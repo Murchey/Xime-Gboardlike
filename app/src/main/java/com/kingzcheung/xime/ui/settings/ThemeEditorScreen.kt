@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -63,6 +65,7 @@ import com.kingzcheung.xime.settings.CustomThemeStore
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.settings.ThemeColorSet
 import com.kingzcheung.xime.ui.theme.KeyboardThemes
+import com.kingzcheung.xime.ui.theme.toCustomColorScheme
 import com.kingzcheung.xime.ui.theme.toKeyboardColorScheme
 
 /** 可调颜色项；名称同时用于取色与保存。 */
@@ -99,6 +102,12 @@ fun ThemeEditorContent(
     val initialDarkThemeId = remember {
         SettingsPreferences.getKeyboardThemeForMode(context, isDark = true)
     }
+    // 只把非自定义、非动态的内置主题作为模板；动态配色随壁纸变化，不适合作为固定模板。
+    val templateThemes = remember {
+        KeyboardThemes.themes.filter {
+            !it.isDynamic && !it.id.startsWith(CustomThemeStore.ID_PREFIX)
+        }
+    }
     var schemes by remember { mutableStateOf(initialSchemes) }
     var appliedLightThemeId by remember { mutableStateOf(initialLightThemeId) }
     var appliedDarkThemeId by remember { mutableStateOf(initialDarkThemeId) }
@@ -106,9 +115,14 @@ fun ThemeEditorContent(
         mutableStateOf(
             initialSchemes.firstOrNull { it.id == initialLightThemeId }
                 ?: initialSchemes.firstOrNull()
+                ?: templateThemes.firstOrNull { it.id == initialLightThemeId }
+                    ?.toCustomColorScheme("我的配色")
+                ?: templateThemes.firstOrNull()?.toCustomColorScheme("我的配色")
                 ?: CustomThemeStore.defaultScheme()
         )
     }
+    // 没有已保存配色时，先选模板再开始自定义。
+    var showTemplatePicker by remember { mutableStateOf(initialSchemes.isEmpty()) }
     var isDarkMode by remember { mutableStateOf(false) }
     var editingField by remember { mutableStateOf<ThemeColorField?>(null) }
     var pendingDelete by remember { mutableStateOf<CustomColorScheme?>(null) }
@@ -181,7 +195,13 @@ fun ThemeEditorContent(
     }
 
     fun newScheme() {
-        draft = CustomThemeStore.defaultScheme(name = "我的配色 ${schemes.size + 1}")
+        showTemplatePicker = true
+        message = null
+    }
+
+    fun applyTemplate(theme: com.kingzcheung.xime.ui.theme.KeyboardColorScheme) {
+        draft = theme.toCustomColorScheme("${theme.name} 副本")
+        showTemplatePicker = false
         message = null
     }
 
@@ -409,6 +429,69 @@ fun ThemeEditorContent(
             dismissButton = {
                 TextButton(onClick = { pendingDelete = null }) { Text(tr(R.string.s_quxiao)) }
             }
+        )
+    }
+
+    if (showTemplatePicker) {
+        AlertDialog(
+            onDismissRequest = { showTemplatePicker = false },
+            title = { Text(tr(R.string.s_xuanzemoban)) },
+            text = {
+                Column {
+                    Text(
+                        text = tr(R.string.s_xuanzemoban_shuoming),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+                        items(templateThemes, key = { it.id }) { theme ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { applyTemplate(theme) }
+                                    .padding(vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = theme.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    Text(
+                                        text = theme.id,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    listOf(theme.accentLight, theme.keyBgLight, theme.specialKeyLight)
+                                        .forEach { color ->
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(16.dp)
+                                                    .clip(CircleShape)
+                                                    .background(color)
+                                                    .border(
+                                                        0.5.dp,
+                                                        MaterialTheme.colorScheme.outlineVariant,
+                                                        CircleShape,
+                                                    )
+                                            )
+                                        }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showTemplatePicker = false }) {
+                    Text(tr(R.string.s_quxiao))
+                }
+            },
         )
     }
 }

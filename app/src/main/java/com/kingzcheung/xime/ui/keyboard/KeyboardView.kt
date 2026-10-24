@@ -499,7 +499,9 @@ fun KeyboardView(
                     dividerColor = dividerColor,
                     accentColor = accentColor,
                     selectedTextColor = candidateSelectedTextColor,
-                    isDarkTheme = state.isDarkTheme
+                    isDarkTheme = state.isDarkTheme,
+                    // 注释（拼音/英文）与候选同对比度，避免浅灰底上不可见
+                    commentColor = KeyboardThemes.ensureContrast(candidateTextColor, keyboardBgColor)
                 ),
                 callbacks = CandidateBarCallbacks(
                     // 常驻语音：点按候选栏频谱区域结束识别。

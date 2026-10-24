@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.core.graphics.ColorUtils
 import com.kingzcheung.xime.settings.BackgroundConfig
@@ -129,32 +130,42 @@ object KeyboardThemes {
         name: String,
         light: ThemePalette,
         dark: ThemePalette,
-    ): KeyboardColorScheme = KeyboardColorScheme(
-        id = id,
-        name = name,
-        specialKeyLight = light.specialKey,
-        specialKeyDark = dark.specialKey,
-        accentLight = light.accent,
-        accentDark = dark.accent,
-        primaryLight = light.accent,
-        primaryDark = dark.accent,
-        primaryContainerLight = light.container ?: light.specialKey,
-        primaryContainerDark = dark.container ?: dark.specialKey,
-        surfaceLight = light.background,
-        surfaceDark = dark.background,
-        keyboardBgLight = light.background,
-        keyboardBgDark = dark.background,
-        keyBgLight = light.key,
-        keyBgDark = dark.key,
-        candidateBarBgLight = light.background,
-        candidateBarBgDark = dark.background,
-        keyTextColorLight = light.keyText,
-        keyTextColorDark = dark.keyText,
-        candidateTextColorLight = light.candidateText,
-        candidateTextColorDark = dark.candidateText,
-        candidateSelectedTextColorLight = light.selectedText ?: light.accent,
-        candidateSelectedTextColorDark = dark.selectedText ?: dark.accent,
-    )
+    ): KeyboardColorScheme {
+        // 功能键取主题的 tinted container：既有品牌色相，又不会像高饱和 accent 那样刺眼。
+        val lightSpecial = light.container ?: light.specialKey
+        val darkSpecial = dark.container ?: dark.specialKey
+        return KeyboardColorScheme(
+            id = id,
+            name = name,
+            specialKeyLight = lightSpecial,
+            specialKeyDark = darkSpecial,
+            accentLight = light.accent,
+            accentDark = dark.accent,
+            primaryLight = light.accent,
+            primaryDark = dark.accent,
+            primaryContainerLight = lightSpecial,
+            primaryContainerDark = darkSpecial,
+            surfaceLight = light.background,
+            surfaceDark = dark.background,
+            keyboardBgLight = light.background,
+            keyboardBgDark = dark.background,
+            keyBgLight = light.key,
+            keyBgDark = dark.key,
+            candidateBarBgLight = light.background,
+            candidateBarBgDark = dark.background,
+            keyTextColorLight = light.keyText,
+            keyTextColorDark = dark.keyText,
+            // 候选字与选中色必须保证在键盘背景上可读；偏淡的品牌色会被自动压深/提亮。
+            candidateTextColorLight = ensureContrast(light.candidateText, light.background),
+            candidateTextColorDark = ensureContrast(dark.candidateText, dark.background),
+            candidateSelectedTextColorLight = ensureContrast(
+                light.selectedText ?: light.accent, light.background
+            ),
+            candidateSelectedTextColorDark = ensureContrast(
+                dark.selectedText ?: dark.accent, dark.background
+            ),
+        )
+    }
 
     /** 现代内置主题：Gboard 灰/黑、微信、QQ、Telegram、X、GitHub、ChatGPT、Claude。 */
     private val defaultThemes = listOf(
@@ -164,13 +175,13 @@ object KeyboardThemes {
                 background = Color(0xFFF1F3F4), key = Color(0xFFFFFFFF),
                 specialKey = Color(0xFFE8EAED), keyText = Color(0xFF202124),
                 candidateText = Color(0xFF5F6368), accent = Color(0xFF1A73E8),
-                selectedText = Color(0xFF1A73E8), container = Color(0xFFE8EAED),
+                selectedText = Color(0xFF1A73E8), container = Color(0xFFD2E3FC),
             ),
             dark = ThemePalette(
                 background = Color(0xFF1E1F21), key = Color(0xFF38393B),
                 specialKey = Color(0xFF38393B), keyText = Color(0xFFE7E8EA),
                 candidateText = Color(0xFF8D8E90), accent = Color(0xFFA8C8FB),
-                selectedText = Color(0xFFA8C8FB), container = Color(0xFF38393B),
+                selectedText = Color(0xFFA8C8FB), container = Color(0xFF1A2B45),
             ),
         ),
         buildTheme(
@@ -179,7 +190,7 @@ object KeyboardThemes {
                 background = Color(0xFFF1F3F4), key = Color(0xFFFFFFFF),
                 specialKey = Color(0xFFE8EAED), keyText = Color(0xFF202124),
                 candidateText = Color(0xFF5F6368), accent = Color(0xFF1A73E8),
-                selectedText = Color(0xFF1A73E8), container = Color(0xFFE8EAED),
+                selectedText = Color(0xFF1A73E8), container = Color(0xFFD2E3FC),
             ),
             dark = ThemePalette(
                 background = Color(0xFF000000), key = Color(0xFF1F1F1F),
@@ -672,13 +683,54 @@ object KeyboardThemes {
         )
     }
 
+    /** WCAG 对比度（1..21）。 */
+    fun contrastRatio(foreground: Color, background: Color): Float {
+        val a = foreground.luminance()
+        val b = background.luminance()
+        val lighter = maxOf(a, b)
+        val darker = minOf(a, b)
+        return (lighter + 0.05f) / (darker + 0.05f)
+    }
+
     /**
-     * 特殊键（确定/删除等）文字颜色：按功能键背景亮度自适应——
-     * 亮背景配 [onLightBgText]（通常为皮肤按键文字色），暗背景配柔和亮白
+     * 保持色相，向黑/白插值，直到达到 [minRatio] 对比度。
+     * 候选字、注释、选中色统一走这条逻辑，避免品牌色在浅底上「几乎不可见」。
+     */
+    fun ensureContrast(
+        foreground: Color,
+        background: Color,
+        minRatio: Float = 4.5f,
+    ): Color {
+        if (contrastRatio(foreground, background) >= minRatio) return foreground
+        val target = if (background.luminance() > 0.5f) Color.Black else Color.White
+        var low = 0f
+        var high = 1f
+        repeat(12) {
+            val mid = (low + high) / 2f
+            if (contrastRatio(lerp(foreground, target, mid), background) >= minRatio) {
+                high = mid
+            } else {
+                low = mid
+            }
+        }
+        return lerp(foreground, target, high)
+    }
+
+    /**
+     * 特殊键（确定/删除等）文字颜色：按功能键背景对比度自适应——
+     * 亮背景优先 [onLightBgText]（通常为皮肤按键文字色），暗背景配柔和亮白
      * （非纯白，高对比在暗光下刺眼）。实机各布局与主题预览共用此逻辑保证一致。
      */
-    fun getSpecialKeyTextColorForBackground(bgColor: Color, onLightBgText: Color): Color =
-        if (bgColor.luminance() > 0.5f) onLightBgText else Color(0xFFE8EAED)
+    fun getSpecialKeyTextColorForBackground(bgColor: Color, onLightBgText: Color): Color {
+        val softWhite = Color(0xFFE8EAED)
+        val chosen = if (contrastRatio(onLightBgText, bgColor) >= contrastRatio(softWhite, bgColor)) {
+            onLightBgText
+        } else {
+            softWhite
+        }
+        // 设计约束：深色背景不用纯白；即使对比度略高也回落柔和亮白。
+        return if (chosen == Color.White) softWhite else chosen
+    }
 
     fun getPrimaryColor(themeId: String, isDark: Boolean): Color {
         val theme = getThemeById(themeId)

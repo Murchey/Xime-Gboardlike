@@ -1027,4 +1027,11 @@
     <string name="s_wenjianming_shibie_shibai">「%1$s」未能辨識出目標詞庫，請重新命名為 &lt;詞典名&gt;.txt</string>
     <string name="s_yongmougefangan_daguozi">用某個方案打過字之後，引擎會自動產生對應的 .userdb</string>
     <string name="s_zidingyibeijing">自訂背景</string>
+    <string name="s_changganqipao">長按氣泡</string>
+    <string name="s_changganqipao_chufashijian">觸發時間</string>
+    <string name="s_changganqipao_shuoming">按住按鍵多久後彈出長按候選氣泡，預設 250ms。</string>
+    <string name="s_yincanganjianzifu">隱藏按鍵字元</string>
+    <string name="s_yincanganjianzifu_fu">隱藏字母/數字鍵面文字，功能鍵圖示與候選欄不受影響。</string>
+    <string name="s_xuanzemoban">選擇配色模板</string>
+    <string name="s_xuanzemoban_shuoming">選擇一套內建主題作為起點，再調整顏色。</string>
 </resources>
