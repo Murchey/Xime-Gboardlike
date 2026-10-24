@@ -521,7 +521,7 @@ keyboard:
       # ── 第三行 ──
       z: { tap: "z", swipe_up: { label: "＊", value: "*" }, swipe_down: { label: "", action: "none", display: "key", bubble: false }, long_press: { display: "bubble", values: ["'"] } }
       x: { tap: "x", swipe_up: { label: "＠", value: "@" }, swipe_down: { label: "弓匕纟幺弓𠤎", action: "none", display: "bubble" }, long_press: { display: "bubble", values: [":"] } }
-      c: { tap: "c", swipe_up: { label: "、", value: "、" }, swipe_down: { label: "又巴马厶龴ス", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["""] } }
+      c: { tap: "c", swipe_up: { label: "、", value: "、" }, swipe_down: { label: "又巴马厶龴ス", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["\""] } }
       v: { tap: "v", swipe_up: { label: "？", value: "?" }, swipe_down: { label: "女刀九臼巛彐", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["?"] } }
       b: { tap: "b", swipe_up: { label: "！", value: "!" }, swipe_down: { label: "子耳了也阝卩㔾凵", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["!"] } }
       n: { tap: "n", swipe_up: { label: "％", value: "%" }, swipe_down: { label: "已己巳心忄羽乙𠃜", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["~"] } }
@@ -593,7 +593,7 @@ keyboard:
       # ── 第三行 ──
       z: { tap: "z", swipe_up: "*", long_press: { display: "bubble", values: ["'"] } }
       x: { tap: "x", swipe_up: "@", long_press: { display: "bubble", values: [":"] } }
-      c: { tap: "c", swipe_up: "、", long_press: { display: "bubble", values: ["""] } }
+      c: { tap: "c", swipe_up: "、", long_press: { display: "bubble", values: ["\""] } }
       v: { tap: "v", swipe_up: "?", long_press: { display: "bubble", values: ["?"] } }
       b: { tap: "b", swipe_up: "!", long_press: { display: "bubble", values: ["!"] } }
       n: { tap: "n", swipe_up: "%", long_press: { display: "bubble", values: ["~"] } }
@@ -664,11 +664,11 @@ keyboard:
       shift_right: { width: 1.2 }
       z: { tap: { value: "z", bubble: false }, swipe_up: { label: "＊", value: "*" }, swipe_down: { label: "", action: "none", display: "key", bubble: false }, long_press: { display: "bubble", values: ["'"] } }
       x: { tap: { value: "x", bubble: false }, swipe_up: { label: "＠", value: "@" }, swipe_down: { label: "弓匕纟幺弓𠤎", action: "none", display: "bubble" }, long_press: { display: "bubble", values: [":"] } }
-      c: { tap: { value: "c", bubble: false }, swipe_up: { label: "、", value: "、" }, swipe_down: { label: "又巴马厶龴ス", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["""] } }
+      c: { tap: { value: "c", bubble: false }, swipe_up: { label: "、", value: "、" }, swipe_down: { label: "又巴马厶龴ス", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["\""] } }
       v: { tap: { value: "v", bubble: false }, swipe_up: { label: "？", value: "?" }, swipe_down: { label: "女刀九臼巛彐", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["?"] } }
       b: { tap: { value: "b", bubble: false }, swipe_up: { label: "！", value: "!" }, swipe_down: { label: "子耳了也阝卩㔾凵", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["!"] } }
       n: { tap: { value: "n", bubble: false }, swipe_up: { label: "％", value: "%" }, swipe_down: { label: "已己巳心忄羽乙𠃜", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["~"] } }
-      m: { tap: { value: "m", bubble: false }, swipe_up: { label: "＃", value: "#" }, swipe_down: { label: "山由贝冂冎几", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["\"] } }
+      m: { tap: { value: "m", bubble: false }, swipe_up: { label: "＃", value: "#" }, swipe_down: { label: "山由贝冂冎几", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["\\"] } }
       # 逗号/句号独立成键（value 经 rime 引擎，中文态自动转全角）
       comma: { width: 1, tap: {  label: "，", value: ",", bubble: false } }
       period: { width: 1, tap: {  label: "。", value: ".", bubble: false } }
@@ -719,11 +719,11 @@ keyboard:
       shift_right: { width: 1.2 }
       z: { tap: { value: "z", bubble: false }, swipe_up: "*", long_press: { display: "bubble", values: ["'"] } }
       x: { tap: { value: "x", bubble: false }, swipe_up: "@", long_press: { display: "bubble", values: [":"] } }
-      c: { tap: { value: "c", bubble: false }, swipe_up: "、", long_press: { display: "bubble", values: ["""] } }
+      c: { tap: { value: "c", bubble: false }, swipe_up: "、", long_press: { display: "bubble", values: ["\""] } }
       v: { tap: { value: "v", bubble: false }, swipe_up: "?", long_press: { display: "bubble", values: ["?"] } }
       b: { tap: { value: "b", bubble: false }, swipe_up: "!", long_press: { display: "bubble", values: ["!"] } }
       n: { tap: { value: "n", bubble: false }, swipe_up: "%", long_press: { display: "bubble", values: ["~"] } }
-      m: { tap: { value: "m", bubble: false }, swipe_up: "#", long_press: { display: "bubble", values: ["\"] } }
+      m: { tap: { value: "m", bubble: false }, swipe_up: "#", long_press: { display: "bubble", values: ["\\"] } }
       comma: { width: 1, tap: {  label: ",", value: ",", bubble: false } }
       period: { width: 1, tap: {  label: ".", value: ".", bubble: false } }
       mode_change: { width: 1.2, tap: {  action: command, value: mode_change, bubble: false }, long_press: { display: bubble, values: [ { label: number, action: command, value: mode_change_number }, { label: common_symbol, action: command, value: mode_change_common_symbol } ] } }
