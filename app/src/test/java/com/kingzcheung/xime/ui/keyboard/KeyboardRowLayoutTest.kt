@@ -13,7 +13,7 @@ import org.junit.Test
  */
 class KeyboardRowLayoutTest {
 
-    private val controlRow = listOf("mode_change", "comma", "space", "earth", "enter")
+    private val controlRow = listOf("mode_change", "comma", "earth", "space", "enter")
     private val digitRow = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
     private val letterRow = listOf("a", "s", "d", "f", "g", "h", "j", "k", "l")
 

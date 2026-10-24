@@ -276,6 +276,7 @@ private fun T9KeyboardSwipeOverlay(
             }
             .drawWithContent {
                 drawContent()
+                drawLongPressScrim(swipeBubble.state.isLongPress)
                 bubbleData?.let { drawSwipeBubble(it) }
             }
             .padding(bottom = if (isFloatingMode || isLandscape) 0.dp else 0.dp)) {

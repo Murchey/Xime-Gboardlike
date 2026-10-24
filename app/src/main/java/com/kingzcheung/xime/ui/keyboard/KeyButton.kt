@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.kingzcheung.xime.correction.KeyTapLogger
 import com.kingzcheung.xime.settings.ButtonLayout
+import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.util.CharInfo
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,6 +43,7 @@ import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -525,6 +527,7 @@ fun SwipeableKeyButton(
     val currentLongPressDrawableIds by rememberUpdatedState(longPressDrawableIds)
     val scope = rememberCoroutineScope()
     val view = LocalView.current
+    val longPressBubbleDelayMs = SettingsPreferences.getLongPressBubbleDelayMs(LocalContext.current)
     
     val density = LocalDensity.current
     val swipeUpThreshold = with(density) { (-50).dp.toPx() }
@@ -744,7 +747,7 @@ fun SwipeableKeyButton(
                     currentOnPress?.invoke()
                     
                     val longPressJob = scope.launch {
-                        delay(400L)
+                        delay(longPressBubbleDelayMs.toLong())
                         localLongPressTriggered = true
                         view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                         currentOnSwipeStateChange?.invoke(
@@ -1301,6 +1304,7 @@ fun SwipeableIconKeyButton(
     val currentLongPressDrawableIds by rememberUpdatedState(longPressDrawableIds)
     val scope = rememberCoroutineScope()
     val view = LocalView.current
+    val longPressBubbleDelayMs = SettingsPreferences.getLongPressBubbleDelayMs(LocalContext.current)
     val keyLabelFontFamily = AppFonts.keyLabelFontFamily
     
     val density = LocalDensity.current
@@ -1589,7 +1593,7 @@ fun SwipeableIconKeyButton(
                     val items = currentLongPressItems ?: return@awaitEachGesture
 
                     val longPressJob = scope.launch {
-                        delay(400L)
+                        delay(longPressBubbleDelayMs.toLong())
                         localLongPressTriggered = true
                         view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                         onSwipeStateChange?.invoke(
@@ -1777,6 +1781,7 @@ fun SwipeableKeyButtonLandscape(
     val currentPressText by rememberUpdatedState(pressText)
     val scope = rememberCoroutineScope()
     val view = LocalView.current
+    val longPressBubbleDelayMs = SettingsPreferences.getLongPressBubbleDelayMs(LocalContext.current)
     val keyLabelFontFamily = AppFonts.keyLabelFontFamily
     val keyFontFamily = AppFonts.keyFontFamily
 
@@ -2001,7 +2006,7 @@ fun SwipeableKeyButtonLandscape(
                         currentOnPress?.invoke()
 
                         val longPressJob = scope.launch {
-                            delay(400L)
+                            delay(longPressBubbleDelayMs.toLong())
                             localLongPressTriggered = true
                             view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                             currentOnSwipeStateChange?.invoke(

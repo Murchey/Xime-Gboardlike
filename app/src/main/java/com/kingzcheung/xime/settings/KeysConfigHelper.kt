@@ -704,7 +704,7 @@ object KeysConfigHelper {
      * 布局行里出现这些 id 时，渲染层按 id 选择功能键组件而非字母键。
      */
     val FUNCTION_KEY_IDS: Set<String> = setOf(
-        "shift", "delete", "enter", "space", "mode_change", "symbol", "emoji", "earth", "voice", "comma",
+        "shift", "delete", "enter", "space", "mode_change", "symbol", "emoji", "earth", "voice", "comma", "period",
         "cursor_left", "cursor_right", "tab", "caps", "shift_left", "shift_right",
         // 面板专用功能键（数字/常用符号键盘，行为内置：返回主键盘/切数字/切常用符号/打开全量符号/中英切换/空格）
         // back_right：平板面板右端的「返回字母键盘」键（与左端 back 同行为、各自可配宽度）
