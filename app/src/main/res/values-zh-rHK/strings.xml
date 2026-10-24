@@ -1034,6 +1034,10 @@
     <string name="s_yincanganjianzifu_fu">隱藏字母/數字鍵面文字，功能鍵圖示與候選欄不受影響。</string>
     <string name="s_xianshizimujianfushangfangdefuhao">顯示字母按鍵上方的符號</string>
     <string name="s_xianshizimujianfushangfangdefuhao_fu">在字母鍵右上角顯示長按/上滑的符號提示；關閉後鍵面更簡潔。</string>
+    <string name="s_zimudaxiaoxie">字母大小寫</string>
+    <string name="s_zimudaxiaoxie_fu">關閉顯示小寫，開啟顯示大寫。</string>
+    <string name="s_gensuishiftjianqiehuan">跟隨 Shift 鍵切換</string>
+    <string name="s_gensuishiftjianqiehuan_fu">小寫模式下 Shift 狀態立即反映到鍵面；關閉後始終顯示小寫。選擇大寫時此項不生效。</string>
     <string name="s_xuanzemoban">選擇配色模板</string>
     <string name="s_xuanzemoban_shuoming">選擇一套內建主題作為起點，再調整顏色。</string>
 </resources>

@@ -54,11 +54,20 @@ class ThemeCatalogTest {
     }
 
     @Test
-    fun `终末地主题色为黄色且浅色更暗`() {
+    fun `终末地使用精调深浅色`() {
         val theme = KeyboardThemes.getThemeById("endfield")
         assertEquals(Color(0xFFFFCC00), theme.accentDark)
-        assertEquals(Color(0xFFB38F00), theme.accentLight)
+        assertEquals(Color(0xFFC2A325), theme.accentLight)
         assertTrue(theme.accentLight.luminance() < theme.accentDark.luminance())
+        assertEquals(Color(0xFF000000), theme.keyboardBgDark)
+        assertEquals(Color(0xFF1E1D17), theme.keyBgDark)
+        assertEquals(Color(0xFFBF9C00), theme.specialKeyDark)
+        assertEquals(Color(0xFFFFFCEC), theme.keyTextColorDark)
+        assertEquals(Color(0xFFBBFBEB), theme.candidateTextColorDark)
+        assertEquals(Color(0xFFFFFFFF), theme.keyboardBgLight)
+        assertEquals(Color(0xFFE7E8EA), theme.keyBgLight)
+        assertEquals(Color(0xFFF0D957), theme.specialKeyLight)
+        assertEquals(Color(0xFF474A4F), theme.candidateTextColorLight)
     }
 
     @Test
@@ -67,18 +76,6 @@ class ThemeCatalogTest {
         assertEquals(Color(0xFF0B2E59), theme.accentLight)
         assertEquals(Color(0xFFFFFFFF), theme.accentDark)
         assertEquals(Color(0xFF0A1220), theme.keyboardBgDark)
-    }
-
-    @Test
-    fun `内置主题非选中候选统一中性灰`() {
-        val light = KeyboardThemes.neutralCandidateTextColor(isDark = false)
-        val dark = KeyboardThemes.neutralCandidateTextColor(isDark = true)
-        KeyboardThemes.themes
-            .filterNot { it.isDynamic || it.id.startsWith("custom_") }
-            .forEach { theme ->
-                assertEquals("${theme.id} 浅色候选不是灰色", light, theme.candidateTextColorLight)
-                assertEquals("${theme.id} 深色候选不是灰色", dark, theme.candidateTextColorDark)
-            }
     }
 
     @Test

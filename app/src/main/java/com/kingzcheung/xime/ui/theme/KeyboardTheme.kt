@@ -156,9 +156,9 @@ object KeyboardThemes {
             candidateBarBgDark = dark.background,
             keyTextColorLight = light.keyText,
             keyTextColorDark = dark.keyText,
-            // 非选中候选统一中性灰：主题色只用于选中项/功能键，避免各品牌色把候选区染花。
-            candidateTextColorLight = ensureContrast(neutralCandidateTextColor(isDark = false), light.background),
-            candidateTextColorDark = ensureContrast(neutralCandidateTextColor(isDark = true), dark.background),
+            // 非选中候选使用主题自己的中性灰；终末地按用户精调色单独指定。
+            candidateTextColorLight = ensureContrast(light.candidateText, light.background),
+            candidateTextColorDark = ensureContrast(dark.candidateText, dark.background),
             candidateSelectedTextColorLight = ensureContrast(
                 light.selectedText ?: light.accent, light.background
             ),
@@ -233,16 +233,16 @@ object KeyboardThemes {
         buildTheme(
             id = "endfield", name = "终末地",
             light = ThemePalette(
-                background = Color(0xFFF3F0E7), key = Color(0xFFFFFFFF),
-                specialKey = Color(0xFFE8E1CB), keyText = Color(0xFF1F1B12),
-                candidateText = Color(0xFF5F5A4E), accent = Color(0xFFB38F00),
-                selectedText = Color(0xFF8C6D00), container = Color(0xFFF0DFA0),
+                background = Color(0xFFFFFFFF), key = Color(0xFFE7E8EA),
+                specialKey = Color(0xFFF0D957), keyText = Color(0xFF1F1B12),
+                candidateText = Color(0xFF474A4F), accent = Color(0xFFC2A325),
+                selectedText = Color(0xFF8C6D00), container = Color(0xFFF0D957),
             ),
             dark = ThemePalette(
-                background = Color(0xFF11110D), key = Color(0xFF1E1D17),
-                specialKey = Color(0xFF302C1C), keyText = Color(0xFFF7F3E6),
-                candidateText = Color(0xFFB8B2A3), accent = Color(0xFFFFCC00),
-                selectedText = Color(0xFFFFD84D), container = Color(0xFF4A3B00),
+                background = Color(0xFF000000), key = Color(0xFF1E1D17),
+                specialKey = Color(0xFFBF9C00), keyText = Color(0xFFFFFCEC),
+                candidateText = Color(0xFFBBFBEB), accent = Color(0xFFFFCC00),
+                selectedText = Color(0xFFFFD84D), container = Color(0xFFBF9C00),
             ),
         ),
         buildTheme(

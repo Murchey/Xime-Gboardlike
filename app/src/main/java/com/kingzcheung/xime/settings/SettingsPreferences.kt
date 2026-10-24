@@ -368,6 +368,12 @@ object SettingsPreferences {
     /** 在字母键右上角显示长按/上滑符号提示（默认显示）。 */
     private const val KEY_SHOW_LETTER_HINT_SYMBOLS = "show_letter_hint_symbols"
 
+    /** 字母键显示大小写：小写 / 大写；小写时可跟随 Shift。 */
+    private const val KEY_LETTER_DISPLAY_CASE = "letter_display_case"
+    private const val KEY_LETTER_CASE_FOLLOW_SHIFT = "letter_case_follow_shift"
+    const val LETTER_CASE_LOWER = "lower"
+    const val LETTER_CASE_UPPER = "upper"
+
     fun getHapticMode(context: Context): String {
         return getPrefs(context).getString(KEY_HAPTIC_MODE, "following_system") ?: "following_system"
     }
@@ -438,6 +444,25 @@ object SettingsPreferences {
 
     fun setShowLetterHintSymbols(context: Context, show: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_SHOW_LETTER_HINT_SYMBOLS, show).apply()
+    }
+
+    fun getLetterDisplayCase(context: Context): String =
+        getPrefs(context).getString(KEY_LETTER_DISPLAY_CASE, LETTER_CASE_LOWER)
+            ?.takeIf { it == LETTER_CASE_LOWER || it == LETTER_CASE_UPPER }
+            ?: LETTER_CASE_LOWER
+
+    fun setLetterDisplayCase(context: Context, case: String) {
+        getPrefs(context).edit()
+            .putString(KEY_LETTER_DISPLAY_CASE, if (case == LETTER_CASE_UPPER) LETTER_CASE_UPPER else LETTER_CASE_LOWER)
+            .apply()
+    }
+
+    /** 小写模式下是否跟随 Shift 实时切换键面大小写；默认跟随。 */
+    fun followShiftForLetterCase(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_LETTER_CASE_FOLLOW_SHIFT, true)
+
+    fun setFollowShiftForLetterCase(context: Context, follow: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_LETTER_CASE_FOLLOW_SHIFT, follow).apply()
     }
 
     /**
