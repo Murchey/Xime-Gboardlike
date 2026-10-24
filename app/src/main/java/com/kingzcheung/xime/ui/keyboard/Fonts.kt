@@ -21,6 +21,10 @@ object AppFonts {
     private const val TAG = "AppFonts"
     private const val CHAI_PUA_FONT = "ChaiPUA-0.2.7-snow.ttf"
 
+    /** 内置默认字体（思源 + Google Sans VF），随 APK 打包；配置里用 [BUILTIN_SENTINEL] 表示它。 */
+    private const val BUILTIN_FONT_ASSET = "fonts/app_default.ttf"
+    const val BUILTIN_SENTINEL = "@builtin"
+
     private var initialized = false
     private lateinit var assetManager: AssetManager
     private lateinit var filesDir: File
@@ -147,6 +151,14 @@ object AppFonts {
      */
     private fun loadTypeface(fontPath: String): Typeface? {
         if (fontPath.isBlank()) return null
+        if (fontPath == BUILTIN_SENTINEL) {
+            return try {
+                Typeface.createFromAsset(assetManager, BUILTIN_FONT_ASSET)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load builtin font", e)
+                null
+            }
+        }
         val fontFile = resolveFontPath(fontPath)
         if (!fontFile.exists()) {
             Log.w(TAG, "Font file not found: ${fontFile.absolutePath}")
@@ -167,6 +179,14 @@ object AppFonts {
      */
     private fun loadFontFamily(fontPath: String, typeface: Typeface?): FontFamily? {
         if (fontPath.isBlank()) return null
+        if (fontPath == BUILTIN_SENTINEL) {
+            return try {
+                FontFamily(Font(BUILTIN_FONT_ASSET, assetManager))
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load builtin font family", e)
+                null
+            }
+        }
         if (typeface != null) return FontFamily(typeface)
         val fontFile = resolveFontPath(fontPath)
         if (!fontFile.exists()) {
