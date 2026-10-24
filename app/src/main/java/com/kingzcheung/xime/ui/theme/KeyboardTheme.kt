@@ -111,6 +111,7 @@ object KeyboardThemes {
         "lilac_purple", "peach_orange", "cream_beige", "aurora_gradient",
         "sunset_gradient", "ocean_gradient", "purple_gradient", "rose_gradient",
         "forest_gradient", "kitosonita_landscape", "mrfawdi_nature", "olivcelso_desert",
+        "telegram",
     )
 
     /** 单套（浅色或深色）主题色。 */
@@ -155,9 +156,9 @@ object KeyboardThemes {
             candidateBarBgDark = dark.background,
             keyTextColorLight = light.keyText,
             keyTextColorDark = dark.keyText,
-            // 候选字与选中色必须保证在键盘背景上可读；偏淡的品牌色会被自动压深/提亮。
-            candidateTextColorLight = ensureContrast(light.candidateText, light.background),
-            candidateTextColorDark = ensureContrast(dark.candidateText, dark.background),
+            // 非选中候选统一中性灰：主题色只用于选中项/功能键，避免各品牌色把候选区染花。
+            candidateTextColorLight = ensureContrast(neutralCandidateTextColor(isDark = false), light.background),
+            candidateTextColorDark = ensureContrast(neutralCandidateTextColor(isDark = true), dark.background),
             candidateSelectedTextColorLight = ensureContrast(
                 light.selectedText ?: light.accent, light.background
             ),
@@ -167,7 +168,7 @@ object KeyboardThemes {
         )
     }
 
-    /** 现代内置主题：Gboard 灰/黑、微信、QQ、Telegram、X、GitHub、ChatGPT、Claude。 */
+    /** 现代内置主题：Gboard 灰/黑、微信、QQ、终末地、X、GitHub、ChatGPT、Claude。 */
     private val defaultThemes = listOf(
         buildTheme(
             id = "gboard_gray", name = "Gboard 灰",
@@ -196,7 +197,7 @@ object KeyboardThemes {
                 background = Color(0xFF000000), key = Color(0xFF1F1F1F),
                 specialKey = Color(0xFF2A2A2A), keyText = Color(0xFFF1F3F4),
                 candidateText = Color(0xFF9AA0A6), accent = Color(0xFF8AB4F8),
-                selectedText = Color(0xFFA8C8FB), container = Color(0xFF1A2B45),
+                selectedText = Color(0xFFA8C8FB), container = Color(0xFF2A2A2A),
             ),
         ),
         buildTheme(
@@ -230,18 +231,18 @@ object KeyboardThemes {
             ),
         ),
         buildTheme(
-            id = "telegram", name = "Telegram",
+            id = "endfield", name = "终末地",
             light = ThemePalette(
-                background = Color(0xFFF2F5F7), key = Color(0xFFFFFFFF),
-                specialKey = Color(0xFFE4EDF3), keyText = Color(0xFF1A1A1A),
-                candidateText = Color(0xFF6E7A85), accent = Color(0xFF2AABEE),
-                selectedText = Color(0xFF168ACD), container = Color(0xFFD8F0FB),
+                background = Color(0xFFF3F0E7), key = Color(0xFFFFFFFF),
+                specialKey = Color(0xFFE8E1CB), keyText = Color(0xFF1F1B12),
+                candidateText = Color(0xFF5F5A4E), accent = Color(0xFFB38F00),
+                selectedText = Color(0xFF8C6D00), container = Color(0xFFF0DFA0),
             ),
             dark = ThemePalette(
-                background = Color(0xFF17212B), key = Color(0xFF232F3D),
-                specialKey = Color(0xFF2B3A4A), keyText = Color(0xFFF5F5F5),
-                candidateText = Color(0xFF8FA3B8), accent = Color(0xFF6AB2F2),
-                selectedText = Color(0xFF8CC8FF), container = Color(0xFF1C3B57),
+                background = Color(0xFF11110D), key = Color(0xFF1E1D17),
+                specialKey = Color(0xFF302C1C), keyText = Color(0xFFF7F3E6),
+                candidateText = Color(0xFFB8B2A3), accent = Color(0xFFFFCC00),
+                selectedText = Color(0xFFFFD84D), container = Color(0xFF4A3B00),
             ),
         ),
         buildTheme(
@@ -277,16 +278,16 @@ object KeyboardThemes {
         buildTheme(
             id = "chatgpt", name = "ChatGPT",
             light = ThemePalette(
-                background = Color(0xFFF7F7F8), key = Color(0xFFFFFFFF),
-                specialKey = Color(0xFFECECEF), keyText = Color(0xFF202123),
-                candidateText = Color(0xFF6E6E80), accent = Color(0xFF10A37F),
-                selectedText = Color(0xFF0E8A6B), container = Color(0xFFD9F3EA),
+                background = Color(0xFFF5F7FB), key = Color(0xFFFFFFFF),
+                specialKey = Color(0xFFE4EAF3), keyText = Color(0xFF0B1F3A),
+                candidateText = Color(0xFF5F6368), accent = Color(0xFF0B2E59),
+                selectedText = Color(0xFF0B2E59), container = Color(0xFFD8E4F2),
             ),
             dark = ThemePalette(
-                background = Color(0xFF212121), key = Color(0xFF2F2F2F),
-                specialKey = Color(0xFF383838), keyText = Color(0xFFECECEC),
-                candidateText = Color(0xFF9B9B9B), accent = Color(0xFF10A37F),
-                selectedText = Color(0xFF6EE7B7), container = Color(0xFF1A3A32),
+                background = Color(0xFF0A1220), key = Color(0xFF16233A),
+                specialKey = Color(0xFF1D2C45), keyText = Color(0xFFFFFFFF),
+                candidateText = Color(0xFF9AA0A6), accent = Color(0xFFFFFFFF),
+                selectedText = Color(0xFFFFFFFF), container = Color(0xFF223A5E),
             ),
         ),
         buildTheme(
@@ -682,6 +683,10 @@ object KeyboardThemes {
             red = accent.red * 0.6f, green = accent.green * 0.6f, blue = accent.blue * 0.6f
         )
     }
+
+    /** 非选中候选词的中性灰（浅色更深、深色更浅），主题色只保留给选中项。 */
+    fun neutralCandidateTextColor(isDark: Boolean): Color =
+        if (isDark) Color(0xFF9AA0A6) else Color(0xFF5F6368)
 
     /** WCAG 对比度（1..21）。 */
     fun contrastRatio(foreground: Color, background: Color): Float {

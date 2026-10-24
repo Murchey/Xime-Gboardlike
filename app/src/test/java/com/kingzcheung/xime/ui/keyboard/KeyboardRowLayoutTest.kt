@@ -1,5 +1,6 @@
 package com.kingzcheung.xime.ui.keyboard
 
+import androidx.compose.ui.graphics.Color
 import com.kingzcheung.xime.settings.KeyboardRow
 import com.kingzcheung.xime.settings.RowAlign
 import org.junit.Assert.assertEquals
@@ -13,7 +14,7 @@ import org.junit.Test
  */
 class KeyboardRowLayoutTest {
 
-    private val controlRow = listOf("mode_change", "comma", "earth", "space", "enter")
+    private val controlRow = listOf("mode_change", "comma", "earth", "space", "period", "enter")
     private val digitRow = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
     private val letterRow = listOf("a", "s", "d", "f", "g", "h", "j", "k", "l")
 
@@ -135,6 +136,12 @@ class KeyboardRowLayoutTest {
         assertEquals(0.7f, rowWidthFraction(explicit, 10, RowAlign.STRETCH), 0.0001f)
         assertEquals(1f, rowWidthFraction(KeyboardRow(letterRow, width = 1.5f), 10, RowAlign.UNIFORM), 0.0001f)
         assertEquals(0f, rowWidthFraction(KeyboardRow(letterRow, width = -1f), 10, RowAlign.UNIFORM), 0.0001f)
+    }
+
+    @Test
+    fun `按键描边替代底部阴影且深浅键自动取反色`() {
+        assertEquals(Color.Black.copy(alpha = 0.16f), keyOutlineColor(Color.White))
+        assertEquals(Color.White.copy(alpha = 0.16f), keyOutlineColor(Color(0xFF1F1F1F)))
     }
 
     // ── 横向滑动接管（左右滑 vs 父层光标手势）──

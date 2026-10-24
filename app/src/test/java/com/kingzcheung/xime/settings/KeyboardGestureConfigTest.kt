@@ -235,12 +235,12 @@ class KeyboardGestureConfigTest {
     }
 
     @Test
-    fun `long_press 超过 10 项时截断为 10 项`() {
-        val items = (1..12).joinToString(", ") { """{ value: "$it" }""" }
+    fun `long_press 超过 16 项时截断为 16 项`() {
+        val items = (1..18).joinToString(", ") { """{ value: "$it" }""" }
         val lp = parse("""a: { long_press: { values: [$items] } }""")["a"]!!.longPress!!
-        assertEquals(10, lp.values.size)
+        assertEquals(16, lp.values.size)
         assertEquals(
-            listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"),
+            (1..16).map { it.toString() },
             KeysConfigHelper.longPressDisplayItems(lp),
         )
     }

@@ -127,6 +127,8 @@ object KeyActionRegistry {
         register("switch_route", ActionDomain.UI, GestureAction.SWITCH_ROUTE) { _, _ -> }
         register("toggle_symbols", ActionDomain.UI, GestureAction.TOGGLE_SYMBOLS) { _, _ -> }
         register("toggle_shift", ActionDomain.UI, GestureAction.TOGGLE_SHIFT) { _, _ -> }
+        register("toggle_floating", ActionDomain.UI, GestureAction.TOGGLE_FLOATING) { _, _ -> }
+        register("open_settings", ActionDomain.UI, GestureAction.OPEN_SETTINGS) { _, _ -> }
         register("voice", ActionDomain.UI, GestureAction.VOICE) { c, _ -> c.ui?.enterVoice() }
 
         register("toggle_ascii", ActionDomain.CROSS, GestureAction.TOGGLE_ASCII) { c, _ ->

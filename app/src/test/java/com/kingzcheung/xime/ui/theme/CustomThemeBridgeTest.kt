@@ -1,10 +1,24 @@
 package com.kingzcheung.xime.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import com.kingzcheung.xime.settings.CustomThemeStore
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class CustomThemeBridgeTest {
+
+    @Test
+    fun `自定义键盘背景色转换后不被默认色覆盖`() {
+        val base = CustomThemeStore.defaultScheme(id = "custom_demo", name = "Demo")
+        val custom = base.copy(
+            light = base.light.copy(keyboardBackground = "#123456"),
+            dark = base.dark.copy(keyboardBackground = "#0A0B0C"),
+        )
+        val scheme = custom.toKeyboardColorScheme()
+        assertEquals(Color(0xFF123456), scheme.keyboardBgLight)
+        assertEquals(Color(0xFF0A0B0C), scheme.keyboardBgDark)
+        assertEquals(Color(0xFF123456), scheme.surfaceLight)
+    }
 
     @Test
     fun `内置主题模板完整带入六个颜色`() {

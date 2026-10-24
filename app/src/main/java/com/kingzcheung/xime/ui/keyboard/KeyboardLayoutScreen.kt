@@ -61,10 +61,8 @@ fun KeyboardLayoutScreen(
         ?: if (uiState.isDarkTheme) longToColor(kbColors.keyBgColorDark) else longToColor(kbColors.keyBgColor)
     val keyTextColor = KeyboardThemes.getKeyTextColorOverride(uiState.themeId, uiState.isDarkTheme)
         ?: if (uiState.isDarkTheme) longToColor(kbColors.keyTextColorDark) else longToColor(kbColors.keyTextColor)
-    val specialKeyBgColor =
-        if (uiState.isDarkTheme) kbColors.specialKeyBgColorDark?.let { longToColor(it) }
-            ?: themeSpecialKeyColor else kbColors.specialKeyBgColor?.let { longToColor(it) }
-            ?: themeSpecialKeyColor
+    // 功能键取主题色，避免全局 special_key 覆盖自定义主题。
+    val specialKeyBgColor = themeSpecialKeyColor
     val specialKeyTextColor = KeyboardThemes.getSpecialKeyTextColorForBackground(
         specialKeyBgColor, keyTextColor
     )

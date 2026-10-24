@@ -141,7 +141,7 @@ internal class ImeTextCommit(private val service: XimeInputMethodService) {
      *
      * 两条路径（与 Emoji 图片发送一致，复用 [commitImage] 的 MIME 探测）：
      * 1. 宿主输入框声明支持图片 MIME → `commitContent` 直插（如部分笔记/邮件应用）；
-     * 2. 否则（微信/Telegram 等）→ 写入系统剪贴板，提示用户长按输入框粘贴发送。
+     * 2. 否则（微信等第三方应用）→ 写入系统剪贴板，提示用户长按输入框粘贴发送。
      *
      * 图片条目没有文本上屏，但同样标记 consumed（候选栏/列表不再提示"新内容"）。
      */
