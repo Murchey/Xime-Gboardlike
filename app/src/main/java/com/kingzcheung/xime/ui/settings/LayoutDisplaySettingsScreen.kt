@@ -234,6 +234,85 @@ fun LayoutDisplaySettingsContent(
                             }
                         )
                     }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 16.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    var letterCaseUpper by remember {
+                        mutableStateOf(
+                            SettingsPreferences.getLetterDisplayCase(context) == SettingsPreferences.LETTER_CASE_UPPER
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = tr(R.string.s_zimudaxiaoxie),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = tr(R.string.s_zimudaxiaoxie_fu),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = letterCaseUpper,
+                            onCheckedChange = { enabled ->
+                                letterCaseUpper = enabled
+                                SettingsPreferences.setLetterDisplayCase(
+                                    context,
+                                    if (enabled) SettingsPreferences.LETTER_CASE_UPPER
+                                    else SettingsPreferences.LETTER_CASE_LOWER
+                                )
+                            }
+                        )
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 16.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    var followShift by remember {
+                        mutableStateOf(SettingsPreferences.followShiftForLetterCase(context))
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = tr(R.string.s_gensuishiftjianqiehuan),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = tr(R.string.s_gensuishiftjianqiehuan_fu),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = followShift && !letterCaseUpper,
+                            enabled = !letterCaseUpper,
+                            onCheckedChange = { enabled ->
+                                followShift = enabled
+                                SettingsPreferences.setFollowShiftForLetterCase(context, enabled)
+                            }
+                        )
+                    }
                 })
             }
 

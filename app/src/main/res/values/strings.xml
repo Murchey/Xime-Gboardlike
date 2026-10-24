@@ -1111,6 +1111,10 @@
     <string name="s_yincanganjianzifu_fu">隐藏字母/数字键面文字，功能键图标与候选栏不受影响。</string>
     <string name="s_xianshizimujianfushangfangdefuhao">显示字母按键上方的符号</string>
     <string name="s_xianshizimujianfushangfangdefuhao_fu">在字母键右上角显示长按/上滑的符号提示；关闭后键面更简洁。</string>
+    <string name="s_zimudaxiaoxie">字母大小写</string>
+    <string name="s_zimudaxiaoxie_fu">关闭显示小写，开启显示大写。</string>
+    <string name="s_gensuishiftjianqiehuan">跟随 Shift 键切换</string>
+    <string name="s_gensuishiftjianqiehuan_fu">小写模式下 Shift 状态立即反映到键面；关闭后始终显示小写。选择大写时此项不生效。</string>
     <string name="s_xuanzemoban">选择配色模板</string>
     <string name="s_xuanzemoban_shuoming">选择一套内置主题作为起点，再调整颜色。</string>
 </resources>

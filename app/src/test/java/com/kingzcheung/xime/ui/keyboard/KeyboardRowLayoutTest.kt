@@ -139,6 +139,23 @@ class KeyboardRowLayoutTest {
     }
 
     @Test
+    fun `字母大小写支持固定小写、固定大写与跟随 Shift`() {
+        val lowerFollow = LetterCaseSetting(upperCase = false, followShift = true)
+        val lowerFixed = LetterCaseSetting(upperCase = false, followShift = false)
+        val upperFixed = LetterCaseSetting(upperCase = true, followShift = true)
+
+        assertEquals("q", applyLetterDisplayCase("q", true, false, lowerFollow))
+        assertEquals("Q", applyLetterDisplayCase("q", true, true, lowerFollow))
+        // 关闭跟随后，Shift 不再改变键面
+        assertEquals("q", applyLetterDisplayCase("q", true, true, lowerFixed))
+        // 大写固定时，Shift 开关都不影响
+        assertEquals("Q", applyLetterDisplayCase("q", true, false, upperFixed))
+        assertEquals("Q", applyLetterDisplayCase("q", true, true, upperFixed))
+        // 非字母键不受影响
+        assertEquals("?", applyLetterDisplayCase("?", false, true, upperFixed))
+    }
+
+    @Test
     fun `按键描边替代底部阴影且深浅键自动取反色`() {
         assertEquals(Color.Black.copy(alpha = 0.10f), keyOutlineColor(Color.White))
         assertEquals(Color.White.copy(alpha = 0.10f), keyOutlineColor(Color(0xFF1F1F1F)))

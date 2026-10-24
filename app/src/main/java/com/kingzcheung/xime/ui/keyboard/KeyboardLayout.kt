@@ -121,6 +121,26 @@ import androidx.compose.ui.unit.TextUnit
 /** 字母键上方符号提示开关；由键盘根层订阅设置变化，切换后立即生效。 */
 internal val LocalShowLetterHintSymbols = staticCompositionLocalOf { true }
 
+/** 字母键显示大小写：大写固定 / 小写是否跟随 Shift。 */
+internal data class LetterCaseSetting(
+    val upperCase: Boolean = false,
+    val followShift: Boolean = true,
+)
+
+internal val LocalLetterCaseSetting = staticCompositionLocalOf { LetterCaseSetting() }
+
+/** 按设置计算字母键的显示文本；非字母键原样返回。 */
+internal fun applyLetterDisplayCase(
+    text: String,
+    isLetterKey: Boolean,
+    isShifted: Boolean,
+    setting: LetterCaseSetting,
+): String {
+    if (!isLetterKey) return text
+    val upper = setting.upperCase || (!setting.upperCase && setting.followShift && isShifted)
+    return if (upper) text.uppercase() else text.lowercase()
+}
+
 /**
  * shift 视觉延迟：按下 shift 后延迟 [delayMillis] 再点亮键面（快速连按不闪烁），松开立即熄灭。
  * 主键盘正常路径 delay=0（历史行为即时），分体路径 250ms（历史行为）。
@@ -197,6 +217,15 @@ fun KeyboardLayout(
     var showLetterHintSymbols by remember {
         mutableStateOf(SettingsPreferences.showLetterHintSymbols(context))
     }
+    var letterCaseSetting by remember {
+        mutableStateOf(
+            LetterCaseSetting(
+                upperCase = SettingsPreferences.getLetterDisplayCase(context) ==
+                    SettingsPreferences.LETTER_CASE_UPPER,
+                followShift = SettingsPreferences.followShiftForLetterCase(context),
+            )
+        )
+    }
 
     // 监听设置变化
     DisposableEffect(context) {
@@ -209,6 +238,12 @@ fun KeyboardLayout(
                             SettingsPreferences.isLandscapeSplitKeyboardEnabled(context)
                     "show_letter_hint_symbols" ->
                         showLetterHintSymbols = SettingsPreferences.showLetterHintSymbols(context)
+                    "letter_display_case", "letter_case_follow_shift" ->
+                        letterCaseSetting = LetterCaseSetting(
+                            upperCase = SettingsPreferences.getLetterDisplayCase(context) ==
+                                SettingsPreferences.LETTER_CASE_UPPER,
+                            followShift = SettingsPreferences.followShiftForLetterCase(context),
+                        )
                 }
             }
         prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -265,6 +300,7 @@ fun KeyboardLayout(
 
     CompositionLocalProvider(
         LocalShowLetterHintSymbols provides showLetterHintSymbols,
+        LocalLetterCaseSetting provides letterCaseSetting,
         LocalKeyCornerRadius provides qwertyCornerRadius,
         // 键面提示档与主键盘同一规则（退格的「清空」等提示的放大倍率与画法）
         LocalSwipeHintCorner provides swipeHintCornerFor(isLandscape, tabletParams),
@@ -1803,6 +1839,7 @@ fun KeyboardRowWithConfig(
         val context = LocalContext.current
     val hideKeyLabels = SettingsPreferences.isKeyLabelsHidden(context)
     val showLetterHintSymbols = LocalShowLetterHintSymbols.current
+    val letterCase = LocalLetterCaseSetting.current
     keys.forEachIndexed { index, key ->
             val rawSwipeUpLabel = KeysConfigHelper.getSwipeUpLabel(key, isAsciiMode)
             val swipeUpAction = KeysConfigHelper.getSwipeUpAction(key, isAsciiMode)
@@ -1854,7 +1891,14 @@ fun KeyboardRowWithConfig(
             // 只隐藏字母键上方的符号角标；数字行、功能键不受这个开关影响。
             val hideLetterCornerHint = key.length == 1 && key[0].isLetter() && !showLetterHintSymbols
             val hideCornerHint = hideMainLabel || hideLetterCornerHint
-            val displayText = if (hideMainLabel) "" else rawDisplayText
+            // 键面大小写：大写固定 / 小写固定 / 小写跟随 Shift（默认）。
+            val isLetterKey = key.length == 1 && key[0].isLetter()
+            val displayText = if (hideMainLabel) "" else applyLetterDisplayCase(
+                text = rawDisplayText,
+                isLetterKey = isLetterKey,
+                isShifted = isShifted,
+                setting = letterCase,
+            )
 
             // tap 动作接线：非 COMMIT/SEND_RIME 的动作（复制/粘贴/面板切换等）走手势分发，
             // 其余沿用原有上屏路径（shift 大写与输入法组合语义不变）
