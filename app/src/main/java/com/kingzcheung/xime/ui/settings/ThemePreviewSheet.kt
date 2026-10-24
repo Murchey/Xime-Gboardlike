@@ -129,10 +129,7 @@ fun ThemePreviewSheet(
                     shape = RoundedCornerShape(24.dp),
                 ) {
                     Text(
-                        tr(
-                            if (targetIsDark) R.string.s_yingyongdaoshense
-                            else R.string.s_yingyongdaoxianse
-                        ),
+                        tr(R.string.s_yingyong),
                         fontSize = 16.sp
                     )
                 }

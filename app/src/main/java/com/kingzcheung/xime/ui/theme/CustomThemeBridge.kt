@@ -1,10 +1,12 @@
 package com.kingzcheung.xime.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.kingzcheung.xime.settings.BackgroundConfig
 import com.kingzcheung.xime.settings.ColorSchemeEntry
 import com.kingzcheung.xime.settings.CustomColorScheme
 import com.kingzcheung.xime.settings.CustomThemeStore
+import com.kingzcheung.xime.settings.ThemeColorSet
 
 /** 自定义配色 → 运行时主题（预览与键盘共用，避免两套取色逻辑）。 */
 fun CustomColorScheme.toKeyboardColorScheme(): KeyboardColorScheme {
@@ -65,6 +67,31 @@ fun CustomColorScheme.toColorSchemeEntry(): ColorSchemeEntry {
         ),
     )
 }
+
+/** 内置主题 → 自定义配色模板：把当前浅/深色板完整带入，用户从它开始微调。 */
+fun KeyboardColorScheme.toCustomColorScheme(name: String): CustomColorScheme = CustomColorScheme(
+    id = CustomThemeStore.newId(),
+    name = name,
+    light = ThemeColorSet(
+        keyboardBackground = keyboardBgLight.toHexString(),
+        keyBackground = keyBgLight.toHexString(),
+        functionKeyBackground = specialKeyLight.toHexString(),
+        keyText = keyTextColorLight.toHexString(),
+        candidateText = candidateTextColorLight.toHexString(),
+        accent = accentLight.toHexString(),
+    ),
+    dark = ThemeColorSet(
+        keyboardBackground = keyboardBgDark.toHexString(),
+        keyBackground = keyBgDark.toHexString(),
+        functionKeyBackground = specialKeyDark.toHexString(),
+        keyText = keyTextColorDark.toHexString(),
+        candidateText = candidateTextColorDark.toHexString(),
+        accent = accentDark.toHexString(),
+    ),
+)
+
+private fun Color.toHexString(): String =
+    CustomThemeStore.formatHexColor(toArgb().toLong() and 0xFFFFFFFFL)
 
 private fun String.toHexLong(): Long =
     CustomThemeStore.parseHexColor(this) ?: 0xFF000000L

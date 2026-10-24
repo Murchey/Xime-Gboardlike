@@ -99,6 +99,8 @@ data class CandidateBarVisuals(
     val accentColor: Color = Color(0xFF1A73E8),
     val selectedTextColor: Color = Color(0xFF1A73E8),
     val isDarkTheme: Boolean = false,
+    /** 候选注释（拼音/英文）颜色；与主候选同对比度，仅靠字号区分。 */
+    val commentColor: Color = textColor,
 )
 
 data class CandidateBarCallbacks(
@@ -493,6 +495,7 @@ fun CandidateBar(
                                 isSelected = index == 0,
                                 accentColor = visuals.accentColor,
                                 selectedTextColor = visuals.selectedTextColor,
+                                commentColor = visuals.commentColor,
                                 fontSize = candidateTextSize.sp,
                                 candidateFontFamily = candidateFontFamily,
                                 commentFontFamily = commentFontFamily,
@@ -515,6 +518,7 @@ fun CandidateBar(
                             isSelected = assocState?.highlightIndex == index,
                             accentColor = visuals.accentColor,
                             selectedTextColor = visuals.selectedTextColor,
+                            commentColor = visuals.commentColor,
                             fontSize = candidateTextSize.sp,
                             candidateFontFamily = candidateFontFamily,
                             commentFontFamily = commentFontFamily,
@@ -783,6 +787,8 @@ fun CandidateItem(
     isSelected: Boolean = false,
     accentColor: Color = Color(0xFF1A73E8),
     selectedTextColor: Color = Color(0xFF1A73E8),
+    /** 注释（拼音/英文）颜色；缺省回退主候选色。 */
+    commentColor: Color = textColor,
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
     fontSize: androidx.compose.ui.unit.TextUnit = 19.sp,
     candidateFontFamily: androidx.compose.ui.text.font.FontFamily = androidx.compose.ui.text.font.FontFamily.Default,
@@ -821,7 +827,9 @@ fun CandidateItem(
             Spacer(modifier = Modifier.width(3.dp))
             Text(
                 text = comment,
-                color = if (isSelected) selectedTextColor.copy(alpha = 0.6f) else textColor.copy(alpha = 0.5f),
+                // 拼音注释不再用 50% 透明度：浅灰底上会几乎不可见。
+                // 与主候选同对比度，靠更小字号区分层级。
+                color = if (isSelected) selectedTextColor else commentColor,
                 fontSize = (fontSize.value * 11f / 19f).sp,
                 fontWeight = FontWeight.Normal,
                 maxLines = 1,
@@ -873,14 +881,14 @@ private fun Modifier.drawPreeditBubble(
     } else {
         if (isDarkTheme) Color(0xFF2D2F31) else Color(0xFFFAFAFA)
     }
-    // 半透明：62% 不透明度
-    val bubbleBgColor = bubbleBaseColor.copy(alpha = 0.62f)
+    // 92% 不透明度：浅灰背景上仍能形成足够对比，避免拼音编码看不见。
+    val bubbleBgColor = bubbleBaseColor.copy(alpha = 0.92f)
 
     // 文本画笔：与 SwipeBubble 同款 nativeCanvas 绘制方式
     val bubbleTextPaint = remember(textColor, textSizePx) {
         android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             textSize = textSizePx
-            color = textColor.copy(alpha = 0.9f).toArgb()
+            color = textColor.toArgb()
         }
     }
 

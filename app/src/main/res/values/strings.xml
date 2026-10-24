@@ -1104,4 +1104,11 @@
     <string name="s_baohedu">饱和度</string>
     <string name="s_mingdu">明度</string>
     <string name="s_kuaijieyanse">快捷颜色</string>
+    <string name="s_changganqipao">长按气泡</string>
+    <string name="s_changganqipao_chufashijian">触发时间</string>
+    <string name="s_changganqipao_shuoming">按住按键多久后弹出长按候选气泡，默认 250ms。</string>
+    <string name="s_yincanganjianzifu">隐藏按键字符</string>
+    <string name="s_yincanganjianzifu_fu">隐藏字母/数字键面文字，功能键图标与候选栏不受影响。</string>
+    <string name="s_xuanzemoban">选择配色模板</string>
+    <string name="s_xuanzemoban_shuoming">选择一套内置主题作为起点，再调整颜色。</string>
 </resources>

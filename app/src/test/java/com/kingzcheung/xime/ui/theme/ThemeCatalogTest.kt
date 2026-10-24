@@ -1,5 +1,6 @@
 package com.kingzcheung.xime.ui.theme
 
+import androidx.compose.ui.graphics.Color
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -25,5 +26,38 @@ class ThemeCatalogTest {
             .forEach { theme ->
                 assertNotEquals(theme.keyboardBgLight, theme.keyboardBgDark)
             }
+    }
+
+    @Test
+    fun `候选文字与选中文字对背景保持可读对比度`() {
+        KeyboardThemes.themes
+            .filterNot { it.isDynamic }
+            .forEach { theme ->
+                assertTrue(
+                    "${theme.id} 浅色候选文字对比度不足",
+                    KeyboardThemes.contrastRatio(theme.candidateTextColorLight, theme.keyboardBgLight) >= 4.5f
+                )
+                assertTrue(
+                    "${theme.id} 深色候选文字对比度不足",
+                    KeyboardThemes.contrastRatio(theme.candidateTextColorDark, theme.keyboardBgDark) >= 4.5f
+                )
+                assertTrue(
+                    "${theme.id} 浅色选中文字对比度不足",
+                    KeyboardThemes.contrastRatio(theme.candidateSelectedTextColorLight, theme.keyboardBgLight) >= 4.5f
+                )
+                assertTrue(
+                    "${theme.id} 深色选中文字对比度不足",
+                    KeyboardThemes.contrastRatio(theme.candidateSelectedTextColorDark, theme.keyboardBgDark) >= 4.5f
+                )
+            }
+    }
+
+    @Test
+    fun `内置主题功能键取主题色调而不是统一灰`() {
+        val wechat = KeyboardThemes.getThemeById("wechat")
+        assertNotEquals(Color(0xFFE8EAED), wechat.specialKeyLight)
+        assertNotEquals(Color(0xFFE8EAED), wechat.specialKeyDark)
+        val gboard = KeyboardThemes.getThemeById("gboard_gray")
+        assertNotEquals(Color(0xFFE8EAED), gboard.specialKeyLight)
     }
 }
