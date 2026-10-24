@@ -206,20 +206,20 @@ fun AboutContent(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = tr(R.string.s_xima_xime),
+                            text = "xime-Gboardlike",
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = tr(R.string.s_jiyurime_goujian_zhichiwubi_pi_a444c),
+                            text = "基于 xime 3.3.0 的 Gboard 风格分支",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = tr(R.string.s_banben, AppInfo.versionName, AppInfo.versionCode),
+                            text = "版本 1.0.0（基于 xime 3.3.0）",
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -275,7 +275,7 @@ fun AboutContent(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { uriHandler.openUri("https://github.com/kingzcheung") },
+                                .clickable { uriHandler.openUri("https://github.com/Murchey") },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
@@ -286,12 +286,12 @@ fun AboutContent(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Kor1 (kingzcheung)",
+                                    text = "Murchey",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = "github.com/kingzcheung",
+                                    text = "github.com/Murchey",
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
