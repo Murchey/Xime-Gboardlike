@@ -12,12 +12,32 @@
     alt="Get it on F-Droid"
     height="80">](https://f-droid.org/packages/com.kingzcheung.xime)
 
+<sub>此 F-Droid 徽章指向原项目 Xime；本分支需自行构建。</sub>
+
 
 [Xime 输入法 (Windows 版)](https://github.com/ximeiorg/XimeYao) | [Xime 输入法 (Linux 版)](https://github.com/ximeiorg/XimeChe) | [联想词预测模型](https://github.com/ximeiorg/predictive-text) | [手写输入法模型](https://github.com/ximeiorg/ochwpro)
 
 一款基于 <a href="https://rime.im/">Rime</a> 引擎构建的 Android 五笔/拼音输入法，专注于简洁高效的中文输入体验。
 
-如果你觉得 UI 或者功能不符合你的要求，你可以直接 fork 一份自行修改。
+## 关于本分支
+
+> **这是个人分支：[Xime-Gboardlike](https://github.com/Murchey/Xime-Gboardlike)，基于 Kingz Cheung 与贡献者维护的原项目 [Xime](https://github.com/ximeiorg/Xime)。本分支不是上游项目，也不代表原作者。**
+
+**设计理念。** 本分支围绕 **Gboard** 与 **fcitx5-android** 的使用习惯做改造：候选栏更安静、更宽松；采用 Gboard 风格主题色；字体与个性化入口更直接；剪贴板保留策略更实用；同时保持对个人安装友好的构建方式。目标是和社区一起打造一款现代化、可定制、支持插件的优秀输入法，而不是取代上游的设计。
+
+**本分支的修改（在上游基础上）：**
+
+- 字体选择：系统默认 / 内置字体 / 已导入字体，一次选择全局生效。
+- Gboard 风格主题色，以及支持 JSON 导入导出的个性化调色面板。
+- Gboard 风格候选栏：更宽的候选格、竖向分隔线、更多候选下箭头；编码注释默认关闭。
+- 剪贴板自动清理支持 1 小时到 90 天，保留条数支持手动输入，并兼容旧版按天设置。
+- 提供公共打包密钥与 `build_apk.bat`，便于生成按 ABI 分开的已签名个人安装包。
+
+**尊重原作者的代码与劳动。** Rime 引擎接入、插件体系、整体架构、文档以及绝大部分代码，均来自 **Kingz Cheung 与 Xime 贡献者**。本分支只在其成果之上做增量修改，并沿用 **GPLv3** 许可证；原项目的全部荣誉归原作者及贡献者所有。上游才是项目的源头：如果你希望使用原始行为、官方发布或官方支持，请使用 [ximeiorg/Xime](https://github.com/ximeiorg/Xime)。
+
+**为什么公开打包密钥？** 单一构建产物不可能完全符合所有人的审美、习惯和设备环境。公开社区 keystore（密码同样放在 `app/keystore.properties`），是为了让任何人都能 fork 本项目、按自己的喜好修改，并直接打出可安装、签名一致的 APK，而不必等待维护者。该密钥**仅用于个人侧载构建**，不要用于应用商店发布，也不要用来冒充上游项目；正式对外发布请替换为你自己的密钥。
+
+**如果不适合你？** 本仓库只是对 Gboard / fcitx5-android 风格个性化的一次尝试。如果你的习惯与本分支不同，**推荐直接使用原仓库项目**。
 
 ---
 
@@ -66,7 +86,7 @@
 - **滑动手势** - 光标移动、删除、符号输入等滑动手势操作
 - **剪贴板管理** - 剪贴板历史记录，支持快捷发送和置顶
 - **剪贴板同步** - 通过插件与远端设备双向同步剪贴板（WebDAV、ximed 等）
-- **候选词编码提示** - 候选词显示五笔编码，辅助学习
+- **候选词编码提示** - 候选词可显示五笔编码，辅助学习（默认关闭，可在「布局与显示」开启）
 - **字根显示** - 下滑按钮显示五笔字根，方便健忘用户
 - **实体键盘支持** - 连接物理/蓝牙键盘时显示浮动候选栏
 - **WebDAV 同步** - 通过 WebDAV 备份和恢复方案与配置
@@ -101,7 +121,7 @@
 
 ### 从 Release 下载
 
-1. 在 [Releases](https://github.com/ximeiorg/Xime/releases) 页面下载最新版本的 APK
+1. 在 [本分支 Releases](https://github.com/Murchey/Xime-Gboardlike/releases) 页面下载最新版本的 APK（也可以使用 [上游 Releases](https://github.com/ximeiorg/Xime/releases)）
 2. 安装应用
 3. 在系统设置中启用 Xime 输入法
 4. 将 Xime 设为当前输入法
@@ -129,15 +149,29 @@
 ## 构建
 
 ```bash
-# 克隆项目（包含子模块）
-git clone --recursive https://github.com/ximeiorg/Xime.git
+# 克隆本分支（包含子模块）
+git clone --recursive https://github.com/Murchey/Xime-Gboardlike.git
 
 # 或者在已克隆的项目中初始化子模块
 git submodule update --init --recursive
 
-# 构建 Release APK
+# 使用仓库内公共证书构建 Release APK
 ./gradlew assembleRelease
 ```
+
+### 个人签名打包
+
+本分支随仓库提供公共社区证书（`app/xime-gboard.jks` + `app/keystore.properties`），无需额外配置即可生成可安装、签名一致的 APK。
+
+Windows 下在仓库根目录运行 `build_apk.bat`，会生成按 ABI 分开的已签名 release APK，并复制到 `dist/`：
+
+```bat
+build_apk.bat
+```
+
+如需对外正式发布，请替换为你自己的密钥。
+
+> 构建中间产物（`app/build/`、`app/.cxx/`）可能达到数 GB；它们是生成文件而非源码，打包完成后可以安全删除。
 
 ## 技术栈
 
