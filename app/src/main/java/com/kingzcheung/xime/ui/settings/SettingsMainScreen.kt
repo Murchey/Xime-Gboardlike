@@ -79,6 +79,7 @@ fun SettingsMainContent(
     onNavigateToSchema: () -> Unit,
     onNavigateToMarket: () -> Unit = {},
     onNavigateToTheme: () -> Unit,
+    onNavigateToFont: () -> Unit = {},
     onNavigateToKeyEffect: () -> Unit,
     onNavigateToLayoutDisplay: () -> Unit,
     onNavigateToDictionary: () -> Unit,
@@ -225,6 +226,18 @@ fun SettingsMainContent(
                         title = tr(R.string.s_zhutiyudingzhi),
                         subtitle = tr(R.string.s_zidingyiwaiguanheyangshi),
                         onClick = onNavigateToTheme,
+                        showArrow = true
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 56.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsItem(
+                        icon = Icons.TwoTone.TypeSpecimen,
+                        title = tr(R.string.s_zitiguanli),
+                        subtitle = tr(R.string.s_ziti_guanli_fu),
+                        onClick = onNavigateToFont,
                         showArrow = true
                     )
                     HorizontalDivider(
