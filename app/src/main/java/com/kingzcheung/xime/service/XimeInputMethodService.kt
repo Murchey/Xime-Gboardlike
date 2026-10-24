@@ -562,9 +562,17 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         }
         // 边距按当前屏宽收紧：横竖屏/折叠屏切换后旧值可能超出上限（键盘会收到负宽）
         val maxMargin = KeyboardResizeBounds.maxHorizontalMarginDp(screenW)
+        val darkMode = SettingsPreferences.getDarkMode(this)
+        val isDarkNow = when (darkMode) {
+            1 -> true
+            0 -> false
+            else -> (resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
         uiState.value = uiState.value.copy(
-            darkMode = SettingsPreferences.getDarkMode(this),
-            themeId = SettingsPreferences.getKeyboardTheme(this),
+            darkMode = darkMode,
+            themeId = SettingsPreferences.getKeyboardThemeForMode(this, isDarkNow),
             isSttEnabled = SettingsPreferences.isSttEnabled(this@XimeInputMethodService),
             keyboardHeightDp = SettingsPreferences.getKeyboardHeightDp(this, isLandscape),
             keyboardBottomPaddingDp = SettingsPreferences.getKeyboardBottomPaddingDp(this),
@@ -585,7 +593,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val prefs = SettingsPreferences.getPrefsPublic(this)
         sharedPrefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             when (key) {
-                "dark_mode", "keyboard_theme", "show_bottom_buttons", "keyboard_height_dp", "keyboard_bottom_padding_dp", "keyboard_flush_bottom" -> {
+                "dark_mode", "keyboard_theme_light", "keyboard_theme_dark", "show_bottom_buttons", "keyboard_height_dp", "keyboard_bottom_padding_dp", "keyboard_flush_bottom" -> {
                     loadDarkModePreference()
                     applyWindowBackground()
                 }

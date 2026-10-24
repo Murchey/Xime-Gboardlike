@@ -55,7 +55,7 @@ fun VoiceKeyboardLayout(
     keyboardBackgroundColor: Color,
     modifier: Modifier = Modifier,
     isDarkTheme: Boolean = false,
-    themeId: String = "ocean_blue",
+    themeId: String = "gboard_gray",
     bottomActive: Boolean = false,
     leftActive: Boolean = false,
     rightActive: Boolean = false,

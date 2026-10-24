@@ -29,7 +29,10 @@ object SettingsPreferences {
     private const val KEY_SOUND_VOLUME = "sound_volume"
     private const val KEY_VIBRATION_ENABLED = "vibration_enabled"
     private const val KEY_VIBRATION_INTENSITY = "vibration_intensity"
-    private const val KEY_KEYBOARD_THEME = "keyboard_theme"
+    private const val KEY_KEYBOARD_THEME_LIGHT = "keyboard_theme_light"
+    private const val KEY_KEYBOARD_THEME_DARK = "keyboard_theme_dark"
+    /** 旧版单主题键，仅用于迁移。 */
+    private const val KEY_KEYBOARD_THEME_LEGACY = "keyboard_theme"
     
     const val KEY_SMART_PREDICTION_ENABLED = "smart_prediction_enabled"
     private const val KEY_PREDICTION_MODEL_REPO = "prediction_model_repo"
@@ -43,9 +46,13 @@ object SettingsPreferences {
     const val KEY_STT_KEEP_ENGINE_ALIVE = "stt_keep_engine_alive"
     const val KEY_STT_DEBUG_RECORD = "stt_debug_record"
     
-    /** 默认主题 ID，可从 xime.yaml 的 style.color_scheme 初始化。 */
+    /** 默认浅色主题 ID，可从 xime.yaml 的 style.color_scheme 初始化。 */
     @JvmStatic
-    var defaultKeyboardTheme: String = "gboard"
+    var defaultKeyboardTheme: String = "gboard_gray"
+
+    /** 默认深色主题 ID，可从 xime.yaml 的 style.color_scheme 初始化。 */
+    @JvmStatic
+    var defaultDarkKeyboardTheme: String = "gboard_black"
 
     /** 默认显示模式，可从 xime.yaml 的 style.dark_mode 初始化。 */
     @JvmStatic
@@ -399,12 +406,36 @@ object SettingsPreferences {
         getPrefs(context).edit().putInt(KEY_VIBRATION_LONG_PRESS_AMPLITUDE, amplitude).apply()
     }
 
-    fun getKeyboardTheme(context: Context): String {
-        return getPrefs(context).getString(KEY_KEYBOARD_THEME, defaultKeyboardTheme) ?: defaultKeyboardTheme
+    /**
+     * 指定深/浅模式当前使用的主题 ID。
+     *
+     * 新配置按模式分别存储；首次读取时回退到旧版单主题键，再回退到 xime.yaml 默认值。
+     */
+    fun getKeyboardThemeForMode(context: Context, isDark: Boolean): String {
+        val prefs = getPrefs(context)
+        val key = if (isDark) KEY_KEYBOARD_THEME_DARK else KEY_KEYBOARD_THEME_LIGHT
+        prefs.getString(key, null)?.let { return it }
+        val fallback = if (isDark) defaultDarkKeyboardTheme else defaultKeyboardTheme
+        val migrated = prefs.getString(KEY_KEYBOARD_THEME_LEGACY, null) ?: fallback
+        prefs.edit().putString(key, migrated).apply()
+        return migrated
     }
-    
+
+    fun setKeyboardThemeForMode(context: Context, isDark: Boolean, themeId: String) {
+        val key = if (isDark) KEY_KEYBOARD_THEME_DARK else KEY_KEYBOARD_THEME_LIGHT
+        getPrefs(context).edit().putString(key, themeId).apply()
+    }
+
+    /** 兼容旧调用：读取浅色主题。 */
+    fun getKeyboardTheme(context: Context): String =
+        getKeyboardThemeForMode(context, isDark = false)
+
+    /** 兼容旧调用：同时写入深/浅两套主题（自定义调色方案含两套色板时使用）。 */
     fun setKeyboardTheme(context: Context, themeId: String) {
-        getPrefs(context).edit().putString(KEY_KEYBOARD_THEME, themeId).apply()
+        getPrefs(context).edit()
+            .putString(KEY_KEYBOARD_THEME_LIGHT, themeId)
+            .putString(KEY_KEYBOARD_THEME_DARK, themeId)
+            .apply()
     }
 
     

@@ -28,7 +28,7 @@ An Android input method built on the [Rime](https://rime.im/) engine, designed f
 **Changes in this fork (on top of upstream):**
 
 - Font picker: system default / bundled font / imported fonts, applied globally.
-- Gboard-inspired theme colors plus a personalization color panel with JSON import/export.
+- A curated modern theme set — WeChat, QQ, Telegram, X, GitHub, ChatGPT, Gboard Gray, Gboard Black, and Claude — with light/dark palettes and independent light/dark selection, plus a personalization color panel with JSON import/export.
 - Gboard-style candidate bar: wider cells, vertical separators, down-chevron for more candidates; candidate code hints are off by default.
 - Clipboard retention from 1 hour up to 90 days, manual history-size input, and migration from the old day-based setting.
 - A public signing key and `build_apk.bat` for signed, ABI-split personal builds.
