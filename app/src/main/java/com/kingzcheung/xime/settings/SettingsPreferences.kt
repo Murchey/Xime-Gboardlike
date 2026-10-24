@@ -45,7 +45,7 @@ object SettingsPreferences {
     
     /** 默认主题 ID，可从 xime.yaml 的 style.color_scheme 初始化。 */
     @JvmStatic
-    var defaultKeyboardTheme: String = "lavender_purple"
+    var defaultKeyboardTheme: String = "gboard"
 
     /** 默认显示模式，可从 xime.yaml 的 style.dark_mode 初始化。 */
     @JvmStatic
@@ -874,13 +874,21 @@ object SettingsPreferences {
     // ── 剪贴板保留策略（条数上限 + 自动过期） ─────────────────────
 
     private const val KEY_CLIPBOARD_MAX_ITEMS = "clipboard_max_items"
-    private const val KEY_CLIPBOARD_RETENTION_DAYS = "clipboard_retention_days"
+    private const val KEY_CLIPBOARD_RETENTION_MINUTES = "clipboard_retention_minutes"
 
-    /** 条数上限可选区间（滑块与读取校验共用）。 */
+    /** 旧版按天存储的键，仅用于迁移。 */
+    private const val KEY_CLIPBOARD_RETENTION_DAYS_LEGACY = "clipboard_retention_days"
+
+    /** 条数上限可选区间（滑块与手动输入校验共用）。 */
     val CLIPBOARD_MAX_ITEMS_RANGE = 50..2000
 
-    /** 自动清理天数候选，0 = 不自动删除。 */
-    val CLIPBOARD_RETENTION_DAY_OPTIONS = listOf(0, 1, 7, 30, 90)
+    /**
+     * 自动清理时间候选（分钟），0 = 不自动删除。
+     * 对齐 Gboard 剪贴板的短周期选项：1/3/6/12 小时，外加 1/3/7/30/90 天。
+     */
+    val CLIPBOARD_RETENTION_MINUTE_OPTIONS = listOf(
+        0, 60, 180, 360, 720, 1440, 4320, 10080, 43200, 129600,
+    )
 
     /** 文字/图片历史最多保留条数（不含置顶与快捷发送条目），默认 1000。 */
     fun getClipboardMaxItems(context: Context): Int {
@@ -895,15 +903,37 @@ object SettingsPreferences {
             .apply()
     }
 
-    /** 超过多少天自动删除（0 = 永不），默认 0。 */
-    fun getClipboardRetentionDays(context: Context): Int {
-        val value = getPrefs(context).getInt(KEY_CLIPBOARD_RETENTION_DAYS, 0)
-        return if (value in CLIPBOARD_RETENTION_DAY_OPTIONS) value else 0
+    /** 超过多少分钟自动删除（0 = 永不），默认 0；旧版按天的设置自动迁移。 */
+    fun getClipboardRetentionMinutes(context: Context): Int {
+        val prefs = getPrefs(context)
+        if (prefs.contains(KEY_CLIPBOARD_RETENTION_MINUTES)) {
+            val value = prefs.getInt(KEY_CLIPBOARD_RETENTION_MINUTES, 0)
+            return if (value in CLIPBOARD_RETENTION_MINUTE_OPTIONS) value else 0
+        }
+        val legacyDays = prefs.getInt(KEY_CLIPBOARD_RETENTION_DAYS_LEGACY, 0)
+        val migrated = legacyRetentionDaysToMinutes(legacyDays)
+        prefs.edit()
+            .putInt(KEY_CLIPBOARD_RETENTION_MINUTES, migrated)
+            .remove(KEY_CLIPBOARD_RETENTION_DAYS_LEGACY)
+            .apply()
+        return migrated
     }
 
-    fun setClipboardRetentionDays(context: Context, days: Int) {
-        val normalized = if (days in CLIPBOARD_RETENTION_DAY_OPTIONS) days else 0
-        getPrefs(context).edit().putInt(KEY_CLIPBOARD_RETENTION_DAYS, normalized).apply()
+    fun setClipboardRetentionMinutes(context: Context, minutes: Int) {
+        val normalized = if (minutes in CLIPBOARD_RETENTION_MINUTE_OPTIONS) minutes else 0
+        getPrefs(context).edit()
+            .putInt(KEY_CLIPBOARD_RETENTION_MINUTES, normalized)
+            .remove(KEY_CLIPBOARD_RETENTION_DAYS_LEGACY)
+            .apply()
+    }
+
+    /** 旧版天值 → 分钟；未识别的值按「不清理」处理。 */
+    internal fun legacyRetentionDaysToMinutes(days: Int): Int = when (days) {
+        1 -> 1440
+        7 -> 10080
+        30 -> 43200
+        90 -> 129600
+        else -> 0
     }
 
     const val KEY_BACKUP_PLUGIN_ID = "backup_plugin_id"

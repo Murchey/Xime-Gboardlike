@@ -545,21 +545,21 @@ class ClipboardManager private constructor(private val context: Context) {
     }
 
     /**
-     * 按「自动清理天数」删除过期条目（置顶与快捷发送不参与）。
+     * 按「自动清理时间」删除过期条目（置顶与快捷发送不参与）。
      *
      * 触发时机：进程启动、设置里改完保留策略、以及打开剪贴板面板时。
      * 图片条目被删后其磁盘文件由 [deleteEntriesAndFiles] 一并回收。
      */
     fun purgeExpired(now: Long = System.currentTimeMillis()) {
-        val days = SettingsPreferences.getClipboardRetentionDays(context)
-        if (days <= 0) return
+        val minutes = SettingsPreferences.getClipboardRetentionMinutes(context)
+        if (minutes <= 0) return
         scope.launch {
             runCatching {
-                val cutoff = now - days * 24L * 60L * 60L * 1000L
+                val cutoff = now - minutes * 60_000L
                 val expired = dao.findExpired(cutoff)
                 if (expired.isNotEmpty()) {
                     deleteEntriesAndFiles(expired.map { it.id })
-                    Log.d(TAG, "purged ${expired.size} expired clipboard entries (>${days}d)")
+                    Log.d(TAG, "purged ${expired.size} expired clipboard entries (>${minutes}min)")
                 }
             }.onFailure { Log.w(TAG, "purgeExpired failed", it) }
         }

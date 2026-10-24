@@ -442,6 +442,9 @@ data class ColorSchemeEntry(
     val name: String = "",
     @SerialName("primary_color")
     val primaryColor: Long = 0,
+    /** 深色强调色；未配置时沿用 primary_color 提亮后的派生值。 */
+    @SerialName("primary_color_dark")
+    val primaryColorDark: Long = 0,
     @SerialName("keyboard_bg_color")
     val keyboardBgColor: Long? = null,
     @SerialName("key_bg_color")
@@ -2171,6 +2174,7 @@ object KeysConfigHelper {
             result[id] = base.copy(
                 name = customEntry.name.ifEmpty { base.name },
                 primaryColor = customEntry.primaryColor.takeIf { it != 0L } ?: base.primaryColor,
+                primaryColorDark = customEntry.primaryColorDark.takeIf { it != 0L } ?: base.primaryColorDark,
                 keyboardBgColor = customEntry.keyboardBgColor ?: base.keyboardBgColor,
                 keyBgColor = customEntry.keyBgColor ?: base.keyBgColor,
                 keyBgColorDark = customEntry.keyBgColorDark ?: base.keyBgColorDark,

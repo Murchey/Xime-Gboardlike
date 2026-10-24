@@ -195,10 +195,13 @@ private fun PageIndicator(
 }
 
 @Composable
-private fun ThemeKeyboardPreview(
+internal fun ThemeKeyboardPreview(
     theme: KeyboardColorScheme,
     isDark: Boolean,
     modifier: Modifier = Modifier,
+    keyColorOverride: Color? = null,
+    candidateTextColorOverride: Color? = null,
+    selectedTextColorOverride: Color? = null,
 ) {
     val bgColor = if (isDark) theme.keyboardBgDark else theme.keyboardBgLight
     val accent = if (isDark) theme.accentDark else theme.accentLight
@@ -207,12 +210,14 @@ private fun ThemeKeyboardPreview(
 
     val kbColors = KeysConfigHelper.getKeyboardColors()
     val longToColor: (Long) -> Color = { if (it > 0xFFFFFF) Color(it) else Color(0xFF000000 or it) }
-    val keyColor = KeyboardThemes.getKeyBgColorOverride(theme.id, isDark)
+    val keyColor = keyColorOverride ?: KeyboardThemes.getKeyBgColorOverride(theme.id, isDark)
         ?: if (isDark) longToColor(kbColors.keyBgColorDark) else longToColor(kbColors.keyBgColor)
-    val candidateTextColor = KeyboardThemes.getCandidateTextColorOverride(theme.id, isDark)
+    val candidateTextColor = candidateTextColorOverride
+        ?: KeyboardThemes.getCandidateTextColorOverride(theme.id, isDark)
         ?: if (isDark) longToColor(kbColors.candidateTextColorDark)
         else longToColor(kbColors.candidateTextColor)
-    val selectedTextColor = KeyboardThemes.getCandidateSelectedTextColorOverride(theme.id, isDark)
+    val selectedTextColor = selectedTextColorOverride
+        ?: KeyboardThemes.getCandidateSelectedTextColorOverride(theme.id, isDark)
         ?: if (isDark) theme.candidateSelectedTextColorDark else theme.candidateSelectedTextColorLight
     // 与实机键盘同一条取色逻辑（亮度自适应），保证预览所见即所得
     val specialTextColor = KeyboardThemes.getSpecialKeyTextColorForBackground(
