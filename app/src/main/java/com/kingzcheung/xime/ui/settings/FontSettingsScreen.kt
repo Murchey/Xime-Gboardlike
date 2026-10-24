@@ -134,7 +134,7 @@ fun FontSettingsContent(onBack: () -> Unit) {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = if (currentPath.isBlank()) tr(R.string.s_xitongmoren)
+                                text = if (currentPath.isBlank()) tr(R.string.s_neizhiziti)
                                 else FontImporter.displayName(currentPath),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface

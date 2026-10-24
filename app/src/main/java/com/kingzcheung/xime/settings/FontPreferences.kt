@@ -1,6 +1,7 @@
 package com.kingzcheung.xime.settings
 
 import android.content.Context
+import com.kingzcheung.xime.ui.keyboard.AppFonts
 
 /** 字体槽位：四类键盘字体 + 全局界面字体。 */
 enum class FontSlot(val prefKey: String) {
@@ -49,15 +50,15 @@ object FontPreferences {
 
     /** 把用户选择叠加到 YAML 解析出的字体配置上（用户值优先）。 */
     fun applyOverrides(context: Context, base: KeyboardFontConfig): KeyboardFontConfig {
-        fun pick(slot: FontSlot, fallback: String): String =
-            get(context, slot).ifBlank { fallback }
+        // 未选字体时统一用内置字体（思源 + Google Sans），不再回退系统字体/YAML 配置
+        fun pick(slot: FontSlot): String = get(context, slot).ifBlank { AppFonts.BUILTIN_SENTINEL }
 
         return base.copy(
-            keyFont = pick(FontSlot.KEY, base.keyFont),
-            keyLabelFont = pick(FontSlot.KEY_LABEL, base.keyLabelFont),
-            candidateFont = pick(FontSlot.CANDIDATE, base.candidateFont),
-            commentFont = pick(FontSlot.COMMENT, base.commentFont),
-            uiFont = get(context, FontSlot.UI),
+            keyFont = pick(FontSlot.KEY),
+            keyLabelFont = pick(FontSlot.KEY_LABEL),
+            candidateFont = pick(FontSlot.CANDIDATE),
+            commentFont = pick(FontSlot.COMMENT),
+            uiFont = pick(FontSlot.UI),
         )
     }
 }
