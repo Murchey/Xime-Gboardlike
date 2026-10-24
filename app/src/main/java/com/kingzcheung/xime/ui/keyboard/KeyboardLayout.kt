@@ -43,6 +43,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -117,6 +118,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.TextUnit
 
+/** 字母键上方符号提示开关；由键盘根层订阅设置变化，切换后立即生效。 */
+internal val LocalShowLetterHintSymbols = staticCompositionLocalOf { true }
 
 /**
  * shift 视觉延迟：按下 shift 后延迟 [delayMillis] 再点亮键面（快速连按不闪烁），松开立即熄灭。
@@ -191,6 +194,9 @@ fun KeyboardLayout(
     var landscapeSplitKeyboardEnabled by remember {
         mutableStateOf(SettingsPreferences.isLandscapeSplitKeyboardEnabled(context))
     }
+    var showLetterHintSymbols by remember {
+        mutableStateOf(SettingsPreferences.showLetterHintSymbols(context))
+    }
 
     // 监听设置变化
     DisposableEffect(context) {
@@ -201,6 +207,8 @@ fun KeyboardLayout(
                     SettingsPreferences.KEY_LANDSCAPE_SPLIT_KEYBOARD_ENABLED ->
                         landscapeSplitKeyboardEnabled =
                             SettingsPreferences.isLandscapeSplitKeyboardEnabled(context)
+                    "show_letter_hint_symbols" ->
+                        showLetterHintSymbols = SettingsPreferences.showLetterHintSymbols(context)
                 }
             }
         prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -256,6 +264,7 @@ fun KeyboardLayout(
     val qwertyCornerRadius = keyCornerRadiusFor(kbKey, "qwerty", tabletParams)
 
     CompositionLocalProvider(
+        LocalShowLetterHintSymbols provides showLetterHintSymbols,
         LocalKeyCornerRadius provides qwertyCornerRadius,
         // 键面提示档与主键盘同一规则（退格的「清空」等提示的放大倍率与画法）
         LocalSwipeHintCorner provides swipeHintCornerFor(isLandscape, tabletParams),
@@ -1573,6 +1582,15 @@ private fun EarthCell(env: QwertyRowEnv, modifier: Modifier) {
     val k4LongPressGestureMap = if (k4LongPressDisplay == DisplayMode.BUBBLE) {
         k4LongPressConfig?.let { KeysConfigHelper.longPressActionMap(it) }
     } else null
+    // 单项 bubble:false 的长按（如地球键直接弹出输入法选择器）不画气泡，直接执行。
+    val k4DirectLongPress: (() -> Unit)? = k4LongPressConfig?.values
+        ?.singleOrNull()
+        ?.takeIf { !it.bubble }
+        ?.let { action ->
+            {
+                invokeKeyAction(action, env.onKeyPress, env.onCommitText, env.onGestureAction)
+            }
+        }
     val k4OnClick: () -> Unit = remember(k4TapAction, k4TapValue, env.onKeyPress, env.onGestureAction) {
         {
             if (k4TapAction != null && k4TapAction != GestureAction.COMMIT && k4TapAction != GestureAction.SEND_RIME) {
@@ -1623,6 +1641,9 @@ private fun EarthCell(env: QwertyRowEnv, modifier: Modifier) {
             onSwipeRight = k4Gestures.onRight,
             onPress = { env.onKeyPressDown?.invoke(k4TapValue) },
             onRelease = { env.onKeyRelease?.invoke(k4TapValue) },
+            onLongClick = k4DirectLongPress,
+            // 地球长按只弹一次输入法选择器，不连发。
+            repeatLongPress = false,
             shadowEnabled = env.shadowEnabled,
             shadowElevation = env.shadowElevation,
             shadowShapeRadius = env.shadowShapeRadius,
@@ -1781,6 +1802,7 @@ fun KeyboardRowWithConfig(
     ) {
         val context = LocalContext.current
     val hideKeyLabels = SettingsPreferences.isKeyLabelsHidden(context)
+    val showLetterHintSymbols = LocalShowLetterHintSymbols.current
     keys.forEachIndexed { index, key ->
             val rawSwipeUpLabel = KeysConfigHelper.getSwipeUpLabel(key, isAsciiMode)
             val swipeUpAction = KeysConfigHelper.getSwipeUpAction(key, isAsciiMode)
@@ -1829,6 +1851,9 @@ fun KeyboardRowWithConfig(
             }
             // 隐藏键面字符：只影响字符键主标签，功能键图标/回车图标不受影响。
             val hideMainLabel = hideKeyLabels && key.any { it.isLetterOrDigit() }
+            // 只隐藏字母键上方的符号角标；数字行、功能键不受这个开关影响。
+            val hideLetterCornerHint = key.length == 1 && key[0].isLetter() && !showLetterHintSymbols
+            val hideCornerHint = hideMainLabel || hideLetterCornerHint
             val displayText = if (hideMainLabel) "" else rawDisplayText
 
             // tap 动作接线：非 COMMIT/SEND_RIME 的动作（复制/粘贴/面板切换等）走手势分发，
@@ -1902,7 +1927,7 @@ fun KeyboardRowWithConfig(
                     modifier = Modifier.weight(keyWidths?.getOrNull(index) ?: 1f),
                     swipeText = swipeUpText,
                     swipeDownText = swipeDownText,
-                    swipeUpKeyLabel = if (hideMainLabel) "" else (longPressCornerLabel ?: swipeUpKeyLabel),
+                    swipeUpKeyLabel = if (hideCornerHint) "" else (longPressCornerLabel ?: swipeUpKeyLabel),
                     swipeDownKeyLabel = if (hideMainLabel) "" else swipeDownKeyLabel,
                     onSwipe = onSwipeUp,
                     onSwipeDown = onSwipeDown,
@@ -1932,7 +1957,7 @@ fun KeyboardRowWithConfig(
                 a11yDescription = rawDisplayText.takeIf { hideMainLabel },
                 swipeText = swipeUpText,
                 swipeDownText = swipeDownText,
-                swipeUpKeyLabel = if (hideMainLabel) "" else (longPressCornerLabel ?: swipeUpKeyLabel),
+                swipeUpKeyLabel = if (hideCornerHint) "" else (longPressCornerLabel ?: swipeUpKeyLabel),
                 swipeDownKeyLabel = if (hideMainLabel) "" else swipeDownKeyLabel,
                 onSwipe = onSwipeUp,
                 onSwipeDown = onSwipeDown,

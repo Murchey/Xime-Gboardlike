@@ -1109,6 +1109,8 @@
     <string name="s_changganqipao_shuoming">按住按键多久后弹出长按候选气泡，默认 250ms。</string>
     <string name="s_yincanganjianzifu">隐藏按键字符</string>
     <string name="s_yincanganjianzifu_fu">隐藏字母/数字键面文字，功能键图标与候选栏不受影响。</string>
+    <string name="s_xianshizimujianfushangfangdefuhao">显示字母按键上方的符号</string>
+    <string name="s_xianshizimujianfushangfangdefuhao_fu">在字母键右上角显示长按/上滑的符号提示；关闭后键面更简洁。</string>
     <string name="s_xuanzemoban">选择配色模板</string>
     <string name="s_xuanzemoban_shuoming">选择一套内置主题作为起点，再调整颜色。</string>
 </resources>

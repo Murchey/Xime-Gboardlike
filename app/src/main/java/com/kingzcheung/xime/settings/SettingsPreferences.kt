@@ -365,6 +365,9 @@ object SettingsPreferences {
     /** 隐藏主键盘字符键的键面文字（功能键图标不受影响）。 */
     private const val KEY_HIDE_KEY_LABELS = "hide_key_labels"
 
+    /** 在字母键右上角显示长按/上滑符号提示（默认显示）。 */
+    private const val KEY_SHOW_LETTER_HINT_SYMBOLS = "show_letter_hint_symbols"
+
     fun getHapticMode(context: Context): String {
         return getPrefs(context).getString(KEY_HAPTIC_MODE, "following_system") ?: "following_system"
     }
@@ -428,6 +431,13 @@ object SettingsPreferences {
 
     fun setKeyLabelsHidden(context: Context, hidden: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_HIDE_KEY_LABELS, hidden).apply()
+    }
+
+    fun showLetterHintSymbols(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_SHOW_LETTER_HINT_SYMBOLS, true)
+
+    fun setShowLetterHintSymbols(context: Context, show: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_SHOW_LETTER_HINT_SYMBOLS, show).apply()
     }
 
     /**

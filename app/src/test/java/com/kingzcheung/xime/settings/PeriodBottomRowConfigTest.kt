@@ -2,6 +2,7 @@ package com.kingzcheung.xime.settings
 
 import com.kingzcheung.xime.keyboard.GestureAction
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Test
 import java.io.File
@@ -60,6 +61,17 @@ class PeriodBottomRowConfigTest {
                 values.map { it.action },
             )
             assertEquals("emoji", values[0].value)
+        }
+    }
+
+    @Test
+    fun `地球长按直接弹输入法选择器且不显示气泡`() {
+        for (section in listOf("qwerty", "qwerty_en")) {
+            val values = keys(section)["earth"]!!.longPress!!.values
+            assertEquals(1, values.size)
+            assertEquals(GestureAction.COMMAND, values[0].action)
+            assertEquals("show_ime_picker", values[0].value)
+            assertFalse("地球长按不应再显示文字气泡", values[0].bubble)
         }
     }
 

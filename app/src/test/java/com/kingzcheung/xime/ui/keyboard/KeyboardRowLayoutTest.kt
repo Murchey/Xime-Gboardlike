@@ -140,8 +140,8 @@ class KeyboardRowLayoutTest {
 
     @Test
     fun `按键描边替代底部阴影且深浅键自动取反色`() {
-        assertEquals(Color.Black.copy(alpha = 0.16f), keyOutlineColor(Color.White))
-        assertEquals(Color.White.copy(alpha = 0.16f), keyOutlineColor(Color(0xFF1F1F1F)))
+        assertEquals(Color.Black.copy(alpha = 0.10f), keyOutlineColor(Color.White))
+        assertEquals(Color.White.copy(alpha = 0.10f), keyOutlineColor(Color(0xFF1F1F1F)))
     }
 
     // ── 横向滑动接管（左右滑 vs 父层光标手势）──
