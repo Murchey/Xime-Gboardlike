@@ -29,7 +29,7 @@ jobs:
 
             // 各表单的必填项 label（与 .github/ISSUE_TEMPLATE/*.yml 保持同步）
             const REQUIRED_BY_LABEL = {
-              bug: ['问题描述', '复现步骤', '期望行为', '实际行为', 'Xime 版本', '设备与系统版本', '输入方案与键盘布局'],
+              bug: ['问题描述', '复现步骤', '期望行为', '实际行为', 'XimeGboard 版本', '设备与系统版本', '输入方案与键盘布局'],
               enhancement: ['功能描述', '使用场景'],
             };
             // 敷衍回答判定：空串 / GitHub 默认占位 / 常见无意义填法
