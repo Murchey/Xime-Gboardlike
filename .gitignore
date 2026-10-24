@@ -23,6 +23,9 @@ node_modules
 keystore-base64.txt
 PROGRESS.md
 DECISIONS.md
+# 实施计划与验证截图（本地留存，不进仓库）
+/docs/PLAN*.md
+/docs/plan-screenshots/
 # librime and its dependencies
 app/src/main/jni/librime/
 app/src/main/jni/snappy/
