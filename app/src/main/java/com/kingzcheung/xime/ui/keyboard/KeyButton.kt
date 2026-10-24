@@ -135,6 +135,8 @@ data class SwipeState(
     val charInfos: List<CharInfo> = emptyList(),
     val isPressed: Boolean = false,
     val pressedText: String? = null,
+    /** 字母键按压气泡：画成圆形（与长按单项气泡同形）。 */
+    val isLetterPress: Boolean = false,
     val isDanger: Boolean = false,
     // 长按弹出选择
     val isLongPress: Boolean = false,
@@ -143,6 +145,8 @@ data class SwipeState(
     val longPressDrawableIds: List<Int> = emptyList(),
     /** 长按气泡每行列数；0 = 单行铺满（兼容旧调用）。 */
     val longPressColumns: Int = 0,
+    /** 长按按下点（键盘根坐标 x）：气泡按手指位置摆放，右侧按键也能向左/右双向选择。 */
+    val longPressAnchorX: Float = 0f,
 )
 
 /**
@@ -186,25 +190,43 @@ internal fun longPressCellWidthPx(
     return maxOf(keyWidthPx, maxTextWidth + paddingPx * 2f)
 }
 
+/** 长按气泡主体左缘：让手指落在第一格中心；靠近屏幕边缘时整体钳制。 */
+internal fun longPressBodyLeft(
+    anchorX: Float,
+    bodyWidthPx: Float,
+    columns: Int,
+    keyboardWidthPx: Float,
+    marginPx: Float,
+): Float {
+    val cell = (bodyWidthPx / columns.coerceAtLeast(1)).coerceAtLeast(1f)
+    val maxLeft = keyboardWidthPx - marginPx - bodyWidthPx
+    return (anchorX - cell / 2f).coerceIn(marginPx, maxOf(marginPx, maxLeft))
+}
+
 /**
- * 长按气泡选中项：横向选列，向上拖动选行（第 0 行在最上方，最近的第二行先被命中）。
- * [deltaY] 为相对按下点的纵向位移（向上为负）。
+ * 长按气泡选中项：手指在气泡网格中的绝对位置选列，向上拖动选行。
+ * [touchXInRoot] / [anchorX] 均为键盘根坐标；气泡按 [anchorX] 摆放，因此右侧按键
+ * 初始高亮就在手指附近，向左/右都有可移动空间。
  */
 internal fun longPressIndexAt(
-    deltaX: Float,
+    touchXInRoot: Float,
+    anchorX: Float,
     deltaY: Float,
     cellWidthPx: Float,
     rowHeightPx: Float,
     itemCount: Int,
+    keyboardWidthPx: Float,
+    marginPx: Float,
     bubbleGapPx: Float = 0f,
 ): Int {
     if (itemCount <= 1) return 0
     val columns = longPressColumns(itemCount)
     val rows = longPressRows(itemCount, columns)
-    val cellWidth = cellWidthPx.coerceAtLeast(1f)
-    val col = ((deltaX / cellWidth) + 0.5f).toInt().coerceIn(0, columns - 1)
-    // 气泡第一行画在最上方、第二行靠近按键。手指仍停在按键/间隙时保留首项高亮；
-    // 向上进入气泡先命中最近的第二行，再继续向上才回到第一行。
+    val bodyWidth = minOf(cellWidthPx * columns, keyboardWidthPx - marginPx * 2f).coerceAtLeast(1f)
+    val effectiveCell = (bodyWidth / columns).coerceAtLeast(1f)
+    val bodyLeft = longPressBodyLeft(anchorX, bodyWidth, columns, keyboardWidthPx, marginPx)
+    val col = ((touchXInRoot - bodyLeft) / effectiveCell).toInt().coerceIn(0, columns - 1)
+    // 气泡第一行画在最上方、第二行靠近按键；向上进入气泡先命中第二行，再回第一行。
     val row = if (rows > 1 && rowHeightPx > 0f) {
         val upward = -deltaY
         if (upward < bubbleGapPx) {
@@ -225,9 +247,9 @@ private val shadowColorCache = HashMap<Color, Color>()
 /** 按键描边色：浅色键用淡黑、深色键用淡白，替代原先键底偏移阴影。 */
 internal fun keyOutlineColor(backgroundColor: Color): Color =
     if (backgroundColor.luminance() > 0.5f) {
-        Color.Black.copy(alpha = 0.16f)
+        Color.Black.copy(alpha = 0.10f)
     } else {
-        Color.White.copy(alpha = 0.16f)
+        Color.White.copy(alpha = 0.10f)
     }
 
 /**
@@ -619,6 +641,8 @@ fun SwipeableKeyButton(
     val currentOnSwipeRight by rememberUpdatedState(onSwipeRight)
     val currentOnSwipeStateChange by rememberUpdatedState(onSwipeStateChange)
     val currentPressText by rememberUpdatedState(pressText)
+    // 字母键（单字符字母）的按压气泡画成圆形；功能键/标点保持胶囊。
+    val pressBubbleCircular = pressText?.let { it.length == 1 && it[0].isLetter() } == true
     val currentOnPress by rememberUpdatedState(onPress)
     val currentOnRelease by rememberUpdatedState(onRelease)
     val currentOnClick by rememberUpdatedState(onClick)
@@ -802,7 +826,7 @@ fun SwipeableKeyButton(
                             // 新手势：重置出口与横向峰值
                             clickEmitted = false
                             gesturePeakDx = 0f
-                            currentOnSwipeStateChange?.invoke(SwipeState(isPressed = true, pressedText = currentPressText), buttonBounds)
+                            currentOnSwipeStateChange?.invoke(SwipeState(isPressed = true, pressedText = currentPressText, isLetterPress = pressBubbleCircular), buttonBounds)
                             currentOnPress?.invoke()
                         },
                         onPressEnd = { released ->
@@ -829,7 +853,6 @@ fun SwipeableKeyButton(
                     gesturePeakDx = 0f
                     lastPressOffset = down.position
                     var localLongPressTriggered = false
-                    var selectedIdx = 0
                     val downX = down.position.x
                     val items = currentLongPressItems ?: return@awaitEachGesture
                     val columns = longPressColumns(items.size)
@@ -837,6 +860,10 @@ fun SwipeableKeyButton(
                         adaptiveKeyContentScale(buttonBounds.height / density.density)
                     )
                     val rowHeightPx = with(density) { KeyboardDimensions.BubbleHeightDown.toPx() } * bubbleScale
+                    val marginPx = with(density) { 4.dp.toPx() }
+                    val bubbleGapPx = with(density) { 4.dp.toPx() }
+                    val keyboardWidthPx = KeyTapLogger.keyboardBounds.width.takeIf { it > 0f }
+                        ?: view.width.toFloat()
                     val cellWidthPx = longPressCellWidthPx(
                         items = items,
                         keyWidthPx = buttonBounds.width,
@@ -844,9 +871,22 @@ fun SwipeableKeyButton(
                         paddingPx = with(density) { 6.dp.toPx() } * bubbleScale,
                         measureText = currentLongPressDrawableIds.isNullOrEmpty(),
                     )
+                    // 气泡按手指位置摆：右侧按键的长按高亮不再固定在最左格。
+                    val anchorX = buttonBounds.left + downX
+                    var selectedIdx = longPressIndexAt(
+                        touchXInRoot = anchorX,
+                        anchorX = anchorX,
+                        deltaY = 0f,
+                        cellWidthPx = cellWidthPx,
+                        rowHeightPx = rowHeightPx,
+                        itemCount = items.size,
+                        keyboardWidthPx = keyboardWidthPx,
+                        marginPx = marginPx,
+                        bubbleGapPx = bubbleGapPx,
+                    )
                     
                     currentOnSwipeStateChange?.invoke(
-                        SwipeState(isPressed = true, pressedText = currentPressText), buttonBounds
+                        SwipeState(isPressed = true, pressedText = currentPressText, isLetterPress = pressBubbleCircular), buttonBounds
                     )
                     currentOnPress?.invoke()
                     
@@ -859,9 +899,10 @@ fun SwipeableKeyButton(
                                 isPressed = true,
                                 isLongPress = true,
                                 longPressItems = items,
-                                selectedLongPressIndex = 0,
+                                selectedLongPressIndex = selectedIdx,
                                 longPressDrawableIds = currentLongPressDrawableIds ?: emptyList(),
                                 longPressColumns = columns,
+                                longPressAnchorX = anchorX,
                             ),
                             buttonBounds
                         )
@@ -895,14 +936,16 @@ fun SwipeableKeyButton(
                             }
                             
                             if (localLongPressTriggered) {
-                                val deltaX = change.position.x - downX
                                 selectedIdx = longPressIndexAt(
-                                    deltaX = deltaX,
+                                    touchXInRoot = buttonBounds.left + change.position.x,
+                                    anchorX = anchorX,
                                     deltaY = dyFromDown,
                                     cellWidthPx = cellWidthPx,
                                     rowHeightPx = rowHeightPx,
                                     itemCount = items.size,
-                                    bubbleGapPx = with(density) { 4.dp.toPx() },
+                                    keyboardWidthPx = keyboardWidthPx,
+                                    marginPx = marginPx,
+                                    bubbleGapPx = bubbleGapPx,
                                 )
                                 
                                 if (selectedIdx != lastReportedIdx) {
@@ -915,6 +958,7 @@ fun SwipeableKeyButton(
                                             selectedLongPressIndex = selectedIdx,
                                             longPressDrawableIds = currentLongPressDrawableIds ?: emptyList(),
                                             longPressColumns = columns,
+                                            longPressAnchorX = anchorX,
                                         ),
                                         buttonBounds
                                     )
@@ -1682,7 +1726,6 @@ fun SwipeableIconKeyButton(
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     var localLongPressTriggered = false
-                    var selectedIdx = 0
                     val downX = down.position.x
                     val downY = down.position.y
                     val items = currentLongPressItems ?: return@awaitEachGesture
@@ -1691,12 +1734,28 @@ fun SwipeableIconKeyButton(
                         adaptiveKeyContentScale(buttonBounds.height / density.density)
                     )
                     val rowHeightPx = with(density) { KeyboardDimensions.BubbleHeightDown.toPx() } * bubbleScale
+                    val marginPx = with(density) { 4.dp.toPx() }
+                    val bubbleGapPx = with(density) { 4.dp.toPx() }
+                    val keyboardWidthPx = KeyTapLogger.keyboardBounds.width.takeIf { it > 0f }
+                        ?: view.width.toFloat()
                     val cellWidthPx = longPressCellWidthPx(
                         items = items,
                         keyWidthPx = buttonBounds.width,
                         textSizePx = with(density) { 16.sp.toPx() } * bubbleScale,
                         paddingPx = with(density) { 6.dp.toPx() } * bubbleScale,
                         measureText = currentLongPressDrawableIds.isNullOrEmpty(),
+                    )
+                    val anchorX = buttonBounds.left + downX
+                    var selectedIdx = longPressIndexAt(
+                        touchXInRoot = anchorX,
+                        anchorX = anchorX,
+                        deltaY = 0f,
+                        cellWidthPx = cellWidthPx,
+                        rowHeightPx = rowHeightPx,
+                        itemCount = items.size,
+                        keyboardWidthPx = keyboardWidthPx,
+                        marginPx = marginPx,
+                        bubbleGapPx = bubbleGapPx,
                     )
 
                     val longPressJob = scope.launch {
@@ -1708,9 +1767,10 @@ fun SwipeableIconKeyButton(
                                 isPressed = true,
                                 isLongPress = true,
                                 longPressItems = items,
-                                selectedLongPressIndex = 0,
+                                selectedLongPressIndex = selectedIdx,
                                 longPressDrawableIds = currentLongPressDrawableIds,
                                 longPressColumns = columns,
+                                longPressAnchorX = anchorX,
                             ),
                             buttonBounds,
                         )
@@ -1738,15 +1798,17 @@ fun SwipeableIconKeyButton(
                                 continue
                             }
 
-                            val deltaX = change.position.x - downX
                             val deltaY = change.position.y - downY
                             selectedIdx = longPressIndexAt(
-                                deltaX = deltaX,
+                                touchXInRoot = buttonBounds.left + change.position.x,
+                                anchorX = anchorX,
                                 deltaY = deltaY,
                                 cellWidthPx = cellWidthPx,
                                 rowHeightPx = rowHeightPx,
                                 itemCount = items.size,
-                                bubbleGapPx = with(density) { 4.dp.toPx() },
+                                keyboardWidthPx = keyboardWidthPx,
+                                marginPx = marginPx,
+                                bubbleGapPx = bubbleGapPx,
                             )
                             if (!isRelease && selectedIdx != lastReportedIdx) {
                                 lastReportedIdx = selectedIdx
@@ -1758,6 +1820,7 @@ fun SwipeableIconKeyButton(
                                         selectedLongPressIndex = selectedIdx,
                                         longPressDrawableIds = currentLongPressDrawableIds,
                                         longPressColumns = columns,
+                                        longPressAnchorX = anchorX,
                                     ),
                                     buttonBounds,
                                 )
@@ -1894,6 +1957,8 @@ fun SwipeableKeyButtonLandscape(
     val currentLongPressItems by rememberUpdatedState(longPressItems)
     val currentOnSwipeStateChange by rememberUpdatedState(onSwipeStateChange)
     val currentPressText by rememberUpdatedState(pressText)
+    // 字母键（单字符字母）的按压气泡画成圆形；功能键/标点保持胶囊。
+    val pressBubbleCircular = pressText?.let { it.length == 1 && it[0].isLetter() } == true
     val scope = rememberCoroutineScope()
     val view = LocalView.current
     val longPressBubbleDelayMs = SettingsPreferences.getLongPressBubbleDelayMs(LocalContext.current)
@@ -1973,7 +2038,7 @@ fun SwipeableKeyButtonLandscape(
                                 hasTriggeredSwipeRight = false
                                 isSwiping = false
                                 isSwipeDown = false
-                                currentOnSwipeStateChange?.invoke(SwipeState(isPressed = true, pressedText = currentPressText), buttonBounds)
+                                currentOnSwipeStateChange?.invoke(SwipeState(isPressed = true, pressedText = currentPressText, isLetterPress = pressBubbleCircular), buttonBounds)
                             },
                             onDragEnd = {
                                 // 兜底点击：落在上下滑阈值之间（未判为滑动）才点；
@@ -2088,7 +2153,7 @@ fun SwipeableKeyButtonLandscape(
                             isPressed = true
                             // 新手势：重置点击出口
                             clickEmitted = false
-                            currentOnSwipeStateChange?.invoke(SwipeState(isPressed = true, pressedText = currentPressText), buttonBounds)
+                            currentOnSwipeStateChange?.invoke(SwipeState(isPressed = true, pressedText = currentPressText, isLetterPress = pressBubbleCircular), buttonBounds)
                             currentOnPress?.invoke()
                         },
                         onPressEnd = {
@@ -2109,7 +2174,7 @@ fun SwipeableKeyButtonLandscape(
                         val downX = down.position.x
                         val items = currentLongPressItems ?: return@awaitEachGesture
 
-                        currentOnSwipeStateChange?.invoke(SwipeState(isPressed = true, pressedText = currentPressText), buttonBounds)
+                        currentOnSwipeStateChange?.invoke(SwipeState(isPressed = true, pressedText = currentPressText, isLetterPress = pressBubbleCircular), buttonBounds)
                         currentOnPress?.invoke()
 
                         val longPressJob = scope.launch {

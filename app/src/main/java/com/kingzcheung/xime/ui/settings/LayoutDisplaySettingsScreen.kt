@@ -198,6 +198,42 @@ fun LayoutDisplaySettingsContent(
                             }
                         )
                     }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 16.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    var showLetterHintSymbols by remember {
+                        mutableStateOf(SettingsPreferences.showLetterHintSymbols(context))
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = tr(R.string.s_xianshizimujianfushangfangdefuhao),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = tr(R.string.s_xianshizimujianfushangfangdefuhao_fu),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = showLetterHintSymbols,
+                            onCheckedChange = { enabled ->
+                                showLetterHintSymbols = enabled
+                                SettingsPreferences.setShowLetterHintSymbols(context, enabled)
+                            }
+                        )
+                    }
                 })
             }
 

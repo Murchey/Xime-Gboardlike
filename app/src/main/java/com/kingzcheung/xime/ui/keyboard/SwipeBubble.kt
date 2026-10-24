@@ -74,6 +74,8 @@ data class BubbleDrawData(
     val isSingleLongPress: Boolean = false,
     /** 长按气泡每行列数（0 = 单行）。 */
     val longPressColumns: Int = 0,
+    /** 字母键按压气泡：圆形、无尖角。 */
+    val isCircularPress: Boolean = false,
 )
 
 /** 按压气泡抬起后的滞留时长：随抬起瞬间消失看不清键位提示（主流输入法约 50~80ms），取中值。 */
@@ -160,14 +162,15 @@ fun rememberSwipeBubbleDrawData(
         (swipeState.longPressItems.size + longPressColumns - 1) / longPressColumns
     } else 1
     val bodyHeightPx = rowHeightPx * longPressRows
-    // 单项长按：整个气泡画成圆形，不再向下伸出尖角。
+    // 单项长按、字母键按压气泡都画成圆形，不再向下伸出尖角。
     val singleLongPress = isLongPressMode && swipeState.longPressItems.size == 1
+    val circularPress = swipeState.isPressed && !swipeState.isLongPress && swipeState.isLetterPress
     // 尖端完整覆盖按下的按键（与按键同高），宽体锚定按键顶部悬在上方（见 boxTop）。
     // 全部基于真实按键 bounds 计算，不再用 KeyHeight 估算值——
     // 键盘高度被调大时估算失准，宽体会下沉进按键被手指挡住。
     // 长按气泡统一悬浮在按键上方，不带向下的方块/尖角；点按与滑动气泡保留指示尖角。
-    val pointerHeightPx = if (isLongPressMode) 0f else keyBounds.height
-    val cornerRadiusPx = if (isLongPressMode) {
+    val pointerHeightPx = if (isLongPressMode || circularPress) 0f else keyBounds.height
+    val cornerRadiusPx = if (isLongPressMode || circularPress) {
         bodyHeightPx / 2f
     } else {
         with(density) { BubbleCornerRadius.toPx() } * bubbleScale
@@ -210,7 +213,7 @@ fun rememberSwipeBubbleDrawData(
         keyWidthPx
     }
 
-    val bodyWidth = if (singleLongPress) {
+    val bodyWidth = if (singleLongPress || circularPress) {
         bodyHeightPx
     } else if (isLongPressMode) {
         // 英文变音候选可能到 9 项、符号气泡 8 列，宽度必须钳制在键盘内。
@@ -227,10 +230,27 @@ fun rememberSwipeBubbleDrawData(
     val selectedBgRadiusPx = with(density) { 6.dp.toPx() } * bubbleScale
 
     val pointerCenterX = keyBounds.left + keyBounds.width / 2f
-    val bodyLeft = (pointerCenterX - bodyWidth / 2f).coerceIn(
-        screenMarginPx,
-        maxOf(screenMarginPx, keyboardWidth - bodyWidth - screenMarginPx)
-    )
+    // 长按气泡按手指位置摆放：手指落在第一格中心；靠近屏幕边缘时整体左移钳制，
+    // 这样右侧（如句号键）也能从当前格向左/右滑动选择，而不是从最左格开始。
+    val anchorX = if (isLongPressMode && swipeState.longPressAnchorX > 0f) {
+        swipeState.longPressAnchorX
+    } else {
+        keyBounds.left + keyBounds.width / 2f
+    }
+    val bodyLeft = if (isLongPressMode) {
+        longPressBodyLeft(
+            anchorX = anchorX,
+            bodyWidthPx = bodyWidth,
+            columns = longPressColumns,
+            keyboardWidthPx = keyboardWidth,
+            marginPx = screenMarginPx,
+        )
+    } else {
+        (anchorX - bodyWidth / 2f).coerceIn(
+            screenMarginPx,
+            maxOf(screenMarginPx, keyboardWidth - bodyWidth - screenMarginPx)
+        )
+    }
     val bodyRight = bodyLeft + bodyWidth
     val pointerLeft = pointerCenterX - keyWidthPx / 2f
     val pointerRight = pointerLeft + keyWidthPx
@@ -238,7 +258,7 @@ fun rememberSwipeBubbleDrawData(
     // 宽体（显示文字的主体）底部对齐按键顶部，悬在按键正上方不被手指遮挡；
     // 尖端从宽体底部向下延伸 pointerHeightPx（≈按键上半部）指示归属键。
     // 单项圆形气泡没有尖角，额外留 4dp 间隙。
-    val boxTop = if (isLongPressMode) {
+    val boxTop = if (isLongPressMode || circularPress) {
         keyBounds.top - bodyHeightPx - with(density) { 4.dp.toPx() }
     } else {
         keyBounds.top - bodyHeightPx
@@ -248,9 +268,9 @@ fun rememberSwipeBubbleDrawData(
     val rightRoom = bodyRight - pointerRight
     val leftRoom = pointerLeft - bodyLeft
     val flushTolerancePx = with(density) { 10.dp.toPx() }
-    val isLeftFlush = !isLongPressMode &&
+    val isLeftFlush = !isLongPressMode && !circularPress &&
         (leftRoom < cornerRadiusPx + flushTolerancePx || kotlin.math.abs(bodyLeft - pointerLeft) < 1f)
-    val isRightFlush = !isLongPressMode &&
+    val isRightFlush = !isLongPressMode && !circularPress &&
         (rightRoom < cornerRadiusPx + flushTolerancePx || kotlin.math.abs(bodyRight - pointerRight) < 1f)
     val bodyLeftInBox = bodyLeft - boxLeft
     val pointerLeftInBox = pointerLeft - boxLeft
@@ -307,6 +327,7 @@ fun rememberSwipeBubbleDrawData(
         selectedTextColorArgb = selectedTextColorArgb,
         isSingleLongPress = singleLongPress,
         longPressColumns = longPressColumns,
+        isCircularPress = circularPress,
     )
 }
 
@@ -321,7 +342,7 @@ private fun buildBubblePath(data: BubbleDrawData): Path {
     val isLeftFlush = data.isLeftFlush
     val isRightFlush = data.isRightFlush
 
-    if (data.isSingleLongPress) {
+    if (data.isSingleLongPress || data.isCircularPress) {
         bubblePath.rewind()
         bubblePath.addOval(0f, 0f, bodyWidth, bodyHeight, Path.Direction.CW)
         return bubblePath
