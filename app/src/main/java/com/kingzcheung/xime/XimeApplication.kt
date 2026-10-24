@@ -148,8 +148,11 @@ class XimeApplication : Application(), ImageLoaderFactory {
         // 从 xime.yaml 的 style 读取默认主题和显示模式
         // color_scheme 可指定 dynamic（Material You 动态配色，仅 Android 12+，
         // 低版本 getThemeById 自动回退到内置配色）
-        SettingsPreferences.defaultKeyboardTheme = KeysConfigHelper.loadDefaultThemeId(this)
+        SettingsPreferences.defaultKeyboardTheme = KeysConfigHelper.loadThemeIdForMode(this, isDark = false)
+        SettingsPreferences.defaultDarkKeyboardTheme = KeysConfigHelper.loadThemeIdForMode(this, isDark = true)
         SettingsPreferences.defaultDarkMode = KeysConfigHelper.loadDefaultDarkMode(this)
+        // 旧内置主题（如 lavender_purple）被替换后，已保存的选择回退到新默认主题
+        KeyboardThemes.normalizeThemeSelection(this)
 
         // 初始化模型运行时（内存管理 + 生命周期）
         ModelRuntime.attach(this)

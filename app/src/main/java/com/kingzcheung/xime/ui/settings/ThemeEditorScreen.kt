@@ -93,12 +93,18 @@ fun ThemeEditorContent(
 ) {
     val context = LocalContext.current
     val initialSchemes = remember { CustomThemeStore.load(context) }
-    val initialThemeId = remember { SettingsPreferences.getKeyboardTheme(context) }
+    val initialLightThemeId = remember {
+        SettingsPreferences.getKeyboardThemeForMode(context, isDark = false)
+    }
+    val initialDarkThemeId = remember {
+        SettingsPreferences.getKeyboardThemeForMode(context, isDark = true)
+    }
     var schemes by remember { mutableStateOf(initialSchemes) }
-    var appliedThemeId by remember { mutableStateOf(initialThemeId) }
+    var appliedLightThemeId by remember { mutableStateOf(initialLightThemeId) }
+    var appliedDarkThemeId by remember { mutableStateOf(initialDarkThemeId) }
     var draft by remember {
         mutableStateOf(
-            initialSchemes.firstOrNull { it.id == initialThemeId }
+            initialSchemes.firstOrNull { it.id == initialLightThemeId }
                 ?: initialSchemes.firstOrNull()
                 ?: CustomThemeStore.defaultScheme()
         )
@@ -116,8 +122,11 @@ fun ThemeEditorContent(
 
     fun applyScheme(scheme: CustomColorScheme) {
         KeyboardThemes.reload(context)
-        SettingsPreferences.setKeyboardTheme(context, scheme.id)
-        appliedThemeId = scheme.id
+        // 自定义方案同时包含浅色与深色色板，两套模式一起应用。
+        SettingsPreferences.setKeyboardThemeForMode(context, isDark = false, themeId = scheme.id)
+        SettingsPreferences.setKeyboardThemeForMode(context, isDark = true, themeId = scheme.id)
+        appliedLightThemeId = scheme.id
+        appliedDarkThemeId = scheme.id
         onThemeChanged()
     }
 
@@ -180,10 +189,17 @@ fun ThemeEditorContent(
         val remaining = CustomThemeStore.delete(context, scheme.id)
         schemes = remaining
         pendingDelete = null
-        if (appliedThemeId == scheme.id) {
-            val fallback = SettingsPreferences.defaultKeyboardTheme.ifBlank { "gboard" }
-            SettingsPreferences.setKeyboardTheme(context, fallback)
-            appliedThemeId = fallback
+        if (appliedLightThemeId == scheme.id || appliedDarkThemeId == scheme.id) {
+            val lightFallback = SettingsPreferences.defaultKeyboardTheme.ifBlank { "gboard_gray" }
+            val darkFallback = SettingsPreferences.defaultDarkKeyboardTheme.ifBlank { "gboard_black" }
+            if (appliedLightThemeId == scheme.id) {
+                SettingsPreferences.setKeyboardThemeForMode(context, isDark = false, themeId = lightFallback)
+                appliedLightThemeId = lightFallback
+            }
+            if (appliedDarkThemeId == scheme.id) {
+                SettingsPreferences.setKeyboardThemeForMode(context, isDark = true, themeId = darkFallback)
+                appliedDarkThemeId = darkFallback
+            }
             onThemeChanged()
         }
         if (draft.id == scheme.id) {
@@ -349,7 +365,8 @@ fun ThemeEditorContent(
                             }
                             SavedSchemeRow(
                                 scheme = scheme,
-                                isApplied = appliedThemeId == scheme.id,
+                                isApplied = appliedLightThemeId == scheme.id ||
+                                    appliedDarkThemeId == scheme.id,
                                 onEdit = { draft = scheme },
                                 onApply = {
                                     applyScheme(scheme)

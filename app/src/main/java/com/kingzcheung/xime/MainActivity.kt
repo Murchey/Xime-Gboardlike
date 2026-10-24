@@ -132,15 +132,13 @@ class MainActivity : ComponentActivity() {
             var showWizard by remember { mutableStateOf(!setupCompleted) }
             var wizardToSettings by remember { mutableStateOf(false) }
             var darkMode by remember { mutableIntStateOf(SettingsPreferences.getDarkMode(context)) }
-            var keyboardTheme by remember { mutableStateOf(SettingsPreferences.getKeyboardTheme(context)) }
-            
             val isDarkTheme = when (darkMode) {
                 2 -> isSystemInDarkTheme()
                 1 -> true
                 else -> false
             }
 
-            XimeTheme(darkTheme = isDarkTheme, themeId = keyboardTheme) {
+            XimeTheme(darkTheme = isDarkTheme) {
                 val view = LocalView.current
                 if (!view.isInEditMode) {
                     DisposableEffect(darkMode) {
@@ -173,7 +171,6 @@ class MainActivity : ComponentActivity() {
                                     initialRoute = "schema",
                                     onThemeChanged = {
                                         darkMode = SettingsPreferences.getDarkMode(context)
-                                        keyboardTheme = SettingsPreferences.getKeyboardTheme(context)
                                     },
                                     onWizardBack = { wizardToSettings = false }
                                 )
@@ -185,7 +182,6 @@ class MainActivity : ComponentActivity() {
                             initialPluginId = openPluginId,
                             onThemeChanged = {
                                 darkMode = SettingsPreferences.getDarkMode(context)
-                                keyboardTheme = SettingsPreferences.getKeyboardTheme(context)
                             }
                         )
                     }

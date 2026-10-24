@@ -1059,6 +1059,12 @@
 
     <!-- 字体选择 / 个性化调色 -->
     <string name="s_gboard_jingdian">Gboard 经典</string>
+    <string name="s_zhutiyanse">主题色</string>
+    <string name="s_zhutiyanse_fenbieshezhi">浅色与深色模式可以分别选择主题</string>
+    <string name="s_zhengzaishezhi">正在设置：%1$s</string>
+    <string name="s_jiangyingyongdao">将应用到：%1$s</string>
+    <string name="s_yingyongdaoxianse">应用到浅色</string>
+    <string name="s_yingyongdaoshense">应用到深色</string>
     <string name="s_xitongmorenziti">系统默认</string>
     <string name="s_xitongmorenziti_fu">跟随手机系统字体</string>
     <string name="s_neizhiziti_fu">随应用打包，离线可用</string>

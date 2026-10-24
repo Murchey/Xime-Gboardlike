@@ -139,27 +139,23 @@ fun XimeTheme(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    var currentThemeId by remember { mutableStateOf(themeId ?: SettingsPreferences.getKeyboardTheme(context)) }
-    var configDarkThemeId by remember { mutableStateOf(KeysConfigHelper.loadThemeIdForMode(context, true)) }
+    // 深/浅模式可以各自选择主题；themeId 非空时仍用于临时预览。
+    var selectedThemeId by remember(darkTheme, themeId) {
+        mutableStateOf(themeId ?: SettingsPreferences.getKeyboardThemeForMode(context, darkTheme))
+    }
 
-    DisposableEffect(context, themeId) {
+    DisposableEffect(context, darkTheme, themeId) {
         val prefs = SettingsPreferences.getPrefsPublic(context)
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == "keyboard_theme" && themeId == null) {
-                currentThemeId = SettingsPreferences.getKeyboardTheme(context)
+            if (themeId == null && (key == "keyboard_theme_light" || key == "keyboard_theme_dark")) {
+                selectedThemeId = SettingsPreferences.getKeyboardThemeForMode(context, darkTheme)
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
         onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
 
-    val effectiveThemeId = if (themeId != null) {
-        themeId
-    } else if (darkTheme) {
-        configDarkThemeId.takeIf { it.isNotEmpty() } ?: currentThemeId
-    } else {
-        currentThemeId
-    }
+    val effectiveThemeId = themeId ?: selectedThemeId
     val scheme = KeyboardThemes.getThemeById(effectiveThemeId)
     val colorScheme = if (scheme.isDynamic && DynamicThemes.isSupported()) {
         // Material You 动态配色：由系统壁纸调色板生成（官方实现），随壁纸自动更新

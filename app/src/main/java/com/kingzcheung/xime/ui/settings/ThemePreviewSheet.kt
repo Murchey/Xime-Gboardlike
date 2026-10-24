@@ -68,6 +68,7 @@ private val QWERTY_ROW2 = listOf("Z", "X", "C", "V", "B", "N", "M")
 @Composable
 fun ThemePreviewSheet(
     theme: KeyboardColorScheme,
+    targetIsDark: Boolean = false,
     onApply: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -89,10 +90,21 @@ fun ThemePreviewSheet(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 16.dp),
+            )
+            Text(
+                text = tr(
+                    R.string.s_jiangyingyongdao,
+                    tr(if (targetIsDark) R.string.s_shense else R.string.s_qianse)
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp),
             )
 
-            ThemePreviewPager(theme = theme)
+            ThemePreviewPager(
+                theme = theme,
+                initialPage = if (targetIsDark) 1 else 0,
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -116,7 +128,13 @@ fun ThemePreviewSheet(
                         .height(48.dp),
                     shape = RoundedCornerShape(24.dp),
                 ) {
-                    Text(tr(R.string.s_yingyong), fontSize = 16.sp)
+                    Text(
+                        tr(
+                            if (targetIsDark) R.string.s_yingyongdaoshense
+                            else R.string.s_yingyongdaoxianse
+                        ),
+                        fontSize = 16.sp
+                    )
                 }
             }
         }
@@ -133,8 +151,12 @@ private val PREVIEW_PAGES = listOf(
 @Composable
 private fun ThemePreviewPager(
     theme: KeyboardColorScheme,
+    initialPage: Int = 0,
 ) {
-    val pagerState = rememberPagerState(pageCount = { PREVIEW_PAGES.size })
+    val pagerState = rememberPagerState(
+        initialPage = initialPage.coerceIn(0, PREVIEW_PAGES.lastIndex),
+        pageCount = { PREVIEW_PAGES.size },
+    )
 
     Column(modifier = Modifier.fillMaxWidth()) {
         HorizontalPager(

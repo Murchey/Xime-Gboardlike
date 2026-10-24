@@ -8,12 +8,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.core.graphics.ColorUtils
-import com.kingzcheung.xime.R
-import com.kingzcheung.xime.i18n.tr
 import com.kingzcheung.xime.settings.BackgroundConfig
 import com.kingzcheung.xime.settings.ColorSchemeEntry
 import com.kingzcheung.xime.settings.CustomThemeStore
 import com.kingzcheung.xime.settings.KeysConfigHelper
+import com.kingzcheung.xime.settings.SettingsPreferences
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
@@ -104,49 +103,196 @@ object KeyboardThemes {
     /** 从 xime.yaml 加载的配置覆盖项。 */
     private var configOverrides: Map<String, ColorSchemeEntry> = emptyMap()
 
-    /** 硬编码的默认主题列表（兜底，其余主题由 xime.yaml color_schemes 提供）。 */
+    /** 已下线的旧内置主题：旧版 xime.yaml/用户部署目录里可能还残留，不再显示。 */
+    private val obsoleteThemeIds = setOf(
+        "gboard", "lavender_purple", "ocean_blue", "sunset_orange", "slate_gray",
+        "rose_pink", "teal_cyan", "sakura_pink", "sky_blue", "mint_green",
+        "lilac_purple", "peach_orange", "cream_beige", "aurora_gradient",
+        "sunset_gradient", "ocean_gradient", "purple_gradient", "rose_gradient",
+        "forest_gradient", "kitosonita_landscape", "mrfawdi_nature", "olivcelso_desert",
+    )
+
+    /** 单套（浅色或深色）主题色。 */
+    private data class ThemePalette(
+        val background: Color,
+        val key: Color,
+        val specialKey: Color,
+        val keyText: Color,
+        val candidateText: Color,
+        val accent: Color,
+        val selectedText: Color? = null,
+        val container: Color? = null,
+    )
+
+    private fun buildTheme(
+        id: String,
+        name: String,
+        light: ThemePalette,
+        dark: ThemePalette,
+    ): KeyboardColorScheme = KeyboardColorScheme(
+        id = id,
+        name = name,
+        specialKeyLight = light.specialKey,
+        specialKeyDark = dark.specialKey,
+        accentLight = light.accent,
+        accentDark = dark.accent,
+        primaryLight = light.accent,
+        primaryDark = dark.accent,
+        primaryContainerLight = light.container ?: light.specialKey,
+        primaryContainerDark = dark.container ?: dark.specialKey,
+        surfaceLight = light.background,
+        surfaceDark = dark.background,
+        keyboardBgLight = light.background,
+        keyboardBgDark = dark.background,
+        keyBgLight = light.key,
+        keyBgDark = dark.key,
+        candidateBarBgLight = light.background,
+        candidateBarBgDark = dark.background,
+        keyTextColorLight = light.keyText,
+        keyTextColorDark = dark.keyText,
+        candidateTextColorLight = light.candidateText,
+        candidateTextColorDark = dark.candidateText,
+        candidateSelectedTextColorLight = light.selectedText ?: light.accent,
+        candidateSelectedTextColorDark = dark.selectedText ?: dark.accent,
+    )
+
+    /** 现代内置主题：Gboard 灰/黑、微信、QQ、Telegram、X、GitHub、ChatGPT、Claude。 */
     private val defaultThemes = listOf(
-        // Gboard 公开主题色：浅色白键 + 浅灰底 + Google 蓝，深色按参考图实测取色
-        KeyboardColorScheme(
-            id = "gboard",
-            name = tr(R.string.s_gboard_jingdian),
-            specialKeyLight = Color(0xFFE8EAED),
-            specialKeyDark = Color(0xFF38393B),
-            accentLight = Color(0xFF1A73E8),
-            accentDark = Color(0xFFA8C8FB),
-            primaryLight = Color(0xFF1A73E8),
-            primaryDark = Color(0xFFA8C8FB),
-            primaryContainerLight = Color(0xFFE8EAED),
-            primaryContainerDark = Color(0xFF38393B),
-            surfaceLight = Color(0xFFF1F3F4),
-            surfaceDark = Color(0xFF1E1F21),
-            keyboardBgLight = Color(0xFFF1F3F4),
-            keyboardBgDark = Color(0xFF1E1F21),
-            keyBgLight = Color(0xFFFFFFFF),
-            keyBgDark = Color(0xFF38393B),
-            candidateBarBgLight = Color(0xFFF1F3F4),
-            candidateBarBgDark = Color(0xFF1E1F21),
-            keyTextColorLight = Color(0xFF202124),
-            keyTextColorDark = Color(0xFFE7E8EA),
-            candidateTextColorLight = Color(0xFF5F6368),
-            candidateTextColorDark = Color(0xFF8D8E90),
-            candidateSelectedTextColorLight = Color(0xFF1A73E8),
-            candidateSelectedTextColorDark = Color(0xFFA8C8FB),
+        buildTheme(
+            id = "gboard_gray", name = "Gboard 灰",
+            light = ThemePalette(
+                background = Color(0xFFF1F3F4), key = Color(0xFFFFFFFF),
+                specialKey = Color(0xFFE8EAED), keyText = Color(0xFF202124),
+                candidateText = Color(0xFF5F6368), accent = Color(0xFF1A73E8),
+                selectedText = Color(0xFF1A73E8), container = Color(0xFFE8EAED),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF1E1F21), key = Color(0xFF38393B),
+                specialKey = Color(0xFF38393B), keyText = Color(0xFFE7E8EA),
+                candidateText = Color(0xFF8D8E90), accent = Color(0xFFA8C8FB),
+                selectedText = Color(0xFFA8C8FB), container = Color(0xFF38393B),
+            ),
         ),
-        KeyboardColorScheme(
-            id = "lavender_purple",
-            name = tr(R.string.s_xunyicaozi),
-            specialKeyLight = Color(0xFFE8DEF8),
-            specialKeyDark = Color(0xFF6750A4),
-            accentLight = Color(0xFF8F73E2),
-            accentDark = Color(0xFFD0BCFF),
-            primaryLight = Color(0xFF8F73E2),
-            primaryDark = Color(0xFFD0BCFF),
-            primaryContainerLight = Color(0xFFEADDFF),
-            primaryContainerDark = Color(0xFF4F378B),
-            surfaceLight = Color(0xFFFAF8FC),
-            surfaceDark = Color(0xFF2B2930)
-        )
+        buildTheme(
+            id = "gboard_black", name = "Gboard 黑",
+            light = ThemePalette(
+                background = Color(0xFFF1F3F4), key = Color(0xFFFFFFFF),
+                specialKey = Color(0xFFE8EAED), keyText = Color(0xFF202124),
+                candidateText = Color(0xFF5F6368), accent = Color(0xFF1A73E8),
+                selectedText = Color(0xFF1A73E8), container = Color(0xFFE8EAED),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF000000), key = Color(0xFF1F1F1F),
+                specialKey = Color(0xFF2A2A2A), keyText = Color(0xFFF1F3F4),
+                candidateText = Color(0xFF9AA0A6), accent = Color(0xFF8AB4F8),
+                selectedText = Color(0xFFA8C8FB), container = Color(0xFF1A2B45),
+            ),
+        ),
+        buildTheme(
+            id = "wechat", name = "微信",
+            light = ThemePalette(
+                background = Color(0xFFF2F2F2), key = Color(0xFFFFFFFF),
+                specialKey = Color(0xFFE5E5E5), keyText = Color(0xFF191919),
+                candidateText = Color(0xFF7A7E83), accent = Color(0xFF07C160),
+                selectedText = Color(0xFF06AD56), container = Color(0xFFD8F5E4),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF111111), key = Color(0xFF2C2C2C),
+                specialKey = Color(0xFF3A3A3A), keyText = Color(0xFFEDEDED),
+                candidateText = Color(0xFFA3A3A3), accent = Color(0xFF2BD96B),
+                selectedText = Color(0xFF7DF0A8), container = Color(0xFF173A27),
+            ),
+        ),
+        buildTheme(
+            id = "qq", name = "QQ",
+            light = ThemePalette(
+                background = Color(0xFFF4F7FA), key = Color(0xFFFFFFFF),
+                specialKey = Color(0xFFE4ECF4), keyText = Color(0xFF1A1A1A),
+                candidateText = Color(0xFF6B7B8C), accent = Color(0xFF12B7F5),
+                selectedText = Color(0xFF0099DD), container = Color(0xFFD6F2FD),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF0F1419), key = Color(0xFF1E252D),
+                specialKey = Color(0xFF2A333D), keyText = Color(0xFFE6EDF3),
+                candidateText = Color(0xFF8B9AA8), accent = Color(0xFF4CC9F0),
+                selectedText = Color(0xFF7DD8F7), container = Color(0xFF17364A),
+            ),
+        ),
+        buildTheme(
+            id = "telegram", name = "Telegram",
+            light = ThemePalette(
+                background = Color(0xFFF2F5F7), key = Color(0xFFFFFFFF),
+                specialKey = Color(0xFFE4EDF3), keyText = Color(0xFF1A1A1A),
+                candidateText = Color(0xFF6E7A85), accent = Color(0xFF2AABEE),
+                selectedText = Color(0xFF168ACD), container = Color(0xFFD8F0FB),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF17212B), key = Color(0xFF232F3D),
+                specialKey = Color(0xFF2B3A4A), keyText = Color(0xFFF5F5F5),
+                candidateText = Color(0xFF8FA3B8), accent = Color(0xFF6AB2F2),
+                selectedText = Color(0xFF8CC8FF), container = Color(0xFF1C3B57),
+            ),
+        ),
+        buildTheme(
+            id = "x", name = "X",
+            light = ThemePalette(
+                background = Color(0xFFFFFFFF), key = Color(0xFFEFF3F4),
+                specialKey = Color(0xFFE1E8ED), keyText = Color(0xFF0F1419),
+                candidateText = Color(0xFF536471), accent = Color(0xFF1D9BF0),
+                selectedText = Color(0xFF1D9BF0), container = Color(0xFFD7EEFC),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF000000), key = Color(0xFF16181C),
+                specialKey = Color(0xFF202327), keyText = Color(0xFFE7E9EA),
+                candidateText = Color(0xFF71767B), accent = Color(0xFF1D9BF0),
+                selectedText = Color(0xFF8ECDF8), container = Color(0xFF162D3D),
+            ),
+        ),
+        buildTheme(
+            id = "github", name = "GitHub",
+            light = ThemePalette(
+                background = Color(0xFFF6F8FA), key = Color(0xFFFFFFFF),
+                specialKey = Color(0xFFEAEEF2), keyText = Color(0xFF1F2328),
+                candidateText = Color(0xFF59636E), accent = Color(0xFF0969DA),
+                selectedText = Color(0xFF0969DA), container = Color(0xFFDDF4FF),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF0D1117), key = Color(0xFF161B22),
+                specialKey = Color(0xFF21262D), keyText = Color(0xFFE6EDF3),
+                candidateText = Color(0xFF8D96A0), accent = Color(0xFF58A6FF),
+                selectedText = Color(0xFF79C0FF), container = Color(0xFF1F3A5F),
+            ),
+        ),
+        buildTheme(
+            id = "chatgpt", name = "ChatGPT",
+            light = ThemePalette(
+                background = Color(0xFFF7F7F8), key = Color(0xFFFFFFFF),
+                specialKey = Color(0xFFECECEF), keyText = Color(0xFF202123),
+                candidateText = Color(0xFF6E6E80), accent = Color(0xFF10A37F),
+                selectedText = Color(0xFF0E8A6B), container = Color(0xFFD9F3EA),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF212121), key = Color(0xFF2F2F2F),
+                specialKey = Color(0xFF383838), keyText = Color(0xFFECECEC),
+                candidateText = Color(0xFF9B9B9B), accent = Color(0xFF10A37F),
+                selectedText = Color(0xFF6EE7B7), container = Color(0xFF1A3A32),
+            ),
+        ),
+        buildTheme(
+            id = "claude", name = "Claude",
+            light = ThemePalette(
+                background = Color(0xFFFAF9F5), key = Color(0xFFFFFFFF),
+                specialKey = Color(0xFFEDEBE4), keyText = Color(0xFF3D3929),
+                candidateText = Color(0xFF6B6657), accent = Color(0xFFD97757),
+                selectedText = Color(0xFFA94E2E), container = Color(0xFFF1E6DD),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF262624), key = Color(0xFF30302E),
+                specialKey = Color(0xFF3A3A37), keyText = Color(0xFFF5F4EF),
+                candidateText = Color(0xFFA9A69C), accent = Color(0xFFD97757),
+                selectedText = Color(0xFFE8A58C), container = Color(0xFF3D2B24),
+            ),
+        ),
     )
 
     /**
@@ -162,11 +308,36 @@ object KeyboardThemes {
         reload(context)
     }
 
+    /** 把已不存在的旧主题 ID（如早期内置的 lavender_purple）回退到当前默认主题。 */
+    fun normalizeThemeSelection(context: Context) {
+        val available = themesMapCache.keys
+        if (available.isEmpty()) return
+        val fallbackLight = SettingsPreferences.defaultKeyboardTheme
+            .takeIf { it in available }
+            ?: "gboard_gray".takeIf { it in available }
+            ?: available.first()
+        val fallbackDark = SettingsPreferences.defaultDarkKeyboardTheme
+            .takeIf { it in available }
+            ?: "gboard_black".takeIf { it in available }
+            ?: available.last()
+        SettingsPreferences.defaultKeyboardTheme = fallbackLight
+        SettingsPreferences.defaultDarkKeyboardTheme = fallbackDark
+        val light = SettingsPreferences.getKeyboardThemeForMode(context, isDark = false)
+        if (light !in available) {
+            SettingsPreferences.setKeyboardThemeForMode(context, isDark = false, themeId = fallbackLight)
+        }
+        val dark = SettingsPreferences.getKeyboardThemeForMode(context, isDark = true)
+        if (dark !in available) {
+            SettingsPreferences.setKeyboardThemeForMode(context, isDark = true, themeId = fallbackDark)
+        }
+    }
+
     /** 重新加载 xime.yaml/xime.custom.yaml 与用户自定义配色，并更新缓存。 */
     fun reload(context: Context) {
         val customSchemes = CustomThemeStore.load(context)
         val customIds = customSchemes.map { it.id }.toSet()
-        configOverrides = KeysConfigHelper.loadColorSchemes(context) +
+        configOverrides = KeysConfigHelper.loadColorSchemes(context)
+            .filterKeys { it !in obsoleteThemeIds } +
             customSchemes.associate { it.id to it.toColorSchemeEntry() }
         // 1) 对硬编码主题应用配置覆盖
         val overridden = defaultThemes.map { applyConfigOverrides(context, it) }
@@ -560,51 +731,25 @@ object KeyboardThemes {
         return if (isDark) theme.dividerColorDark else theme.dividerColorLight
     }
 
-    /** 动态配色主题不走 color_schemes 静态覆盖，直接从主题缓存取色；其他主题返回 null 走原逻辑。 */
-    private inline fun dynamicThemeColor(themeId: String, selector: (KeyboardColorScheme) -> Color): Color? {
-        // 从状态化缓存查找以建立 Compose 订阅：缓存整体替换后 UI 自动重组
+    /** 从状态化缓存取主题颜色，建立 Compose 订阅；主题不存在时返回 null。 */
+    private inline fun themeColor(themeId: String, selector: (KeyboardColorScheme) -> Color): Color? {
         val theme = themesCache.firstOrNull { it.id == themeId } ?: return null
-        if (!theme.isDynamic) return null
         return selector(theme)
     }
 
-    /** 返回 color_schemes 中显式定义的按键背景色，未定义返回 null。 */
-    fun getKeyBgColorOverride(themeId: String, isDark: Boolean): Color? {
-        dynamicThemeColor(themeId) { if (isDark) it.keyBgDark else it.keyBgLight }?.let { return it }
-        val entry = configOverrides[themeId] ?: return null
-        return resolveKeyBgColor(entry, isDark)
-    }
+    /** 按键背景色：内置/配置/自定义主题都以缓存中的最终色值为准。 */
+    fun getKeyBgColorOverride(themeId: String, isDark: Boolean): Color? =
+        themeColor(themeId) { if (isDark) it.keyBgDark else it.keyBgLight }
 
-    /** 返回 color_schemes 中显式定义的按键文字色，未定义返回 null。 */
-    fun getKeyTextColorOverride(themeId: String, isDark: Boolean): Color? {
-        dynamicThemeColor(themeId) { if (isDark) it.keyTextColorDark else it.keyTextColorLight }?.let { return it }
-        val entry = configOverrides[themeId] ?: return null
-        return if (isDark) {
-            entry.keyTextColorDark?.let { longToColor(it) }
-        } else {
-            entry.keyTextColor?.let { longToColor(it) }
-        }
-    }
+    /** 按键文字色：内置/配置/自定义主题都以缓存中的最终色值为准。 */
+    fun getKeyTextColorOverride(themeId: String, isDark: Boolean): Color? =
+        themeColor(themeId) { if (isDark) it.keyTextColorDark else it.keyTextColorLight }
 
-    /** 返回 color_schemes 中显式定义的候选文字色，未定义返回 null。 */
-    fun getCandidateTextColorOverride(themeId: String, isDark: Boolean): Color? {
-        dynamicThemeColor(themeId) { if (isDark) it.candidateTextColorDark else it.candidateTextColorLight }?.let { return it }
-        val entry = configOverrides[themeId] ?: return null
-        return if (isDark) {
-            entry.candidateTextColorDark?.let { longToColor(it) }
-        } else {
-            entry.candidateTextColor?.let { longToColor(it) }
-        }
-    }
+    /** 候选文字色：内置/配置/自定义主题都以缓存中的最终色值为准。 */
+    fun getCandidateTextColorOverride(themeId: String, isDark: Boolean): Color? =
+        themeColor(themeId) { if (isDark) it.candidateTextColorDark else it.candidateTextColorLight }
 
-    /** 返回 color_schemes 中显式定义的候选选中文字色，未定义返回 null。 */
-    fun getCandidateSelectedTextColorOverride(themeId: String, isDark: Boolean): Color? {
-        dynamicThemeColor(themeId) { if (isDark) it.candidateSelectedTextColorDark else it.candidateSelectedTextColorLight }?.let { return it }
-        val entry = configOverrides[themeId] ?: return null
-        return if (isDark) {
-            entry.candidateSelectedTextColorDark?.let { longToColor(it) }
-        } else {
-            entry.candidateSelectedTextColor?.let { longToColor(it) }
-        }
-    }
+    /** 候选选中文字色：内置/配置/自定义主题都以缓存中的最终色值为准。 */
+    fun getCandidateSelectedTextColorOverride(themeId: String, isDark: Boolean): Color? =
+        themeColor(themeId) { if (isDark) it.candidateSelectedTextColorDark else it.candidateSelectedTextColorLight }
 }

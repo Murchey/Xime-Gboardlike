@@ -20,7 +20,7 @@ data class InputUIState(
     val schemaSwitches: List<SchemaSwitchUiState> = emptyList(),
     val enterKeyText: String = tr(R.string.s_fasong),
     val darkMode: Int = 0,
-    val themeId: String = "ocean_blue",
+    val themeId: String = "gboard_gray",
     val isSttEnabled: Boolean = false,
     val keyboardHeightDp: Int = 0,
     val keyboardBottomPaddingDp: Int = 0,

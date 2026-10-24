@@ -59,7 +59,7 @@ data class KeyboardUiState(
     val enterKeyText: String = tr(R.string.s_fasong),
     val isDarkTheme: Boolean = false,
     val darkMode: Int = 2,
-    val themeId: String = "ocean_blue",
+    val themeId: String = "gboard_gray",
     val keyboardHeightDp: Int = 0,
     val keyboardBottomPaddingDp: Int = 0,
     val isDeploying: Boolean = false,
