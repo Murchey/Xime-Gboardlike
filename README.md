@@ -12,10 +12,32 @@
     alt="Get it on F-Droid"
     height="80">](https://f-droid.org/packages/com.kingzcheung.xime)
 
+<sub>This F-Droid badge points to the upstream Xime package. This fork is built from source.</sub>
+
 
 [Windows Version](https://github.com/ximeiorg/XimeYao) | [Linux Version](https://github.com/ximeiorg/XimeChe) | [Predictive Text Model](https://github.com/ximeiorg/predictive-text) | [Handwriting Model](https://github.com/ximeiorg/ochwpro)
 
 An Android input method built on the [Rime](https://rime.im/) engine, designed for efficient Chinese text input with Wubi (五笔) and Pinyin support.
+
+## About this fork
+
+> **This is a personal fork: [Xime-Gboardlike](https://github.com/Murchey/Xime-Gboardlike), based on the original [Xime](https://github.com/ximeiorg/Xime) by Kingz Cheung and contributors. It is not the upstream project and does not speak for the original author.**
+
+**Design goal.** This fork reworks the input experience around the habits of **Gboard** and **fcitx5-android** users: a quieter, roomier candidate bar; Gboard-inspired color themes; straightforward font and personalization controls; practical clipboard retention options; and a build flow that is friendly to self-installation. The goal is to build a modern, customizable, plugin-capable input method together with the community — not to replace the upstream design.
+
+**Changes in this fork (on top of upstream):**
+
+- Font picker: system default / bundled font / imported fonts, applied globally.
+- Gboard-inspired theme colors plus a personalization color panel with JSON import/export.
+- Gboard-style candidate bar: wider cells, vertical separators, down-chevron for more candidates; candidate code hints are off by default.
+- Clipboard retention from 1 hour up to 90 days, manual history-size input, and migration from the old day-based setting.
+- A public signing key and `build_apk.bat` for signed, ABI-split personal builds.
+
+**Respect for the original work.** The Rime engine integration, plugin system, architecture, documentation, and the vast majority of the code are the work of **Kingz Cheung and the Xime contributors**. This fork only adds changes on top of their work and is released under the same **GPLv3** license. All credit for the original project remains with its authors. Upstream is the source of truth: if you want the original behavior, official releases, or official support, please use [ximeiorg/Xime](https://github.com/ximeiorg/Xime).
+
+**Why publish the signing key?** A single build cannot satisfy every taste, workflow, or device. Publishing the community keystore (with its password in `app/keystore.properties`) lets anyone fork this project, adjust it, and produce a signed APK that can be installed without waiting for a maintainer. The key is for **personal, sideloaded builds only** — do not use it for app-store distribution or to impersonate the upstream project. Replace it with your own key for public releases.
+
+**Not the right fit?** This repository is an experiment in Gboard/fcitx5-android-style personalization. If its choices do not suit you, using the original Xime project is explicitly encouraged.
 
 ---
 
@@ -63,7 +85,7 @@ An Android input method built on the [Rime](https://rime.im/) engine, designed f
 - **Swipe Gestures** - Cursor movement, deletion, symbol input via swipe gestures
 - **Clipboard Manager** - Clipboard history with quick send and pinning
 - **Clipboard Sync** - Bidirectional clipboard sync with remote devices via plugins (WebDAV, ximed, etc.)
-- **Candidate Coding Hints** - Display Wubi codes for candidates to aid learning
+- **Optional Candidate Coding Hints** - Display Wubi codes for candidates to aid learning (off by default; enable in Layout & Display)
 - **Radical Display** - Swipe down on keys to show Wubi radicals for memory aid
 - **Physical Keyboard Support** - Floating candidate bar when using hardware/bluetooth keyboards
 - **WebDAV Sync** - Backup and restore schemas and settings via WebDAV
@@ -85,7 +107,7 @@ Choose the APK matching your device architecture:
 
 ### From Releases
 
-1. Download the latest APK from [Releases](https://github.com/ximeiorg/Xime/releases)
+1. Download the latest APK from [this fork's Releases](https://github.com/Murchey/Xime-Gboardlike/releases) (upstream releases are also available at [ximeiorg/Xime](https://github.com/ximeiorg/Xime/releases))
 2. Install the application
 3. Enable Xime in system input method settings
 4. Set Xime as the current input method
@@ -122,15 +144,29 @@ For detailed documentation, visit [https://ime.ximei.me](https://ime.ximei.me).
 ## Building
 
 ```bash
-# Clone with submodules
-git clone --recursive https://github.com/ximeiorg/Xime.git
+# Clone this fork with submodules
+git clone --recursive https://github.com/Murchey/Xime-Gboardlike.git
 
 # Or initialize submodules in an existing clone
 git submodule update --init --recursive
 
-# Build Release APK
+# Build Release APK with the included community keystore
 ./gradlew assembleRelease
 ```
+
+### Signed personal builds
+
+This fork ships a public community keystore (`app/xime-gboard.jks` + `app/keystore.properties`) so that anyone can produce an installable, consistently signed APK without extra setup.
+
+On Windows, run `build_apk.bat` from the repository root. It builds signed release APKs for each ABI and copies them to `dist/`:
+
+```bat
+build_apk.bat
+```
+
+For public distribution, replace the community keystore with your own key.
+
+> Build intermediates (`app/build/`, `app/.cxx/`) can grow to several GB. They are generated, not source, and can be deleted safely when you are done building.
 
 ## Tech Stack
 
