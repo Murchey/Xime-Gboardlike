@@ -144,6 +144,12 @@ enum class GestureAction(val value: String) {
     /** 进入语音输入态（含麦克风权限校验）。纯 UI 层行为。 */
     VOICE("voice"),
 
+    /** 切换悬浮键盘。纯 UI 层行为（需要输入法服务上下文的空格高度）。 */
+    TOGGLE_FLOATING("toggle_floating"),
+
+    /** 打开应用设置页。纯 UI 层行为。 */
+    OPEN_SETTINGS("open_settings"),
+
     /** 重复空格：value 为次数（默认 5），一次触发连续上屏多个空格。 */
     REPEAT_SPACE("repeat_space");
 

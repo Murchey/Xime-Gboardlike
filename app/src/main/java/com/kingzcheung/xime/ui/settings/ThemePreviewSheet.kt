@@ -55,7 +55,8 @@ import androidx.compose.ui.unit.sp
 import com.kingzcheung.xime.settings.KeysConfigHelper
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.ui.keyboard.LocalKeyCornerRadius
-import com.kingzcheung.xime.ui.keyboard.crispShadowColor
+import com.kingzcheung.xime.ui.keyboard.keyOutline
+import com.kingzcheung.xime.ui.keyboard.keyOutlineColor
 import com.kingzcheung.xime.ui.theme.KeyboardColorScheme
 import com.kingzcheung.xime.ui.theme.KeyboardThemes
 import com.kingzcheung.xime.ui.theme.keyboardBackground
@@ -435,20 +436,13 @@ private fun RowScope.PreviewKey(
     extraModifier: Modifier = Modifier,
 ) {
     val shadow = KeysConfigHelper.getKeyboardShadow()
-    val density = LocalDensity.current
-    val shadowModifier = remember(shadow, density, color) {
-        if (shadow.enabled) {
-            val offsetPx = with(density) { shadow.elevation.dp.toPx() }
-            val cornerPx = with(density) { shadow.shapeRadius.dp.toPx() }
-            Modifier.drawBehind {
-                drawRoundRect(
-                    color = crispShadowColor(color),
-                    topLeft = Offset(0f, offsetPx),
-                    size = size,
-                    cornerRadius = CornerRadius(cornerPx),
-                )
-            }
-        } else Modifier
+    val cornerRadius = LocalKeyCornerRadius.current
+    val shadowModifier = remember(shadow.enabled, cornerRadius, color) {
+        Modifier.keyOutline(
+            enabled = shadow.enabled,
+            cornerRadius = cornerRadius,
+            color = keyOutlineColor(color),
+        )
     }
 
     Box(

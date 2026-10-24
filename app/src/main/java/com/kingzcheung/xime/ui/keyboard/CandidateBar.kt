@@ -101,6 +101,10 @@ data class CandidateBarVisuals(
     val isDarkTheme: Boolean = false,
     /** 候选注释（拼音/英文）颜色；与主候选同对比度，仅靠字号区分。 */
     val commentColor: Color = textColor,
+    /** 编码气泡背景：传键盘背景色，避免暗色主题下气泡又白又灰。 */
+    val preeditBubbleBackground: Color = backgroundColor,
+    /** 编码气泡文字：传按键文字色，与键盘正文一致。 */
+    val preeditBubbleTextColor: Color = textColor,
 )
 
 data class CandidateBarCallbacks(
@@ -298,8 +302,9 @@ fun CandidateBar(
                 text = preeditBubbleText,
                 caretOffset = preeditBubbleCaret,
                 enabled = showPreeditBubble,
-                bubbleColor = visuals.backgroundColor,
-                textColor = visuals.textColor
+                bubbleColor = visuals.preeditBubbleBackground,
+                textColor = visuals.preeditBubbleTextColor,
+                isDarkTheme = visuals.isDarkTheme,
             )
             .background(visuals.backgroundColor)
             .padding(horizontal = horizontalPadding),
@@ -861,6 +866,7 @@ private fun Modifier.drawPreeditBubble(
     enabled: Boolean,
     bubbleColor: Color,
     textColor: Color,
+    isDarkTheme: Boolean,
     caretOffset: Int = -1
 ): Modifier = composed {
     val density = LocalDensity.current
@@ -872,17 +878,13 @@ private fun Modifier.drawPreeditBubble(
     val textSizePx = with(density) { 12.sp.toPx() }
     val caretWidthPx = with(density) { 1.5.dp.toPx() }
 
-    // 气泡基色：优先用传入的主题背景色；其为全透明（CandidateBarVisuals 传
-    // Color.Transparent，真实背景由外层绘制）时按候选文字亮度推导，
-    // 保证浅色模式近白/深色模式深灰的可读对比。
-    val isDarkTheme = textColor.luminance() > 0.5f
-    val bubbleBaseColor = if (bubbleColor.alpha > 0.01f) {
+    // 气泡底色直接取键盘背景色，文字取按键文字色：暗色主题不再出现白底灰字。
+    // 仅当调用方仍传透明色（旧调用）时按主题深浅兜底。
+    val bubbleBgColor = if (bubbleColor.alpha > 0.01f) {
         bubbleColor
     } else {
-        if (isDarkTheme) Color(0xFF2D2F31) else Color(0xFFFAFAFA)
+        if (isDarkTheme) Color(0xFF1E1F21) else Color(0xFFF1F3F4)
     }
-    // 92% 不透明度：浅灰背景上仍能形成足够对比，避免拼音编码看不见。
-    val bubbleBgColor = bubbleBaseColor.copy(alpha = 0.92f)
 
     // 文本画笔：与 SwipeBubble 同款 nativeCanvas 绘制方式
     val bubbleTextPaint = remember(textColor, textSizePx) {

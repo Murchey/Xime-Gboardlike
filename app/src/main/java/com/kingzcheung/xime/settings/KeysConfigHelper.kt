@@ -247,8 +247,8 @@ internal fun parseKeyBinding(
  * - 不写 `values` 而直接给 `action`/`value`/`label`/`icon`/`use` 时，等价于只含这一项的列表；
  *   配合 `bubble: false` 即为「不弹气泡、长按直接执行该动作」。
  */
-/** 长按气泡最多展示的候选数（气泡按此宽度布局）。 */
-private const val MAX_LONG_PRESS_VALUES = 10
+/** 长按气泡最多展示的候选数（句号键两行 8+8，需容纳 16 项）。 */
+private const val MAX_LONG_PRESS_VALUES = 16
 
 /** long_press 单项直写形式（不写 `values`）认可的字段。 */
 private val LONG_PRESS_DIRECT_FIELDS = setOf("action", "value", "label", "icon", "use")

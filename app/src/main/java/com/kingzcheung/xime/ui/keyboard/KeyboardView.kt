@@ -239,10 +239,8 @@ fun KeyboardView(
         else longToColor(kbColors.keyTextColor)
     val accentColor = KeyboardThemes.getAccentColor(state.themeId, state.isDarkTheme)
     val themeScheme = KeyboardThemes.getThemeById(state.themeId)
-    val themeSpecialKeyColor = KeyboardThemes.getSpecialKeyColor(state.themeId, state.isDarkTheme)
-    val specialKeyBgColor = if (state.isDarkTheme) kbColors.specialKeyBgColorDark?.let { longToColor(it) }
-        ?: themeSpecialKeyColor
-        else kbColors.specialKeyBgColor?.let { longToColor(it) } ?: themeSpecialKeyColor
+    // 功能键取主题色；全局 special_key 不再压过主题，保证自定义主题功能键颜色生效。
+    val specialKeyBgColor = KeyboardThemes.getSpecialKeyColor(state.themeId, state.isDarkTheme)
     val specialKeyTextColor = KeyboardThemes.getSpecialKeyTextColorForBackground(
         specialKeyBgColor, keyTextColor
     )
@@ -501,7 +499,10 @@ fun KeyboardView(
                     selectedTextColor = candidateSelectedTextColor,
                     isDarkTheme = state.isDarkTheme,
                     // 注释（拼音/英文）与候选同对比度，避免浅灰底上不可见
-                    commentColor = KeyboardThemes.ensureContrast(candidateTextColor, keyboardBgColor)
+                    commentColor = KeyboardThemes.ensureContrast(candidateTextColor, keyboardBgColor),
+                    // 编码气泡跟随键盘底色/按键文字色，暗色模式下不再是白底灰字
+                    preeditBubbleBackground = keyboardBgColor,
+                    preeditBubbleTextColor = keyTextColor,
                 ),
                 callbacks = CandidateBarCallbacks(
                     // 常驻语音：点按候选栏频谱区域结束识别。
@@ -1258,7 +1259,7 @@ fun KeyboardView(
                         keyBackgroundColor = keyBgColor,
                         keyTextColor = keyTextColor,
                         specialKeyBackgroundColor = specialKeyBgColor,
-                        bubbleBackgroundColor = themeSpecialKeyColor,
+                        bubbleBackgroundColor = specialKeyBgColor,
                         keyboardBackgroundColor = keyboardBgColor,
                         shadowEnabled = kbShadow.enabled,
                         shadowElevation = kbShadow.elevation.dp,
@@ -1301,7 +1302,7 @@ fun KeyboardView(
                         keyBackgroundColor = keyBgColor,
                         keyTextColor = keyTextColor,
                         specialKeyBackgroundColor = specialKeyBgColor,
-                        bubbleBackgroundColor = themeSpecialKeyColor,
+                        bubbleBackgroundColor = specialKeyBgColor,
                         keyboardBackgroundColor = keyboardBgColor,
                         shadowEnabled = kbShadow.enabled,
                         shadowElevation = kbShadow.elevation.dp,

@@ -604,7 +604,14 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val prefs = SettingsPreferences.getPrefsPublic(this)
         sharedPrefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             when (key) {
-                "dark_mode", "keyboard_theme_light", "keyboard_theme_dark", "show_bottom_buttons", "keyboard_height_dp", "keyboard_bottom_padding_dp", "keyboard_flush_bottom" -> {
+                "dark_mode", "keyboard_theme_light", "keyboard_theme_dark" -> {
+                    // 自定义配色可能只改了内置主题 id 的缓存内容；主题切换时重载，
+                    // 避免 IME 与设置页处于不同进程/时序时继续用旧色板。
+                    KeyboardThemes.reload(this)
+                    loadDarkModePreference()
+                    applyWindowBackground()
+                }
+                "show_bottom_buttons", "keyboard_height_dp", "keyboard_bottom_padding_dp", "keyboard_flush_bottom" -> {
                     loadDarkModePreference()
                     applyWindowBackground()
                 }
@@ -1706,8 +1713,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             ?: if (isDark) longToColor(kbColors.candidateTextColorDark) else longToColor(kbColors.candidateTextColor)
                         val accentCol = com.kingzcheung.xime.ui.theme.KeyboardThemes.getAccentColor(state.themeId, isDark)
                         val selectedTextCol = com.kingzcheung.xime.ui.theme.KeyboardThemes.getCandidateSelectedTextColor(state.themeId, isDark)
-                        val keyboardBgColor = cardBg
                         val rootTheme = com.kingzcheung.xime.ui.theme.KeyboardThemes.getThemeById(state.themeId)
+                        // 根背景必须跟主题走：此前固定用 FALLBACK 灰，导致自定义键盘背景/纯黑主题不生效。
+                        val keyboardBgColor = if (isDark) rootTheme.keyboardBgDark else rootTheme.keyboardBgLight
                         if (state.isCompact && (cand.candidates.isNotEmpty() || cand.isShowingRecentClipboard || cand.inputText.isNotEmpty())) {
                             HardwareKeyboardCandidateBar(
                                 inputText = cand.inputText,

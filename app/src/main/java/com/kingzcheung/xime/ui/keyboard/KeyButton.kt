@@ -28,16 +28,20 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.kingzcheung.xime.correction.KeyTapLogger
+import com.kingzcheung.xime.keyboard.KeyboardDimensions
 import com.kingzcheung.xime.settings.ButtonLayout
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.util.CharInfo
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
@@ -137,9 +141,113 @@ data class SwipeState(
     val longPressItems: List<String> = emptyList(),
     val selectedLongPressIndex: Int = 0,
     val longPressDrawableIds: List<Int> = emptyList(),
+    /** 长按气泡每行列数；0 = 单行铺满（兼容旧调用）。 */
+    val longPressColumns: Int = 0,
 )
 
+/**
+ * 长按气泡的换行阈值与最大列数。
+ *
+ * 字母变音候选最多 9 项，保持单行；句号键的中英文符号各 15/16 项，
+ * 超过阈值后均分两行（15 → 8+7，16 → 8+8），与配置顺序一致。
+ */
+internal const val LONG_PRESS_MAX_COLUMNS = 8
+internal const val LONG_PRESS_WRAP_THRESHOLD = 10
+
+internal fun longPressColumns(itemCount: Int): Int {
+    if (itemCount <= 0) return 1
+    if (itemCount <= LONG_PRESS_WRAP_THRESHOLD) return itemCount
+    return ((itemCount + 1) / 2).coerceAtMost(LONG_PRESS_MAX_COLUMNS)
+}
+
+internal fun longPressRows(itemCount: Int, columns: Int = longPressColumns(itemCount)): Int {
+    if (itemCount <= 0 || columns <= 0) return 1
+    return (itemCount + columns - 1) / columns
+}
+
+/**
+ * 长按气泡单元格宽度：至少与按键同宽；文字标签（如「悬浮模式」）较宽时按实测文字加内边距撑开，
+ * 与 [SwipeBubble] 的绘制宽度同源，避免气泡文字重叠、选中位置错位。
+ */
+internal fun longPressCellWidthPx(
+    items: List<String>,
+    keyWidthPx: Float,
+    textSizePx: Float,
+    paddingPx: Float,
+    measureText: Boolean = true,
+): Float {
+    if (!measureText || items.isEmpty()) return keyWidthPx
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        this.textSize = textSizePx
+        typeface = AppFonts.keyLabelTypeface
+        isFakeBoldText = true
+    }
+    val maxTextWidth = items.maxOf { paint.measureText(it) }
+    return maxOf(keyWidthPx, maxTextWidth + paddingPx * 2f)
+}
+
+/**
+ * 长按气泡选中项：横向选列，向上拖动选行（第 0 行在最上方，最近的第二行先被命中）。
+ * [deltaY] 为相对按下点的纵向位移（向上为负）。
+ */
+internal fun longPressIndexAt(
+    deltaX: Float,
+    deltaY: Float,
+    cellWidthPx: Float,
+    rowHeightPx: Float,
+    itemCount: Int,
+    bubbleGapPx: Float = 0f,
+): Int {
+    if (itemCount <= 1) return 0
+    val columns = longPressColumns(itemCount)
+    val rows = longPressRows(itemCount, columns)
+    val cellWidth = cellWidthPx.coerceAtLeast(1f)
+    val col = ((deltaX / cellWidth) + 0.5f).toInt().coerceIn(0, columns - 1)
+    // 气泡第一行画在最上方、第二行靠近按键。手指仍停在按键/间隙时保留首项高亮；
+    // 向上进入气泡先命中最近的第二行，再继续向上才回到第一行。
+    val row = if (rows > 1 && rowHeightPx > 0f) {
+        val upward = -deltaY
+        if (upward < bubbleGapPx) {
+            0
+        } else {
+            val fromBottom = ((upward - bubbleGapPx) / rowHeightPx).toInt()
+                .coerceIn(0, rows - 1)
+            rows - 1 - fromBottom
+        }
+    } else {
+        0
+    }
+    return (row * columns + col).coerceIn(0, itemCount - 1)
+}
+
 private val shadowColorCache = HashMap<Color, Color>()
+
+/** 按键描边色：浅色键用淡黑、深色键用淡白，替代原先键底偏移阴影。 */
+internal fun keyOutlineColor(backgroundColor: Color): Color =
+    if (backgroundColor.luminance() > 0.5f) {
+        Color.Black.copy(alpha = 0.16f)
+    } else {
+        Color.White.copy(alpha = 0.16f)
+    }
+
+/**
+ * 按键描边（替代底部阴影）：在内容绘制完成后沿键形描 1dp 内边线。
+ * 放在原有 shadowModifier 的位置即可，无需调整各键的 clip/background 顺序。
+ */
+internal fun Modifier.keyOutline(
+    enabled: Boolean,
+    cornerRadius: Dp,
+    color: Color,
+): Modifier = if (!enabled) this else drawWithContent {
+    drawContent()
+    drawRoundRect(
+        color = color,
+        topLeft = Offset.Zero,
+        size = size,
+        cornerRadius = CornerRadius(cornerRadius.toPx()),
+        style = Stroke(width = 1.dp.toPx()),
+    )
+}
 
 internal fun crispShadowColor(backgroundColor: Color): Color {
     return shadowColorCache.getOrPut(backgroundColor) {
@@ -232,20 +340,12 @@ fun KeyButton(
     // 父层光标手势已接管横向滑动时，本键不再判定点击（否则会"移动光标 + 打出一个字母"）
     val cursorGestureActive = LocalCursorGestureActive.current
 
-    val shadowModifier = remember(shadowEnabled, shadowElevation, shadowShapeRadius, density, backgroundColor) {
-        if (shadowEnabled) {
-            val offsetPx = with(density) { shadowElevation.toPx() }
-            val cornerPx = with(density) { shadowShapeRadius.toPx() }
-            val color = crispShadowColor(backgroundColor)
-            Modifier.drawBehind {
-                drawRoundRect(
-                    color = color,
-                    topLeft = Offset(0f, offsetPx),
-                    size = size,
-                    cornerRadius = CornerRadius(cornerPx)
-                )
-            }
-        } else Modifier
+    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor) {
+        Modifier.keyOutline(
+            enabled = shadowEnabled,
+            cornerRadius = shadowShapeRadius,
+            color = keyOutlineColor(backgroundColor),
+        )
     }
     val keyCornerRadius = LocalKeyCornerRadius.current
     val keyClipShape = remember(keyCornerRadius) { RoundedCornerShape(keyCornerRadius) }
@@ -560,20 +660,12 @@ fun SwipeableKeyButton(
         currentOnClick()
     }
 
-    val shadowModifier = remember(shadowEnabled, shadowElevation, shadowShapeRadius, density, backgroundColor) {
-        if (shadowEnabled) {
-            val offsetPx = with(density) { shadowElevation.toPx() }
-            val cornerPx = with(density) { shadowShapeRadius.toPx() }
-            val color = crispShadowColor(backgroundColor)
-            Modifier.drawBehind {
-                drawRoundRect(
-                    color = color,
-                    topLeft = Offset(0f, offsetPx),
-                    size = size,
-                    cornerRadius = CornerRadius(cornerPx)
-                )
-            }
-        } else Modifier
+    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor) {
+        Modifier.keyOutline(
+            enabled = shadowEnabled,
+            cornerRadius = shadowShapeRadius,
+            color = keyOutlineColor(backgroundColor),
+        )
     }
     val keyCornerRadius = LocalKeyCornerRadius.current
     val keyClipShape = remember(keyCornerRadius) { RoundedCornerShape(keyCornerRadius) }
@@ -740,6 +832,18 @@ fun SwipeableKeyButton(
                     var selectedIdx = 0
                     val downX = down.position.x
                     val items = currentLongPressItems ?: return@awaitEachGesture
+                    val columns = longPressColumns(items.size)
+                    val bubbleScale = adaptiveBubbleScale(
+                        adaptiveKeyContentScale(buttonBounds.height / density.density)
+                    )
+                    val rowHeightPx = with(density) { KeyboardDimensions.BubbleHeightDown.toPx() } * bubbleScale
+                    val cellWidthPx = longPressCellWidthPx(
+                        items = items,
+                        keyWidthPx = buttonBounds.width,
+                        textSizePx = with(density) { 16.sp.toPx() } * bubbleScale,
+                        paddingPx = with(density) { 6.dp.toPx() } * bubbleScale,
+                        measureText = currentLongPressDrawableIds.isNullOrEmpty(),
+                    )
                     
                     currentOnSwipeStateChange?.invoke(
                         SwipeState(isPressed = true, pressedText = currentPressText), buttonBounds
@@ -756,7 +860,8 @@ fun SwipeableKeyButton(
                                 isLongPress = true,
                                 longPressItems = items,
                                 selectedLongPressIndex = 0,
-                                longPressDrawableIds = currentLongPressDrawableIds ?: emptyList()
+                                longPressDrawableIds = currentLongPressDrawableIds ?: emptyList(),
+                                longPressColumns = columns,
                             ),
                             buttonBounds
                         )
@@ -791,9 +896,14 @@ fun SwipeableKeyButton(
                             
                             if (localLongPressTriggered) {
                                 val deltaX = change.position.x - downX
-                                val itemWidth = buttonBounds.width / items.size
-                                selectedIdx = ((deltaX / itemWidth) + if (items.size > 1) 0.5f else 0f).toInt()
-                                    .coerceIn(0, items.size - 1)
+                                selectedIdx = longPressIndexAt(
+                                    deltaX = deltaX,
+                                    deltaY = dyFromDown,
+                                    cellWidthPx = cellWidthPx,
+                                    rowHeightPx = rowHeightPx,
+                                    itemCount = items.size,
+                                    bubbleGapPx = with(density) { 4.dp.toPx() },
+                                )
                                 
                                 if (selectedIdx != lastReportedIdx) {
                                     lastReportedIdx = selectedIdx
@@ -803,7 +913,8 @@ fun SwipeableKeyButton(
                                             isLongPress = true,
                                             longPressItems = items,
                                             selectedLongPressIndex = selectedIdx,
-                                            longPressDrawableIds = currentLongPressDrawableIds ?: emptyList()
+                                            longPressDrawableIds = currentLongPressDrawableIds ?: emptyList(),
+                                            longPressColumns = columns,
                                         ),
                                         buttonBounds
                                     )
@@ -1155,20 +1266,12 @@ fun IconKeyButton(
     val density = LocalDensity.current
     val currentOnClick by rememberUpdatedState(onClick)
 
-    val shadowModifier = remember(shadowEnabled, shadowElevation, shadowShapeRadius, density, backgroundColor) {
-        if (shadowEnabled) {
-            val offsetPx = with(density) { shadowElevation.toPx() }
-            val cornerPx = with(density) { shadowShapeRadius.toPx() }
-            val color = crispShadowColor(backgroundColor)
-            Modifier.drawBehind {
-                drawRoundRect(
-                    color = color,
-                    topLeft = Offset(0f, offsetPx),
-                    size = size,
-                    cornerRadius = CornerRadius(cornerPx)
-                )
-            }
-        } else Modifier
+    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor) {
+        Modifier.keyOutline(
+            enabled = shadowEnabled,
+            cornerRadius = shadowShapeRadius,
+            color = keyOutlineColor(backgroundColor),
+        )
     }
     val keyCornerRadius = LocalKeyCornerRadius.current
     val keyClipShape = remember(keyCornerRadius) { RoundedCornerShape(keyCornerRadius) }
@@ -1341,20 +1444,12 @@ fun SwipeableIconKeyButton(
         }
     }
 
-    val shadowModifier = remember(shadowEnabled, shadowElevation, shadowShapeRadius, density, backgroundColor) {
-        if (shadowEnabled) {
-            val offsetPx = with(density) { shadowElevation.toPx() }
-            val cornerPx = with(density) { shadowShapeRadius.toPx() }
-            val color = crispShadowColor(backgroundColor)
-            Modifier.drawBehind {
-                drawRoundRect(
-                    color = color,
-                    topLeft = Offset(0f, offsetPx),
-                    size = size,
-                    cornerRadius = CornerRadius(cornerPx)
-                )
-            }
-        } else Modifier
+    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor) {
+        Modifier.keyOutline(
+            enabled = shadowEnabled,
+            cornerRadius = shadowShapeRadius,
+            color = keyOutlineColor(backgroundColor),
+        )
     }
     val keyCornerRadius = LocalKeyCornerRadius.current
     val keyClipShape = remember(keyCornerRadius) { RoundedCornerShape(keyCornerRadius) }
@@ -1591,6 +1686,18 @@ fun SwipeableIconKeyButton(
                     val downX = down.position.x
                     val downY = down.position.y
                     val items = currentLongPressItems ?: return@awaitEachGesture
+                    val columns = longPressColumns(items.size)
+                    val bubbleScale = adaptiveBubbleScale(
+                        adaptiveKeyContentScale(buttonBounds.height / density.density)
+                    )
+                    val rowHeightPx = with(density) { KeyboardDimensions.BubbleHeightDown.toPx() } * bubbleScale
+                    val cellWidthPx = longPressCellWidthPx(
+                        items = items,
+                        keyWidthPx = buttonBounds.width,
+                        textSizePx = with(density) { 16.sp.toPx() } * bubbleScale,
+                        paddingPx = with(density) { 6.dp.toPx() } * bubbleScale,
+                        measureText = currentLongPressDrawableIds.isNullOrEmpty(),
+                    )
 
                     val longPressJob = scope.launch {
                         delay(longPressBubbleDelayMs.toLong())
@@ -1603,6 +1710,7 @@ fun SwipeableIconKeyButton(
                                 longPressItems = items,
                                 selectedLongPressIndex = 0,
                                 longPressDrawableIds = currentLongPressDrawableIds,
+                                longPressColumns = columns,
                             ),
                             buttonBounds,
                         )
@@ -1631,9 +1739,15 @@ fun SwipeableIconKeyButton(
                             }
 
                             val deltaX = change.position.x - downX
-                            val itemWidth = buttonBounds.width / items.size
-                            selectedIdx = ((deltaX / itemWidth) + if (items.size > 1) 0.5f else 0f)
-                                .toInt().coerceIn(0, items.size - 1)
+                            val deltaY = change.position.y - downY
+                            selectedIdx = longPressIndexAt(
+                                deltaX = deltaX,
+                                deltaY = deltaY,
+                                cellWidthPx = cellWidthPx,
+                                rowHeightPx = rowHeightPx,
+                                itemCount = items.size,
+                                bubbleGapPx = with(density) { 4.dp.toPx() },
+                            )
                             if (!isRelease && selectedIdx != lastReportedIdx) {
                                 lastReportedIdx = selectedIdx
                                 onSwipeStateChange?.invoke(
@@ -1643,6 +1757,7 @@ fun SwipeableIconKeyButton(
                                         longPressItems = items,
                                         selectedLongPressIndex = selectedIdx,
                                         longPressDrawableIds = currentLongPressDrawableIds,
+                                        longPressColumns = columns,
                                     ),
                                     buttonBounds,
                                 )
@@ -1811,20 +1926,12 @@ fun SwipeableKeyButtonLandscape(
         if (shouldClick) currentOnClick()
     }
 
-    val shadowModifier = remember(shadowEnabled, shadowElevation, shadowShapeRadius, density, backgroundColor) {
-        if (shadowEnabled) {
-            val offsetPx = with(density) { shadowElevation.toPx() }
-            val cornerPx = with(density) { shadowShapeRadius.toPx() }
-            val color = crispShadowColor(backgroundColor)
-            Modifier.drawBehind {
-                drawRoundRect(
-                    color = color,
-                    topLeft = Offset(0f, offsetPx),
-                    size = size,
-                    cornerRadius = CornerRadius(cornerPx)
-                )
-            }
-        } else Modifier
+    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor) {
+        Modifier.keyOutline(
+            enabled = shadowEnabled,
+            cornerRadius = shadowShapeRadius,
+            color = keyOutlineColor(backgroundColor),
+        )
     }
     val keyCornerRadius = LocalKeyCornerRadius.current
     val keyClipShape = remember(keyCornerRadius) { RoundedCornerShape(keyCornerRadius) }

@@ -62,8 +62,9 @@ object DynamicThemes {
             candidateBarBgDark = p.neutral1(900),
             keyTextColorLight = p.neutral1(900),
             keyTextColorDark = p.neutral1(100),
-            candidateTextColorLight = p.accent1(700),
-            candidateTextColorDark = accentDark,
+            // 非选中候选统一中性灰，与内置主题一致；强调色只用于选中项/功能键。
+            candidateTextColorLight = Color(0xFF5F6368),
+            candidateTextColorDark = Color(0xFF9AA0A6),
             candidateSelectedTextColorLight = accentLight,
             candidateSelectedTextColorDark = accentDark,
             dividerColorLight = p.neutral2(100),

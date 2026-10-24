@@ -72,6 +72,8 @@ data class BubbleDrawData(
     val selectedTextColorArgb: Int = android.graphics.Color.WHITE,
     /** 单项长按：整个气泡为圆形，没有向下尖角。 */
     val isSingleLongPress: Boolean = false,
+    /** 长按气泡每行列数（0 = 单行）。 */
+    val longPressColumns: Int = 0,
 )
 
 /** 按压气泡抬起后的滞留时长：随抬起瞬间消失看不清键位提示（主流输入法约 50~80ms），取中值。 */
@@ -148,7 +150,16 @@ fun rememberSwipeBubbleDrawData(
         referenceHeightDp = referenceHeightDp,
     )
     val bubbleScale = adaptiveBubbleScale(contentScale)
-    val bodyHeightPx = with(density) { BubbleBodyHeight.toPx() } * bubbleScale
+    val rowHeightPx = with(density) { BubbleBodyHeight.toPx() } * bubbleScale
+    // 长按气泡按配置列数换行（句号键 8 列 × 2 行）；其余气泡单行。
+    val longPressColumns = if (isLongPressMode) {
+        swipeState.longPressColumns.takeIf { it > 0 }
+            ?: swipeState.longPressItems.size.coerceAtLeast(1)
+    } else 0
+    val longPressRows = if (isLongPressMode && longPressColumns > 0) {
+        (swipeState.longPressItems.size + longPressColumns - 1) / longPressColumns
+    } else 1
+    val bodyHeightPx = rowHeightPx * longPressRows
     // 单项长按：整个气泡画成圆形，不再向下伸出尖角。
     val singleLongPress = isLongPressMode && swipeState.longPressItems.size == 1
     // 尖端完整覆盖按下的按键（与按键同高），宽体锚定按键顶部悬在上方（见 boxTop）。
@@ -186,21 +197,32 @@ fun rememberSwipeBubbleDrawData(
         }
     }
 
+    val textSizePx = with(density) { 16.sp.toPx() } * bubbleScale
+    val cellWidthPx = if (isLongPressMode) {
+        longPressCellWidthPx(
+            items = swipeState.longPressItems,
+            keyWidthPx = keyWidthPx,
+            textSizePx = textSizePx,
+            paddingPx = with(density) { 6.dp.toPx() } * bubbleScale,
+            measureText = swipeState.longPressDrawableIds.isEmpty(),
+        )
+    } else {
+        keyWidthPx
+    }
+
     val bodyWidth = if (singleLongPress) {
         bodyHeightPx
     } else if (isLongPressMode) {
-        val cellMin = if (swipeState.longPressDrawableIds.isNotEmpty())
-            swipeState.longPressItems.size
-        else
-            maxOf(swipeState.longPressItems.size, 3)
-        // 英文变音候选可能到 9 项，宽度必须钳制在键盘内。
-        minOf(cellMin * keyWidthPx, keyboardWidth - screenMarginPx * 2f)
+        // 英文变音候选可能到 9 项、符号气泡 8 列，宽度必须钳制在键盘内。
+        minOf(cellWidthPx * longPressColumns, keyboardWidth - screenMarginPx * 2f)
     } else {
         maxOf(textPaint.measureText(displayText!!) + with(density) { 20.dp.toPx() } * bubbleScale, minBodyWidthPx)
     }
 
-    val textSizePx = with(density) { 16.sp.toPx() } * bubbleScale
-    val selectedFontSizePx = with(density) { 20.sp.toPx() } * bubbleScale
+    // 两行气泡每格更窄，选中项不再额外放大，避免多字符符号（^_^ / ……）溢出。
+    val selectedFontSizePx = with(density) {
+        (if (longPressRows > 1) 17.sp else 20.sp).toPx()
+    } * bubbleScale
     val normalFontSizePx = with(density) { 16.sp.toPx() } * bubbleScale
     val selectedBgRadiusPx = with(density) { 6.dp.toPx() } * bubbleScale
 
@@ -284,6 +306,7 @@ fun rememberSwipeBubbleDrawData(
         accentArgb = accentArgb,
         selectedTextColorArgb = selectedTextColorArgb,
         isSingleLongPress = singleLongPress,
+        longPressColumns = longPressColumns,
     )
 }
 
@@ -380,27 +403,34 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
             canvas.save()
             canvas.clipRect(0f, 0f, data.bodyWidth, data.bodyHeightPx)
             val accentColor = data.accentArgb
-            val cellWidth = data.bodyWidth / data.longPressItems.size
+            val columns = data.longPressColumns.coerceAtLeast(1)
+            val rows = (data.longPressItems.size + columns - 1) / columns
+            val cellWidth = data.bodyWidth / columns
+            val cellHeight = data.bodyHeightPx / rows
 
             data.longPressItems.forEachIndexed { index, item ->
-                val itemLeft = index * cellWidth
+                val row = index / columns
+                val col = index % columns
+                val itemLeft = col * cellWidth
+                val itemTop = row * cellHeight
+                val itemCenterY = itemTop + cellHeight / 2f
                 if (index == data.selectedLongPressIndex && !data.isSingleLongPress) {
                     // 多项气泡的选中项使用实心强调圆（设计稿：圆形而不是方形）。
                     // 单项气泡整体就是选中项，保持键帽同色圆形，不再套一圈蓝色。
                     bubbleBgPaint.color = accentColor
-                    val radius = minOf(cellWidth, data.bodyHeightPx) * 0.38f
+                    val radius = minOf(cellWidth, cellHeight) * 0.48f
                     canvas.drawCircle(
                         itemLeft + cellWidth / 2f,
-                        data.bodyHeightPx / 2f,
+                        itemCenterY,
                         radius,
                         bubbleBgPaint
                     )
                 }
                 if (data.longPressIconBitmaps.isNotEmpty() && index < data.longPressIconBitmaps.size) {
                     val icon = data.longPressIconBitmaps[index]
-                    val iconSize = data.bodyHeightPx * 0.45f
+                    val iconSize = cellHeight * 0.45f
                     val iconLeft = itemLeft + (cellWidth - iconSize) / 2f
-                    val iconTop = (data.bodyHeightPx - iconSize) / 2f
+                    val iconTop = itemTop + (cellHeight - iconSize) / 2f
                     canvas.drawBitmap(
                         icon, null,
                         android.graphics.RectF(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize),
@@ -419,7 +449,8 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
                     bubbleLabelPaint.textAlign = Paint.Align.CENTER
                     bubbleLabelPaint.isFakeBoldText = true
                     bubbleLabelPaint.typeface = data.keyLabelTypeface
-                    val textY = data.bodyHeightPx / 2f - (bubbleLabelPaint.fontMetrics.ascent + bubbleLabelPaint.fontMetrics.descent) / 2f
+                    val textY = itemCenterY -
+                        (bubbleLabelPaint.fontMetrics.ascent + bubbleLabelPaint.fontMetrics.descent) / 2f
                     canvas.drawText(item, itemLeft + cellWidth / 2f, textY, bubbleLabelPaint)
                 }
             }

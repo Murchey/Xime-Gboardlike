@@ -58,20 +58,12 @@ fun SpaceKeyButton(
     val longPressTimeout = 400L
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val shadowModifier = remember(shadowEnabled, shadowElevation, shadowShapeRadius, density, backgroundColor) {
-        if (shadowEnabled) {
-            val offsetPx = with(density) { shadowElevation.toPx() }
-            val cornerPx = with(density) { shadowShapeRadius.toPx() }
-            val color = crispShadowColor(backgroundColor)
-            Modifier.drawBehind {
-                drawRoundRect(
-                    color = color,
-                    topLeft = Offset(0f, offsetPx),
-                    size = size,
-                    cornerRadius = CornerRadius(cornerPx)
-                )
-            }
-        } else Modifier
+    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor) {
+        Modifier.keyOutline(
+            enabled = shadowEnabled,
+            cornerRadius = shadowShapeRadius,
+            color = keyOutlineColor(backgroundColor),
+        )
     }
     
     Box(

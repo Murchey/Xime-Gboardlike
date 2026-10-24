@@ -75,7 +75,7 @@ correction:
 #                                                 （灰色系 primary 提亮后仍偏暗时建议单独配置）
 #
 color_schemes:
-  # 内置现代主题（Gboard 灰/黑、微信、QQ、Telegram、X、GitHub、ChatGPT、Claude）
+  # 内置现代主题（Gboard 灰/黑、微信、QQ、终末地、X、GitHub、ChatGPT、Claude）
   # 定义在 KeyboardTheme.kt；如需覆盖同名主题，在 xime.custom.yaml 中追加同 id 的字段即可。
   dynamic:
     name: "动态配色"
@@ -145,8 +145,9 @@ keyboard:
     # special_key_bg_color_dark: 0x4A4A4A #不设置时默认取主题色
     key_text_color: 0x202124
     key_text_color_dark: 0xE8EAED
-    candidate_text_color: 0x202124
-    candidate_text_color_dark: 0xE8EAED
+    # 非选中候选统一中性灰（主题未覆盖时也不要用纯白/纯黑）
+    candidate_text_color: 0x5F6368
+    candidate_text_color_dark: 0x9AA0A6
   
   # ── 按键配置（可选，不设置则使用默认值）──
   # corner_radius:      按键圆角半径（dp，默认 8），独立于 shadow.shape_radius
@@ -212,7 +213,7 @@ keyboard:
         - [a, s, d, f, g, h, j, k, l]
         - [shift, z, x, c, v, b, n, m, delete]
         # 第四行（控制行）：位置/是否出现由本 rows 决定，行为在下方 keys.<id> 配置
-        - [mode_change, comma, earth, space, enter]
+        - [mode_change, comma, earth, space, period, enter]
     keys:
       # ── 第一行 ──
       # long_press 顺序：小写 → 大写 → 带变音符号的相似字母
@@ -253,18 +254,18 @@ keyboard:
       delete: { width: 1.4, tap: { action: delete }, long_press: { values: [ { action: delete, label: "删除" } ] }, swipe_up: { action: clear_all, label: "上滑清空" }, swipe_down: { action: undo_clear, label: "下滑撤回" }, swipe_left: { action: command, value: clear_composition }, swipe_right: { action: command, value: clear_composition } }
       # ── 第四行功能键（位置/是否出现由上方 layout.rows 第四行决定；行为在此定义）──
       # ?123：单击切面板，长按弹出「数字 / 常用符号」（命令值走键盘按键路由）
-      mode_change: { width: 1.2, tap: { action: command, value: mode_change, bubble: false }, long_press: { display: bubble, values: [ { label: number, action: command, value: mode_change_number }, { label: common_symbol, action: command, value: mode_change_common_symbol } ] } }
+      mode_change: { width: 1.0, tap: { action: command, value: mode_change, bubble: false }, long_press: { display: bubble, values: [ { label: number, action: command, value: mode_change_number }, { label: common_symbol, action: command, value: mode_change_common_symbol } ] } }
       # 空格键：单击上屏空格；长按进入语音输入（含麦克风权限校验）
       # 长按若想改为「重复空格」：long_press: { values: [ { action: repeat_space, value: 5 } ] }
-      space: { width: 3, tap: { action: space }, long_press: { label: "语音", action: voice, bubble: false } }
+      space: { width: 2.9, tap: { action: space }, long_press: { label: "语音", action: voice, bubble: false } }
       # 回车键
-      enter: { width: 1.2, tap: { action: enter, bubble: false } }
-      #  逗号键，label 为中文显示，value 为英文显示+提交值
-      comma: { tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." } , long_press: { display: "bubble", values: [ ",","."] }}
-
-
+      enter: { width: 1.0, tap: { action: enter, bubble: false } }
+      # 逗号键：长按打开表情面板 / 悬浮模式 / 设置
+      comma: { width: 0.7, tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." }, long_press: { display: "bubble", values: [ { label: "表情", action: switch_route, value: "emoji" }, { label: "悬浮模式", action: toggle_floating }, { label: "设置", action: open_settings } ] } }
+      # 句号键（空格右侧、回车左侧）：长按两行符号气泡
+      period: { width: 0.7, tap: { label: "。", value: "." }, long_press: { display: bubble, values: ["^_^", ":)", ":(", ":D", ":P", "&", "$", "^", "%", "_", "；：", "、", "！", "……", "？"] } }
       # 中/英切换键，label 为按键显示文字
-      earth: { tap: { label: "@language", action: "toggle_ascii" }, long_press: { display: "bubble", values: [ { label: "选择输入法", action: "command", value: "show_ime_picker" } ] } }
+      earth: { width: 0.7, tap: { label: "@language", action: "toggle_ascii" }, long_press: { display: "bubble", values: [ { label: "选择输入法", action: "command", value: "show_ime_picker" } ] } }
     
   # 英文键盘布局
   qwerty_en:
@@ -286,7 +287,7 @@ keyboard:
         - [a, s, d, f, g, h, j, k, l]
         - [shift, z, x, c, v, b, n, m, delete]
         # 第四行（控制行）：位置/是否出现由本 rows 决定，行为在下方 keys.<id> 配置
-        - [mode_change, comma, earth, space, enter]
+        - [mode_change, comma, earth, space, period, enter]
     keys:
       # ── 第一行 ──
       q: { tap: "q", swipe_up: "1", long_press: { display: "bubble", values: ["q", "Q"] } }
@@ -324,16 +325,18 @@ keyboard:
       # delete：单击删除、长按重复删、上滑清空、下滑撤回、左右滑清空输入
       delete: { width: 1.4, tap: { action: delete }, long_press: { values: [ { action: delete, label: "删除" } ] }, swipe_up: { action: clear_all, label: "上滑清空" }, swipe_down: { action: undo_clear, label: "下滑撤回" }, swipe_left: { action: command, value: clear_composition }, swipe_right: { action: command, value: clear_composition } }
       # ?123：单击切面板，长按弹出「数字 / 常用符号」
-      mode_change: { width: 1.2, tap: { action: command, value: mode_change , bubble: false}, long_press: { display: bubble, values: [ { label: number, action: command, value: mode_change_number }, { label: common_symbol, action: command, value: mode_change_common_symbol } ] } }
+      mode_change: { width: 1.0, tap: { action: command, value: mode_change , bubble: false}, long_press: { display: bubble, values: [ { label: number, action: command, value: mode_change_number }, { label: common_symbol, action: command, value: mode_change_common_symbol } ] } }
       # 空格键：单击上屏空格；长按进入语音输入（含麦克风权限校验）
       # 长按若想改为「重复空格」：long_press: { values: [ { action: repeat_space, value: 5 } ] }
-      space: { width: 3, tap: { action: space }, long_press: { label: "语音", action: voice, bubble: false } }
+      space: { width: 2.9, tap: { action: space }, long_press: { label: "语音", action: voice, bubble: false } }
       # 回车键
-      enter: { width: 1.2, tap: { action: enter } }
-      #  逗号键，label 为中文显示，value 为英文显示+提交值
-      comma: { tap: { label: ".", value: "." }, swipe_up: { label: ",", value: "," } }
+      enter: { width: 1.0, tap: { action: enter } }
+      # 逗号键：与句号分开，长按打开表情面板 / 悬浮模式 / 设置
+      comma: { width: 0.7, tap: { label: ",", value: "," }, swipe_up: { label: ".", value: "." }, long_press: { display: "bubble", values: [ { label: "表情", action: switch_route, value: "emoji" }, { label: "悬浮模式", action: toggle_floating }, { label: "设置", action: open_settings } ] } }
+      # 句号键（空格右侧、回车左侧）：长按两行符号气泡
+      period: { width: 0.7, tap: { label: ".", value: "." }, long_press: { display: bubble, values: ["&", "%", "+", "\"", "-", ":", "'", "@", ";", "/", "(", ")", "#", "!", ",", "?"] } }
       # 中/英切换键，label 为按键显示文字
-      earth: { tap: { label: "@language", action: "toggle_ascii" , bubble: false}, long_press: { display: "bubble", values: [ { label: "选择输入法", action: "command", value: "show_ime_picker" } ] } }
+      earth: { width: 0.7, tap: { label: "@language", action: "toggle_ascii" , bubble: false}, long_press: { display: "bubble", values: [ { label: "选择输入法", action: "command", value: "show_ime_picker" } ] } }
 
   # ── 平板/大屏键盘布局（设备档变体）──
   # 平板（smallestWidth ≥ 600dp，不随横竖屏变化）上自动整段替换同名基础段
@@ -491,8 +494,9 @@ keyboard:
       cv: { tap: { label: "cv", value: "c" }, swipe_up: "、", long_press: { display: "bubble", values: ["c", "v", "C", "V"] } }
       bn: { tap: { label: "bn", value: "b" }, swipe_up: "!", long_press: { display: "bubble", values: ["b", "n", "B", "N"] } }
       m:  { tap: { label: "m", value: "m" }, swipe_up: "#", long_press: { display: "bubble", values: ["m", "M"] } }
-      comma: { tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." } , long_press: { display: "bubble", values: [ ",","."] }}
-      earth: { tap: { label: "@language", action: "toggle_ascii" }, long_press: { display: "bubble", values: [ { label: "选择输入法", action: "command", value: "show_ime_picker" } ] } }
+      comma: { width: 0.7, tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." }, long_press: { display: "bubble", values: [ { label: "表情", action: switch_route, value: "emoji" }, { label: "悬浮模式", action: toggle_floating }, { label: "设置", action: open_settings } ] } }
+      period: { width: 0.7, tap: { label: "。", value: "." }, long_press: { display: bubble, values: ["^_^", ":)", ":(", ":D", ":P", "&", "$", "^", "%", "_", "；：", "、", "！", "……", "？"] } }
+      earth: { width: 0.7, tap: { label: "@language", action: "toggle_ascii" }, long_press: { display: "bubble", values: [ { label: "选择输入法", action: "command", value: "show_ime_picker" } ] } }
 
   # 拼音 17 键：we/rt/yu/op、sd/fg/jk、xc/bn（对应方案 pinyin_17jian）
   qwerty_17:
@@ -524,8 +528,9 @@ keyboard:
       v:  { tap: { label: "v", value: "v" }, swipe_up: "?", long_press: { display: "bubble", values: ["v", "V"] } }
       bn: { tap: { label: "bn", value: "b" }, swipe_up: "!", long_press: { display: "bubble", values: ["b", "n", "B", "N"] } }
       m:  { tap: { label: "m", value: "m" }, swipe_up: "#", long_press: { display: "bubble", values: ["m", "M"] } }
-      comma: { tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." } , long_press: { display: "bubble", values: [ ",","."] }}
-      earth: { tap: { label: "@language", action: "toggle_ascii" }, long_press: { display: "bubble", values: [ { label: "选择输入法", action: "command", value: "show_ime_picker" } ] } }
+      comma: { width: 0.7, tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." }, long_press: { display: "bubble", values: [ { label: "表情", action: switch_route, value: "emoji" }, { label: "悬浮模式", action: toggle_floating }, { label: "设置", action: open_settings } ] } }
+      period: { width: 0.7, tap: { label: "。", value: "." }, long_press: { display: bubble, values: ["^_^", ":)", ":(", ":D", ":P", "&", "$", "^", "%", "_", "；：", "、", "！", "……", "？"] } }
+      earth: { width: 0.7, tap: { label: "@language", action: "toggle_ascii" }, long_press: { display: "bubble", values: [ { label: "选择输入法", action: "command", value: "show_ime_picker" } ] } }
 
   # 拼音 18 键：we/rt/io、sd/fg/jk、xc/bn（对应方案 pinyin_18jian）
   qwerty_18:
@@ -558,8 +563,9 @@ keyboard:
       v:  { tap: { label: "v", value: "v" }, swipe_up: "?", long_press: { display: "bubble", values: ["v", "V"] } }
       bn: { tap: { label: "bn", value: "b" }, swipe_up: "!", long_press: { display: "bubble", values: ["b", "n", "B", "N"] } }
       m:  { tap: { label: "m", value: "m" }, swipe_up: "#", long_press: { display: "bubble", values: ["m", "M"] } }
-      comma: { tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." } , long_press: { display: "bubble", values: [ ",","."] }}
-      earth: { tap: { label: "@language", action: "toggle_ascii" }, long_press: { display: "bubble", values: [ { label: "选择输入法", action: "command", value: "show_ime_picker" } ] } }
+      comma: { width: 0.7, tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." }, long_press: { display: "bubble", values: [ { label: "表情", action: switch_route, value: "emoji" }, { label: "悬浮模式", action: toggle_floating }, { label: "设置", action: open_settings } ] } }
+      period: { width: 0.7, tap: { label: "。", value: "." }, long_press: { display: bubble, values: ["^_^", ":)", ":(", ":D", ":P", "&", "$", "^", "%", "_", "；：", "、", "！", "……", "？"] } }
+      earth: { width: 0.7, tap: { label: "@language", action: "toggle_ascii" }, long_press: { display: "bubble", values: [ { label: "选择输入法", action: "command", value: "show_ime_picker" } ] } }
 
   # 九键（T9）键盘配置
   # 注意：本键盘不支持 button_layout（按键布局模式），固定 standard 键面布局；

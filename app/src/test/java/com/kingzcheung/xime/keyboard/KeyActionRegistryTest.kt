@@ -32,6 +32,8 @@ class KeyActionRegistryTest {
         assertEquals(ActionDomain.CROSS, KeyActionRegistry.fromId("toggle_ascii")!!.domain)
         assertEquals(ActionDomain.SERVICE, KeyActionRegistry.fromId("repeat_space")!!.domain)
         assertEquals(ActionDomain.SERVICE, KeyActionRegistry.fromId("smart_quote")!!.domain)
+        assertEquals(ActionDomain.UI, KeyActionRegistry.fromId("toggle_floating")!!.domain)
+        assertEquals(ActionDomain.UI, KeyActionRegistry.fromId("open_settings")!!.domain)
     }
 
     @Test
