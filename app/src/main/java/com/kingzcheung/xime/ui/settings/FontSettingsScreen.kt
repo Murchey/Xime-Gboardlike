@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,7 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -49,10 +47,11 @@ import com.kingzcheung.xime.settings.KeysConfigHelper
 import com.kingzcheung.xime.ui.keyboard.AppFonts
 
 /**
- * 字体设置：导入本地 ttf/otf/ttc，分别替换按键主字、字根、候选词、注释与整个界面。
+ * 字体设置：导入一次，全局生效。
  *
- * 导入的字体复制到 `files/rime/fonts/`，选择结果存 SharedPreferences（不写 xime.yaml），
- * 每次变更调用 [KeysConfigHelper.reloadFonts] 立即生效。
+ * 一次导入即同时写入五个槽位（按键主字 / 字根 / 候选词 / 注释 / 界面），
+ * 因此键盘按键、候选栏、设置页等所有文字都换成同一款字体；文件按 SHA 去重，
+ * 只占一份空间。清除时五个槽位一起清掉，回退系统默认。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,46 +59,33 @@ fun FontSettingsContent(onBack: () -> Unit) {
     val context = LocalContext.current
     var version by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
-    var pendingSlot by remember { mutableStateOf<FontSlot?>(null) }
-    var uiEnabled by remember { mutableStateOf(FontPreferences.isUiFontEnabled(context)) }
-    // 各槽位当前字体：从 prefs 读进状态，改字体后必须刷新（否则整行不会重组）
-    var slotValues by remember { mutableStateOf(readSlots(context)) }
+    var currentPath by remember { mutableStateOf(currentGlobalFont(context)) }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        val slot = pendingSlot
-        pendingSlot = null
-        if (uri == null || slot == null) return@rememberLauncherForActivityResult
+        if (uri == null) return@rememberLauncherForActivityResult
         runCatching {
-            val old = FontPreferences.get(context, slot)
+            val old = currentPath
             val imported = FontImporter.import(context, uri)
-            FontPreferences.set(context, slot, imported.relativePath)
-            val stillUsed = FontSlot.entries.any { FontPreferences.get(context, it) == old }
-            if (old.isNotBlank() && old != imported.relativePath && !stillUsed) {
-                FontImporter.delete(context, old)
-            }
-        }.onSuccess {
+            // 一次导入 → 五个槽位全部指向同一个文件
+            FontSlot.entries.forEach { FontPreferences.set(context, it, imported.relativePath) }
+            if (old.isNotBlank() && old != imported.relativePath) FontImporter.delete(context, old)
+            imported.relativePath
+        }.onSuccess { path ->
             message = null
+            currentPath = path
             KeysConfigHelper.reloadFonts(context)
-            slotValues = readSlots(context)
             version++
         }.onFailure { error ->
             message = error.message ?: "导入失败"
         }
     }
 
-    fun launchPick(slot: FontSlot) {
-        pendingSlot = slot
-        picker.launch(arrayOf("font/ttf", "font/otf", "font/collection", "application/octet-stream", "*/*"))
-    }
-
-    fun clearSlot(slot: FontSlot) {
-        val old = FontPreferences.get(context, slot)
-        FontPreferences.clear(context, slot)
-        // 多个槽位可能共用同一个字体文件，只有没人再用时才删
-        val stillUsed = FontSlot.entries.any { FontPreferences.get(context, it) == old }
-        if (old.isNotBlank() && !stillUsed) FontImporter.delete(context, old)
+    fun clearFont() {
+        val old = currentPath
+        FontPreferences.clearAll(context)
+        if (old.isNotBlank()) FontImporter.delete(context, old)
+        currentPath = ""
         KeysConfigHelper.reloadFonts(context)
-        slotValues = readSlots(context)
         version++
     }
 
@@ -139,76 +125,46 @@ fun FontSettingsContent(onBack: () -> Unit) {
             }
 
             item {
-                SettingsSection(title = tr(R.string.s_jianpanziti)) {
-                    FontSlotRow(
-                        title = tr(R.string.s_anjianzhuzi),
-                        value = slotValues[FontSlot.KEY] ?: "",
-                        onPick = { launchPick(FontSlot.KEY) },
-                        onClear = { clearSlot(FontSlot.KEY) }
-                    )
-                    FontSlotRow(
-                        title = tr(R.string.s_zigenziti),
-                        value = slotValues[FontSlot.KEY_LABEL] ?: "",
-                        onPick = { launchPick(FontSlot.KEY_LABEL) },
-                        onClear = { clearSlot(FontSlot.KEY_LABEL) }
-                    )
-                    FontSlotRow(
-                        title = tr(R.string.s_houxuanziti),
-                        value = slotValues[FontSlot.CANDIDATE] ?: "",
-                        onPick = { launchPick(FontSlot.CANDIDATE) },
-                        onClear = { clearSlot(FontSlot.CANDIDATE) }
-                    )
-                    FontSlotRow(
-                        title = tr(R.string.s_zhushiziti),
-                        value = slotValues[FontSlot.COMMENT] ?: "",
-                        onPick = { launchPick(FontSlot.COMMENT) },
-                        onClear = { clearSlot(FontSlot.COMMENT) }
-                    )
-                }
-            }
-
-            item {
-                SettingsSection(title = tr(R.string.s_jiemianziti)) {
-                    FontSlotRow(
-                        title = tr(R.string.s_jiemianziti),
-                        value = slotValues[FontSlot.UI] ?: "",
-                        onPick = { launchPick(FontSlot.UI) },
-                        onClear = { clearSlot(FontSlot.UI) }
-                    )
+                SettingsSection(title = tr(R.string.s_quanjuziti)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                            .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = tr(R.string.s_jiemianziti_kaiguan),
-                                style = MaterialTheme.typography.bodyLarge,
+                                text = if (currentPath.isBlank()) tr(R.string.s_xitongmoren)
+                                else FontImporter.displayName(currentPath),
+                                style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = tr(R.string.s_jiemianziti_kaiguan_shuoming),
+                                text = tr(R.string.s_ziti_yingyongfanwei),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Switch(
-                            checked = uiEnabled,
-                            onCheckedChange = { checked ->
-                                uiEnabled = checked
-                                FontPreferences.setUiFontEnabled(context, checked)
-                                KeysConfigHelper.reloadFonts(context)
-                                version++
+                        if (currentPath.isNotBlank()) {
+                            TextButton(onClick = { clearFont() }) {
+                                Text(tr(R.string.s_qingchu))
                             }
-                        )
+                        }
+                        TextButton(onClick = {
+                            picker.launch(
+                                arrayOf(
+                                    "font/ttf", "font/otf", "font/collection",
+                                    "application/octet-stream", "*/*"
+                                )
+                            )
+                        }) {
+                            Text(if (currentPath.isBlank()) tr(R.string.s_daoru) else tr(R.string.s_genguan))
+                        }
                     }
                 }
             }
 
-            item {
-                FontPreviewCard(version = version)
-            }
+            item { FontPreviewCard(version = version) }
 
             item {
                 message?.let { text ->
@@ -222,10 +178,9 @@ fun FontSettingsContent(onBack: () -> Unit) {
                 OutlinedButton(
                     onClick = {
                         FontPreferences.clearAll(context)
-                        uiEnabled = true
+                        currentPath = ""
                         message = null
                         KeysConfigHelper.reloadFonts(context)
-                        slotValues = readSlots(context)
                         version++
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -239,46 +194,12 @@ fun FontSettingsContent(onBack: () -> Unit) {
     }
 }
 
-@Composable
-private fun FontSlotRow(
-    title: String,
-    value: String,
-    onPick: () -> Unit,
-    onClear: () -> Unit
-) {
-    val name = if (value.isBlank()) tr(R.string.s_xitongmoren) else FontImporter.displayName(value)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = name,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        if (value.isNotBlank()) {
-            TextButton(onClick = onClear) {
-                Text(tr(R.string.s_qingchu))
-            }
-        }
-        TextButton(onClick = onPick) {
-            Text(tr(R.string.s_daoru))
-        }
-    }
-}
+/** 五个槽位当前是否指向同一款字体；不一致时以按键主字为准（历史多槽位配置的兼容）。 */
+private fun currentGlobalFont(context: android.content.Context): String =
+    FontPreferences.get(context, FontSlot.KEY)
 
 @Composable
 private fun FontPreviewCard(version: Int) {
-    // AppFonts 是单例，字体变更后靠 version 触发重读
     val keyFamily: FontFamily = remember(version) { AppFonts.keyFontFamily }
     val candidateFamily: FontFamily = remember(version) { AppFonts.candidateFontFamily }
 
@@ -316,7 +237,3 @@ private fun FontPreviewCard(version: Int) {
         }
     }
 }
-
-/** 读取全部槽位的当前字体（相对 files/rime 的路径，空串表示未设置）。 */
-private fun readSlots(context: android.content.Context): Map<FontSlot, String> =
-    FontSlot.entries.associateWith { FontPreferences.get(context, it) }

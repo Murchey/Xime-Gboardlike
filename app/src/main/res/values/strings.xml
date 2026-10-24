@@ -1029,7 +1029,10 @@
     <string name="s_zidingyibeijing">自定义背景</string>
     <string name="s_zitiguanli">字体</string>
     <string name="s_ziti_guanli_fu">导入本地字体，替换键盘与界面字体</string>
-    <string name="s_zitishuoming">支持 ttf / otf / ttc 字体文件；导入后立即生效，文件保存在应用私有目录，不会上传。</string>
+    <string name="s_zitishuoming">支持 ttf / otf / ttc；导入一次即全局生效（键盘按键、候选栏、整个界面），文件保存在应用私有目录，不会上传。</string>
+    <string name="s_quanjuziti">全局字体</string>
+    <string name="s_ziti_yingyongfanwei">键盘按键、候选栏与界面统一使用</string>
+    <string name="s_genguan">更换</string>
     <string name="s_jianpanziti">键盘字体</string>
     <string name="s_anjianzhuzi">按键主字</string>
     <string name="s_zigenziti">字根标签</string>
