@@ -1124,7 +1124,7 @@ internal fun buildPluginDiagnosticText(
     enabled: Boolean,
     errors: List<PluginErrorLog.PluginError>
 ): String = buildString {
-    appendLine("Xime v$hostVersionName")
+    appendLine("XimeGboard v$hostVersionName")
     appendLine(tr(R.string.s_chajian_xinxi, pluginName, pluginId, pluginVersion, if (enabled) tr(R.string.s_yiqiyong) else tr(R.string.s_yijinyong)))
     appendLine()
     appendLine(tr(R.string.s_cuowujilu_tiao, errors.size))

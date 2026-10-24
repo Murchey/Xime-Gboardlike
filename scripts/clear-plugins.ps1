@@ -5,7 +5,7 @@
 #
 # 需要 adb 在 PATH 中，且设备已连接
 
-$PackageName = "com.kingzcheung.xime"
+$PackageName = "com.ximegboard"
 $PluginsDir = "/data/data/$PackageName/files/plugins"
 
 Write-Host "=== 清除 Xime 插件数据 ===" -ForegroundColor Cyan

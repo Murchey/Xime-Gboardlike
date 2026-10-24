@@ -48,7 +48,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.kingzcheung.xime"
+        applicationId = "com.ximegboard"
         minSdk = 28
         targetSdk = 35
         versionCode = 20261023
@@ -167,7 +167,7 @@ android {
 }
 
 android.applicationVariants.all {
-    val appName = "Xime"
+    val appName = "XimeGboard"
     outputs.all {
         val abi = filters.find { it.filterType.toString() == "ABI" }?.identifier ?: "universal"
         (this as BaseVariantOutputImpl).outputFileName = "$appName-$versionName-$abi.apk"

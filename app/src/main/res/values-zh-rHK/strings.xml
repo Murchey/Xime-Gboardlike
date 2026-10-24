@@ -1,12 +1,12 @@
 <resources>
-    <string name="app_name">曦碼輸入法</string>
-    <string name="subtype_label_wubi">曦碼輸入法</string>
+    <string name="app_name">XimeGboard</string>
+    <string name="subtype_label_wubi">XimeGboard 輸入法</string>
     <string name="subtype_label_pinyin">拼音</string>
-    <string name="keyboard_name">曦碼輸入法</string>
-    <string name="ime_service_label">曦碼輸入法</string>
+    <string name="keyboard_name">XimeGboard 輸入法</string>
+    <string name="ime_service_label">XimeGboard 輸入法</string>
 
     <!-- 設定 -->
-    <string name="settings_title">曦碼輸入法設定</string>
+    <string name="settings_title">XimeGboard 設定</string>
     <string name="settings_section_appearance">外觀與互動</string>
 
     <!-- 語言選項 -->
@@ -197,7 +197,7 @@
     <string name="s_wufaqidongluyin">無法啟動錄音</string>
     <string name="s_qidongyinqingshibai">啟動引擎失敗</string>
     <string name="s_fanhuicaidan">返回選單</string>
-    <string name="s_xima_logo">曦碼 Logo</string>
+    <string name="s_xima_logo">XimeGboard Logo</string>
     <string name="s_jianqieban">剪下板</string>
     <string name="s_shouqijianpan">收起鍵盤</string>
     <string name="s_fanhuijianpan">返回鍵盤</string>
@@ -287,10 +287,10 @@
     <string name="s_tupianyiqingli">圖片已清理</string>
     <string name="s_kuaijiefasongweikong">快捷發送為空</string>
     <string name="s_meiyoukeyongdeshurufangan">沒有可用的輸入方案</string>
-    <string name="s_xima">曦碼</string>
+    <string name="s_xima">XimeGboard</string>
     <string name="s_yijiesuokaifazherukou">已解鎖開發者入口</string>
     <string name="s_guanyu">關於</string>
-    <string name="s_xima_xime">曦碼（Xime）</string>
+    <string name="s_xima_xime">Xime（上游）</string>
     <string name="s_jiyurime_goujian_zhichiwubi_pi_a444c">基於Rime 建構，支援五筆/拼音/自訂方案。</string>
     <string name="s_banben">版本 %1$s (%2$s)</string>
     <string name="s_goujian">建構: %1$s</string>
@@ -306,18 +306,18 @@
     <string name="s_shebeixinxi">裝置資訊</string>
     <string name="s_xitongbanben">系統版本</string>
     <string name="s_shebeixinghao">裝置型號</string>
-    <string name="s_ximayinsicelve">曦碼隱私策略</string>
+    <string name="s_ximayinsicelve">XimeGboard 隱私策略</string>
     <string name="s_shujushouji">數據收集</string>
-    <string name="s_ximabushoujirenhegerenshenfenx_7e0f8">曦碼不收集任何個人身份資訊。您的輸入內容僅用於提供輸入法功能，不會被上傳到伺服器或分享給第三方。</string>
+    <string name="s_ximabushoujirenhegerenshenfenx_7e0f8">XimeGboard 不收集任何個人身份資訊。您的輸入內容僅用於提供輸入法功能，不會被上傳到伺服器或分享給第三方。</string>
     <string name="s_bendicunchu">本地儲存</string>
-    <string name="s_ximajiangyonghushezhi_yonghuci_e9dfb">曦碼將用戶設定、用戶詞庫和剪貼簿歷史儲存在您的裝置上，不會上傳到雲端。您可以隨時清除這些數據。</string>
+    <string name="s_ximajiangyonghushezhi_yonghuci_e9dfb">XimeGboard 將用戶設定、用戶詞庫和剪貼簿歷史儲存在您的裝置上，不會上傳到雲端。您可以隨時清除這些數據。</string>
     <string name="s_wangluoquanxian">網絡權限</string>
-    <string name="s_ximaxuyaowangluoquanxianyongyu_5544d">曦碼需要網絡權限用於下載聯想模型。下載完成後，模型將在本地運行，您的輸入內容不會被上傳。</string>
+    <string name="s_ximaxuyaowangluoquanxianyongyu_5544d">XimeGboard 需要網絡權限用於下載聯想模型。下載完成後，模型將在本地運行，您的輸入內容不會被上傳。</string>
     <string name="s_shuruneirong">輸入內容</string>
-    <string name="s_nindesuoyoushuruneirongjinbaoc_31812">您的所有輸入內容僅儲存在本地裝置上。曦碼使用開源的 Rime 輸入引擎，所有處理均在本地完成。</string>
+    <string name="s_nindesuoyoushuruneirongjinbaoc_31812">您的所有輸入內容僅儲存在本地裝置上。XimeGboard 使用開源的 Rime 輸入引擎，所有處理均在本地完成。</string>
     <string name="s_jiantiebangongnengjinzainindes_cfa37">剪貼簿功能僅在您的裝置本地運行。您可以隨時查看、刪除或清除剪貼簿歷史記錄。</string>
     <string name="s_kaiyuan">開源</string>
-    <string name="s_ximashikaiyuanruanjian_yuandai_3c8a7">曦碼是開源軟件，原始碼公開可審計。您可以在 GitHub 上查看完整原始碼。</string>
+    <string name="s_ximashikaiyuanruanjian_yuandai_3c8a7">XimeGboard 是開源軟件，原始碼公開可審計。您可以在 GitHub 上查看完整原始碼。</string>
     <string name="s_gengxinriqi_2026nian4yue">更新日期：2026年4月</string>
     <string name="s_yidaoru_gekuaizhao">已匯入 %1$s 個快照</string>
     <string name="s_bingwanchenghebing">並完成合並</string>
@@ -478,7 +478,7 @@
     <string name="s_kuashebeibanyun_danbencikuyong_176a2">跨裝置轉移：單本詞庫用「用戶詞庫 → 匯出/匯入文本碼錶」，與電腦端 rime 同格式；</string>
     <string name="s_duoshebeianshijianchuohebingqi_0f0c1">多裝置按時間戳合併請用「同步與備份 → 詞庫同步」。</string>
     <string name="s_zanwucaijiyangben">暫無採集樣本</string>
-    <string name="s_xime_shouxiecaijishuju">Xime 手寫採集數據</string>
+    <string name="s_xime_shouxiecaijishuju">XimeGboard 手寫採集數據</string>
     <string name="s_daochushibai_2">匯出失敗: %1$s</string>
     <string name="s_baocunshibai_2">儲存失敗: %1$s</string>
     <string name="s_fenxiangcaijishuju">分享採集數據</string>
@@ -568,7 +568,7 @@
     <string name="s_rimerizhi">RIME日誌</string>
     <string name="s_tiao_2">%1$s 條</string>
     <string name="s_dianjichakanxiangqing">點擊查看詳情</string>
-    <string name="s_xime_chajianzhenduanxinxi">Xime 插件診斷資訊</string>
+    <string name="s_xime_chajianzhenduanxinxi">XimeGboard 插件診斷資訊</string>
     <string name="s_zhenduanxinxiyifuzhi">診斷資訊已複製</string>
     <string name="s_cuowuxiangqing">%1$s 錯誤詳情</string>
     <string name="s_zanwucuowujilu">暫無錯誤記錄</string>
@@ -586,7 +586,7 @@
     <string name="s_jiazaishibai">載入失敗</string>
     <string name="s_meiyoupipeidefangan">沒有匹配的方案</string>
     <string name="s_laiyuan">來源：%1$s</string>
-    <string name="s_laizi_xime_guanfangyuan">來自 Xime 官方源</string>
+    <string name="s_laizi_xime_guanfangyuan">來自上游官方源</string>
     <string name="s_gong_gefangan">共 %1$s 個方案（%2$s</string>
     <string name="s_gengxinyu">" · 更新於 %1$s"</string>
     <string name="s_xu_app">需 App ≥ %1$s</string>
@@ -803,13 +803,13 @@
     <string name="s_yixuanze">已選擇</string>
     <string name="s_gengxinzhong">更新中</string>
     <string name="s_xuanzeshurufangan">選擇輸入方案</string>
-    <string name="s_xima_shu_ru_fa">曦碼 shu ru fa</string>
+    <string name="s_xima_shu_ru_fa">XimeGboard shu ru fa</string>
     <string name="s_shurufa">輸入法</string>
     <string name="s_lixue">力學</string>
     <string name="s_qiyongshurufa">啟用輸入法</string>
-    <string name="s_zaixitongshezhizhongqiyongxima_44550">在系統設定中啟用曦碼輸入法</string>
+    <string name="s_zaixitongshezhizhongqiyongxima_44550">在系統設定中啟用 XimeGboard 輸入法</string>
     <string name="s_xuanzeshurufa">選擇輸入法</string>
-    <string name="s_jiangximasheweidangqianshurufa">將曦碼設為目前輸入法</string>
+    <string name="s_jiangximasheweidangqianshurufa">將 XimeGboard 設為目前輸入法</string>
     <string name="s_dianjicichukaishishuruceshi">點擊此處開始輸入測試...</string>
     <string name="s_qingchu">清除</string>
     <string name="s_zhutiyudingzhi">主題與自訂</string>
@@ -834,26 +834,26 @@
     <string name="s_tupianjilu_tijixianzhi_zhanyon_fa4c6">圖片記錄、體積限制、佔用清理與剪貼簿同步</string>
     <string name="s_duoshebeicidianhutongyupeizhib_1efa8">多裝置詞典互通與配置備份</string>
     <string name="s_shiyongwendang">使用文檔</string>
-    <string name="s_guanyuxima">關於曦碼</string>
+    <string name="s_guanyuxima">關於 XimeGboard</string>
     <string name="s_banbenxinxi_kaifazhe_lianxifangshi">版本資訊、開發者、聯繫方式</string>
     <string name="s_xuanfangan">選方案</string>
     <string name="s_xuanzefangan">選擇方案</string>
     <string name="s_qiehuanshurufa">切換輸入法</string>
     <string name="s_xuanzebingbushushurufangan">選擇並部署輸入方案</string>
-    <string name="s_qiehuandaoximashurufa">切換到曦碼輸入法</string>
+    <string name="s_qiehuandaoximashurufa">切換到 XimeGboard 輸入法</string>
     <string name="s_buzhou_1_qiyongshurufa">步驟 1：啟用輸入法</string>
     <string name="s_buzhou_2_xuanzeshurufangan">步驟 2：選擇輸入方案</string>
     <string name="s_buzhou_3_qiehuanshurufa">步驟 3：切換輸入法</string>
     <string name="s_fanganyixuanze_danshangweibush_80e59">方案已選擇，但尚未部署。請前往設定點擊「部署」按鈕編譯詞庫</string>
     <string name="s_shezhixiangdao">設定精靈</string>
-    <string name="s_ximashurufa">曦碼輸入法</string>
+    <string name="s_ximashurufa">XimeGboard 輸入法</string>
     <string name="s_wanchengyixiabuzhoujikekaishis_a88af">完成以下步驟即可開始使用</string>
     <string name="s_jiyu_rime_yinqingde_android_sh_4b613">基於 Rime 引擎的 Android 輸入法</string>
-    <string name="s_qingzaixitongshezhizhongqiyong_f6c5a">請在系統設定中啟用「曦碼輸入法」</string>
+    <string name="s_qingzaixitongshezhizhongqiyong_f6c5a">請在系統設定中啟用「XimeGboard 輸入法」</string>
     <string name="s_quxitongshezhiqiyong">前往系統設定啟用</string>
-    <string name="s_ximashurufayiqiyong">✓ 曦碼輸入法已啟用</string>
+    <string name="s_ximashurufayiqiyong">✓ XimeGboard 輸入法已啟用</string>
     <string name="s_xiayibu">下一步</string>
-    <string name="s_qingxianzaixitongshezhizhongqi_97b2c">請先在系統設定中啟用曦碼輸入法</string>
+    <string name="s_qingxianzaixitongshezhizhongqi_97b2c">請先在系統設定中啟用 XimeGboard 輸入法</string>
     <string name="s_jianchazhuangtai">檢查狀態</string>
     <string name="s_dianjixiafanganniuqianwangshez_77d28">點擊下方按鈕前往設定，選擇您需要的輸入方案並點擊「部署」</string>
     <string name="s_qingzhishaoxuanzeyigefanganhou_e4dfa">請至少選擇一個方案後才能繼續</string>
@@ -861,7 +861,7 @@
     <string name="s_yixuanze_gefangan">✓ 已選擇 %1$s 個方案</string>
     <string name="s_zhengzaichushihuashurufayinqing">正在初始化輸入法引擎...</string>
     <string name="s_cuowu">錯誤：%1$s</string>
-    <string name="s_yiqiezhunbeijiuxu_qingqiehuand_3e15e">一切準備就緒！請切換到曦碼輸入法開始使用</string>
+    <string name="s_yiqiezhunbeijiuxu_qingqiehuand_3e15e">一切準備就緒！請切換到 XimeGboard 輸入法開始使用</string>
     <string name="s_danchushurufaxuanzeqi">彈出輸入法選擇器</string>
     <string name="s_wanchengshezhi">完成設定</string>
     <string name="s_qiyongzhinenglianxiang">啟用智能聯想</string>
@@ -953,7 +953,7 @@
     <string name="s_yingyongshibai">應用失敗</string>
     <string name="s_yihuifumoren">已還原預設</string>
     <string name="s_duqurizhishibai">讀取日誌失敗: %1$s</string>
-    <string name="s_xime_rizhi">Xime 日誌 - %1$s</string>
+    <string name="s_xime_rizhi">XimeGboard 日誌 - %1$s</string>
     <string name="s_fenxiangshibai">分享失敗: %1$s</string>
     <string name="s_moxingxiazaiwancheng">模型下載完成</string>
     <string name="s_moxingyishanchu">模型已刪除</string>

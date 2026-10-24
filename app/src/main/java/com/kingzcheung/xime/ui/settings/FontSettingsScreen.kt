@@ -323,7 +323,7 @@ private fun FontPreviewCard(version: Int, currentPath: String) {
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "曦码输入法 你好世界",
+                text = "XimeGboard 输入法 你好世界",
                 fontFamily = candidateFamily,
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface
