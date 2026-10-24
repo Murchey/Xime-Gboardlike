@@ -20,8 +20,8 @@ style:
   # 浅色/深色模式的配色，deep 为降级后备
   # 可选值：内置主题 id、color_schemes 中定义的 id、或 dynamic（Material You 动态配色，随壁纸取色，仅 Android 12+ 生效）
   color_scheme:
-    light: lavender_purple
-    dark: slate_gray
+    light: gboard
+    dark: gboard
   # 显示模式：0=浅色, 1=深色, 2=跟随系统（默认）
   dark_mode: 2
 
@@ -63,6 +63,7 @@ correction:
 #
 # color_schemes 每个主题可用的颜色字段（未设置的会回退到全局 keyboard.colors 默认值）：
 #   primary_color          - 主题强调色（种子色）
+#   primary_color_dark     - 深色模式强调色（未设置时由 primary_color 提亮派生）
 #   keyboard_bg_color      - 键盘背景后备色（配置了 keyboard_background 时以 background 为准）
 #   key_bg_color / key_bg_color_dark           - 按键底色（亮/暗）
 #   special_key_bg_color / _dark               - 特殊按键底色（亮/暗）
@@ -74,6 +75,27 @@ correction:
 #                                                 （灰色系 primary 提亮后仍偏暗时建议单独配置）
 #
 color_schemes:
+  # Gboard 公开主题色：浅色白键 + 浅灰底 + Google 蓝；深色按 Pixel 实机参考图取色
+  # （底 #1E1F21 / 键 #38393B / 字 #E7E8EA / 次要字 #8D8E90 / 强调 #A8C8FB）。
+  gboard:
+    name: "Gboard 经典"
+    primary_color: 0x1A73E8
+    primary_color_dark: 0xA8C8FB
+    keyboard_background:
+      type: solid
+      color: 0xF1F3F4
+      color_dark: 0x1E1F21
+    key_bg_color: 0xFFFFFF
+    key_bg_color_dark: 0x38393B
+    special_key_bg_color: 0xE8EAED
+    special_key_bg_color_dark: 0x38393B
+    key_text_color: 0x202124
+    key_text_color_dark: 0xE7E8EA
+    candidate_text_color: 0x5F6368
+    candidate_text_color_dark: 0x8D8E90
+    candidate_selected_text_color: 0x1A73E8
+    candidate_selected_text_color_dark: 0xA8C8FB
+
   # 动态配色（Material You）：颜色由运行时从壁纸调色板派生，随壁纸变化，
   # 仅 Android 12+（API 31+）生效，低版本不显示此方案。
   # dynamic_color: true 时忽略静态颜色字段；style.color_scheme 可用 dynamic 引用。

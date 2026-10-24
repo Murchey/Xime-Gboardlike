@@ -150,6 +150,13 @@ fun SettingsScreen(
         composable(SettingsRoutes.Theme) {
             ThemeSettingsContent(
                 onBack = { navController.popBackStack() },
+                onNavigateToEditor = { navController.navigate(SettingsRoutes.ThemeEditor) },
+                onThemeChanged = onThemeChanged
+            )
+        }
+        composable(SettingsRoutes.ThemeEditor) {
+            ThemeEditorContent(
+                onBack = { navController.popBackStack() },
                 onThemeChanged = onThemeChanged
             )
         }

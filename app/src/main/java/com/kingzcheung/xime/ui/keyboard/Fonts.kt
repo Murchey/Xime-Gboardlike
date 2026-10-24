@@ -22,8 +22,11 @@ object AppFonts {
     private const val CHAI_PUA_FONT = "ChaiPUA-0.2.7-snow.ttf"
 
     /** 内置默认字体（思源 + Google Sans VF），随 APK 打包；配置里用 [BUILTIN_SENTINEL] 表示它。 */
-    private const val BUILTIN_FONT_ASSET = "fonts/app_default.ttf"
+    const val BUILTIN_FONT_ASSET = "fonts/app_default.ttf"
     const val BUILTIN_SENTINEL = "@builtin"
+
+    /** 系统默认字体：不加载任何自定义字体，交由系统字体回退链渲染。 */
+    const val SYSTEM_SENTINEL = "@system"
 
     private var initialized = false
     private lateinit var assetManager: AssetManager
@@ -150,7 +153,7 @@ object AppFonts {
      * @return Typeface 或 null（文件不存在或加载失败）
      */
     private fun loadTypeface(fontPath: String): Typeface? {
-        if (fontPath.isBlank()) return null
+        if (fontPath.isBlank() || fontPath == SYSTEM_SENTINEL) return null
         if (fontPath == BUILTIN_SENTINEL) {
             return try {
                 Typeface.createFromAsset(assetManager, BUILTIN_FONT_ASSET)
@@ -178,7 +181,7 @@ object AppFonts {
      * @return FontFamily 或 null（文件不存在或加载失败）
      */
     private fun loadFontFamily(fontPath: String, typeface: Typeface?): FontFamily? {
-        if (fontPath.isBlank()) return null
+        if (fontPath.isBlank() || fontPath == SYSTEM_SENTINEL) return null
         if (fontPath == BUILTIN_SENTINEL) {
             return try {
                 FontFamily(Font(BUILTIN_FONT_ASSET, assetManager))

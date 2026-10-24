@@ -102,6 +102,25 @@ class StyleColorSchemeSerializerTest {
     }
 
     @Test
+    fun `primary_color_dark 可解析并在合并时保留`() {
+        val config = yaml.decodeFromString(
+            XimeConfig.serializer(),
+            "color_schemes:\n" +
+                "  gboard:\n" +
+                "    name: \"Gboard 经典\"\n" +
+                "    primary_color: 0x1A73E8\n" +
+                "    primary_color_dark: 0xA8C8FB\n"
+        )
+        val parsed = config.colorSchemes?.get("gboard")
+        assertEquals(0xA8C8FBL, parsed?.primaryColorDark)
+
+        val default = mapOf("gboard" to ColorSchemeEntry(primaryColorDark = 0xA8C8FBL))
+        val custom = mapOf("gboard" to ColorSchemeEntry(name = "Gboard 改"))
+        val merged = KeysConfigHelper.mergeColorSchemesForTest(default, custom)?.get("gboard")
+        assertEquals(0xA8C8FBL, merged?.primaryColorDark)
+    }
+
+    @Test
     fun `mergeColorSchemes custom 只覆盖显式字段且保留 dark 功能键色`() {
         val default = mapOf(
             "sunset_orange" to ColorSchemeEntry(

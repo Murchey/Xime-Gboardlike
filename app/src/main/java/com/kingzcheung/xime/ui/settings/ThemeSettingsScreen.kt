@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.twotone.Palette
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,20 +30,28 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.ui.theme.KeyboardColorScheme
+import com.kingzcheung.xime.ui.theme.KeyboardThemes
 import com.kingzcheung.xime.viewmodel.ThemeSettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThemeSettingsContent(
     onBack: () -> Unit,
+    onNavigateToEditor: () -> Unit = {},
     onThemeChanged: () -> Unit = {}
 ) {
     val viewModel: ThemeSettingsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    // 直接读取实际选择与主题缓存：从调色面板返回后自定义方案能立即出现
+    val colorThemes = KeyboardThemes.themes
+    val currentThemeId = SettingsPreferences.getKeyboardTheme(context)
     
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -83,8 +92,8 @@ fun ThemeSettingsContent(
             }
             
             item {
-                val currentTheme = uiState.colorThemes.firstOrNull { it.id == uiState.colorTheme }
-                    ?: uiState.colorThemes.first()
+                val currentTheme = colorThemes.firstOrNull { it.id == currentThemeId }
+                    ?: colorThemes.first()
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -127,6 +136,18 @@ fun ThemeSettingsContent(
             }
             
             item {
+                SettingsSection(title = tr(R.string.s_gexinghua)) {
+                    SettingsItem(
+                        icon = Icons.TwoTone.Palette,
+                        title = tr(R.string.s_diaoseban),
+                        subtitle = tr(R.string.s_diaoseban_rukou_fu),
+                        onClick = onNavigateToEditor,
+                        showArrow = true
+                    )
+                }
+            }
+
+            item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = tr(R.string.s_peisefangan),
@@ -145,7 +166,7 @@ fun ThemeSettingsContent(
                 )
             }
             
-            uiState.colorThemes.chunked(3).forEach { rowThemes ->
+            colorThemes.chunked(3).forEach { rowThemes ->
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -154,7 +175,7 @@ fun ThemeSettingsContent(
                         rowThemes.forEach { theme ->
                             KeyboardThemeCard(
                                 theme = theme,
-                                isSelected = uiState.colorTheme == theme.id,
+                                isSelected = currentThemeId == theme.id,
                                 onClick = {
                                     previewTheme = theme
                                 },

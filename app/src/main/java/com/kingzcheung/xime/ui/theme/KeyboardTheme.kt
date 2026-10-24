@@ -12,6 +12,7 @@ import com.kingzcheung.xime.R
 import com.kingzcheung.xime.i18n.tr
 import com.kingzcheung.xime.settings.BackgroundConfig
 import com.kingzcheung.xime.settings.ColorSchemeEntry
+import com.kingzcheung.xime.settings.CustomThemeStore
 import com.kingzcheung.xime.settings.KeysConfigHelper
 import java.io.File
 import java.io.FileInputStream
@@ -105,6 +106,33 @@ object KeyboardThemes {
 
     /** 硬编码的默认主题列表（兜底，其余主题由 xime.yaml color_schemes 提供）。 */
     private val defaultThemes = listOf(
+        // Gboard 公开主题色：浅色白键 + 浅灰底 + Google 蓝，深色按参考图实测取色
+        KeyboardColorScheme(
+            id = "gboard",
+            name = tr(R.string.s_gboard_jingdian),
+            specialKeyLight = Color(0xFFE8EAED),
+            specialKeyDark = Color(0xFF38393B),
+            accentLight = Color(0xFF1A73E8),
+            accentDark = Color(0xFFA8C8FB),
+            primaryLight = Color(0xFF1A73E8),
+            primaryDark = Color(0xFFA8C8FB),
+            primaryContainerLight = Color(0xFFE8EAED),
+            primaryContainerDark = Color(0xFF38393B),
+            surfaceLight = Color(0xFFF1F3F4),
+            surfaceDark = Color(0xFF1E1F21),
+            keyboardBgLight = Color(0xFFF1F3F4),
+            keyboardBgDark = Color(0xFF1E1F21),
+            keyBgLight = Color(0xFFFFFFFF),
+            keyBgDark = Color(0xFF38393B),
+            candidateBarBgLight = Color(0xFFF1F3F4),
+            candidateBarBgDark = Color(0xFF1E1F21),
+            keyTextColorLight = Color(0xFF202124),
+            keyTextColorDark = Color(0xFFE7E8EA),
+            candidateTextColorLight = Color(0xFF5F6368),
+            candidateTextColorDark = Color(0xFF8D8E90),
+            candidateSelectedTextColorLight = Color(0xFF1A73E8),
+            candidateSelectedTextColorDark = Color(0xFFA8C8FB),
+        ),
         KeyboardColorScheme(
             id = "lavender_purple",
             name = tr(R.string.s_xunyicaozi),
@@ -134,19 +162,24 @@ object KeyboardThemes {
         reload(context)
     }
 
-    /** 重新加载 xime.yaml/xime.custom.yaml 中的配色方案并更新缓存。 */
+    /** 重新加载 xime.yaml/xime.custom.yaml 与用户自定义配色，并更新缓存。 */
     fun reload(context: Context) {
-        configOverrides = KeysConfigHelper.loadColorSchemes(context)
+        val customSchemes = CustomThemeStore.load(context)
+        val customIds = customSchemes.map { it.id }.toSet()
+        configOverrides = KeysConfigHelper.loadColorSchemes(context) +
+            customSchemes.associate { it.id to it.toColorSchemeEntry() }
         // 1) 对硬编码主题应用配置覆盖
         val overridden = defaultThemes.map { applyConfigOverrides(context, it) }
         // 2) 把配置中有但硬编码列表中没有的新主题也加入缓存
         //    （dynamic_color: true 的条目由 DynamicThemes 运行时从壁纸调色板构建）
         val existingIds = overridden.map { it.id }.toSet()
         val newThemes = configOverrides
-            .filterKeys { it !in existingIds }
+            .filterKeys { it !in existingIds && it !in customIds }
             .map { (id, entry) -> buildSchemeFromConfig(context, id, entry) }
             .filterNotNull()
-        themesCache = overridden + newThemes
+        // 3) 用户自定义配色直接用原始色值构建，避免再次派生覆盖深色强调色
+        val customThemes = customSchemes.map { it.toKeyboardColorScheme() }
+        themesCache = overridden + newThemes + customThemes
         themesMapCache = themesCache.associateBy { it.id }
     }
 
@@ -188,7 +221,8 @@ object KeyboardThemes {
         val primary = if (entry.primaryColor != 0L) entry.primaryColor
         else extractImageSeedColor(context, entry)
         val cfgColor = longToColor(primary)
-        val lightened = lightenColor(cfgColor)
+        val cfgColorDark = if (entry.primaryColorDark != 0L) longToColor(entry.primaryColorDark)
+        else lightenColor(cfgColor)
         val veryLight = lightenColor(cfgColor, 0.8f)
         val global = KeysConfigHelper.getKeyboardColors()
 
@@ -204,7 +238,7 @@ object KeyboardThemes {
         val candColorDark = entry.candidateTextColorDark?.let { longToColor(it) }
             ?: longToColor(global.candidateTextColorDark)
         val candSelectedLight = entry.candidateSelectedTextColor?.let { longToColor(it) } ?: cfgColor
-        val candSelectedDark = entry.candidateSelectedTextColorDark?.let { longToColor(it) } ?: lightened
+        val candSelectedDark = entry.candidateSelectedTextColorDark?.let { longToColor(it) } ?: cfgColorDark
 
         return KeyboardColorScheme(
             id = id,
@@ -212,9 +246,9 @@ object KeyboardThemes {
             specialKeyLight = entry.specialKeyBgColor?.let { longToColor(it) } ?: veryLight,
             specialKeyDark = entry.specialKeyBgColorDark?.let { longToColor(it) } ?: cfgColor,
             accentLight = cfgColor,
-            accentDark = lightened,
+            accentDark = cfgColorDark,
             primaryLight = cfgColor,
-            primaryDark = lightened,
+            primaryDark = cfgColorDark,
             primaryContainerLight = veryLight,
             primaryContainerDark = cfgColor,
             surfaceLight = Color.White,
@@ -405,16 +439,17 @@ object KeyboardThemes {
         val primary = if (entry.primaryColor != 0L) entry.primaryColor
         else extractImageSeedColor(context, entry)
         val cfgColor = longToColor(primary)
-        val lightened = lightenColor(cfgColor)
+        val cfgColorDark = if (entry.primaryColorDark != 0L) longToColor(entry.primaryColorDark)
+        else lightenColor(cfgColor)
         val global = KeysConfigHelper.getKeyboardColors()
         return scheme.copy(
             name = entry.name.ifEmpty { scheme.name },
             specialKeyLight = entry.specialKeyBgColor?.let { longToColor(it) } ?: scheme.specialKeyLight,
             specialKeyDark = entry.specialKeyBgColorDark?.let { longToColor(it) } ?: scheme.specialKeyDark,
             accentLight = cfgColor,
-            accentDark = lightened,
+            accentDark = cfgColorDark,
             primaryLight = cfgColor,
-            primaryDark = lightened,
+            primaryDark = cfgColorDark,
             keyboardBgLight = resolveBgColor(entry, isDark = false) ?: scheme.keyboardBgLight,
             keyboardBgDark = resolveBgColor(entry, isDark = true) ?: scheme.keyboardBgDark,
             keyBgLight = resolveKeyBgColor(entry, isDark = false) ?: longToColor(global.keyBgColor),
@@ -431,7 +466,7 @@ object KeyboardThemes {
             candidateSelectedTextColorLight = entry.candidateSelectedTextColor?.let { longToColor(it) }
                 ?: cfgColor,
             candidateSelectedTextColorDark = entry.candidateSelectedTextColorDark?.let { longToColor(it) }
-                ?: lightened,
+                ?: cfgColorDark,
             keyboardBackground = entry.keyboardBackground ?: scheme.keyboardBackground,
             keyBackground = entry.keyBackground ?: scheme.keyBackground,
             candidateBarBackground = entry.candidateBarBackground ?: scheme.candidateBarBackground,

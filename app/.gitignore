@@ -1,3 +1,5 @@
 /build
 keystore.properties
+# 公开自签名配置：允许随仓库提供，供 fork 用户直接打包
+!keystore.properties
 /debug

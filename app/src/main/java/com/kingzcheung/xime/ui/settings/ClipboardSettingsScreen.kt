@@ -7,6 +7,8 @@ import com.kingzcheung.xime.i18n.tr
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,8 +17,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,6 +32,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Slider
@@ -44,8 +48,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kingzcheung.xime.clipboard.ClipboardManager
 import com.kingzcheung.xime.clipboard.ImageUsage
@@ -65,13 +74,14 @@ import kotlinx.coroutines.withContext
  * 「剪贴板同步」的**总开关就在本页**（就地可切），整行点击进入内页做「选服务 + 配置」——
  * 同步是剪贴板的一种流向，不另立设置分组；开关上提后无需为开关专门进一层页面。
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ClipboardSettingsContent(
     onBack: () -> Unit,
     onNavigateToClipboardSync: () -> Unit,
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val clipboardManager = remember { ClipboardManager.getInstance(context) }
 
     var captureEnabled by remember {
@@ -97,8 +107,24 @@ fun ClipboardSettingsContent(
     var maxItems by remember {
         mutableFloatStateOf(SettingsPreferences.getClipboardMaxItems(context).toFloat())
     }
-    var retentionDays by remember {
-        mutableStateOf(SettingsPreferences.getClipboardRetentionDays(context))
+    var maxItemsText by remember {
+        mutableStateOf(SettingsPreferences.getClipboardMaxItems(context).toString())
+    }
+    var maxItemsFieldFocused by remember { mutableStateOf(false) }
+    var retentionMinutes by remember {
+        mutableStateOf(SettingsPreferences.getClipboardRetentionMinutes(context))
+    }
+
+    /** 提交手动输入的条数：夹到合法区间，同步滑块并立即裁剪历史。 */
+    fun commitMaxItems() {
+        val range = SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE
+        val parsed = maxItemsText.toIntOrNull() ?: maxItems.toInt()
+        val clamped = parsed.coerceIn(range.first, range.last)
+        maxItems = clamped.toFloat()
+        maxItemsText = clamped.toString()
+        SettingsPreferences.setClipboardMaxItems(context, clamped)
+        clipboardManager.enforceItemLimit()
+        clipboardManager.purgeExpired()
     }
 
     // 占用统计读的是数据库 + 图片目录，放到 IO 线程
@@ -273,19 +299,47 @@ fun ClipboardSettingsContent(
                             Text(
                                 text = tr(R.string.s_zuiduobaoliutiaoshu),
                                 style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.weight(1f)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = tr(R.string.s_tiaoshu, maxItems.toInt()),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
+                            OutlinedTextField(
+                                value = maxItemsText,
+                                onValueChange = { input ->
+                                    val digits = input.filter { it.isDigit() }.take(4)
+                                    maxItemsText = digits
+                                    digits.toIntOrNull()
+                                        ?.takeIf { it in SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE }
+                                        ?.let { maxItems = it.toFloat() }
+                                },
+                                modifier = Modifier
+                                    .width(100.dp)
+                                    .onFocusChanged { focusState ->
+                                        if (maxItemsFieldFocused && !focusState.isFocused) {
+                                            commitMaxItems()
+                                        }
+                                        maxItemsFieldFocused = focusState.isFocused
+                                    },
+                                singleLine = true,
+                                label = { Text(tr(R.string.s_tiaoshu_danwei)) },
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                    textAlign = TextAlign.End
+                                ),
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Number,
+                                    imeAction = ImeAction.Done
+                                ),
+                                keyboardActions = KeyboardActions(
+                                    onDone = { focusManager.clearFocus() }
+                                ),
                             )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Slider(
                             value = maxItems,
-                            onValueChange = { maxItems = it },
+                            onValueChange = {
+                                maxItems = it
+                                maxItemsText = it.toInt().toString()
+                            },
                             onValueChangeFinished = {
                                 SettingsPreferences.setClipboardMaxItems(context, maxItems.toInt())
                                 clipboardManager.enforceItemLimit()
@@ -295,6 +349,15 @@ fun ClipboardSettingsContent(
                                 SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.last.toFloat(),
                             steps = (SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.last -
                                 SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.first) / 50 - 1,
+                        )
+                        Text(
+                            text = tr(
+                                R.string.s_tiaoshu_fanwei,
+                                SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.first,
+                                SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.last
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = tr(R.string.s_baoliutiaoshu_tishi),
@@ -321,21 +384,19 @@ fun ClipboardSettingsContent(
                             fontWeight = FontWeight.Medium
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            SettingsPreferences.CLIPBOARD_RETENTION_DAY_OPTIONS.forEach { days ->
-                                val label = if (days == 0) tr(R.string.s_buzidongqingli)
-                                else tr(R.string.s_tian, days)
+                            SettingsPreferences.CLIPBOARD_RETENTION_MINUTE_OPTIONS.forEach { minutes ->
                                 FilterChip(
-                                    selected = retentionDays == days,
+                                    selected = retentionMinutes == minutes,
                                     onClick = {
-                                        retentionDays = days
-                                        SettingsPreferences.setClipboardRetentionDays(context, days)
+                                        retentionMinutes = minutes
+                                        SettingsPreferences.setClipboardRetentionMinutes(context, minutes)
                                         clipboardManager.purgeExpired()
                                     },
-                                    label = { Text(label) }
+                                    label = { Text(clipboardRetentionLabel(minutes)) }
                                 )
                             }
                         }
@@ -383,4 +444,11 @@ fun ClipboardSettingsContent(
             )
         }
     }
+}
+
+/** 自动清理时间标签：整天的显示「N天」，其余显示「N小时」。 */
+private fun clipboardRetentionLabel(minutes: Int): String = when {
+    minutes <= 0 -> tr(R.string.s_buzidongqingli)
+    minutes % 1440 == 0 -> tr(R.string.s_tian, minutes / 1440)
+    else -> tr(R.string.s_xiaoshi, minutes / 60)
 }

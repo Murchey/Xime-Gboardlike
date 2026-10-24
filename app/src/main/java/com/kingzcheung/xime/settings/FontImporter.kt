@@ -27,6 +27,16 @@ object FontImporter {
     fun fontsDir(context: Context): File =
         File(context.filesDir, "rime/fonts").apply { if (!exists()) mkdirs() }
 
+    /** 已导入的字体文件列表（按文件名排序），供字体选择页展示。 */
+    fun list(context: Context): List<Imported> =
+        fontsDir(context).listFiles()
+            ?.asSequence()
+            ?.filter { it.isFile && it.extension.lowercase() in SUPPORTED_EXT }
+            ?.sortedBy { it.name.lowercase() }
+            ?.map { Imported("fonts/${it.name}") }
+            ?.toList()
+            ?: emptyList()
+
     /** 用户可见的字体名（去掉目录与扩展名）。 */
     fun displayName(relativePath: String): String {
         if (relativePath.isBlank()) return ""
