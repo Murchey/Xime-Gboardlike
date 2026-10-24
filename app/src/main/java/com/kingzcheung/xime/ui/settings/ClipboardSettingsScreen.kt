@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -92,6 +94,12 @@ fun ClipboardSettingsContent(
     }
     var usage by remember { mutableStateOf<ImageUsage?>(null) }
     var syncOn by remember { mutableStateOf(syncEnabled) }
+    var maxItems by remember {
+        mutableFloatStateOf(SettingsPreferences.getClipboardMaxItems(context).toFloat())
+    }
+    var retentionDays by remember {
+        mutableStateOf(SettingsPreferences.getClipboardRetentionDays(context))
+    }
 
     // 占用统计读的是数据库 + 图片目录，放到 IO 线程
     LaunchedEffect(Unit) {
@@ -244,6 +252,97 @@ fun ClipboardSettingsContent(
                                 tr(R.string.s_zhang, it.count, Formatter.formatFileSize(context, it.fileBytes))
                             } ?: tr(R.string.s_tongjizhong),
                             style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            )
+
+            SettingsSection(
+                title = tr(R.string.s_jiantiebanbaoliuguize),
+                content = {
+                    Column(
+                        modifier = Modifier.padding(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 16.dp,
+                            bottom = 12.dp
+                        )
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = tr(R.string.s_zuiduobaoliutiaoshu),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = tr(R.string.s_tiaoshu, maxItems.toInt()),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Slider(
+                            value = maxItems,
+                            onValueChange = { maxItems = it },
+                            onValueChangeFinished = {
+                                SettingsPreferences.setClipboardMaxItems(context, maxItems.toInt())
+                                clipboardManager.enforceItemLimit()
+                                clipboardManager.purgeExpired()
+                            },
+                            valueRange = SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.first.toFloat()..
+                                SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.last.toFloat(),
+                            steps = (SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.last -
+                                SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.first) / 50 - 1,
+                        )
+                        Text(
+                            text = tr(R.string.s_baoliutiaoshu_tishi),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 16.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    Column(
+                        modifier = Modifier.padding(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 12.dp,
+                            bottom = 16.dp
+                        )
+                    ) {
+                        Text(
+                            text = tr(R.string.s_zidongqingli),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            SettingsPreferences.CLIPBOARD_RETENTION_DAY_OPTIONS.forEach { days ->
+                                val label = if (days == 0) tr(R.string.s_buzidongqingli)
+                                else tr(R.string.s_tian, days)
+                                FilterChip(
+                                    selected = retentionDays == days,
+                                    onClick = {
+                                        retentionDays = days
+                                        SettingsPreferences.setClipboardRetentionDays(context, days)
+                                        clipboardManager.purgeExpired()
+                                    },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = tr(R.string.s_zidongqingli_tishi),
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
