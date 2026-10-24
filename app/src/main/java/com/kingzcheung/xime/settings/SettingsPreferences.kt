@@ -132,8 +132,9 @@ object SettingsPreferences {
         getPrefs(context).edit().putBoolean(KEY_COMPACT_MODE, enabled).apply()
     }
 
+    /** 候选词旁的编码注释：Gboard 风格默认关闭，需要看编码时可在「布局与显示」开启。 */
     fun showCandidateComments(context: Context): Boolean {
-        return getPrefs(context).getBoolean(KEY_SHOW_CANDIDATE_COMMENTS, true)
+        return getPrefs(context).getBoolean(KEY_SHOW_CANDIDATE_COMMENTS, false)
     }
 
     fun setShowCandidateComments(context: Context, show: Boolean) {

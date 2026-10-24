@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -31,7 +32,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -75,6 +75,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -137,9 +138,8 @@ fun CandidateBar(
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = !isFloatingMode && configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    // 统一 8dp 靠边；横屏挖孔/导航栏的物理避让由服务层内容容器的边衬区 padding 统一处理，
-    // 不再叠加手机横屏专用的 50dp 缩进
-    val horizontalPadding = 8.dp
+    // 候选栏左右留白：参考 Gboard，首个候选和末个操作按钮都不贴屏幕边缘
+    val horizontalPadding = 12.dp
     val context = LocalContext.current
 
     // M3 角色色：图标按钮背景用 surface 与 primary 的混合色调（带种子色但不过于强烈），
@@ -159,8 +159,8 @@ fun CandidateBar(
 
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
-    val itemPaddingPx = with(density) { 8.dp.toPx() }
-    val spacingPx = with(density) { 4.dp.toPx() }
+    val itemPaddingPx = with(density) { 16.dp.toPx() }
+    val spacingPx = with(density) { 6.dp.toPx() }
 
     val screenWidthPx = with(density) { LocalConfiguration.current.screenWidthDp.dp.toPx() }
     val rowPaddingPx = with(density) { 16.dp.toPx() }
@@ -217,7 +217,7 @@ fun CandidateBar(
                     val regularWidthPx = taken.sumOf { c ->
                         measureText(c).toDouble() + itemPaddingPx
                     }.toFloat()
-                    val dividerWidthPx = with(density) { 9.dp.toPx() }
+                    val dividerWidthPx = with(density) { 12.dp.toPx() }
                     val availablePx = rowWidthPx - regularWidthPx - dividerWidthPx
 
                     var used = 0f
@@ -291,7 +291,7 @@ fun CandidateBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .height(48.dp)
             .drawPreeditBubble(
                 text = preeditBubbleText,
                 caretOffset = preeditBubbleCaret,
@@ -446,85 +446,84 @@ fun CandidateBar(
             LazyRow(
                 modifier = if (state is CandidateBarState.Idle) Modifier else Modifier.weight(1f),
                 state = candidateListState,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 // 图片候选芯片比文字候选高：居中对齐，避免同排文字候选被顶到上沿
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 itemsIndexed(displayCandidates, key = { index, _ -> index }) { index, candidate ->
                     val imageItem = displayImages.getOrNull(index)
+                    val hasFollowing = index < displayCandidates.lastIndex ||
+                        displayAssociation.isNotEmpty()
                     if (imageItem != null) {
                         // 图片候选：Gboard 风格芯片（圆角矩形底 + 圆形缩略图 + "图片"）
-                        ClipboardImageCandidateItem(
-                            file = clipboardImageFileOf?.invoke(imageItem),
-                            isSelected = index == 0,
-                            onClick = { callbacks.onCandidateSelect(index) },
-                            onLongClick = if (callbacks.onCandidateLongPress != null) {
-                                { callbacks.onCandidateLongPress(index) }
-                            } else null,
-                            containerColor = visuals.textColor.copy(alpha = 0.10f),
-                            textColor = visuals.textColor,
-                            accentColor = visuals.accentColor,
-                            dividerColor = visuals.dividerColor,
-                            fontSize = candidateTextSize.sp,
-                            fontFamily = candidateFontFamily,
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ClipboardImageCandidateItem(
+                                file = clipboardImageFileOf?.invoke(imageItem),
+                                isSelected = index == 0,
+                                onClick = { callbacks.onCandidateSelect(index) },
+                                onLongClick = if (callbacks.onCandidateLongPress != null) {
+                                    { callbacks.onCandidateLongPress(index) }
+                                } else null,
+                                containerColor = visuals.textColor.copy(alpha = 0.10f),
+                                textColor = visuals.textColor,
+                                accentColor = visuals.accentColor,
+                                dividerColor = visuals.dividerColor,
+                                fontSize = candidateTextSize.sp,
+                                fontFamily = candidateFontFamily,
+                            )
+                            if (hasFollowing) CandidateBarDivider(visuals.dividerColor)
+                        }
                     } else {
-                        CandidateItem(
-                            text = candidate,
-                            index = index,
-                            onClick = { callbacks.onCandidateSelect(index) },
-                            onLongClick = if (callbacks.onCandidateLongPress != null) {
-                                { callbacks.onCandidateLongPress(index) }
-                            } else null,
-                            textColor = visuals.textColor,
-                            comment = if (showComments) {
-                                when (val s = state) {
-                                    is CandidateBarState.ChineseCandidates -> s.comments.getOrElse(index) { "" }
-                                    is CandidateBarState.EnglishCandidates -> s.comments.getOrElse(index) { "" }
-                                    else -> ""
-                                }
-                            } else "",
-                            isSelected = index == 0,
-                            accentColor = visuals.accentColor,
-                            selectedTextColor = visuals.selectedTextColor,
-                            fontSize = candidateTextSize.sp,
-                            candidateFontFamily = candidateFontFamily,
-                            commentFontFamily = commentFontFamily
-                        )
-                    }
-                }
-
-                // 仅当左侧存在打字候选时才需要分隔线；纯联想态（无打字候选）下
-                // 该竖线会孤悬列表最左缘，属多余元素。
-                // 注意：分隔线在条件内，联想词 items 必须在条件外——纯联想态
-                // displayCandidates 为空，若一并包进条件会导致联想词整个不渲染。
-                if (displayCandidates.isNotEmpty() && displayAssociation.isNotEmpty()) {
-                    item(key = "divider") {
-                        Box(
-                            modifier = Modifier
-                                .width(1.dp)
-                                .height(20.dp)
-                                .background(visuals.dividerColor.copy(alpha = 0.5f))
-                                .padding(horizontal = 4.dp)
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CandidateItem(
+                                text = candidate,
+                                index = index,
+                                onClick = { callbacks.onCandidateSelect(index) },
+                                onLongClick = if (callbacks.onCandidateLongPress != null) {
+                                    { callbacks.onCandidateLongPress(index) }
+                                } else null,
+                                textColor = visuals.textColor,
+                                comment = if (showComments) {
+                                    when (val s = state) {
+                                        is CandidateBarState.ChineseCandidates -> s.comments.getOrElse(index) { "" }
+                                        is CandidateBarState.EnglishCandidates -> s.comments.getOrElse(index) { "" }
+                                        else -> ""
+                                    }
+                                } else "",
+                                isSelected = index == 0,
+                                accentColor = visuals.accentColor,
+                                selectedTextColor = visuals.selectedTextColor,
+                                fontSize = candidateTextSize.sp,
+                                candidateFontFamily = candidateFontFamily,
+                                commentFontFamily = commentFontFamily,
+                                minWidth = 46.dp,
+                            )
+                            if (hasFollowing) CandidateBarDivider(visuals.dividerColor)
+                        }
                     }
                 }
 
                 itemsIndexed(displayAssociation, key = { index, _ -> "assoc-$index" }) { index, candidate ->
                     val assocState = state as? CandidateBarState.AssociationOnly
-                    CandidateItem(
-                        text = candidate,
-                        index = -1,
-                        onClick = { callbacks.onAssociationSelect?.invoke(index) },
-                        textColor = visuals.textColor,
-                        comment = displayComments.getOrElse(index) { "" },
-                        isSelected = assocState?.highlightIndex == index,
-                        accentColor = visuals.accentColor,
-                        selectedTextColor = visuals.selectedTextColor,
-                        fontSize = candidateTextSize.sp,
-                        candidateFontFamily = candidateFontFamily,
-                        commentFontFamily = commentFontFamily
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CandidateItem(
+                            text = candidate,
+                            index = -1,
+                            onClick = { callbacks.onAssociationSelect?.invoke(index) },
+                            textColor = visuals.textColor,
+                            comment = displayComments.getOrElse(index) { "" },
+                            isSelected = assocState?.highlightIndex == index,
+                            accentColor = visuals.accentColor,
+                            selectedTextColor = visuals.selectedTextColor,
+                            fontSize = candidateTextSize.sp,
+                            candidateFontFamily = candidateFontFamily,
+                            commentFontFamily = commentFontFamily,
+                            minWidth = 46.dp,
+                        )
+                        if (index < displayAssociation.lastIndex) {
+                            CandidateBarDivider(visuals.dividerColor)
+                        }
+                    }
                 }
             }
 
@@ -674,7 +673,7 @@ fun CandidateBar(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = tr(R.string.s_gengduohouxuan),
                             tint = if (isMorePressed) visuals.textColor.copy(alpha = 0.6f) else visuals.textColor,
                             modifier = Modifier.size(22.dp)
@@ -765,6 +764,16 @@ fun ClipboardImageCandidateItem(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
+private fun CandidateBarDivider(color: Color) {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(18.dp)
+            .background(color.copy(alpha = 0.5f))
+    )
+}
+
+@Composable
 fun CandidateItem(
     text: String,
     index: Int,
@@ -779,12 +788,15 @@ fun CandidateItem(
     candidateFontFamily: androidx.compose.ui.text.font.FontFamily = androidx.compose.ui.text.font.FontFamily.Default,
     commentFontFamily: androidx.compose.ui.text.font.FontFamily = androidx.compose.ui.text.font.FontFamily.Default,
     onLongClick: (() -> Unit)? = null,
+    /** 单字候选的最小占位宽度：参考 Gboard 的宽松单元格，避免候选挤在一起。 */
+    minWidth: Dp = 0.dp,
 ) {
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(5.dp))
+            .widthIn(min = minWidth)
+            .clip(RoundedCornerShape(8.dp))
             .background(
-                if (isSelected) accentColor.copy(alpha = 0.2f)
+                if (isSelected) accentColor.copy(alpha = 0.12f)
                 else Color.Transparent
             )
             // 候选栏在 LazyRow 内且外层还有滚动手势：用 tolerantClick 容忍轻点的小位移，
@@ -793,8 +805,9 @@ fun CandidateItem(
                 onClick = onClick,
                 onLongClick = onLongClick,
             )
-            .padding(horizontal = 4.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
     ) {
         Text(
             text = text,
