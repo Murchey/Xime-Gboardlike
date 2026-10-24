@@ -531,6 +531,8 @@ data class KeyboardFontConfig(
     val keyLabelFont: String = "",
     val candidateFont: String = "",
     val commentFont: String = "",
+    /** 全局界面字体（设置页等），仅由用户在设置里导入，不参与 xime.yaml 解析。 */
+    val uiFont: String = "",
 )
 
 /**
@@ -810,6 +812,19 @@ object KeysConfigHelper {
     // 字体配置缓存
     private var keyboardFontConfig: KeyboardFontConfig = KeyboardFontConfig()
     fun getKeyboardFontConfig(): KeyboardFontConfig = keyboardFontConfig
+
+    /**
+     * 字体设置变更后立即生效。
+     *
+     * 不走 [loadXimeConfig] 的 custom 文件时间戳缓存（字体存在 SharedPreferences 里，
+     * 改字体不会触碰 xime.custom.yaml）；直接重算配置、重载 Typeface 并递增
+     * [configVersion] 让键盘重组。
+     */
+    fun reloadFonts(context: Context) {
+        keyboardFontConfig = FontPreferences.applyOverrides(context, parseKeyboardFontsFromAssets(context))
+        com.kingzcheung.xime.ui.keyboard.AppFonts.loadCustomFonts(keyboardFontConfig)
+        _configVersion.value++
+    }
     
     // 按键布局模式缓存（中文 qwerty / 英文 qwerty_en）
     private var _buttonLayoutZh: ButtonLayout = ButtonLayout.STANDARD
@@ -1058,7 +1073,7 @@ object KeysConfigHelper {
             // 键盘按键（从原始 YAML 手动解析）
             keyboardKeyConfig = parseKeyboardKeyFromAssets(context)
             // 字体配置（从原始 YAML 手动解析）
-            keyboardFontConfig = parseKeyboardFontsFromAssets(context)
+            keyboardFontConfig = FontPreferences.applyOverrides(context, parseKeyboardFontsFromAssets(context))
             com.kingzcheung.xime.ui.keyboard.AppFonts.loadCustomFonts(keyboardFontConfig)
             // 按键布局（从原始 YAML 手动解析，中英文分开）
             val parsedLayouts = parseButtonLayoutFromAssets(context)

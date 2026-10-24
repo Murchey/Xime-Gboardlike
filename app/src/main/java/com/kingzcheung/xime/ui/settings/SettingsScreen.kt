@@ -40,6 +40,7 @@ fun SettingsScreen(
                 onNavigateToSchema = { navController.navigate(SettingsRoutes.Schema) },
                 onNavigateToMarket = { navController.navigate(SettingsRoutes.Market) },
                 onNavigateToTheme = { navController.navigate(SettingsRoutes.Theme) },
+                onNavigateToFont = { navController.navigate(SettingsRoutes.Font) },
                 onNavigateToKeyEffect = { navController.navigate(SettingsRoutes.KeyEffect) },
                 onNavigateToLayoutDisplay = { navController.navigate(SettingsRoutes.LayoutDisplay) },
                 onNavigateToDictionary = { navController.navigate(SettingsRoutes.Dictionary) },
@@ -174,6 +175,14 @@ fun SettingsScreen(
             PluginSettingsContent(
                 pluginId = pluginId ?: "",
                 onBack = { navController.popBackStack() }
+            )
+        }
+        composable(SettingsRoutes.Font) {
+            FontSettingsContent(
+                onBack = {
+                    navController.popBackStack()
+                    onThemeChanged()
+                }
             )
         }
         composable(SettingsRoutes.KeyEffect) {

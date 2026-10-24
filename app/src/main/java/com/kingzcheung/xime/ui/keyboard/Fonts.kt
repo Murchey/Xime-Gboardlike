@@ -45,12 +45,14 @@ object AppFonts {
     private var _keyLabelTypeface: Typeface? = null
     private var _candidateTypeface: Typeface? = null
     private var _commentTypeface: Typeface? = null
+    private var _uiTypeface: Typeface? = null
 
     // FontFamily 用于 Compose Text（如 CandidateBar）
     private var _keyFontFamily: FontFamily? = null
     private var _keyLabelFontFamily: FontFamily? = null
     private var _candidateFontFamily: FontFamily? = null
     private var _commentFontFamily: FontFamily? = null
+    private var _uiFontFamily: FontFamily? = null
 
     // 粗体 Typeface 缓存（避免每次访问都新建）
     private var _keyFontTypeface: Typeface? = null
@@ -80,6 +82,8 @@ object AppFonts {
     val candidateFontFamily: FontFamily get() = _candidateFontFamily ?: FontFamily.Default
     /** 注释 FontFamily */
     val commentFontFamily: FontFamily get() = _commentFontFamily ?: FontFamily.Default
+    /** 全局界面字体（设置页等非键盘文本）；未配置时为 null，回退系统字体。 */
+    val uiFontFamily: FontFamily? get() = _uiFontFamily
 
     fun initialize(context: Context) {
         if (initialized) return
@@ -105,17 +109,19 @@ object AppFonts {
         _keyLabelTypeface = loadTypeface(config.keyLabelFont)
         _candidateTypeface = loadTypeface(config.candidateFont)
         _commentTypeface = loadTypeface(config.commentFont)
+        _uiTypeface = loadTypeface(config.uiFont)
 
         // 复用已解析的 Typeface 构造 FontFamily，避免同一字体文件被解析两次
         _keyFontFamily = loadFontFamily(config.keyFont, _keyTypeface)
         _keyLabelFontFamily = loadFontFamily(config.keyLabelFont, _keyLabelTypeface)
         _candidateFontFamily = loadFontFamily(config.candidateFont, _candidateTypeface)
         _commentFontFamily = loadFontFamily(config.commentFont, _commentTypeface)
+        _uiFontFamily = loadFontFamily(config.uiFont, _uiTypeface)
 
         // 粗体缓存失效
         _keyFontTypeface = null
 
-        Log.d(TAG, "Custom fonts loaded: key=${config.keyFont}, keyLabel=${config.keyLabelFont}, candidate=${config.candidateFont}, comment=${config.commentFont}")
+        Log.d(TAG, "Custom fonts loaded: key=${config.keyFont}, keyLabel=${config.keyLabelFont}, candidate=${config.candidateFont}, comment=${config.commentFont}, ui=${config.uiFont}")
     }
 
     /**

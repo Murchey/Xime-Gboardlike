@@ -1027,4 +1027,18 @@
     <string name="s_wenjianming_shibie_shibai">「%1$s」没能识别出目标词库，请重命名为 &lt;词典名&gt;.txt</string>
     <string name="s_yongmougefangan_daguozi">用某个方案打过字之后，引擎会自动生成对应的 .userdb</string>
     <string name="s_zidingyibeijing">自定义背景</string>
+    <string name="s_zitiguanli">字体</string>
+    <string name="s_ziti_guanli_fu">导入本地字体，替换键盘与界面字体</string>
+    <string name="s_zitishuoming">支持 ttf / otf / ttc 字体文件；导入后立即生效，文件保存在应用私有目录，不会上传。</string>
+    <string name="s_jianpanziti">键盘字体</string>
+    <string name="s_anjianzhuzi">按键主字</string>
+    <string name="s_zigenziti">字根标签</string>
+    <string name="s_houxuanziti">候选词</string>
+    <string name="s_zhushiziti">注释</string>
+    <string name="s_jiemianziti">界面字体</string>
+    <string name="s_jiemianziti_kaiguan">应用到整个界面</string>
+    <string name="s_jiemianziti_kaiguan_shuoming">开启后设置页、对话框等界面文字也使用该字体</string>
+    <string name="s_zitiyulan">字体预览</string>
+    <string name="s_zitiyulan_jiemian">界面字体示例：设置、候选栏、对话框</string>
+    <string name="s_huifumorenziti">恢复默认字体</string>
 </resources>

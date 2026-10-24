@@ -14,6 +14,7 @@ object SettingsRoutes {
     const val PluginMarketDetail = "plugin_market_detail/{pluginId}"
     const val LayoutMarketDetail = "layout_market_detail/{layoutId}"
     const val Theme = "theme"
+    const val Font = "font"
     const val KeyEffect = "key_effect"
     const val LayoutDisplay = "layout_display"
     const val Dictionary = "dictionary"
