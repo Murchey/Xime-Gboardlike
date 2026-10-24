@@ -1729,6 +1729,11 @@ fun KeyboardRowWithConfig(
             val longPressGestureMap = if (longPressDisplay == DisplayMode.BUBBLE) {
                 longPressConfig?.let { KeysConfigHelper.longPressActionMap(it) }
             } else null
+            // 键面右上角角标：优先显示长按项（Gboard 式标点），没有长按项时回退上滑提示
+            val longPressCornerLabel = longPressConfig
+                ?.let { KeysConfigHelper.longPressDisplayItems(it) }
+                ?.firstOrNull()
+                ?.takeIf { it.isNotBlank() }
 
             // 键帽显示文本
             val rawCommitValue = KeysConfigHelper.getKeyCommitValue(key, isAsciiMode)
@@ -1814,7 +1819,7 @@ fun KeyboardRowWithConfig(
                     modifier = Modifier.weight(keyWidths?.getOrNull(index) ?: 1f),
                     swipeText = swipeUpText,
                     swipeDownText = swipeDownText,
-                    swipeUpKeyLabel = swipeUpKeyLabel,
+                    swipeUpKeyLabel = longPressCornerLabel ?: swipeUpKeyLabel,
                     swipeDownKeyLabel = swipeDownKeyLabel,
                     onSwipe = onSwipeUp,
                     onSwipeDown = onSwipeDown,
@@ -1843,7 +1848,7 @@ fun KeyboardRowWithConfig(
                 modifier = Modifier.weight(keyWidths?.getOrNull(index) ?: 1f),
                 swipeText = swipeUpText,
                 swipeDownText = swipeDownText,
-                swipeUpKeyLabel = swipeUpKeyLabel,
+                swipeUpKeyLabel = longPressCornerLabel ?: swipeUpKeyLabel,
                 swipeDownKeyLabel = swipeDownKeyLabel,
                 onSwipe = onSwipeUp,
                 onSwipeDown = onSwipeDown,
