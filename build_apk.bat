@@ -3,7 +3,7 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 
 echo ============================================
-echo  Xime Gboard - Build signed APKs by ABI
+echo  XimeGboard - Build signed APKs by ABI
 echo ============================================
 echo.
 
@@ -43,7 +43,17 @@ mkdir "%OUT_DIR%"
 set "FOUND=0"
 for %%F in ("app\build\outputs\apk\release\*.apk") do (
     if exist "%%~fF" (
-        copy /y "%%~fF" "%OUT_DIR%" >nul
+        set "SRC=%%~fF"
+        set "NAME=%%~nxF"
+        setlocal EnableDelayedExpansion
+        rem Gradle outputs XimeGboard-<version>-<abi>.apk; keep legacy Xime- prefix compatibility
+        if /i "!NAME:~0,5!"=="Xime-" (
+            set "NEWNAME=XimeGboardlike-!NAME:~5!"
+        ) else (
+            set "NEWNAME=!NAME!"
+        )
+        copy /y "!SRC!" "%OUT_DIR%\!NEWNAME!" >nul
+        endlocal
         set "FOUND=1"
     )
 )

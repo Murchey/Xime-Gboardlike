@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/logo.jpg" alt="Xime Logo" width="600">
+  <img src="docs/logo.jpg" alt="XimeGboard Logo" width="600">
 </p>
 
-<h1 align="center">Xime（曦碼） - 五筆/拼音輸入法</h1>
+<h1 align="center">XimeGboard - 五筆/拼音輸入法</h1>
 
 <p align="center">
   <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a>
@@ -123,8 +123,8 @@
 
 1. 在 [本分支 Releases](https://github.com/Murchey/Xime-Gboardlike/releases) 頁面下載最新版本的 APK（也可使用 [上游 Releases](https://github.com/ximeiorg/Xime/releases)）
 2. 安裝應用程式
-3. 在系統設定中啟用 Xime 輸入法
-4. 將 Xime 設為目前輸入法
+3. 在系統設定中啟用 XimeGboard 輸入法
+4. 將 XimeGboard 設為目前輸入法
 
 ### 國內下載
 
@@ -134,8 +134,8 @@
 
 1. 克隆專案並構建 APK
 2. 安裝應用程式
-3. 在系統設定中啟用 Xime 輸入法
-4. 將 Xime 設為目前輸入法
+3. 在系統設定中啟用 XimeGboard 輸入法
+4. 將 XimeGboard 設為目前輸入法
 
 ## 使用文件
 

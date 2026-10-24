@@ -122,7 +122,7 @@ struct DevArgs {
     /// 插件目录（含 main.ts + manifest.json）；缺省为当前目录
     dir: Option<PathBuf>,
     /// 应用包名
-    #[arg(long, default_value = "com.kingzcheung.xime")]
+    #[arg(long, default_value = "com.ximegboard")]
     package: String,
     /// adb 可执行文件路径（缺省：$ADB / $ANDROID_HOME/platform-tools/adb / PATH）
     #[arg(long)]
@@ -140,7 +140,7 @@ struct InstallArgs {
     /// 待安装的 xipk 文件，或插件目录（含 manifest.json；会先编译打包）；缺省为当前目录
     target: Option<PathBuf>,
     /// 应用包名
-    #[arg(long, default_value = "com.kingzcheung.xime")]
+    #[arg(long, default_value = "com.ximegboard")]
     package: String,
     /// adb 可执行文件路径（缺省：$ADB / $ANDROID_HOME/platform-tools/adb / PATH）
     #[arg(long)]
@@ -152,7 +152,7 @@ struct LogsArgs {
     /// 插件目录（读 manifest.id 过滤日志）；缺省为当前目录
     dir: Option<PathBuf>,
     /// 应用包名
-    #[arg(long, default_value = "com.kingzcheung.xime")]
+    #[arg(long, default_value = "com.ximegboard")]
     package: String,
     /// adb 可执行文件路径
     #[arg(long)]

@@ -198,7 +198,7 @@ xipm dev -s <serial> --no-logs                # 多设备/无线调试；只热�
 
 | 参数 | 说明 | 默认 |
 |---|---|---|
-| `--package` | 应用包名 | `com.kingzcheung.xime` |
+| `--package` | 应用包名 | `com.ximegboard` |
 | `--adb` | adb 路径（缺省 `$ADB` / `$ANDROID_HOME/platform-tools/adb`（Windows 自动补 `.exe`）/ PATH） | - |
 | `-s, --device` | 全局参数：`adb -s` 设备序列号（无线调试：先 `adb pair`/`connect`） | 自动采用唯一在线设备 |
 | `--no-logs` | 不跟随设备日志 | 跟随 |
@@ -232,7 +232,7 @@ xipm -s <serial> install plugins/volc-asr              # 多设备：全局 -s �
 
 | 参数 | 说明 | 默认 |
 |---|---|---|
-| `--package` | 应用包名 | `com.kingzcheung.xime` |
+| `--package` | 应用包名 | `com.ximegboard` |
 | `--adb` | adb 路径（同 `xipm dev`） | - |
 
 - 目标缺省为当前目录；是**插件目录**时按 `xipm pack` 的默认布局先编译打包

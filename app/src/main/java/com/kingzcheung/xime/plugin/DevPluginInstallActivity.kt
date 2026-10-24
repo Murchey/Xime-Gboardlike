@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
  * 插件热安装入口（`xipm dev` 的主通道；debug 直用，release 由"插件开发模式"开关门禁）。
  *
  * ```
- * adb shell am start -n com.kingzcheung.xime/.plugin.DevPluginInstallActivity \
+ * adb shell am start -n com.ximegboard/com.kingzcheung.xime.plugin.DevPluginInstallActivity \
  *   --es path <设备上的 xipk 路径>
  * ```
  *

@@ -4,7 +4,7 @@ param(
     [string]$Source = "ide"
 )
 
-$PackageName = "com.kingzcheung.xime"
+$PackageName = "com.ximegboard"
 $Plugins = @(
     "com.kingzcheung.xime.plugin.emoji",
     "com.kingzcheung.xime.plugin.kaomoji"

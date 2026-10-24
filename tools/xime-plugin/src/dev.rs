@@ -31,7 +31,7 @@ const COMPAT_DEV_DIR: &str = "/data/local/tmp/xipm-dev";
 
 /// 热安装组件（app/src/main 的 DevPluginInstallActivity：透明无界面、
 /// `am start` 由 shell 特权发起，不受应用后台执行限制；开发模式开关门禁）。
-const INSTALL_ACTIVITY_SUFFIX: &str = "plugin.DevPluginInstallActivity";
+const INSTALL_ACTIVITY_CLASS: &str = "com.kingzcheung.xime.plugin.DevPluginInstallActivity";
 
 /// 推送/回执通道（`xipm dev` / `xipm install` 按 run-as 可用性自动探测）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -235,7 +235,8 @@ impl Adb {
 
     /// 触发热安装（`am start` 无界面 Activity；path 指向设备上的 xipk）。
     pub fn start_install(&self, package: &str, remote_xipk: &str) -> Result<()> {
-        let component = format!("{package}/{package}.{INSTALL_ACTIVITY_SUFFIX}");
+        // applicationId 与代码 namespace 不同（com.ximegboard vs com.kingzcheung.xime）
+        let component = format!("{package}/{INSTALL_ACTIVITY_CLASS}");
         let out = self.run(&[
             "shell",
             "am",

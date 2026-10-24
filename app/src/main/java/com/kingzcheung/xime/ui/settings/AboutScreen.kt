@@ -82,7 +82,7 @@ object AppInfo {
     
     val dependencies = listOf(
         LicenseItem(
-            name = tr(R.string.s_xima),
+            name = tr(R.string.s_xima_xime),
             license = "GPL-3.0",
             url = "https://github.com/ximeiorg/Xime"
         ),
@@ -207,20 +207,20 @@ fun AboutContent(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "曦码Gboard",
+                            text = "XimeGboard",
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "基于 xime 3.3.0 的 Gboard 风格分支",
+                            text = "基于上游 Xime 3.3.0 的 Gboard 风格分支",
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "版本 1.0.0（基于 xime 3.3.0）",
+                            text = "版本 1.0.0（上游 Xime 3.3.0）",
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )

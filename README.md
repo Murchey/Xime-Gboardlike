@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/logo.jpg" alt="Xime Logo" width="600">
+  <img src="docs/logo.jpg" alt="XimeGboard Logo" width="600">
 </p>
 
-<h1 align="center">Xime - Wubi / Pinyin Input Method for Android</h1>
+<h1 align="center">XimeGboard - Wubi / Pinyin Input Method for Android</h1>
 
 <p align="center">
   <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a>
@@ -109,8 +109,8 @@ Choose the APK matching your device architecture:
 
 1. Download the latest APK from [this fork's Releases](https://github.com/Murchey/Xime-Gboardlike/releases) (upstream releases are also available at [ximeiorg/Xime](https://github.com/ximeiorg/Xime/releases))
 2. Install the application
-3. Enable Xime in system input method settings
-4. Set Xime as the current input method
+3. Enable XimeGboard in system input method settings
+4. Set XimeGboard as the current input method
 
 ### Plugins (Optional)
 
@@ -129,8 +129,8 @@ For the full plugin list, see the [Plugin Center](https://ime.ximei.me/plugin-li
 
 1. Clone the project and build the APK
 2. Install the application
-3. Enable Xime in system input method settings
-4. Set Xime as the current input method
+3. Enable XimeGboard in system input method settings
+4. Set XimeGboard as the current input method
 
 ## Documentation
 
