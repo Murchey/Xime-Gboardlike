@@ -88,6 +88,9 @@ object KeyActionRegistry {
         register("send_rime", ActionDomain.SERVICE, GestureAction.SEND_RIME) { c, v -> c.service.dispatchKey(v) }
         // command 由 UI 手势层按命令名白名单走按键路由；此处仅保留服务域兜底执行体
         register("command", ActionDomain.SERVICE, GestureAction.COMMAND) { c, v -> c.service.executeCommand(v) }
+        register("smart_quote", ActionDomain.SERVICE, GestureAction.SMART_QUOTE) { c, _ ->
+            c.service.executeCommand("smart_quote")
+        }
         register("select_all", ActionDomain.SERVICE, GestureAction.SELECT_ALL) { c, _ ->
             c.service.performEditorMenuAction(android.R.id.selectAll)
         }

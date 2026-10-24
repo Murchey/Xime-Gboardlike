@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.material.icons.automirrored.filled.KeyboardReturn
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.KeyboardTab
@@ -238,7 +239,7 @@ fun KeyboardLayout(
         keyBounds = swipeBubble.keyBounds,
         keyBackgroundColor = bubbleBgColor,
         keyTextColor = keyTextColor,
-        accentColor = specialKeyTextColor,
+        accentColor = KeyboardThemes.getAccentColor(uiState.themeId, isDarkTheme),
         keyWidth = if (swipeBubble.state.isSwiping || swipeBubble.state.isPressed) swipeBubble.keyBounds.width else 0f,
         keyboardWidth = keyboardBounds.width
     )
@@ -280,6 +281,7 @@ fun KeyboardLayout(
             }
             .drawWithContent {
                 drawContent()
+                drawLongPressScrim(swipeBubble.state.isLongPress)
                 bubbleData?.let { drawSwipeBubble(it) }
             }
             .padding(bottom = if (uiState.isFloatingMode || isLandscape) {0.dp} else {0.dp})
@@ -695,7 +697,8 @@ internal fun resolveKeyboardPalette(themeId: String, isDarkTheme: Boolean): Keyb
         keyTextColor = keyTextColor,
         specialKeyBackgroundColor = specialKeyBackgroundColor,
         specialKeyTextColor = specialKeyTextColor,
-        bubbleBgColor = if (isDarkTheme) themeScheme.specialKeyDark else themeScheme.specialKeyLight,
+        // 长按气泡与普通按键同色；特殊键色只用于键帽，不用于气泡。
+        bubbleBgColor = keyBackgroundColor,
     )
 }
 
@@ -752,7 +755,7 @@ internal val DEFAULT_QWERTY_ROWS: List<KeyboardRow> = listOf(
     KeyboardRow(listOf("q", "w", "e", "r", "t", "y", "u", "i", "o", "p")),
     KeyboardRow(listOf("a", "s", "d", "f", "g", "h", "j", "k", "l")),
     KeyboardRow(listOf("z", "x", "c", "v", "b", "n", "m")),
-    KeyboardRow(listOf("mode_change", "comma", "space", "earth", "enter")),
+    KeyboardRow(listOf("mode_change", "comma", "earth", "space", "enter")),
 )
 
 /**
@@ -878,10 +881,22 @@ private fun QwertyRow(
  * 「占宽度但看不见、也不响应」的死键。两者一致性由单测保证（`FunctionKeyRenderContractTest`）。
  */
 internal val RENDERED_FUNCTION_KEY_IDS: Set<String> = setOf(
-    "shift", "delete", "mode_change", "comma", "space", "earth", "enter", "symbol", "emoji", "voice",
+    "shift", "delete", "mode_change", "comma", "period", "space", "earth", "enter", "symbol", "emoji", "voice",
     "cursor_left", "cursor_right", "tab", "caps", "shift_left", "shift_right",
     "back", "back_right", "number", "open_symbols", "space_bar", "space_key",
 )
+
+/** 底行两端功能键（?123 / 回车）的方形圆角。 */
+private val BottomActionKeyCornerRadius = 24.dp
+
+@Composable
+private fun BottomActionKey(content: @Composable () -> Unit) {
+    CompositionLocalProvider(
+        LocalKeyCornerRadius provides BottomActionKeyCornerRadius
+    ) {
+        content()
+    }
+}
 
 @Composable
 internal fun FunctionKeyCell(id: String, env: QwertyRowEnv, modifier: Modifier) {
@@ -891,11 +906,13 @@ internal fun FunctionKeyCell(id: String, env: QwertyRowEnv, modifier: Modifier) 
         "shift_left" -> ShiftCell(env, modifier, id = "shift_left")
         "shift_right" -> ShiftCell(env, modifier, id = "shift_right")
         "delete" -> DeleteCell(env, modifier)
-        "mode_change" -> ModeChangeCell(env, modifier)
+        "mode_change" -> BottomActionKey { ModeChangeCell(env, modifier) }
         "comma" -> CommaCell(env, modifier)
+        // 平板布局的独立句号键：复用面板文本键实现，颜色与功能键一致
+        "period" -> PanelTextCell("period", "。", ".", special = true, env, modifier)
         "space" -> SpaceCell(env, modifier)
         "earth" -> EarthCell(env, modifier)
-        "enter" -> EnterCell(env, modifier, env.ctrlFontSize)
+        "enter" -> BottomActionKey { EnterCell(env, modifier, env.ctrlFontSize) }
         "symbol" -> PanelActionCell(
             "symbol", GestureAction.TOGGLE_SYMBOLS, "", rememberVectorPainter(Icons.TwoTone.KeyboardAlt), env, modifier,
         )
@@ -1229,7 +1246,11 @@ private fun EnterCell(env: QwertyRowEnv, modifier: Modifier, fontSize: TextUnit?
     val enterLongPressItems = enterLongPressConfig?.let { KeysConfigHelper.longPressDisplayItems(it) }?.ifEmpty { null }
     val enterLongPressMap = enterLongPressConfig?.let { KeysConfigHelper.longPressActionMap(it) }
     SwipeableKeyButton(
-        text = enterAction.label.ifEmpty { env.enterKeyText },
+        text = "",
+        // 键面改为回车图标；无障碍仍朗读配置的文字/「回车」
+        icon = rememberVectorPainter(Icons.AutoMirrored.Filled.KeyboardReturn),
+        pressText = null,
+        a11yDescription = enterAction.label.ifEmpty { env.enterKeyText },
         onClick = { invokeKeyAction(enterAction, env.onKeyPress, env.onCommitText, env.onGestureAction) },
         backgroundColor = env.specialKeyBackgroundColor,
         textColor = env.specialKeyTextColor,
@@ -1250,7 +1271,7 @@ private fun EnterCell(env: QwertyRowEnv, modifier: Modifier, fontSize: TextUnit?
         onRelease = { env.onKeyRelease?.invoke(enterKeyValue) },
         shadowEnabled = env.shadowEnabled,
         shadowElevation = env.shadowElevation,
-        shadowShapeRadius = env.shadowShapeRadius,
+        shadowShapeRadius = maxOf(env.shadowShapeRadius, BottomActionKeyCornerRadius),
         fontSize = fontSize ?: androidx.compose.ui.unit.TextUnit.Unspecified,
     )
 }
@@ -1331,7 +1352,7 @@ private fun ModeChangeCell(env: QwertyRowEnv, modifier: Modifier) {
         onSwipeStateChange = { state, bounds -> env.processSwipeState(state, bounds) },
         shadowEnabled = env.shadowEnabled,
         shadowElevation = env.shadowElevation,
-        shadowShapeRadius = env.shadowShapeRadius,
+        shadowShapeRadius = maxOf(env.shadowShapeRadius, BottomActionKeyCornerRadius),
     )
 }
 
@@ -1406,8 +1427,8 @@ private fun CommaCell(env: QwertyRowEnv, modifier: Modifier) {
         SwipeableIconKeyButton(
             icon = rememberVectorPainter(Icons.Default.Language),
             onClick = k2OnClick,
-            backgroundColor = env.keyBackgroundColor,
-            iconColor = env.keyTextColor,
+            backgroundColor = env.specialKeyBackgroundColor,
+            iconColor = env.specialKeyTextColor,
             modifier = modifier,
             a11yDescription = tr(R.string.s_zhongyingqiehuan),
             a11yState = if (env.isAsciiMode) tr(R.string.s_dangqianyingwen) else tr(R.string.s_dangqianzhongwen),
@@ -1428,8 +1449,8 @@ private fun CommaCell(env: QwertyRowEnv, modifier: Modifier) {
             // tap.bubble: false → 不弹按压气泡（默认 true，行为与改动前一致）
             pressText = k2TapLabel.takeIf { k2KeyGesture?.tap?.bubble ?: true },
             onClick = k2OnClick,
-            backgroundColor = env.keyBackgroundColor,
-            textColor = env.keyTextColor,
+            backgroundColor = env.specialKeyBackgroundColor,
+            textColor = env.specialKeyTextColor,
             modifier = modifier,
             swipeText = k2SwipeUpText,
             swipeDownText = k2SwipeDownText,
@@ -1701,7 +1722,9 @@ fun KeyboardRowWithConfig(
         modifier = modifier
             .fillMaxWidth(),
     ) {
-        keys.forEachIndexed { index, key ->
+        val context = LocalContext.current
+    val hideKeyLabels = SettingsPreferences.isKeyLabelsHidden(context)
+    keys.forEachIndexed { index, key ->
             val rawSwipeUpLabel = KeysConfigHelper.getSwipeUpLabel(key, isAsciiMode)
             val swipeUpAction = KeysConfigHelper.getSwipeUpAction(key, isAsciiMode)
             val swipeUpDisplay = KeysConfigHelper.getSwipeUpDisplay(key, isAsciiMode)
@@ -1742,11 +1765,14 @@ fun KeyboardRowWithConfig(
             } else {
                 rawCommitValue
             }
-            val displayText = if (isAsciiMode) {
+            val rawDisplayText = if (isAsciiMode) {
                 commitValue
             } else {
                 KeysConfigHelper.getKeyDisplayLabel(key, isAsciiMode)
             }
+            // 隐藏键面字符：只影响字符键主标签，功能键图标/回车图标不受影响。
+            val hideMainLabel = hideKeyLabels && key.any { it.isLetterOrDigit() }
+            val displayText = if (hideMainLabel) "" else rawDisplayText
 
             // tap 动作接线：非 COMMIT/SEND_RIME 的动作（复制/粘贴/面板切换等）走手势分发，
             // 其余沿用原有上屏路径（shift 大写与输入法组合语义不变）
@@ -1819,8 +1845,8 @@ fun KeyboardRowWithConfig(
                     modifier = Modifier.weight(keyWidths?.getOrNull(index) ?: 1f),
                     swipeText = swipeUpText,
                     swipeDownText = swipeDownText,
-                    swipeUpKeyLabel = longPressCornerLabel ?: swipeUpKeyLabel,
-                    swipeDownKeyLabel = swipeDownKeyLabel,
+                    swipeUpKeyLabel = if (hideMainLabel) "" else (longPressCornerLabel ?: swipeUpKeyLabel),
+                    swipeDownKeyLabel = if (hideMainLabel) "" else swipeDownKeyLabel,
                     onSwipe = onSwipeUp,
                     onSwipeDown = onSwipeDown,
                     onSwipeLeft = onSwipeLeft,
@@ -1846,10 +1872,11 @@ fun KeyboardRowWithConfig(
                 backgroundColor = config.keyBackgroundColor,
                 textColor = config.keyTextColor,
                 modifier = Modifier.weight(keyWidths?.getOrNull(index) ?: 1f),
+                a11yDescription = rawDisplayText.takeIf { hideMainLabel },
                 swipeText = swipeUpText,
                 swipeDownText = swipeDownText,
-                swipeUpKeyLabel = longPressCornerLabel ?: swipeUpKeyLabel,
-                swipeDownKeyLabel = swipeDownKeyLabel,
+                swipeUpKeyLabel = if (hideMainLabel) "" else (longPressCornerLabel ?: swipeUpKeyLabel),
+                swipeDownKeyLabel = if (hideMainLabel) "" else swipeDownKeyLabel,
                 onSwipe = onSwipeUp,
                 onSwipeDown = onSwipeDown,
                 onSwipeLeft = onSwipeLeft,
@@ -2179,6 +2206,7 @@ private fun SpaceKey(
     val currentOnSwipe by rememberUpdatedState(onSwipe)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val longPressBubbleDelayMs = SettingsPreferences.getLongPressBubbleDelayMs(context)
 
     val density = LocalDensity.current
     val shadowModifier = remember(shadowEnabled, shadowElevation, shadowShapeRadius, density, keyBackgroundColor) {
@@ -2223,7 +2251,7 @@ private fun SpaceKey(
                         val downX = down.position.x
                         val downY = down.position.y
                         val longPressJob = scope.launch {
-                            delay(400)
+                            delay(longPressBubbleDelayMs.toLong())
                             triggered = true
                             view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                             onSwipeStateChange?.invoke(

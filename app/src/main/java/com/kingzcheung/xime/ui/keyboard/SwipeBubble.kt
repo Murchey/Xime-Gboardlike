@@ -13,6 +13,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -67,6 +68,10 @@ data class BubbleDrawData(
     val selectedBgRadiusPx: Float,
     val longPressIconBitmaps: List<Bitmap> = emptyList(),
     val accentArgb: Int = 0xFF8F73E2.toInt(),
+    /** 选中项文字色：按强调色亮度取深蓝/白，保证实心圆上可读。 */
+    val selectedTextColorArgb: Int = android.graphics.Color.WHITE,
+    /** 单项长按：整个气泡为圆形，没有向下尖角。 */
+    val isSingleLongPress: Boolean = false,
 )
 
 /** 按压气泡抬起后的滞留时长：随抬起瞬间消失看不清键位提示（主流输入法约 50~80ms），取中值。 */
@@ -144,18 +149,29 @@ fun rememberSwipeBubbleDrawData(
     )
     val bubbleScale = adaptiveBubbleScale(contentScale)
     val bodyHeightPx = with(density) { BubbleBodyHeight.toPx() } * bubbleScale
+    // 单项长按：整个气泡画成圆形，不再向下伸出尖角。
+    val singleLongPress = isLongPressMode && swipeState.longPressItems.size == 1
     // 尖端完整覆盖按下的按键（与按键同高），宽体锚定按键顶部悬在上方（见 boxTop）。
     // 全部基于真实按键 bounds 计算，不再用 KeyHeight 估算值——
     // 键盘高度被调大时估算失准，宽体会下沉进按键被手指挡住。
-    val pointerHeightPx = keyBounds.height
-    val cornerRadiusPx = with(density) { BubbleCornerRadius.toPx() } * bubbleScale
+    // 长按气泡统一悬浮在按键上方，不带向下的方块/尖角；点按与滑动气泡保留指示尖角。
+    val pointerHeightPx = if (isLongPressMode) 0f else keyBounds.height
+    val cornerRadiusPx = if (isLongPressMode) {
+        bodyHeightPx / 2f
+    } else {
+        with(density) { BubbleCornerRadius.toPx() } * bubbleScale
+    }
     val screenMarginPx = with(density) { BubbleScreenMargin.toPx() }
     val keyWidthPx = keyWidth
     val minBodyWidthPx = keyWidthPx * 1.8f
     val shadowRadiusPx = with(density) { 4.dp.toPx() } * bubbleScale
 
     val accentArgb = accentColor.toArgb()
-    val isDarkTheme = keyTextColor == Color(0xFFE8EAED)
+    val selectedTextColorArgb = if (Color(accentArgb).luminance() > 0.5f) {
+        0xFF072D6B.toInt()
+    } else {
+        android.graphics.Color.WHITE
+    }
     val bgColor = (if (swipeState.isDanger) {
         if (swipeState.isSwipeDown) Color(0xFF1A73E8) else Color(0xFFD93025)
     } else keyBackgroundColor).toArgb()
@@ -170,12 +186,15 @@ fun rememberSwipeBubbleDrawData(
         }
     }
 
-    val bodyWidth = if (isLongPressMode) {
+    val bodyWidth = if (singleLongPress) {
+        bodyHeightPx
+    } else if (isLongPressMode) {
         val cellMin = if (swipeState.longPressDrawableIds.isNotEmpty())
             swipeState.longPressItems.size
         else
             maxOf(swipeState.longPressItems.size, 3)
-        cellMin * keyWidthPx
+        // 英文变音候选可能到 9 项，宽度必须钳制在键盘内。
+        minOf(cellMin * keyWidthPx, keyboardWidth - screenMarginPx * 2f)
     } else {
         maxOf(textPaint.measureText(displayText!!) + with(density) { 20.dp.toPx() } * bubbleScale, minBodyWidthPx)
     }
@@ -196,19 +215,28 @@ fun rememberSwipeBubbleDrawData(
     val boxLeft = minOf(bodyLeft, pointerLeft)
     // 宽体（显示文字的主体）底部对齐按键顶部，悬在按键正上方不被手指遮挡；
     // 尖端从宽体底部向下延伸 pointerHeightPx（≈按键上半部）指示归属键。
-    val boxTop = keyBounds.top - bodyHeightPx
+    // 单项圆形气泡没有尖角，额外留 4dp 间隙。
+    val boxTop = if (isLongPressMode) {
+        keyBounds.top - bodyHeightPx - with(density) { 4.dp.toPx() }
+    } else {
+        keyBounds.top - bodyHeightPx
+    }
     val boxRight = maxOf(bodyRight, pointerRight)
 
     val rightRoom = bodyRight - pointerRight
     val leftRoom = pointerLeft - bodyLeft
     val flushTolerancePx = with(density) { 10.dp.toPx() }
-    val isLeftFlush = leftRoom < cornerRadiusPx + flushTolerancePx || kotlin.math.abs(bodyLeft - pointerLeft) < 1f
-    val isRightFlush = rightRoom < cornerRadiusPx + flushTolerancePx || kotlin.math.abs(bodyRight - pointerRight) < 1f
+    val isLeftFlush = !isLongPressMode &&
+        (leftRoom < cornerRadiusPx + flushTolerancePx || kotlin.math.abs(bodyLeft - pointerLeft) < 1f)
+    val isRightFlush = !isLongPressMode &&
+        (rightRoom < cornerRadiusPx + flushTolerancePx || kotlin.math.abs(bodyRight - pointerRight) < 1f)
     val bodyLeftInBox = bodyLeft - boxLeft
     val pointerLeftInBox = pointerLeft - boxLeft
     val pointerRightInBox = pointerLeftInBox + keyWidthPx
-    val pathBodyLeft = if (isLeftFlush && leftRoom <= cornerRadiusPx) pointerLeftInBox else bodyLeftInBox
-    val pathBodyWidth = (if (isRightFlush && rightRoom <= cornerRadiusPx) pointerRightInBox else (bodyLeftInBox + bodyWidth)) - pathBodyLeft
+    val pathBodyLeft = if (isLongPressMode) bodyLeftInBox
+        else if (isLeftFlush && leftRoom <= cornerRadiusPx) pointerLeftInBox else bodyLeftInBox
+    val pathBodyWidth = if (isLongPressMode) bodyWidth else
+        (if (isRightFlush && rightRoom <= cornerRadiusPx) pointerRightInBox else (bodyLeftInBox + bodyWidth)) - pathBodyLeft
 
     val paddingPx = with(density) { 10.dp.toPx() } * bubbleScale
 
@@ -254,6 +282,8 @@ fun rememberSwipeBubbleDrawData(
         selectedBgRadiusPx = selectedBgRadiusPx,
         longPressIconBitmaps = longPressIconBitmaps,
         accentArgb = accentArgb,
+        selectedTextColorArgb = selectedTextColorArgb,
+        isSingleLongPress = singleLongPress,
     )
 }
 
@@ -267,6 +297,19 @@ private fun buildBubblePath(data: BubbleDrawData): Path {
     val cornerRadius = data.cornerRadiusPx
     val isLeftFlush = data.isLeftFlush
     val isRightFlush = data.isRightFlush
+
+    if (data.isSingleLongPress) {
+        bubblePath.rewind()
+        bubblePath.addOval(0f, 0f, bodyWidth, bodyHeight, Path.Direction.CW)
+        return bubblePath
+    }
+    if (data.isLongPressMode) {
+        bubblePath.rewind()
+        bubblePath.addRoundRect(
+            0f, 0f, bodyWidth, bodyHeight, cornerRadius, cornerRadius, Path.Direction.CW
+        )
+        return bubblePath
+    }
 
     val bodyRight = bodyLeft + bodyWidth
     val bodyBottom = bodyHeight
@@ -314,6 +357,13 @@ private fun buildBubblePath(data: BubbleDrawData): Path {
     return bubblePath
 }
 
+/** 长按气泡出现时压暗键盘表层；点按/滑动气泡不触发。 */
+fun DrawScope.drawLongPressScrim(visible: Boolean) {
+    if (visible) {
+        drawRect(Color.Black.copy(alpha = 0.20f))
+    }
+}
+
 fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
     val path = buildBubblePath(data)
 
@@ -330,19 +380,20 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
             canvas.save()
             canvas.clipRect(0f, 0f, data.bodyWidth, data.bodyHeightPx)
             val accentColor = data.accentArgb
-            val selectedBgColor = android.graphics.Color.argb(
-                0x33, android.graphics.Color.red(accentColor),
-                android.graphics.Color.green(accentColor), android.graphics.Color.blue(accentColor)
-            )
             val cellWidth = data.bodyWidth / data.longPressItems.size
 
             data.longPressItems.forEachIndexed { index, item ->
                 val itemLeft = index * cellWidth
-                if (index == data.selectedLongPressIndex) {
-                    bubbleBgPaint.color = selectedBgColor
-                    val r = minOf(data.selectedBgRadiusPx, cellWidth / 2f)
-                    canvas.drawRoundRect(
-                        itemLeft, 0f, itemLeft + cellWidth, data.bodyHeightPx, r, r, bubbleBgPaint
+                if (index == data.selectedLongPressIndex && !data.isSingleLongPress) {
+                    // 多项气泡的选中项使用实心强调圆（设计稿：圆形而不是方形）。
+                    // 单项气泡整体就是选中项，保持键帽同色圆形，不再套一圈蓝色。
+                    bubbleBgPaint.color = accentColor
+                    val radius = minOf(cellWidth, data.bodyHeightPx) * 0.38f
+                    canvas.drawCircle(
+                        itemLeft + cellWidth / 2f,
+                        data.bodyHeightPx / 2f,
+                        radius,
+                        bubbleBgPaint
                     )
                 }
                 if (data.longPressIconBitmaps.isNotEmpty() && index < data.longPressIconBitmaps.size) {
@@ -357,7 +408,13 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
                     )
                 } else {
                     val fontSize = if (index == data.selectedLongPressIndex) data.selectedFontSizePx else data.normalFontSizePx
-                    bubbleLabelPaint.color = if (index == data.selectedLongPressIndex) accentColor else data.textColor
+                    bubbleLabelPaint.color = if (
+                        index == data.selectedLongPressIndex && !data.isSingleLongPress
+                    ) {
+                        data.selectedTextColorArgb
+                    } else {
+                        data.textColor
+                    }
                     bubbleLabelPaint.textSize = fontSize
                     bubbleLabelPaint.textAlign = Paint.Align.CENTER
                     bubbleLabelPaint.isFakeBoldText = true

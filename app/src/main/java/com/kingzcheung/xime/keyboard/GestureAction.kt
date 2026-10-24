@@ -72,6 +72,9 @@ enum class GestureAction(val value: String) {
     /** 执行内置命令，value 为命令名（如 "clear_composition"）。 */
     COMMAND("command"),
 
+    /** 智能引号：中文长按 C 时在左右引号间交替。 */
+    SMART_QUOTE("smart_quote"),
+
     /** 全选。 */
     SELECT_ALL("select_all"),
 

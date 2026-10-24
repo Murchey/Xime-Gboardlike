@@ -173,6 +173,7 @@ fun PanelKeyboardLayout(
             }
             .drawWithContent {
                 drawContent()
+                drawLongPressScrim(swipeBubble.state.isLongPress)
                 bubbleData?.let { drawSwipeBubble(it) }
             },
     ) {

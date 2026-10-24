@@ -31,6 +31,7 @@ class KeyActionRegistryTest {
         assertEquals(ActionDomain.CROSS, KeyActionRegistry.fromId("delete")!!.domain)
         assertEquals(ActionDomain.CROSS, KeyActionRegistry.fromId("toggle_ascii")!!.domain)
         assertEquals(ActionDomain.SERVICE, KeyActionRegistry.fromId("repeat_space")!!.domain)
+        assertEquals(ActionDomain.SERVICE, KeyActionRegistry.fromId("smart_quote")!!.domain)
     }
 
     @Test
@@ -67,6 +68,14 @@ class KeyActionRegistryTest {
         val executor = RecordingExecutor()
         KeyActionRegistry.execute(GestureAction.COMMAND, KeyActionContext(executor), "clear_composition")
         assertEquals(listOf("clear_composition"), executor.commands)
+    }
+
+    @Test
+    fun `smart_quote 走服务命令并解析为新枚举`() {
+        val executor = RecordingExecutor()
+        KeyActionRegistry.execute(GestureAction.SMART_QUOTE, KeyActionContext(executor), "")
+        assertEquals(listOf("smart_quote"), executor.commands)
+        assertEquals(GestureAction.SMART_QUOTE, GestureAction.fromValue("smart_quote"))
     }
 
     @Test

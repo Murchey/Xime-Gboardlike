@@ -6,6 +6,8 @@ import com.kingzcheung.xime.i18n.tr
 
 import android.content.Context
 import android.content.Intent
+import android.database.ContentObserver
+import android.provider.Settings
 import android.inputmethodservice.InputMethodService
 import android.os.Build
 import android.os.Handler
@@ -84,6 +86,7 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.kingzcheung.xime.MainActivity
 import com.kingzcheung.xime.association.AssociationManager
+import com.kingzcheung.xime.keyboard.SmartQuoteCycle
 import com.kingzcheung.xime.ui.keyboard.KeyboardCallbacks
 import com.kingzcheung.xime.ui.keyboard.KeyboardLayoutState
 import com.kingzcheung.xime.viewmodel.KeyboardUiState
@@ -363,6 +366,16 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private var deleteSessionActive = false
     private var deleteSessionBeforeText = ""
     private var deleteSessionBeforeCode = ""
+    private val smartQuoteCycle = SmartQuoteCycle()
+
+    /** 系统夜间模式快照：不依赖 IME 窗口是否收到 onConfigurationChanged。 */
+    private val systemDarkState = mutableStateOf(false)
+    private val uiNightModeObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) {
+            refreshSystemDarkMode()
+        }
+    }
+
     /** 累积的 partial commit 段列表（多段选词场景下逐段追加，文本+拼音同源，供调频/回滚） */
     internal val t9PartialSegments = mutableListOf<T9PartialSegment>()
     /**
@@ -566,9 +579,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val isDarkNow = when (darkMode) {
             1 -> true
             0 -> false
-            else -> (resources.configuration.uiMode and
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-                android.content.res.Configuration.UI_MODE_NIGHT_YES
+            else -> systemDarkNow()
         }
         uiState.value = uiState.value.copy(
             darkMode = darkMode,
@@ -667,13 +678,36 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     fun isDarkTheme(): Boolean {
         return when (uiState.value.darkMode) {
             DARK_MODE_DARK -> true
-            DARK_MODE_SYSTEM -> {
-                val nightModeFlags = resources.configuration.uiMode and
-                        android.content.res.Configuration.UI_MODE_NIGHT_MASK
-                nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
-            }
+            DARK_MODE_SYSTEM -> systemDarkNow()
             else -> false
         }
+    }
+
+    /**
+     * 系统夜间模式：优先读 secure ui_night_mode（不依赖 IME 是否收到配置变更），
+     * 读不到再回退 resources.configuration。这样系统切换时键盘无需重建也能换色板。
+     */
+    private fun systemDarkNow(): Boolean {
+        val setting = try {
+            Settings.Secure.getInt(contentResolver, "ui_night_mode", -1)
+        } catch (_: Exception) {
+            -1
+        }
+        return when (setting) {
+            2 -> true
+            1 -> false
+            else -> (resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+    }
+
+    private fun refreshSystemDarkMode() {
+        val dark = systemDarkNow()
+        if (systemDarkState.value == dark) return
+        systemDarkState.value = dark
+        loadDarkModePreference()
+        applyWindowBackground()
     }
 
     override fun onCreate() {
@@ -702,7 +736,13 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         )
         
         feedbackManager.initialize()
-        
+
+        systemDarkState.value = systemDarkNow()
+        contentResolver.registerContentObserver(
+            Settings.Secure.getUriFor("ui_night_mode"),
+            false,
+            uiNightModeObserver,
+        )
         loadDarkModePreference()
         registerSharedPrefsListener()
         
@@ -1505,7 +1545,17 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 val state = uiState.value
                 val page by keyboardViewModel.page.collectAsState(com.kingzcheung.xime.keyboard.KeyboardPage.Main(com.kingzcheung.xime.keyboard.MainType.FULL))
                 val isHandwritingMode = (page as? com.kingzcheung.xime.keyboard.KeyboardPage.Main)?.type == com.kingzcheung.xime.keyboard.MainType.HANDWRITING
-                val isDarkTheme = isDarkTheme()
+                // 订阅服务内的系统夜间模式快照：系统切换时主动重组，
+                // 不再依赖 IME 窗口是否收到 onConfigurationChanged。
+                val systemDarkTheme = systemDarkState.value
+                val isDarkTheme = when (state.darkMode) {
+                    DARK_MODE_DARK -> true
+                    DARK_MODE_LIGHT -> false
+                    else -> systemDarkTheme
+                }
+                LaunchedEffect(state.darkMode, systemDarkTheme) {
+                    loadDarkModePreference()
+                }
                 val screenHeightDp = resources.configuration.screenHeightDp
                 val physicalScreenDp = (resources.displayMetrics.heightPixels / resources.displayMetrics.density).roundToInt()
                 val statusBarHeightDp = tryGetStatusBarHeightDp(this@XimeInputMethodService, window.window)
@@ -2191,6 +2241,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 @Suppress("DEPRECATION")
                 imm.showInputMethodPicker()
             }
+            "smart_quote" -> {
+                commitText(smartQuoteCycle.next())
+            }
             else -> FileLogger.w(TAG, "Unknown command: $name")
         }
     }
@@ -2228,6 +2281,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         // （无 composing 时会在光标处插入空串，选中文字时等于删除选区）。
         if (!restarting) {
             inputBoxComposingActive = false
+            smartQuoteCycle.reset()
         }
 
         predictionManager.clearCommittedText()
@@ -2593,6 +2647,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             closeToolPanel()
         }
         applyCompactMode()
+        systemDarkState.value = systemDarkNow()
         loadDarkModePreference()
         applyWindowBackground()
         updateCursorUpdateMonitoring()
@@ -2857,6 +2912,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     override fun onDestroy() {
         super.onDestroy()
+        try {
+            contentResolver.unregisterContentObserver(uiNightModeObserver)
+        } catch (_: Exception) {
+        }
         sharedPrefsListener?.let {
             SettingsPreferences.getPrefsPublic(this).unregisterOnSharedPreferenceChangeListener(it)
         }

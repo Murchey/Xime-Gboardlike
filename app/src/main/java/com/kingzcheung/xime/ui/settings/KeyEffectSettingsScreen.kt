@@ -76,6 +76,42 @@ fun KeyEffectSettingsContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
+                SettingsSection(title = tr(R.string.s_changganqipao), content = {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = tr(R.string.s_changganqipao_chufashijian),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = "${uiState.longPressBubbleDelayMs} ms",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Text(
+                            text = tr(R.string.s_changganqipao_shuoming),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Slider(
+                            value = uiState.longPressBubbleDelayMs.toFloat(),
+                            onValueChange = { viewModel.setLongPressBubbleDelayMs(it.toInt()) },
+                            valueRange = 100f..600f,
+                            steps = 19
+                        )
+                    }
+                })
+            }
+
+            item {
                 SettingsSection(title = tr(R.string.s_anjianyinxiao), content = {
                     Row(
                         modifier = Modifier

@@ -17,6 +17,7 @@ data class KeyEffectUiState(
     val longPressDuration: Int = 0,
     val pressAmplitude: Int = 0,
     val longPressAmplitude: Int = 0,
+    val longPressBubbleDelayMs: Int = 250,
     val hasAmplitudeControl: Boolean = false
 )
 
@@ -31,7 +32,8 @@ class KeyEffectSettingsViewModel(application: Application) : AndroidViewModel(ap
         pressDuration = SettingsPreferences.getVibrationPressDuration(context),
         longPressDuration = SettingsPreferences.getVibrationLongPressDuration(context),
         pressAmplitude = SettingsPreferences.getVibrationPressAmplitude(context),
-        longPressAmplitude = SettingsPreferences.getVibrationLongPressAmplitude(context)
+        longPressAmplitude = SettingsPreferences.getVibrationLongPressAmplitude(context),
+        longPressBubbleDelayMs = SettingsPreferences.getLongPressBubbleDelayMs(context)
     ))
     val uiState: StateFlow<KeyEffectUiState> = _uiState.asStateFlow()
 
@@ -89,5 +91,16 @@ class KeyEffectSettingsViewModel(application: Application) : AndroidViewModel(ap
     fun setLongPressAmplitude(amplitude: Int) {
         SettingsPreferences.setVibrationLongPressAmplitude(context, amplitude)
         _uiState.update { it.copy(longPressAmplitude = amplitude) }
+    }
+
+    fun setLongPressBubbleDelayMs(delayMs: Int) {
+        SettingsPreferences.setLongPressBubbleDelayMs(context, delayMs)
+        _uiState.update {
+            it.copy(
+                longPressBubbleDelayMs = delayMs.coerceIn(
+                    SettingsPreferences.LONG_PRESS_BUBBLE_DELAY_RANGE
+                )
+            )
+        }
     }
 }
