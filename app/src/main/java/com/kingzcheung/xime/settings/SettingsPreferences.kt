@@ -871,6 +871,41 @@ object SettingsPreferences {
         getPrefs(context).edit().putBoolean(KEY_CLIPBOARD_SENSITIVE_CAPTURE, enabled).apply()
     }
 
+    // ── 剪贴板保留策略（条数上限 + 自动过期） ─────────────────────
+
+    private const val KEY_CLIPBOARD_MAX_ITEMS = "clipboard_max_items"
+    private const val KEY_CLIPBOARD_RETENTION_DAYS = "clipboard_retention_days"
+
+    /** 条数上限可选区间（滑块与读取校验共用）。 */
+    val CLIPBOARD_MAX_ITEMS_RANGE = 50..2000
+
+    /** 自动清理天数候选，0 = 不自动删除。 */
+    val CLIPBOARD_RETENTION_DAY_OPTIONS = listOf(0, 1, 7, 30, 90)
+
+    /** 文字/图片历史最多保留条数（不含置顶与快捷发送条目），默认 1000。 */
+    fun getClipboardMaxItems(context: Context): Int {
+        val default = 1000
+        return getPrefs(context).getInt(KEY_CLIPBOARD_MAX_ITEMS, default)
+            .coerceIn(CLIPBOARD_MAX_ITEMS_RANGE)
+    }
+
+    fun setClipboardMaxItems(context: Context, count: Int) {
+        getPrefs(context).edit()
+            .putInt(KEY_CLIPBOARD_MAX_ITEMS, count.coerceIn(CLIPBOARD_MAX_ITEMS_RANGE))
+            .apply()
+    }
+
+    /** 超过多少天自动删除（0 = 永不），默认 0。 */
+    fun getClipboardRetentionDays(context: Context): Int {
+        val value = getPrefs(context).getInt(KEY_CLIPBOARD_RETENTION_DAYS, 0)
+        return if (value in CLIPBOARD_RETENTION_DAY_OPTIONS) value else 0
+    }
+
+    fun setClipboardRetentionDays(context: Context, days: Int) {
+        val normalized = if (days in CLIPBOARD_RETENTION_DAY_OPTIONS) days else 0
+        getPrefs(context).edit().putInt(KEY_CLIPBOARD_RETENTION_DAYS, normalized).apply()
+    }
+
     const val KEY_BACKUP_PLUGIN_ID = "backup_plugin_id"
 
     fun getBackupPluginId(context: Context): String {

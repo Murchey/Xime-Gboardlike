@@ -1041,4 +1041,12 @@
     <string name="s_zitiyulan">字体预览</string>
     <string name="s_zitiyulan_jiemian">界面字体示例：设置、候选栏、对话框</string>
     <string name="s_huifumorenziti">恢复默认字体</string>
+    <string name="s_jiantiebanbaoliuguize">保留规则</string>
+    <string name="s_zuiduobaoliutiaoshu">最多保留条数</string>
+    <string name="s_tiaoshu">%1$d 条</string>
+    <string name="s_baoliutiaoshu_tishi">超出后自动删除最旧的记录；置顶和快捷发送不计入</string>
+    <string name="s_zidongqingli">自动清理</string>
+    <string name="s_buzidongqingli">不清理</string>
+    <string name="s_tian">%1$d天</string>
+    <string name="s_zidongqingli_tishi">超过设定天数的记录会自动删除；置顶和快捷发送不受影响</string>
 </resources>

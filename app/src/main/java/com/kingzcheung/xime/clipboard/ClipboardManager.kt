@@ -67,6 +67,7 @@ class ClipboardManager private constructor(private val context: Context) {
 
     companion object {
         private const val TAG = "ClipboardManager"
+        /** 历史默认条数上限（现由设置项覆盖，见 SettingsPreferences.getClipboardMaxItems）。 */
         private const val MAX_ITEMS = 1000
         private const val MAX_QUICK_SEND_ITEMS = 2000
         private const val PREFS_NAME = "clipboard_prefs"
@@ -517,6 +518,51 @@ class ClipboardManager private constructor(private val context: Context) {
                 .onFailure { Log.w(TAG, "Media bridge startup sweep failed", it) }
         }
         startListening()
+        enforceItemLimit()
+        purgeExpired()
+    }
+
+    /**
+     * 按「最多保留条数」立即裁剪历史（用户把上限调小时调用）。
+     *
+     * 写入路径本身会淘汰，但调低上限后旧条目要等到下次复制才减少，观感上像设置没生效，
+     * 所以这里主动裁一次；图片条目连带回收磁盘文件。
+     */
+    fun enforceItemLimit() {
+        val max = SettingsPreferences.getClipboardMaxItems(context)
+        scope.launch {
+            runCatching {
+                val count = dao.countUnpinned()
+                if (count > max) {
+                    val victims = dao.oldestUnpinned(count - max)
+                    if (victims.isNotEmpty()) {
+                        deleteEntriesAndFiles(victims.map { it.id })
+                        Log.d(TAG, "trimmed ${victims.size} clipboard entries (limit ${max})")
+                    }
+                }
+            }.onFailure { Log.w(TAG, "enforceItemLimit failed", it) }
+        }
+    }
+
+    /**
+     * 按「自动清理天数」删除过期条目（置顶与快捷发送不参与）。
+     *
+     * 触发时机：进程启动、设置里改完保留策略、以及打开剪贴板面板时。
+     * 图片条目被删后其磁盘文件由 [deleteEntriesAndFiles] 一并回收。
+     */
+    fun purgeExpired(now: Long = System.currentTimeMillis()) {
+        val days = SettingsPreferences.getClipboardRetentionDays(context)
+        if (days <= 0) return
+        scope.launch {
+            runCatching {
+                val cutoff = now - days * 24L * 60L * 60L * 1000L
+                val expired = dao.findExpired(cutoff)
+                if (expired.isNotEmpty()) {
+                    deleteEntriesAndFiles(expired.map { it.id })
+                    Log.d(TAG, "purged ${expired.size} expired clipboard entries (>${days}d)")
+                }
+            }.onFailure { Log.w(TAG, "purgeExpired failed", it) }
+        }
     }
 
     /**
@@ -661,7 +707,11 @@ class ClipboardManager private constructor(private val context: Context) {
     fun addItem(text: String) {
         if (text.isBlank()) return
         scope.launch {
-            dao.upsertAndTrim(text, System.currentTimeMillis(), MAX_ITEMS)
+            dao.upsertAndTrim(
+                text,
+                System.currentTimeMillis(),
+                SettingsPreferences.getClipboardMaxItems(context),
+            )
             _clipboardChanged.emit(
                 ClipboardItem(
                     text = text,

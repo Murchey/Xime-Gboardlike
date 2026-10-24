@@ -106,6 +106,20 @@ interface ClipboardDao {
     @Query("DELETE FROM clipboard_entries")
     suspend fun deleteAll()
 
+    /** 最旧的 n 个普通条目（置顶、快捷发送不参与条数淘汰）。 */
+    @Query(
+        "SELECT * FROM clipboard_entries " +
+            "WHERE isPinned = 0 AND isQuickSend = 0 ORDER BY timestamp ASC LIMIT :n"
+    )
+    suspend fun oldestUnpinned(n: Int): List<ClipboardEntry>
+
+    /** 早于 [cutoff] 的普通条目（置顶、快捷发送不参与自动过期）。 */
+    @Query(
+        "SELECT * FROM clipboard_entries " +
+            "WHERE isPinned = 0 AND isQuickSend = 0 AND timestamp < :cutoff"
+    )
+    suspend fun findExpired(cutoff: Long): List<ClipboardEntry>
+
     @Transaction
     suspend fun upsertAndTrim(text: String, now: Long, maxItems: Int) {
         val existing = findByText(text)
