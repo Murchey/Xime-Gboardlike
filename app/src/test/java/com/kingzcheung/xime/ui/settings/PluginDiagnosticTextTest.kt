@@ -28,7 +28,7 @@ class PluginDiagnosticTextTest {
             errors = emptyList()
         )
 
-        assertTrue(text.contains("Xime v2.9.0"))
+        assertTrue(text.contains("XimeGboard v2.9.0"))
         assertTrue(text.contains("WebDAV 同步 (webdav.test) v1.2.3 已启用"))
         assertTrue(text.contains("0 条"))
     }
