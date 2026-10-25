@@ -51,9 +51,14 @@ android {
         applicationId = "com.ximegboard"
         minSdk = 28
         targetSdk = 35
-        versionCode = 20261023
-        versionName = "1.0.1"
+        versionCode = 20261024
+        versionName = "1.0.2"
 
+        // 插件/方案/布局索引按上游 Xime 3.3.0 的 API 兼容口径判定；
+        // 本分支 versionName 已归零为 1.x，不能直接拿它和 minHostVersion 比。
+        val hostCompatVersion = "3.3.0"
+        buildConfigField("String", "XIME_HOST_COMPAT_VERSION", "\"$hostCompatVersion\"")
+        manifestPlaceholders["ximeHostCompatVersion"] = hostCompatVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

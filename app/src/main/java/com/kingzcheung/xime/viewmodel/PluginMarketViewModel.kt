@@ -8,6 +8,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.kingzcheung.xime.plugin.core.runtime.PluginManager
+import com.kingzcheung.xime.settings.HostVersion
 import com.kingzcheung.xime.settings.MarketUpdateChecker
 import com.kingzcheung.xime.settings.XimeIndexSource
 import kotlinx.coroutines.Dispatchers
@@ -21,9 +22,9 @@ import com.kingzcheung.xime.settings.MarketPluginItem
 
 /**
  * 插件市场兼容宿主版本：本分支基于上游 Xime 3.3.0 改造，
- * 插件索引的 minHostVersion 应按 3.3.0 判定；分支自身 versionName 仍为 1.0.0。
+ * 插件索引的 minHostVersion 按 3.3.0 判定；分支自身 versionName（1.x）不参与比较。
  */
-const val PLUGIN_MARKET_HOST_VERSION = "3.3.0"
+const val PLUGIN_MARKET_HOST_VERSION = HostVersion.COMPAT
 
 data class PluginMarketUiState(
     val plugins: List<MarketPluginItem> = emptyList(),

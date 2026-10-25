@@ -21,7 +21,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Xime"
         tools:targetApi="31">
-        
+
+        <!-- 插件/方案索引兼容的宿主 API 版本（上游 Xime 口径，不等于本分支 versionName） -->
+        <meta-data
+            android:name="xime.host.compat_version"
+            android:value="${ximeHostCompatVersion}" />
+
         <!-- 主Activity -->
         <activity
             android:name=".MainActivity"
