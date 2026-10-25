@@ -81,6 +81,14 @@ class KeyActionRegistryTest {
     }
 
     @Test
+    fun `smart_single_quote 走服务命令并解析为新枚举`() {
+        val executor = RecordingExecutor()
+        KeyActionRegistry.execute(GestureAction.SMART_SINGLE_QUOTE, KeyActionContext(executor), "")
+        assertEquals(listOf("smart_single_quote"), executor.commands)
+        assertEquals(GestureAction.SMART_SINGLE_QUOTE, GestureAction.fromValue("smart_single_quote"))
+    }
+
+    @Test
     fun `GestureAction fromValue 兼容既有取值`() {
         assertEquals(GestureAction.COPY, GestureAction.fromValue("copy"))
         assertEquals(GestureAction.SEND_RIME, GestureAction.fromValue("send_rime"))

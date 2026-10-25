@@ -91,6 +91,9 @@ object KeyActionRegistry {
         register("smart_quote", ActionDomain.SERVICE, GestureAction.SMART_QUOTE) { c, _ ->
             c.service.executeCommand("smart_quote")
         }
+        register("smart_single_quote", ActionDomain.SERVICE, GestureAction.SMART_SINGLE_QUOTE) { c, _ ->
+            c.service.executeCommand("smart_single_quote")
+        }
         register("select_all", ActionDomain.SERVICE, GestureAction.SELECT_ALL) { c, _ ->
             c.service.performEditorMenuAction(android.R.id.selectAll)
         }

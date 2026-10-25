@@ -1,5 +1,6 @@
 package com.kingzcheung.xime.settings
 
+import com.kingzcheung.xime.keyboard.GestureAction
 import com.kingzcheung.xime.ui.keyboard.prependAsciiLongPressSymbol
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -22,7 +23,6 @@ class KeyboardSymbolConfigTest {
         val expected = mapOf(
             "a" to "@", "s" to "*", "d" to "+", "f" to "-", "g" to "=",
             "h" to "/", "j" to "#", "k" to "(", "l" to ")",
-            "x" to ":", "v" to "?", "b" to "!", "n" to "~",
         )
         for (section in listOf("qwerty", "qwerty_tablet")) {
             for ((key, symbol) in expected) {
@@ -32,19 +32,37 @@ class KeyboardSymbolConfigTest {
     }
 
     @Test
-    fun `中文长按不再出现全角 ASCII 符号`() {
-        val fullWidth = "＠＊＋－＝／＃（）！？～"
+    fun `中文问号感叹号冒号波浪号使用中文标点`() {
+        val expected = mapOf("x" to "：", "v" to "？", "b" to "！", "n" to "～")
+        for (section in listOf("qwerty", "qwerty_tablet")) {
+            for ((key, symbol) in expected) {
+                assertEquals("$section/$key", listOf(symbol), labels(section, key))
+            }
+        }
+    }
+
+    @Test
+    fun `中文长按的 ASCII 符号不再使用全角形式`() {
+        val fullWidth = "＠＊＋－＝／＃（）"
         for (section in listOf("qwerty", "qwerty_tablet")) {
             val keys = KeysConfigHelper.parseKeyboardYamlSection(yaml, section)!!
-            for ((id, binding) in keys) {
-                // 句号气泡是有意的中文标点（：；！？），不参与半角 ASCII 断言。
-                if (id == "period") continue
-                val values = binding.longPress?.values ?: continue
+            for (id in listOf("a", "s", "d", "f", "g", "h", "j", "k", "l")) {
+                val values = keys[id]?.longPress?.values ?: continue
                 for (item in values) {
                     val text = item.label.ifEmpty { item.value }
                     assertFalse("$section/$id 仍为全角: $text", text.length == 1 && text[0] in fullWidth)
                 }
             }
+        }
+    }
+
+    @Test
+    fun `Z 长按为智能单引号`() {
+        for (section in listOf("qwerty", "qwerty_tablet")) {
+            val z = KeysConfigHelper.parseKeyboardYamlSection(yaml, section)!!["z"]!!
+            val quote = z.longPress!!.values.single()
+            assertEquals("‘’", quote.label)
+            assertEquals(GestureAction.SMART_SINGLE_QUOTE, quote.action)
         }
     }
 

@@ -14,6 +14,14 @@ class SmartQuoteCycleTest {
     }
 
     @Test
+    fun `单引号左右交替`() {
+        val cycle = SmartQuoteCycle(left = "‘", right = "’")
+        assertEquals("‘", cycle.next())
+        assertEquals("’", cycle.next())
+        assertEquals("‘", cycle.next())
+    }
+
+    @Test
     fun `reset 后回到左引号`() {
         val cycle = SmartQuoteCycle()
         cycle.next()
