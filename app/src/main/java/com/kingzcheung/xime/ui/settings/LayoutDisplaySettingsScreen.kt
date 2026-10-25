@@ -5,6 +5,7 @@ import com.kingzcheung.xime.R
 import com.kingzcheung.xime.i18n.tr
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.twotone.Straighten
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -357,6 +359,98 @@ fun LayoutDisplaySettingsContent(
                             valueRange = 80f..130f,
                             steps = 9
                         )
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 16.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    var doubleSpacePunctuationEnabled by remember {
+                        mutableStateOf(SettingsPreferences.isDoubleSpacePunctuationEnabled(context))
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = tr(R.string.s_lianianliangcikonggecharubiaodian),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = tr(R.string.s_lianianliangcikonggecharubiaodian_fu),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = doubleSpacePunctuationEnabled,
+                            onCheckedChange = { enabled ->
+                                doubleSpacePunctuationEnabled = enabled
+                                SettingsPreferences.setDoubleSpacePunctuationEnabled(context, enabled)
+                            }
+                        )
+                    }
+
+                    if (doubleSpacePunctuationEnabled) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                        var punctuation by remember {
+                            mutableStateOf(SettingsPreferences.getDoubleSpacePunctuation(context))
+                        }
+                        var showPunctuationPicker by remember { mutableStateOf(false) }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showPunctuationPicker = true }
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = tr(R.string.s_charubiaodian),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = tr(R.string.s_dangqianbiaodian, punctuation),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = punctuation,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (showPunctuationPicker) {
+                            SettingsSingleChoiceDialog(
+                                title = tr(R.string.s_xuanzebiaodian),
+                                options = listOf("。", "，", "、", "？", "！", "；", "：", ".", ",", "?", "!")
+                                    .map { SettingsChoiceOption(id = it, title = it) },
+                                selectedId = punctuation,
+                                onSelect = { selected ->
+                                    punctuation = selected
+                                    SettingsPreferences.setDoubleSpacePunctuation(context, selected)
+                                    showPunctuationPicker = false
+                                },
+                                onDismiss = { showPunctuationPicker = false }
+                            )
+                        }
                     }
                 })
             }

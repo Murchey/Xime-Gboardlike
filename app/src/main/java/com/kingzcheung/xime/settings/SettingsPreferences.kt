@@ -560,6 +560,28 @@ object SettingsPreferences {
         getPrefs(context).edit().putString(KEY_PREDICTION_SELECTED_MODEL, modelId).apply()
     }
 
+    /** 连按两次空格插入标点（默认开启，标点默认句号）。 */
+    private const val KEY_DOUBLE_SPACE_PUNCTUATION_ENABLED = "double_space_punctuation_enabled"
+    private const val KEY_DOUBLE_SPACE_PUNCTUATION = "double_space_punctuation"
+    const val DEFAULT_DOUBLE_SPACE_PUNCTUATION = "。"
+
+    fun isDoubleSpacePunctuationEnabled(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_DOUBLE_SPACE_PUNCTUATION_ENABLED, true)
+
+    fun setDoubleSpacePunctuationEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_DOUBLE_SPACE_PUNCTUATION_ENABLED, enabled).apply()
+    }
+
+    fun getDoubleSpacePunctuation(context: Context): String {
+        val raw = getPrefs(context).getString(KEY_DOUBLE_SPACE_PUNCTUATION, null)?.trim()
+        return raw?.takeIf { it.isNotEmpty() && it.length <= 8 } ?: DEFAULT_DOUBLE_SPACE_PUNCTUATION
+    }
+
+    fun setDoubleSpacePunctuation(context: Context, punctuation: String) {
+        val value = punctuation.trim().take(8).ifEmpty { DEFAULT_DOUBLE_SPACE_PUNCTUATION }
+        getPrefs(context).edit().putString(KEY_DOUBLE_SPACE_PUNCTUATION, value).apply()
+    }
+
     /** 空格上屏联想候选：有联想候选时按空格键直接上屏第一个联想词（而非空格字符） */
     fun isSpaceCommitAssociationEnabled(context: Context): Boolean {
         return getPrefs(context).getBoolean(KEY_SPACE_COMMIT_ASSOCIATION, false)

@@ -1040,6 +1040,11 @@
     <string name="s_gensuishiftjianqiehuan_fu">小寫模式下 Shift 狀態立即反映到鍵面；關閉後始終顯示小寫。選擇大寫時此項不生效。</string>
     <string name="s_jianpanxianshizihao">鍵盤顯示字號</string>
     <string name="s_jianpanxianshizihao_fu">調整鍵盤按鍵上的字元大小，80%%–130%%。</string>
+    <string name="s_lianianliangcikonggecharubiaodian">連按兩次空格插入指定標點</string>
+    <string name="s_lianianliangcikonggecharubiaodian_fu">開啟後，連續按兩次空格會用所選標點取代空格（預設句號）。</string>
+    <string name="s_charubiaodian">插入的標點</string>
+    <string name="s_dangqianbiaodian">目前：%1$s</string>
+    <string name="s_xuanzebiaodian">選擇標點</string>
     <string name="s_xuanzemoban">選擇配色模板</string>
     <string name="s_xuanzemoban_shuoming">選擇一套內建主題作為起點，再調整顏色。</string>
 </resources>

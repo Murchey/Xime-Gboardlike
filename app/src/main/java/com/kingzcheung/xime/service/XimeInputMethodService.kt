@@ -331,6 +331,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private var editorRestricted: Boolean = false
     /** 秘密输入框（密码/TYPE_NULL）：英文联想与回删替换的统一禁用线 */
     private var editorSecret: Boolean = false
+    /** 上一次空格字符上屏的时间（uptimeMillis）；0 = 没有可连按的空格。 */
+    @Volatile
+    internal var lastSpaceCommitAt: Long = 0L
 
     internal var isTrackingVoiceButtons = false
     internal var voiceRecordingStarted = false
@@ -2293,6 +2296,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         // （无 composing 时会在光标处插入空串，选中文字时等于删除选区）。
         if (!restarting) {
             inputBoxComposingActive = false
+            lastSpaceCommitAt = 0L
             smartQuoteCycle.reset()
             smartSingleQuoteCycle.reset()
         }
@@ -2822,6 +2826,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     
     private fun clearInputState() {
         closeToolPanel()
+        lastSpaceCommitAt = 0L
         // 输入会话结束：展开候选页回到收起态，避免下次弹出残留空页。
         keyboardViewModel.setCandidatePageExpanded(false)
         // 输入会话结束：关闭残留的面板页面（表情/符号等 overlay），
