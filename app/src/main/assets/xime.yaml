@@ -241,12 +241,12 @@ keyboard:
       k: { tap: "k", swipe_up: "(", swipe_down: { label: "口Ⅲ川", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["("] } }
       l: { tap: "l", swipe_up: ")", swipe_down: { label: "田甲囗四罒车皿力", action: "none", display: "bubble" }, long_press: { display: "bubble", values: [")"] } }
       # ── 第三行 ──
-      z: { tap: "z", swipe_up: "'", swipe_down: { label: "", action: "none", display: "key", bubble: false }, long_press: { display: "bubble", values: ["‘"] } }
-      x: { tap: "x", swipe_up: ":", swipe_down: { label: "弓匕纟幺弓𠤎", action: "none", display: "bubble" }, long_press: { display: "bubble", values: [":"] } }
+      z: { tap: "z", swipe_up: "'", swipe_down: { label: "", action: "none", display: "key", bubble: false }, long_press: { display: "bubble", values: [{ label: "‘’", action: smart_single_quote }] } }
+      x: { tap: "x", swipe_up: "：", swipe_down: { label: "弓匕纟幺弓𠤎", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["："] } }
       c: { tap: "c", swipe_up: "\"", swipe_down: { label: "又巴马厶龴ス", action: "none", display: "bubble" }, long_press: { display: "bubble", values: [{ label: "“”", action: smart_quote }] } }
-      v: { tap: "v", swipe_up: "?", swipe_down: { label: "女刀九臼巛彐", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["?"] } }
-      b: { tap: "b", swipe_up: "!", swipe_down: { label: "子耳了也阝卩㔾凵", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["!"] } }
-      n: { tap: "n", swipe_up: "~", swipe_down: { label: "已己巳心忄羽乙𠃜", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["~"] } }
+      v: { tap: "v", swipe_up: "？", swipe_down: { label: "女刀九臼巛彐", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["？"] } }
+      b: { tap: "b", swipe_up: "！", swipe_down: { label: "子耳了也阝卩㔾凵", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["！"] } }
+      n: { tap: "n", swipe_up: "～", swipe_down: { label: "已己巳心忄羽乙𠃜", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["～"] } }
       m: { tap: "m", swipe_up: "\\", long_press: { display: "bubble", values: ["、"] } }
       # shift：单击切单击态、双击锁定大写；命令值走键盘按键路由（shift_single / shift_caps）
       shift: { width: 1.4, tap: { action: command, value: shift_single }, double_tap: { action: command, value: shift_caps } }
@@ -386,12 +386,12 @@ keyboard:
       # 未配置的手势沿用内置 shift 状态机：单击切单击态、双击锁定大写）──
       shift_left: { width: 1.6 }
       shift_right: { width: 1.2 }
-      z: { tap: { value: "z", bubble: false }, swipe_up: "'", swipe_down: { label: "", action: "none", display: "key", bubble: false }, long_press: { display: "bubble", values: ["‘"] } }
-      x: { tap: { value: "x", bubble: false }, swipe_up: ":", swipe_down: { label: "弓匕纟幺弓𠤎", action: "none", display: "bubble" }, long_press: { display: "bubble", values: [":"] } }
+      z: { tap: { value: "z", bubble: false }, swipe_up: "'", swipe_down: { label: "", action: "none", display: "key", bubble: false }, long_press: { display: "bubble", values: [{ label: "‘’", action: smart_single_quote }] } }
+      x: { tap: { value: "x", bubble: false }, swipe_up: "：", swipe_down: { label: "弓匕纟幺弓𠤎", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["："] } }
       c: { tap: { value: "c", bubble: false }, swipe_up: "\"", swipe_down: { label: "又巴马厶龴ス", action: "none", display: "bubble" }, long_press: { display: "bubble", values: [{ label: "“”", action: smart_quote }] } }
-      v: { tap: { value: "v", bubble: false }, swipe_up: "?", swipe_down: { label: "女刀九臼巛彐", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["?"] } }
-      b: { tap: { value: "b", bubble: false }, swipe_up: "!", swipe_down: { label: "子耳了也阝卩㔾凵", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["!"] } }
-      n: { tap: { value: "n", bubble: false }, swipe_up: "~", swipe_down: { label: "已己巳心忄羽乙𠃜", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["~"] } }
+      v: { tap: { value: "v", bubble: false }, swipe_up: "？", swipe_down: { label: "女刀九臼巛彐", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["？"] } }
+      b: { tap: { value: "b", bubble: false }, swipe_up: "！", swipe_down: { label: "子耳了也阝卩㔾凵", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["！"] } }
+      n: { tap: { value: "n", bubble: false }, swipe_up: "～", swipe_down: { label: "已己巳心忄羽乙𠃜", action: "none", display: "bubble" }, long_press: { display: "bubble", values: ["～"] } }
       m: { tap: { value: "m", bubble: false }, swipe_up: "\\", long_press: { display: "bubble", values: ["、"] } }
       # 逗号/句号独立成键（value 经 rime 引擎，中文态自动转全角）
       comma: { width: 1, tap: {  label: "，", value: ",", bubble: false } }

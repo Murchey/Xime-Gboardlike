@@ -367,6 +367,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private var deleteSessionBeforeText = ""
     private var deleteSessionBeforeCode = ""
     private val smartQuoteCycle = SmartQuoteCycle()
+    private val smartSingleQuoteCycle = SmartQuoteCycle(left = "‘", right = "’")
 
     /** 系统夜间模式快照：不依赖 IME 窗口是否收到 onConfigurationChanged。 */
     private val systemDarkState = mutableStateOf(false)
@@ -2252,6 +2253,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             "smart_quote" -> {
                 commitText(smartQuoteCycle.next())
             }
+            "smart_single_quote" -> {
+                commitText(smartSingleQuoteCycle.next())
+            }
             else -> FileLogger.w(TAG, "Unknown command: $name")
         }
     }
@@ -2290,6 +2294,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         if (!restarting) {
             inputBoxComposingActive = false
             smartQuoteCycle.reset()
+            smartSingleQuoteCycle.reset()
         }
 
         predictionManager.clearCommittedText()
