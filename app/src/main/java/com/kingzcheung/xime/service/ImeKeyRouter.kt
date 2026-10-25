@@ -440,6 +440,10 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                             val ic = service.currentInputConnection
                             // 删掉第一次空格再上屏标点，避免出现「 。」；删除失败则退回普通空格。
                             if (ic != null && ic.deleteSurroundingText(1, 0)) {
+                                // 第一次空格可能已经触发联想；替换为标点前清掉旧联想，避免候选栏残留。
+                                service.candidateState.value = service.candidateState.value.copy(
+                                    associationCandidates = emptyList()
+                                )
                                 service.commitText(punctuation)
                             } else {
                                 service.commitText(" ")
