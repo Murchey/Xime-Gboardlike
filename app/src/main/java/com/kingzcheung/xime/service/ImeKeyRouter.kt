@@ -1,5 +1,6 @@
 package com.kingzcheung.xime.service
 
+import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
@@ -93,6 +94,8 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         // 空键无任何按键语义，且下游 Rime 路由按 key[0] 取码（key.lowercase()[0]），
         // 空串会越界崩溃（2026-09-14 真机实证：滑动手势 commit 值为空时触发）。
         if (key.isEmpty()) return
+        // 只有空格参与“连按两次”窗口；任何其他按键都中断计数。
+        if (key != "space") service.lastSpaceCommitAt = 0L
         if (service.uiState.value.toolPanelInputFocused) {
             val candState = service.candidateState.value
             val hasComposing = candState.isComposing || candState.inputText.isNotEmpty()
@@ -412,17 +415,50 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                 }
                 "space" -> {
                     val pendingEnglish = candState.pendingEnglishText
+                    val now = SystemClock.uptimeMillis()
+                    val lastSpaceAt = service.lastSpaceCommitAt
+                    val doubleSpaceEnabled = SettingsPreferences.isDoubleSpacePunctuationEnabled(service)
+                    val withinDoubleSpaceWindow = doubleSpaceEnabled &&
+                        pendingEnglish.isEmpty() && !candState.isComposing &&
+                        lastSpaceAt > 0L && now >= lastSpaceAt &&
+                        now - lastSpaceAt <= DoubleSpacePunctuation.TIMEOUT_MS
+                    // 只有确实可能触发时才读输入框，普通空格路径零额外 IPC。
+                    val previousChar = if (withinDoubleSpaceWindow) {
+                        withContext(Dispatchers.Main) {
+                            runCatching {
+                                service.currentInputConnection?.getTextBeforeCursor(1, 0)?.toString()
+                            }.getOrNull()
+                        }
+                    } else null
 
-                    if (pendingEnglish.isNotEmpty()) {
+                    if (DoubleSpacePunctuation.shouldReplace(
+                            doubleSpaceEnabled, previousChar, lastSpaceAt, now
+                        )
+                    ) {
+                        val punctuation = SettingsPreferences.getDoubleSpacePunctuation(service)
+                        withContext(Dispatchers.Main) {
+                            val ic = service.currentInputConnection
+                            // 删掉第一次空格再上屏标点，避免出现「 。」；删除失败则退回普通空格。
+                            if (ic != null && ic.deleteSurroundingText(1, 0)) {
+                                service.commitText(punctuation)
+                            } else {
+                                service.commitText(" ")
+                            }
+                            service.lastSpaceCommitAt = 0L
+                        }
+                        needsUIUpdate = true
+                    } else if (pendingEnglish.isNotEmpty()) {
                         // 直接上屏模式：词已逐字落盘，此处只提交空格并结束本轮英文输入。
                         withContext(Dispatchers.Main) {
                             service.commitText(" ")
+                            service.lastSpaceCommitAt = now
                             service.candidateState.value = service.candidateState.value.copy(
                                 pendingEnglishText = "",
                                 associationCandidates = emptyList()
                             )
                         }
                     } else if (candState.isComposing) {
+                        service.lastSpaceCommitAt = 0L
                         if (candState.candidates.isNotEmpty()) {
                             selectCandidateAsync(0)
                         } else {
@@ -465,6 +501,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                         // 仅中文联想——英文模式此分支不生效，空格保持上屏空格字符；
                         // 连续联想模式：commitText 会自动触发下一轮推理（一直上屏一直推理）；
                         // 单次联想模式：先置抑制标志，上屏引发的那轮推理被跳过并清空联想候选。
+                        service.lastSpaceCommitAt = 0L
                         val association = candState.associationCandidates.first()
                         withContext(Dispatchers.Main) {
                             if (SettingsPreferences.isSingleAssociationMode(service)) {
@@ -475,6 +512,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                     } else {
                         withContext(Dispatchers.Main) {
                             service.commitText(" ")
+                            service.lastSpaceCommitAt = now
                         }
                     }
                 }

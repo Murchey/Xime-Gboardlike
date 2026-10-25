@@ -1117,6 +1117,11 @@
     <string name="s_gensuishiftjianqiehuan_fu">小写模式下 Shift 状态立即反映到键面；关闭后始终显示小写。选择大写时此项不生效。</string>
     <string name="s_jianpanxianshizihao">键盘显示字号</string>
     <string name="s_jianpanxianshizihao_fu">调整键盘按键上的字符大小，80%%–130%%。</string>
+    <string name="s_lianianliangcikonggecharubiaodian">连按两次空格插入指定标点</string>
+    <string name="s_lianianliangcikonggecharubiaodian_fu">开启后，连续按两次空格会用所选标点替换空格（默认句号）。</string>
+    <string name="s_charubiaodian">插入的标点</string>
+    <string name="s_dangqianbiaodian">当前：%1$s</string>
+    <string name="s_xuanzebiaodian">选择标点</string>
     <string name="s_xuanzemoban">选择配色模板</string>
     <string name="s_xuanzemoban_shuoming">选择一套内置主题作为起点，再调整颜色。</string>
 </resources>
