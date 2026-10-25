@@ -52,4 +52,23 @@ class VersionUtilTest {
         assertTrue(VersionUtil.isHostSupported("2.7.0", "2.6.0", "2.9.0"))
         assertFalse(VersionUtil.isHostSupported("3.0.0", "2.6.0", "2.9.0"))
     }
+
+    @Test
+    fun `compat version wins over package version`() {
+        assertEquals("3.3.0", VersionUtil.resolveHostVersion("1.0.2", "3.3.0"))
+        assertTrue(
+            VersionUtil.isHostSupported(
+                VersionUtil.resolveHostVersion("1.0.2", "3.3.0")!!,
+                "3.0.0",
+                null,
+            )
+        )
+    }
+
+    @Test
+    fun `blank compat version falls back to package version`() {
+        assertEquals("1.0.2", VersionUtil.resolveHostVersion("1.0.2", " "))
+        assertEquals("1.0.2", VersionUtil.resolveHostVersion("1.0.2", null))
+        assertEquals(null, VersionUtil.resolveHostVersion(null, null))
+    }
 }

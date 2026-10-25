@@ -1,6 +1,7 @@
 package com.kingzcheung.xime.plugin.core.util
 
 import android.content.Context
+import android.content.pm.PackageManager
 
 /**
  * 简单的版本号比较与插件兼容性判定。
@@ -9,14 +10,35 @@ import android.content.Context
  */
 object VersionUtil {
 
-    /** 读取宿主 app 的 versionName。 */
+    /** 宿主在 Manifest 中声明的“上游兼容版本”（应用分支版本号归零后仍按上游 API 判定）。 */
+    private const val META_COMPAT_VERSION = "xime.host.compat_version"
+
+    /**
+     * 读取用于插件兼容性判定的宿主版本。
+     *
+     * 优先取 Manifest 的 [META_COMPAT_VERSION]（如本分支的 3.3.0），没有声明时回退真实
+     * versionName，保持旧宿主/独立构建的行为不变。
+     */
     fun getHostVersionName(context: Context): String? {
-        return try {
+        val compatVersion = try {
+            context.packageManager
+                .getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
+                .metaData?.getString(META_COMPAT_VERSION)
+        } catch (e: Exception) {
+            null
+        }
+        val packageVersion = try {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
         } catch (e: Exception) {
             null
         }
+        return resolveHostVersion(packageVersion, compatVersion)
     }
+
+    /** 兼容版本优先；空白值视为未声明。 */
+    internal fun resolveHostVersion(packageVersion: String?, compatVersion: String?): String? =
+        compatVersion?.takeIf { it.isNotBlank() }
+            ?: packageVersion?.takeIf { it.isNotBlank() }
 
     /** 判断宿主版本 [hostVersion] 是否落在插件声明的 [min]/[max] 范围内。min/max 为 null 表示不限。 */
     fun isHostSupported(hostVersion: String, min: String?, max: String?): Boolean {

@@ -7,7 +7,7 @@ import com.kingzcheung.xime.i18n.tr
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.kingzcheung.xime.BuildConfig
+import com.kingzcheung.xime.settings.HostVersion
 import com.kingzcheung.xime.settings.KeysConfigHelper
 import com.kingzcheung.xime.settings.MarketUpdateChecker
 import com.kingzcheung.xime.settings.MarketLayoutItem
@@ -82,7 +82,7 @@ class LayoutMarketViewModel(application: Application) : AndroidViewModel(applica
             }
             val result = XimeIndexSource.fetchLayouts(
                 context = context,
-                appVersion = BuildConfig.VERSION_NAME,
+                appVersion = HostVersion.COMPAT,
                 installedVersions = appliedVersions,
                 installedSchemaIds = installedSchemaIds,
             )

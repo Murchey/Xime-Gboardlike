@@ -7,8 +7,8 @@ import com.kingzcheung.xime.i18n.tr
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.kingzcheung.xime.BuildConfig
 import com.kingzcheung.xime.settings.FileConflictInfo
+import com.kingzcheung.xime.settings.HostVersion
 import com.kingzcheung.xime.settings.MarketSchemeItem
 import com.kingzcheung.xime.settings.MarketUpdateChecker
 import com.kingzcheung.xime.settings.MarketVersionStore
@@ -84,7 +84,7 @@ class SchemaMarketViewModel(application: Application) : AndroidViewModel(applica
         if (_uiState.value.isLoading) return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val result = XimeIndexSource.fetchSchemes(context, BuildConfig.VERSION_NAME)
+            val result = XimeIndexSource.fetchSchemes(context, HostVersion.COMPAT)
             // 「已下载」靠 market/{schemeId}/ 子目录存在性判断
             val downloadedIds = withContext(Dispatchers.IO) {
                 val marketDir = SchemaManager.getMarketDir(context)

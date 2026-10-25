@@ -2,7 +2,6 @@ package com.kingzcheung.xime.settings
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.kingzcheung.xime.BuildConfig
 import com.kingzcheung.xime.model.ModelManager
 import com.kingzcheung.xime.plugin.core.runtime.PluginManager
 import kotlinx.coroutines.CoroutineScope
@@ -155,7 +154,7 @@ object MarketUpdateChecker {
      * 互不影响；四个市场独立并行请求。
      */
     suspend fun countUpdates(context: Context): MarketCounts = withContext(Dispatchers.IO) {
-        val appVersion = BuildConfig.VERSION_NAME
+        val appVersion = HostVersion.COMPAT
         val schemes = scope.async { runCatching { fetchSchemeUpdates(context, appVersion) } }
         val models = scope.async { runCatching { fetchModelUpdates(context) } }
         val plugins = scope.async { runCatching { fetchPluginUpdates(context, appVersion) } }

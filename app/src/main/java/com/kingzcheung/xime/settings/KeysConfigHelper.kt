@@ -11,7 +11,6 @@ import com.charleskorn.kaml.YamlList
 import com.charleskorn.kaml.YamlMap
 import com.charleskorn.kaml.YamlNode
 import com.charleskorn.kaml.YamlScalar
-import com.kingzcheung.xime.BuildConfig
 import com.kingzcheung.xime.keyboard.GestureAction
 import com.kingzcheung.xime.ui.TABLET_SMALLEST_WIDTH_DP
 import androidx.compose.runtime.mutableStateOf
@@ -1173,8 +1172,8 @@ object KeysConfigHelper {
             val merged = try { loadMergedConfig(context) } catch (_: YamlException) { null }
             val meta = merged?.metadata
             if (meta != null && meta.appVersion.isNotBlank()) {
-                if (!checkVersionConstraint(BuildConfig.VERSION_NAME, meta.appVersion)) {
-                    Log.w(TAG, "Config requires app_version ${meta.appVersion}, current is ${BuildConfig.VERSION_NAME}")
+                if (!checkVersionConstraint(HostVersion.COMPAT, meta.appVersion)) {
+                    Log.w(TAG, "Config requires app_version ${meta.appVersion}, current compat is ${HostVersion.COMPAT}")
                 }
             }
             _configVersion.value++

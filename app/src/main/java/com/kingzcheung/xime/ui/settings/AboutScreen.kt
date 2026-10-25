@@ -220,7 +220,7 @@ fun AboutContent(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "版本 1.0.0（上游 Xime 3.3.0）",
+                            text = "版本 ${AppInfo.versionName}（上游 Xime 3.3.0）",
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
