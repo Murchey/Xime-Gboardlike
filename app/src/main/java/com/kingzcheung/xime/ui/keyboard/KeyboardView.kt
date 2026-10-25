@@ -124,7 +124,20 @@ fun KeyboardView(
     val candidatePageExpanded by viewModel.candidatePageExpanded.collectAsStateWithLifecycle()
     val singleCharFilter by viewModel.singleCharFilter.collectAsStateWithLifecycle()
 
-    // 候选展开页保持展开：编码删空或选词后不自动收起，由候选栏右上角返回键 / 收起键或输入会话结束关闭。
+    // 候选展开页自动收起：一次选词结束（候选与联想均空）后收起并恢复键盘 UI；
+    // 仍有候选/联想时保持展开，避免长候选选择中选一个字就收起。
+    LaunchedEffect(
+        candidatePageExpanded,
+        candidateState.value.candidates.size,
+        candidateState.value.associationCandidates.size
+    ) {
+        if (candidatePageExpanded &&
+            candidateState.value.candidates.isEmpty() &&
+            candidateState.value.associationCandidates.isEmpty()
+        ) {
+            viewModel.setCandidatePageExpanded(false)
+        }
+    }
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
     val isLandscape = if (state.isFloatingMode) false
         else LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE

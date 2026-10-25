@@ -307,7 +307,8 @@ internal class ImeSessionController(private val service: XimeInputMethodService)
         service.uiState.value = service.uiState.value.copy(isAsciiMode = isAsciiMode)
         // 展开态时刷新跨页全量候选并重置页码（编码已变化）
         service.refreshExpandedCandidates()
-        // 候选展开页保持展开，由用户主动收起。
+        // 选词结束（候选与联想均空）时收起展开页；仍有候选时保持展开。
+        service.maybeCollapseCandidatePage()
         // composing 快照 → 插件（input_changed 事件；空编码表示本轮输入结束）
         service.pluginEvents.dispatchInputChanged(if (isT9Schema) displayText else result.inputText)
 
