@@ -539,6 +539,27 @@ fun CandidateBar(
             Spacer(modifier = Modifier.width(8.dp))
 
             when {
+                // 展开页优先显示收起/返回键：选词后即使回到 Idle 也保留入口，
+                // 不会出现展开页还在、却没有按钮可收起的空页。
+                candidatePageExpanded -> {
+                    if (callbacks.onBack != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(iconButtonContainer)
+                                .clickable { callbacks.onBack() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowUp,
+                                contentDescription = tr(R.string.s_fanhuijianpan),
+                                tint = visuals.accentColor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
                 state is CandidateBarState.Idle -> {
                     // 显示内联建议时隐藏工具栏按钮区，把宽度让给建议；logo 与
                     // 收起按钮保留，退格回到 idle 时的状态感知不变
@@ -599,25 +620,6 @@ fun CandidateBar(
                                 contentDescription = tr(R.string.s_shouqijianpan),
                                 tint = if (isHideKeyboardPressed) iconButtonTint.copy(alpha = 0.6f) else iconButtonTint,
                                 modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                }
-                candidatePageExpanded -> {
-                    if (callbacks.onBack != null) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(iconButtonContainer)
-                                .clickable { callbacks.onBack() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowUp,
-                                contentDescription = tr(R.string.s_fanhuijianpan),
-                                tint = visuals.accentColor,
-                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }

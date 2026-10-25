@@ -124,20 +124,7 @@ fun KeyboardView(
     val candidatePageExpanded by viewModel.candidatePageExpanded.collectAsStateWithLifecycle()
     val singleCharFilter by viewModel.singleCharFilter.collectAsStateWithLifecycle()
 
-    // 候选展开页自动收起：编码删空（无候选也无联想）时不留空页。
-    // 展开态是候选栏的在位扩展（非 Overlay），删除实时更新页内候选，删空即回到键盘。
-    LaunchedEffect(
-        candidatePageExpanded,
-        candidateState.value.candidates.size,
-        candidateState.value.associationCandidates.size
-    ) {
-        if (candidatePageExpanded &&
-            candidateState.value.candidates.isEmpty() &&
-            candidateState.value.associationCandidates.isEmpty()
-        ) {
-            viewModel.setCandidatePageExpanded(false)
-        }
-    }
+    // 候选展开页保持展开：编码删空或选词后不自动收起，由候选栏右上角返回键 / 收起键或输入会话结束关闭。
     val viewState by viewModel.viewState.collectAsStateWithLifecycle()
     val isLandscape = if (state.isFloatingMode) false
         else LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -544,7 +531,7 @@ fun KeyboardView(
                             val globalIndex = railExpanded.getOrNull(index)?.first
                             if (globalIndex != null) {
                                 callbacks.onGlobalCandidateSelect?.invoke(globalIndex)
-                                viewModel.setCandidatePageExpanded(false)
+                                // 展开态选词后保持展开，直到用户主动收起。
                             }
                         } else {
                             callbacks.onCandidateSelect(index)
@@ -759,7 +746,7 @@ fun KeyboardView(
                         onCandidateSelect = { entry ->
                             // entry.globalIndex 即跨页全局索引（引擎侧 select_candidate）
                             callbacks.onGlobalCandidateSelect?.invoke(entry.globalIndex)
-                            viewModel.setCandidatePageExpanded(false)
+                            // 选词后保持展开页，方便继续从长候选列表中选词。
                         },
                         onCandidateLongPress = { entry ->
                             // 长按删除自造词：与候选栏共用确认弹窗
@@ -778,7 +765,7 @@ fun KeyboardView(
                         },
                         onAssociationSelect = { index ->
                             callbacks.onAssociationSelect?.invoke(index)
-                            viewModel.setCandidatePageExpanded(false)
+                            // 联想词点选后保持展开页。
                         },
                         onRailPinyinSelect = { index ->
                             onHapticFeedback?.invoke()
@@ -1478,7 +1465,8 @@ fun KeyboardView(
                             onToggleDarkMode = { onHapticFeedback?.invoke(); callbacks.onToggleDarkMode?.invoke() },
                             onToolbarCustomize = { onHapticFeedback?.invoke(); viewModel.showOverlay(OverlayRoute.ToolbarCustomize) },
                             onFloatingModeToggle = { onHapticFeedback?.invoke(); callbacks.onFloatingModeChange?.invoke(!state.isFloatingMode); viewModel.closeOverlay() },
-                            onToggleSchemaSwitch = { sw -> onHapticFeedback?.invoke(); callbacks.onToggleSchemaSwitch?.invoke(sw); viewModel.closeOverlay() },
+                            // 调整半角/全角、简/繁等开关后保持菜单栏展开，方便连续调整。
+                            onToggleSchemaSwitch = { sw -> onHapticFeedback?.invoke(); callbacks.onToggleSchemaSwitch?.invoke(sw) },
                         ),
                         modifier = Modifier.fillMaxWidth().fillMaxHeight()
                     )
