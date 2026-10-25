@@ -1888,6 +1888,10 @@ fun KeyboardRowWithConfig(
             val symbolWasPrepended = asciiLongPressSymbol != null &&
                 baseLongPressLabels != null &&
                 baseLongPressLabels.firstOrNull() != asciiLongPressSymbol
+            // 英文长按补入上滑符号后，默认选中第一项（符号）。否则气泡按手指列定位，
+            // 右端 k/l 的初始高亮会落在中间的字母上，长按直接上屏 k 而不是半角括号。
+            val effectiveLongPressDefaultIndex =
+                if (symbolWasPrepended) 0 else longPressConfig?.defaultIndex
             val baseLongPressGestureMap = if (longPressDisplay == DisplayMode.BUBBLE) {
                 longPressConfig?.let { KeysConfigHelper.longPressActionMap(it) }
             } else null
@@ -2020,7 +2024,7 @@ fun KeyboardRowWithConfig(
                     onRelease = onRelease,
                     onLongPressSelect = onLongPressSelect,
                     longPressItems = longPressLabels,
-                    longPressDefaultIndex = longPressConfig?.defaultIndex,
+                    longPressDefaultIndex = effectiveLongPressDefaultIndex,
                     fontSize = config.fontSize,
                     swipeFontSize = config.swipeFontSize,
                     shadowEnabled = config.shadowEnabled,
@@ -2051,7 +2055,7 @@ fun KeyboardRowWithConfig(
                 onRelease = onRelease,
                 onLongPressSelect = onLongPressSelect,
                 longPressItems = longPressLabels,
-                longPressDefaultIndex = longPressConfig?.defaultIndex,
+                longPressDefaultIndex = effectiveLongPressDefaultIndex,
                 fontSize = config.fontSize,
                 swipeFontSize = config.swipeFontSize,
                 shadowEnabled = config.shadowEnabled,
