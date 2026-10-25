@@ -455,7 +455,11 @@ object RimeConfigHelper {
                 if (!subFiles.isNullOrEmpty()) {
                     childTarget.mkdirs()
                     sync(childAsset, childTarget)
-                } else if (fileName.endsWith(".yaml") || fileName.endsWith(".lua")) {
+                } else if (
+                    fileName.endsWith(".yaml") || fileName.endsWith(".lua") ||
+                    fileName.endsWith(".txt") || fileName.endsWith(".json") ||
+                    fileName.endsWith(".db")
+                ) {
                     // *.custom.yaml 是补丁层文件（用户定制 + app 运行时写入：
                     // setEnabledSchemas 的启用列表、DoEnsureT9SchemaPatches 的
                     // T9 注入与个人词库 packs），覆盖会抹掉用户配置与第三方方案——
@@ -575,17 +579,16 @@ object RimeConfigHelper {
                     if (copyAssetsRecursively(context, fullAssetPath, targetFile)) {
                         copiedAny = true
                     }
-                } else if (fileName.endsWith(".yaml") || fileName.endsWith(".lua")) {
-                    val needsCopy = try {
-                        if (targetFile.exists()) {
-                            val fd = context.assets.openFd(fullAssetPath)
-                            val sameSize = targetFile.length() == fd.length
-                            fd.close()
-                            !sameSize
-                        } else true
-                    } catch (_: Exception) {
-                        true
-                    }
+                } else if (
+                    fileName.endsWith(".yaml") || fileName.endsWith(".lua") ||
+                    fileName.endsWith(".txt") || fileName.endsWith(".json") ||
+                    fileName.endsWith(".db")
+                ) {
+                    // 除 yaml/lua 外，OpenCC 词典（.txt/.json）与 lua 数据（.db）也必须随
+                    // assets 同步到用户 rime 目录，否则 simplifier 找不到 s2t.json/词典，
+                    // 简繁切换会静默失效。
+                    val needsCopy = !targetFile.exists() ||
+                        !assetContentEquals(context, fullAssetPath, targetFile)
                     if (needsCopy) {
                         copyAssetFile(context, fullAssetPath, targetFile)
                         copiedAny = true
