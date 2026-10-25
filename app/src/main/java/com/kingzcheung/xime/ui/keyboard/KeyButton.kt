@@ -929,6 +929,9 @@ fun SwipeableKeyButton(
                     val cancelThresholdPx = with(density) { 5.dp.toPx() }
                     val downY = down.position.y
                     var completed = false
+                    // 长按后手指未移动时保持初始选中项（defaultIndex / 手指落点），
+                    // 避免英文 k/l 的气泡一出现就被手指列覆盖，长按上屏字母而非括号。
+                    var selectionMoved = false
                     
                     try {
                         var lastReportedIdx = -1
@@ -954,18 +957,24 @@ fun SwipeableKeyButton(
                             }
                             
                             if (localLongPressTriggered) {
-                                selectedIdx = longPressIndexAt(
-                                    touchXInRoot = buttonBounds.left + change.position.x,
-                                    anchorX = anchorX,
-                                    deltaY = dyFromDown,
-                                    cellWidthPx = cellWidthPx,
-                                    rowHeightPx = rowHeightPx,
-                                    itemCount = items.size,
-                                    keyboardWidthPx = keyboardWidthPx,
-                                    marginPx = marginPx,
-                                    bubbleGapPx = bubbleGapPx,
-                                    initialRow = defaultRow,
-                                )
+                                if (!selectionMoved) {
+                                    selectionMoved = kotlin.math.abs(dxFromDown) > cancelThresholdPx ||
+                                        kotlin.math.abs(dyFromDown) > cancelThresholdPx
+                                }
+                                if (selectionMoved) {
+                                    selectedIdx = longPressIndexAt(
+                                        touchXInRoot = buttonBounds.left + change.position.x,
+                                        anchorX = anchorX,
+                                        deltaY = dyFromDown,
+                                        cellWidthPx = cellWidthPx,
+                                        rowHeightPx = rowHeightPx,
+                                        itemCount = items.size,
+                                        keyboardWidthPx = keyboardWidthPx,
+                                        marginPx = marginPx,
+                                        bubbleGapPx = bubbleGapPx,
+                                        initialRow = defaultRow,
+                                    )
+                                }
                                 
                                 if (selectedIdx != lastReportedIdx) {
                                     lastReportedIdx = selectedIdx
@@ -2216,6 +2225,8 @@ fun SwipeableKeyButtonLandscape(
                         val cancelThresholdPx = with(density) { 5.dp.toPx() }
                         val downY = down.position.y
                         var swipeDetected = false
+                        // 同上：手指未移动时保持默认选中项。
+                        var selectionMoved = false
 
                         try {
                             var lastReportedIdx = -1
@@ -2237,9 +2248,16 @@ fun SwipeableKeyButtonLandscape(
 
                                 if (localLongPressTriggered) {
                                     val deltaX = change.position.x - downX
-                                    val itemWidth = buttonBounds.width / items.size
-                                    selectedIdx = ((deltaX / itemWidth) + if (items.size > 1) 0.5f else 0f).toInt()
-                                        .coerceIn(0, items.size - 1)
+                                    val deltaY = change.position.y - downY
+                                    if (!selectionMoved) {
+                                        selectionMoved = kotlin.math.abs(deltaX) > cancelThresholdPx ||
+                                            kotlin.math.abs(deltaY) > cancelThresholdPx
+                                    }
+                                    if (selectionMoved) {
+                                        val itemWidth = buttonBounds.width / items.size
+                                        selectedIdx = ((deltaX / itemWidth) + if (items.size > 1) 0.5f else 0f).toInt()
+                                            .coerceIn(0, items.size - 1)
+                                    }
 
                                     if (selectedIdx != lastReportedIdx) {
                                         lastReportedIdx = selectedIdx
