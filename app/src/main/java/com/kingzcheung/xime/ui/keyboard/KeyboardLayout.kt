@@ -129,6 +129,16 @@ internal data class LetterCaseSetting(
 
 internal val LocalLetterCaseSetting = staticCompositionLocalOf { LetterCaseSetting() }
 
+/** 英文模式下把上滑符号插到长按候选首位；已存在时移到首位并去重。 */
+internal fun prependAsciiLongPressSymbol(
+    labels: List<String>?,
+    symbol: String?,
+): List<String>? {
+    if (labels == null || symbol.isNullOrBlank()) return labels
+    if (labels.firstOrNull() == symbol) return labels
+    return listOf(symbol) + labels.filterNot { it == symbol }
+}
+
 /** 按设置计算字母键的显示文本；非字母键原样返回。 */
 internal fun applyLetterDisplayCase(
     text: String,
@@ -1561,6 +1571,7 @@ private fun PeriodCell(env: QwertyRowEnv, modifier: Modifier) {
         modifier = modifier,
         a11yDescription = tapLabel,
         longPressItems = longPressItems,
+        longPressDefaultIndex = longPressConfig?.defaultIndex,
         onLongPressSelect = longPressItems?.let {
             { label ->
                 dispatchLongPressSelection(
@@ -1861,18 +1872,45 @@ fun KeyboardRowWithConfig(
             // 长按选项
             val longPressConfig = KeysConfigHelper.getKeyGesture(key, isAsciiMode)?.longPress
             val longPressDisplay = longPressConfig?.display ?: DisplayMode.KEY
-            val longPressLabels = if (longPressDisplay == DisplayMode.BUBBLE) {
+            val baseLongPressLabels = if (longPressDisplay == DisplayMode.BUBBLE) {
                 longPressConfig?.let { KeysConfigHelper.longPressDisplayItems(it) }
                     ?.ifEmpty { null }
             } else null
-            val longPressGestureMap = if (longPressDisplay == DisplayMode.BUBBLE) {
+            // 英文模式：上滑符号优先进入长按菜单，英文字母/变音变体排在后面。
+            val asciiLongPressSymbol = if (
+                isAsciiMode && (swipeUpAction == null || swipeUpAction == GestureAction.COMMIT)
+            ) {
+                rawSwipeUpLabel?.takeIf { it.isNotBlank() }
+            } else null
+            val longPressLabels = if (isAsciiMode) {
+                prependAsciiLongPressSymbol(baseLongPressLabels, asciiLongPressSymbol)
+            } else baseLongPressLabels
+            val symbolWasPrepended = asciiLongPressSymbol != null &&
+                baseLongPressLabels != null &&
+                baseLongPressLabels.firstOrNull() != asciiLongPressSymbol
+            val baseLongPressGestureMap = if (longPressDisplay == DisplayMode.BUBBLE) {
                 longPressConfig?.let { KeysConfigHelper.longPressActionMap(it) }
             } else null
-            // 键面右上角角标：优先显示长按项（Gboard 式标点），没有长按项时回退上滑提示
+            val longPressGestureMap = if (symbolWasPrepended) {
+                val symbol = asciiLongPressSymbol!!
+                (baseLongPressGestureMap ?: emptyMap()) + (
+                    symbol to KeyAction(
+                        action = GestureAction.COMMIT,
+                        value = swipeUpCommitValue.orEmpty().ifEmpty { symbol },
+                        label = symbol,
+                    )
+                )
+            } else baseLongPressGestureMap
+            // 键面右上角角标：英文优先上滑符号；中文优先长按项（Gboard 式标点）。
             val longPressCornerLabel = longPressConfig
                 ?.let { KeysConfigHelper.longPressDisplayItems(it) }
                 ?.firstOrNull()
                 ?.takeIf { it.isNotBlank() }
+            val cornerHintLabel = if (isAsciiMode) {
+                swipeUpKeyLabel?.takeIf { it.isNotBlank() } ?: longPressCornerLabel
+            } else {
+                longPressCornerLabel ?: swipeUpKeyLabel
+            }
 
             // 键帽显示文本
             val rawCommitValue = KeysConfigHelper.getKeyCommitValue(key, isAsciiMode)
@@ -1971,7 +2009,7 @@ fun KeyboardRowWithConfig(
                     modifier = Modifier.weight(keyWidths?.getOrNull(index) ?: 1f),
                     swipeText = swipeUpText,
                     swipeDownText = swipeDownText,
-                    swipeUpKeyLabel = if (hideCornerHint) "" else (longPressCornerLabel ?: swipeUpKeyLabel),
+                    swipeUpKeyLabel = if (hideCornerHint) "" else cornerHintLabel,
                     swipeDownKeyLabel = if (hideMainLabel) "" else swipeDownKeyLabel,
                     onSwipe = onSwipeUp,
                     onSwipeDown = onSwipeDown,
@@ -1982,6 +2020,7 @@ fun KeyboardRowWithConfig(
                     onRelease = onRelease,
                     onLongPressSelect = onLongPressSelect,
                     longPressItems = longPressLabels,
+                    longPressDefaultIndex = longPressConfig?.defaultIndex,
                     fontSize = config.fontSize,
                     swipeFontSize = config.swipeFontSize,
                     shadowEnabled = config.shadowEnabled,
@@ -2001,7 +2040,7 @@ fun KeyboardRowWithConfig(
                 a11yDescription = rawDisplayText.takeIf { hideMainLabel },
                 swipeText = swipeUpText,
                 swipeDownText = swipeDownText,
-                swipeUpKeyLabel = if (hideCornerHint) "" else (longPressCornerLabel ?: swipeUpKeyLabel),
+                swipeUpKeyLabel = if (hideCornerHint) "" else cornerHintLabel,
                 swipeDownKeyLabel = if (hideMainLabel) "" else swipeDownKeyLabel,
                 onSwipe = onSwipeUp,
                 onSwipeDown = onSwipeDown,
@@ -2012,6 +2051,7 @@ fun KeyboardRowWithConfig(
                 onRelease = onRelease,
                 onLongPressSelect = onLongPressSelect,
                 longPressItems = longPressLabels,
+                longPressDefaultIndex = longPressConfig?.defaultIndex,
                 fontSize = config.fontSize,
                 swipeFontSize = config.swipeFontSize,
                 shadowEnabled = config.shadowEnabled,

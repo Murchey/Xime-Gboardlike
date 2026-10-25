@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
@@ -896,6 +897,23 @@ fun KeyboardView(
                         }
 
                         val context = LocalContext.current
+                        var keyboardTextScale by remember {
+                            mutableFloatStateOf(
+                                SettingsPreferences.getKeyboardTextScale(context) / 100f
+                            )
+                        }
+                        DisposableEffect(context) {
+                            val prefs = SettingsPreferences.getPrefsPublic(context)
+                            val listener =
+                                android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                                    if (key == SettingsPreferences.KEY_KEYBOARD_TEXT_SCALE) {
+                                        keyboardTextScale =
+                                            SettingsPreferences.getKeyboardTextScale(context) / 100f
+                                    }
+                                }
+                            prefs.registerOnSharedPreferenceChangeListener(listener)
+                            onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+                        }
 
                         var modeChangeTarget: KeyboardLayoutAction by remember {
                             mutableStateOf(
@@ -1069,6 +1087,7 @@ fun KeyboardView(
                         CompositionLocalProvider(
                             LocalSuppressCursorMove provides suppressCursorMove,
                             LocalCursorGestureActive provides cursorGestureActive,
+                            LocalKeyFontScale provides keyboardTextScale,
                         ) {
                             KeyboardLayoutScreen(
                                 keyboardState = keyboardState,

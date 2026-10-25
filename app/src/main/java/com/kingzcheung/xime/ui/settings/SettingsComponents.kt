@@ -1260,6 +1260,40 @@ fun CandidateTextSizeCard(
     }
 }
 
+@Composable
+fun KeyboardTextSizeCard(
+    textScalePercent: Float,
+    modifier: Modifier = Modifier
+) {
+    val scale = (textScalePercent / 100f).coerceIn(0.8f, 1.3f)
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        listOf("Aa", "中", "123").forEach { label ->
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surface),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = label,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = (18f * scale).sp,
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
 @Preview(name = "CandidateTextSizeCard - default")
 @Composable
 fun CandidateTextSizeCardPreview() {

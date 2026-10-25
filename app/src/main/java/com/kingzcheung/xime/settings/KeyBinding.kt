@@ -29,10 +29,12 @@ class KeyAction(
  * @param display 显示模式；目前只支持 `bubble`（`key` / `both` 会在解析时回退为 `bubble` 并告警，
  *   长按候选的键面绘制尚未实现）
  * @param values 长按候选动作
+ * @param defaultIndex 气泡打开时默认选中的下标（null = 按手指位置）；越界时由渲染层夹取
  */
 class LongPressAction(
     val display: DisplayMode = DisplayMode.KEY,
     val values: List<KeyAction> = emptyList(),
+    val defaultIndex: Int? = null,
 )
 
 /**

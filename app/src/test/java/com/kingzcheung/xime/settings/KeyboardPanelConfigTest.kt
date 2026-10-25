@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.AssetManager
 import com.kingzcheung.xime.keyboard.GestureAction
 import com.kingzcheung.xime.keyboard.KeyActionRegistry
+import com.kingzcheung.xime.ui.keyboard.englishSymbolPanelLayout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -75,17 +76,18 @@ class KeyboardPanelConfigTest {
         assertEquals(
             listOf(
                 listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0"),
-                listOf("＠", "＃", "＄", "＆", "＿", "－", "＋", "（", "）", "／"),
+                listOf("＠", "＃", "＄", "＆", "＿", "－", "＋", "（", "）", "/"),
                 listOf("open_symbols", "＊", "“", "”", "！", "？", ",", ".", "delete"),
                 listOf("back", "number", "space_key", "enter"),
             ),
             symbols.rows,
         )
-        // 符号默认中文形态（全角）；只有 , 与 . 保留半角 ASCII
+        // 符号默认中文形态（全角）；/、, 与 . 保留半角 ASCII
         assertTrue(
-            "符号键应为全角中文形态",
-            symbols.rows[1].all { it.length == 1 && it[0].code > 0x7E },
+            "除 / 外的符号键应为全角中文形态",
+            symbols.rows[1].filter { it != "/" }.all { it.length == 1 && it[0].code > 0x7E },
         )
+        assertTrue("/ 应使用标准半角斜杠", "/" in symbols.rows[1])
         assertTrue(", 与 . 应保留半角", "," in symbols.rows[2] && "." in symbols.rows[2])
         assertQuotePair(symbols.rows.flatten(), "平板常用符号段")
         assertTrue(
@@ -185,6 +187,23 @@ class KeyboardPanelConfigTest {
     // ═══ 3. 设备档变体（<section>_tablet）与自定义覆盖 ═══
 
     @Test
+    fun `英文模式常用符号面板转换为半角`() {
+        val text = assetXimeYaml()
+        val mobile = KeysConfigHelper.parsePanelLayoutYamlText(text, "common_symbols")!!
+        val english = englishSymbolPanelLayout(mobile)
+        assertTrue("@ 应为半角", "@" in english.rows[1])
+        assertTrue("/ 应为半角", "/" in english.rows[1])
+        assertTrue("不应残留全角 ＠", "＠" !in english.rows.flatten())
+        assertEquals("\"", english.rows[2][2])
+        assertEquals("'", english.rows[2][3])
+
+        val tablet = KeysConfigHelper.parsePanelLayoutYamlText(text, "common_symbols_tablet")!!
+        val englishTablet = englishSymbolPanelLayout(tablet)
+        assertEquals(":", englishTablet.rows[2][4])
+        assertEquals(";", englishTablet.rows[2][5])
+    }
+
+    @Test
     fun `内置平板数字面板段为 9 列 4 行且键宽按设计稿比例`() {
         val text = assetXimeYaml()
         val layout = KeysConfigHelper.parsePanelLayoutYamlText(text, "number_tablet")
@@ -224,13 +243,14 @@ class KeyboardPanelConfigTest {
             listOf(
                 listOf("tab", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "delete"),
                 listOf("caps", "＠", "＃", "＄", "＿", "＆", "－", "＋", "（", "）", "enter"),
-                listOf("open_symbols", "＊", "“", "”", "：", "；", "！", "？", "／", ",", "."),
+                listOf("open_symbols", "＊", "“", "”", "：", "；", "！", "？", "/", ",", "."),
                 listOf("back", "number", "space_key", "cursor_left", "cursor_right", "back_right"),
             ),
             symbols.rows,
         )
-        // 与手机同一套字形：符号中文形态，, 与 . 半角
+        // 与手机同一套字形：符号中文形态，/、, 与 . 半角
         assertTrue("符号键应为全角中文形态", symbols.rows[1].drop(1).dropLast(1).all { it[0].code > 0x7E })
+        assertTrue("/ 应使用标准半角斜杠", "/" in symbols.rows[2])
         assertTrue(", 与 . 应保留半角", "," in symbols.rows[2] && "." in symbols.rows[2])
         assertQuotePair(symbols.rows.flatten(), "平板常用符号段")
         val keys = KeysConfigHelper.parseKeyboardYamlSection(text, "common_symbols_tablet")!!

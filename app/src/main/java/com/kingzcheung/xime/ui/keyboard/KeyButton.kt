@@ -87,6 +87,9 @@ val LocalSwipeHintCorner = staticCompositionLocalOf { false }
  *  任何键（字母/退格/空格等）的提示样式都随设备档一致变化。 */
 val LocalHintExtraScale = staticCompositionLocalOf { 1f }
 
+/** 用户设置的键盘主字符缩放（1f = 100%）。 */
+internal val LocalKeyFontScale = staticCompositionLocalOf { 1f }
+
 /** 按键圆角半径，由各布局在根层通过 CompositionLocalProvider 提供。
  *  独立于 shadow.shape_radius，为统一配置化而设。 */
 val LocalKeyCornerRadius = staticCompositionLocalOf { 8.dp }
@@ -218,6 +221,8 @@ internal fun longPressIndexAt(
     keyboardWidthPx: Float,
     marginPx: Float,
     bubbleGapPx: Float = 0f,
+    /** 默认选中行：手指尚未纵向移动时保持该行，横向滑动只换列。 */
+    initialRow: Int? = null,
 ): Int {
     if (itemCount <= 1) return 0
     val columns = longPressColumns(itemCount)
@@ -229,7 +234,9 @@ internal fun longPressIndexAt(
     // 气泡第一行画在最上方、第二行靠近按键；向上进入气泡先命中第二行，再回第一行。
     val row = if (rows > 1 && rowHeightPx > 0f) {
         val upward = -deltaY
-        if (upward < bubbleGapPx) {
+        if (initialRow != null && upward < bubbleGapPx) {
+            initialRow.coerceIn(0, rows - 1)
+        } else if (upward < bubbleGapPx) {
             0
         } else {
             val fromBottom = ((upward - bubbleGapPx) / rowHeightPx).toInt()
@@ -525,10 +532,16 @@ fun KeyButton(
             .keySemantics(a11yDescription, a11yState) { currentOnClick() },
         contentAlignment = Alignment.Center
     ) {
+        val fontScale = LocalKeyFontScale.current
+        val baseFontSize = if (fontSize != null &&
+            fontSize != androidx.compose.ui.unit.TextUnit.Unspecified
+        ) {
+            fontSize.value
+        } else if (text.length > 2) 14f else 16f
         Text(
             text = text,
             color = textColor,
-            fontSize = fontSize ?: if (text.length > 2) 14.sp else 16.sp,
+            fontSize = (baseFontSize * fontScale).sp,
             fontWeight = if (text.length > 2) FontWeight.Medium else FontWeight.Normal,
             textAlign = TextAlign.Center,
             maxLines = 1,
@@ -601,6 +614,8 @@ fun SwipeableKeyButton(
     onRelease: (() -> Unit)? = null,
     onLongPressSelect: ((String) -> Unit)? = null,
     longPressItems: List<String>? = null,
+    /** 长按气泡默认选中下标；null = 按手指位置（句号键配置为第二行倒数第二个）。 */
+    longPressDefaultIndex: Int? = null,
     longPressDrawableIds: List<Int>? = null,
     /** 右上角角标文字（如 T9 数字键的数字浮标） */
     badgeText: String? = null,
@@ -873,7 +888,9 @@ fun SwipeableKeyButton(
                     )
                     // 气泡按手指位置摆：右侧按键的长按高亮不再固定在最左格。
                     val anchorX = buttonBounds.left + downX
-                    var selectedIdx = longPressIndexAt(
+                    val defaultIndex = longPressDefaultIndex?.coerceIn(0, items.lastIndex)
+                    val defaultRow = defaultIndex?.div(columns)
+                    var selectedIdx = defaultIndex ?: longPressIndexAt(
                         touchXInRoot = anchorX,
                         anchorX = anchorX,
                         deltaY = 0f,
@@ -883,6 +900,7 @@ fun SwipeableKeyButton(
                         keyboardWidthPx = keyboardWidthPx,
                         marginPx = marginPx,
                         bubbleGapPx = bubbleGapPx,
+                        initialRow = null,
                     )
                     
                     currentOnSwipeStateChange?.invoke(
@@ -946,6 +964,7 @@ fun SwipeableKeyButton(
                                     keyboardWidthPx = keyboardWidthPx,
                                     marginPx = marginPx,
                                     bubbleGapPx = bubbleGapPx,
+                                    initialRow = defaultRow,
                                 )
                                 
                                 if (selectedIdx != lastReportedIdx) {
@@ -1029,7 +1048,7 @@ fun SwipeableKeyButton(
                     Text(
                         text = text,
                         color = textColor,
-                        fontSize = ((if (fontSize != androidx.compose.ui.unit.TextUnit.Unspecified) fontSize.value else if (text.length > 2) 13f else 16f) * contentScale).sp,
+                        fontSize = ((if (fontSize != androidx.compose.ui.unit.TextUnit.Unspecified) fontSize.value else if (text.length > 2) 13f else 16f) * contentScale * LocalKeyFontScale.current).sp,
                         fontWeight = if (text.length > 2) FontWeight.Medium else FontWeight.Normal,
                         textAlign = TextAlign.Start,
                         maxLines = 1,
@@ -1105,7 +1124,7 @@ fun SwipeableKeyButton(
                     Text(
                         text = text,
                         color = textColor,
-                        fontSize = ((if (fontSize != androidx.compose.ui.unit.TextUnit.Unspecified) fontSize.value else if (text.length > 2) 14f else 18f) * contentScale).sp,
+                        fontSize = ((if (fontSize != androidx.compose.ui.unit.TextUnit.Unspecified) fontSize.value else if (text.length > 2) 14f else 18f) * contentScale * LocalKeyFontScale.current).sp,
                         // 平板大键（hintExtraScale > 1）单字母也用 Medium，避免大键面上 Normal 显细
                         fontWeight = if (text.length > 2 || hintExtraScale > 1f) FontWeight.Medium else FontWeight.Normal,
                         textAlign = TextAlign.Center,
@@ -1922,6 +1941,8 @@ fun SwipeableKeyButtonLandscape(
     onRelease: (() -> Unit)? = null,
     onLongPressSelect: ((String) -> Unit)? = null,
     longPressItems: List<String>? = null,
+    /** 长按气泡默认选中下标；null = 按手指位置。 */
+    longPressDefaultIndex: Int? = null,
     fontSize: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
     swipeFontSize: androidx.compose.ui.unit.TextUnit = 8.sp,
     onSwipeStateChange: ((SwipeState, Rect) -> Unit)? = null,
@@ -2170,9 +2191,9 @@ fun SwipeableKeyButtonLandscape(
                         // 新手势：重置点击出口
                         clickEmitted = false
                         var localLongPressTriggered = false
-                        var selectedIdx = 0
-                        val downX = down.position.x
                         val items = currentLongPressItems ?: return@awaitEachGesture
+                        var selectedIdx = longPressDefaultIndex?.coerceIn(0, items.lastIndex) ?: 0
+                        val downX = down.position.x
 
                         currentOnSwipeStateChange?.invoke(SwipeState(isPressed = true, pressedText = currentPressText, isLetterPress = pressBubbleCircular), buttonBounds)
                         currentOnPress?.invoke()
@@ -2186,7 +2207,7 @@ fun SwipeableKeyButtonLandscape(
                                     isPressed = true,
                                     isLongPress = true,
                                     longPressItems = items,
-                                    selectedLongPressIndex = 0
+                                    selectedLongPressIndex = selectedIdx
                                 ),
                                 buttonBounds
                             )
@@ -2277,7 +2298,7 @@ fun SwipeableKeyButtonLandscape(
         val hintScale = adaptiveHintScale(contentScale)
         val effectiveFontSize = (
             if (fontSize != androidx.compose.ui.unit.TextUnit.Unspecified) fontSize.value else 14f
-        ) * contentScale
+        ) * contentScale * LocalKeyFontScale.current
         val effectiveSwipeFontSize = swipeFontSize.value * hintScale
 
         Box(

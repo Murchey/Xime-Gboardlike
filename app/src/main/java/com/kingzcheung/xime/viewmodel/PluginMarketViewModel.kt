@@ -19,6 +19,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.kingzcheung.xime.settings.MarketPluginItem
 
+/**
+ * 插件市场兼容宿主版本：本分支基于上游 Xime 3.3.0 改造，
+ * 插件索引的 minHostVersion 应按 3.3.0 判定；分支自身 versionName 仍为 1.0.0。
+ */
+const val PLUGIN_MARKET_HOST_VERSION = "3.3.0"
+
 data class PluginMarketUiState(
     val plugins: List<MarketPluginItem> = emptyList(),
     val isLoading: Boolean = false,
@@ -66,7 +72,7 @@ class PluginMarketViewModel(application: Application) : AndroidViewModel(applica
         viewModelScope.launch {
             if (_uiState.value.isLoading) return@launch
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val appVersion = com.kingzcheung.xime.BuildConfig.VERSION_NAME
+            val appVersion = PLUGIN_MARKET_HOST_VERSION
             val installed = withContext(Dispatchers.IO) { installedVersions() }
             val result = XimeIndexSource.fetchPlugins(context, appVersion, installed)
             result.onSuccess { fetch ->

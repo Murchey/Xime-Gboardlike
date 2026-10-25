@@ -52,6 +52,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kingzcheung.xime.viewmodel.SchemaSwitchUiState
+import com.kingzcheung.xime.viewmodel.currentIcon
+import com.kingzcheung.xime.viewmodel.currentLabel
 
 data class MenuItem(
     val icon: Painter? = null,
@@ -133,12 +135,14 @@ fun MenuBar(
     val floatingLabel = if (state.isFloatingMode) tr(R.string.s_tuichuxuanfu) else tr(R.string.s_xuanfumoshi)
     val floatingAction = callbacks.onFloatingModeToggle ?: {}
 
-    // 动态方案开关：图标取第一个状态的首字；标题若有 abbrev 则用 abbrev（多个用 🔁 连接），否则用所有状态 🔁 连接
+    // 动态方案开关：按钮文字/图标都跟随引擎当前状态（如 半角 / 全角、简 / 繁）。
     val switchItems = state.schemaSwitches.map { sw ->
-        val textIcon = sw.states.firstOrNull()?.firstOrNull()?.toString() ?: ""
-        val label = if (sw.abbrev.isNotEmpty()) sw.abbrev.joinToString("🔁")
-            else sw.states.joinToString("🔁")
-        MenuItem(icon = null, label = label, action = { callbacks.onToggleSchemaSwitch?.invoke(sw) }, textIcon = textIcon)
+        MenuItem(
+            icon = null,
+            label = sw.currentLabel(),
+            action = { callbacks.onToggleSchemaSwitch?.invoke(sw) },
+            textIcon = sw.currentIcon(),
+        )
     }
 
     val menuItems = remember(darkModeIcon, darkModeLabel, state.isFloatingMode, state.schemaSwitches, state.canResizeKeyboard, state.canFloatKeyboard) {

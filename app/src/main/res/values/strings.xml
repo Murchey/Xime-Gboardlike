@@ -1115,6 +1115,8 @@
     <string name="s_zimudaxiaoxie_fu">关闭显示小写，开启显示大写。</string>
     <string name="s_gensuishiftjianqiehuan">跟随 Shift 键切换</string>
     <string name="s_gensuishiftjianqiehuan_fu">小写模式下 Shift 状态立即反映到键面；关闭后始终显示小写。选择大写时此项不生效。</string>
+    <string name="s_jianpanxianshizihao">键盘显示字号</string>
+    <string name="s_jianpanxianshizihao_fu">调整键盘按键上的字符大小，80%%–130%%。</string>
     <string name="s_xuanzemoban">选择配色模板</string>
     <string name="s_xuanzemoban_shuoming">选择一套内置主题作为起点，再调整颜色。</string>
 </resources>

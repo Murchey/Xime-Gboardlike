@@ -313,6 +313,51 @@ fun LayoutDisplaySettingsContent(
                             }
                         )
                     }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 16.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    var keyboardTextScale by remember {
+                        mutableStateOf(SettingsPreferences.getKeyboardTextScale(context).toFloat())
+                    }
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = tr(R.string.s_jianpanxianshizihao),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = tr(R.string.s_jianpanxianshizihao_fu),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        KeyboardTextSizeCard(
+                            textScalePercent = keyboardTextScale,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "${keyboardTextScale.toInt()}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Slider(
+                            value = keyboardTextScale,
+                            onValueChange = { keyboardTextScale = it },
+                            onValueChangeFinished = {
+                                SettingsPreferences.setKeyboardTextScale(
+                                    context,
+                                    keyboardTextScale.toInt()
+                                )
+                            },
+                            valueRange = 80f..130f,
+                            steps = 9
+                        )
+                    }
                 })
             }
 
