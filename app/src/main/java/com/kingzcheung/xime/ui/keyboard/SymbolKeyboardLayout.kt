@@ -36,8 +36,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,13 +80,11 @@ fun SymbolKeyboardLayout(
     val (keySpacingX, keySpacingY) = kbKey.spacingFor("symbol")
     val columnGap = ((keySpacingX ?: 2f) * 2).dp
     val rowGap = ((keySpacingY ?: 2f) * 2).dp
-    // 最近使用（LRU）：惰性排序——面板打开期间点按任何符号只持久化使用记录，
-    // 不重排当前 UI（最近使用页位置稳定，便于连续输入同一符号）；面板关闭后
-    // 组合状态丢弃，下次打开重新读取持久化结果，即为最新顺序。
-    val recentSymbols = remember {
-        RecentUsageStore.get(context, RecentUsageStore.KEY_RECENT_SYMBOLS)
+    // 最近使用（LRU）：点按符号后立即刷新列表，无需退出符号面板再进入。
+    var recentSymbols by remember {
+        mutableStateOf(RecentUsageStore.get(context, RecentUsageStore.KEY_RECENT_SYMBOLS))
     }
-    val displayCategories = remember {
+    val displayCategories = remember(recentSymbols) {
         listOf(SymbolCategory(name = tr(R.string.s_zuijinshiyong), id = "recentSymbols", symbols = recentSymbols)) +
             SymbolData.categories
     }
@@ -181,10 +181,8 @@ fun SymbolKeyboardLayout(
                                 SymbolButton(
                                     symbol = symbol,
                                     onClick = {
-                                        // 惰性排序：任何页（含最近使用页）点按都只持久化使用记录、
-                                        // 不重排当前 UI（最近使用页位置稳定，便于连续输入同一符号）；
-                                        // 面板关闭后下次打开重新读取 store，即为最新顺序。
-                                        RecentUsageStore.record(
+                                        // 立即刷新最近使用列表：停留在符号面板内切到“最近使用”即可看到。
+                                        recentSymbols = RecentUsageStore.record(
                                             context, RecentUsageStore.KEY_RECENT_SYMBOLS, symbol
                                         )
                                         onSelect(symbol)

@@ -8,8 +8,8 @@ import org.json.JSONArray
  * emoji 与符号面板各自独立记录（key 区分），持久化到 SharedPreferences（JSON 数组，
  * 兼容 emoji ZWJ 组合序列与任意符号字符）。
  *
- * UI 侧采用惰性刷新：面板打开期间点按只调用 [record] 持久化、不重排当前列表
- * （位置稳定，便于连续输入）；面板关闭后组合状态丢弃，重新打开时再读取最新顺序。
+ * UI 侧直接使用 [record] 的返回值刷新列表：点按符号后面板内切到「最近使用」
+ * 立即能看到最新顺序，无需退出面板再进入。
  */
 object RecentUsageStore {
     const val MAX_COUNT = 32
