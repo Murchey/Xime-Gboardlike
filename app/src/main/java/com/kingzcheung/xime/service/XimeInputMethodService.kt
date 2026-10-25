@@ -414,16 +414,6 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         ).get(KeyboardViewModel::class.java)
     }
 
-    /** 候选展开页自动收起：候选与联想均空（编码删空）时收起在位展开页，不留空页。
-     *  在状态生产端调用（而非依赖 UI 重组观察）——候选变化时键盘区作用域被设计为跳过重组。 */
-    internal fun maybeCollapseCandidatePage() {
-        if (!keyboardViewModel.candidatePageExpanded.value) return
-        val cs = candidateState.value
-        if (cs.candidates.isEmpty() && cs.associationCandidates.isEmpty()) {
-            keyboardViewModel.setCandidatePageExpanded(false)
-        }
-    }
-
     /** 刷新展开页的跨页全量候选；非展开态清空以省内存。编码变化与展开动作时调用 */
     internal fun refreshExpandedCandidates() {
         if (!keyboardViewModel.candidatePageExpanded.value) {
@@ -2822,6 +2812,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     
     private fun clearInputState() {
         closeToolPanel()
+        // 输入会话结束：展开候选页回到收起态，避免下次弹出残留空页。
+        keyboardViewModel.setCandidatePageExpanded(false)
         // 输入会话结束：关闭残留的面板页面（表情/符号等 overlay），
         // 避免下次键盘弹出时在候选栏上方渲染上次的面板背景
         var page = keyboardViewModel.page.value
