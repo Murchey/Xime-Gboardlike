@@ -54,6 +54,25 @@ import com.kingzcheung.xime.viewmodel.KeyboardUiState
 import com.kingzcheung.xime.viewmodel.KeyboardViewModel
 import com.kingzcheung.xime.viewmodel.ShiftMode
 
+/** 中文全角符号 → 英文半角符号；未列出的功能键/中文标点原样保留。 */
+private val EnglishPanelSymbols: Map<Char, String> = mapOf(
+    '＠' to "@", '＃' to "#", '＄' to "$", '＆' to "&", '＿' to "_",
+    '－' to "-", '＋' to "+", '（' to "(", '）' to ")", '／' to "/",
+    '＊' to "*", '！' to "!", '？' to "?", '：' to ":", '；' to ";",
+    '“' to "\"", '”' to "'",
+)
+
+internal fun toEnglishPanelSymbol(symbol: String): String =
+    if (symbol.length == 1) EnglishPanelSymbols[symbol[0]] ?: symbol else symbol
+
+/** 英文模式常用符号面板：只转换值键字形，功能键 id 不变。 */
+internal fun englishSymbolPanelLayout(layout: PanelLayoutConfig): PanelLayoutConfig =
+    layout.copy(
+        rows = layout.rows.map { row -> row.map(::toEnglishPanelSymbol) },
+        left = layout.left.map { column -> column.map(::toEnglishPanelSymbol) },
+        right = layout.right.map { column -> column.map(::toEnglishPanelSymbol) },
+    )
+
 /**
  * 面板键盘（数字 / 常用符号）——yaml 配置驱动的统一渲染入口。
  *
@@ -63,7 +82,7 @@ import com.kingzcheung.xime.viewmodel.ShiftMode
  *
  * 与旧硬编码面板的行为对齐：
  * - 按键统一发旧键值（"abc"/"number"/"symbol"/"emoji"/数字/运算符…），上层拦截链不变；
- * - 常用符号面板中英共用一段（无 En 键）：键位与字形只有一套，不受引擎中英态影响；
+ * - 常用符号面板仍共用一套布局；英文模式下渲染层把全角符号转成半角 ASCII（如 ＠→@、／→/）；
  * - 数字键盘的返回键位置随 [backKeyOnLeft] 镜像（left 末键 ↔ rows 末行首键）。
  */
 @Composable
@@ -123,7 +142,12 @@ fun PanelKeyboardLayout(
         keyboardWidth = keyboardBounds.width,
     )
 
-    val layout = KeysConfigHelper.getPanelLayout(section)
+    val rawLayout = KeysConfigHelper.getPanelLayout(section)
+    val layout = if (isAsciiMode && section == "common_symbols" && rawLayout != null) {
+        englishSymbolPanelLayout(rawLayout)
+    } else {
+        rawLayout
+    }
     // 值键字号：数字键盘 = KeyButton 默认（与旧版 keyFontSize Unspecified 一致）；常用符号 = 20sp
     val valueFontSize: TextUnit = if (section == "number") TextUnit.Unspecified else 20.sp
     val env = QwertyRowEnv(

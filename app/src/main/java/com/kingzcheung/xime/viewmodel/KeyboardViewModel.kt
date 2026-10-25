@@ -50,6 +50,26 @@ data class SchemaSwitchUiState(
     val currentIndex: Int = 0,
 )
 
+private fun String.firstDisplayChar(): String = when {
+    isEmpty() -> ""
+    length >= 2 && Character.isHighSurrogate(this[0]) && Character.isLowSurrogate(this[1]) ->
+        substring(0, 2)
+    else -> substring(0, 1)
+}
+
+/** 方案开关按钮当前状态文字（如 半角 / 全角、简 / 繁）。 */
+internal fun SchemaSwitchUiState.currentLabel(): String {
+    if (states.isEmpty()) return ""
+    return states[currentIndex.coerceIn(0, states.lastIndex)]
+}
+
+/** 方案开关按钮当前状态图标/缩写；无 abbrev 时取状态首字符。 */
+internal fun SchemaSwitchUiState.currentIcon(): String {
+    val index = if (states.isEmpty()) 0 else currentIndex.coerceIn(0, states.lastIndex)
+    return abbrev.getOrNull(index)?.takeIf { it.isNotBlank() }
+        ?: currentLabel().firstDisplayChar()
+}
+
 data class KeyboardUiState(
     val isAsciiMode: Boolean = false,
     val schemaName: String = "",

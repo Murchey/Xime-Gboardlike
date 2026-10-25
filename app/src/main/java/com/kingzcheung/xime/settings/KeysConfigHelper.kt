@@ -295,9 +295,13 @@ private fun parseLongPress(
     if (values.size > 1 && values.any { !it.bubble }) {
         Log.w("KeysConfigHelper", "long_press 多项时不支持 bubble: false（会让该项无法选中），已忽略")
     }
+    val defaultIndex = node.opt<YamlScalar>("default_index")?.content?.toIntOrNull()
+        ?.takeIf { values.isNotEmpty() }
+        ?.coerceIn(0, values.lastIndex)
     return LongPressAction(
         display = display,
         values = values,
+        defaultIndex = defaultIndex,
     )
 }
 

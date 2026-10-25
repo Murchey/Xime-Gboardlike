@@ -386,6 +386,10 @@ internal class ImeSessionController(private val service: XimeInputMethodService)
     /** 读取当前引擎方案 `switches` 的实际取值，组装成菜单栏可展示的状态。 */
     private fun loadSchemaSwitches(schemaId: String): List<com.kingzcheung.xime.viewmodel.SchemaSwitchUiState> {
         if (schemaId.isEmpty()) return emptyList()
+        // 首次打开菜单时可能尚未创建会话：先建会话，读到的 option 才是真实状态。
+        if (!service.rimeEngine.ensureSession()) {
+            FileLogger.w(XimeInputMethodService.TAG, "loadSchemaSwitches: ensureSession failed for $schemaId")
+        }
         val defs = SchemaManager.getSchemaSwitches(service, schemaId)
         return defs.map { def ->
             val index = when {
@@ -421,6 +425,9 @@ internal class ImeSessionController(private val service: XimeInputMethodService)
     /** 菜单栏方案开关点击：切换引擎选项并刷新状态。 */
     internal fun toggleSchemaSwitch(sw: com.kingzcheung.xime.viewmodel.SchemaSwitchUiState) {
         service.serviceScope.launch(service.keyProcessingDispatcher) {
+            if (!service.rimeEngine.ensureSession()) {
+                FileLogger.w(XimeInputMethodService.TAG, "toggleSchemaSwitch: no rime session for ${sw.name}")
+            }
             if (sw.name == "ascii_mode") {
                 // 菜单中西切换 = 用户显式操作（USER_TOGGLE，会话级，不持久化）
                 service.asciiModeController.switchAscii(AsciiModeController.Reason.USER_TOGGLE)
@@ -428,13 +435,17 @@ internal class ImeSessionController(private val service: XimeInputMethodService)
                 val newValue = !service.rimeEngine.getOption(sw.name)
                 service.rimeEngine.setOption(sw.name, newValue)
                 persistSchemaOption(sw.name, newValue)
+                FileLogger.i(XimeInputMethodService.TAG, "schema switch ${sw.name}: $newValue")
                 service.updateUI()
             } else if (sw.options.isNotEmpty()) {
-                val nextIndex = (sw.currentIndex + 1) % sw.options.size
+                // 以引擎实际 active option 为准，避免 UI 索引过期导致重复/漏切。
+                val active = sw.options.indexOfFirst { service.rimeEngine.getOption(it) }
+                val nextIndex = if (active < 0) 0 else (active + 1) % sw.options.size
                 sw.options.forEachIndexed { i, opt ->
                     service.rimeEngine.setOption(opt, i == nextIndex)
                     persistSchemaOption(opt, i == nextIndex)
                 }
+                FileLogger.i(XimeInputMethodService.TAG, "schema option switch ${sw.options}: $nextIndex")
                 service.updateUI()
             }
             refreshSchemaSwitches()

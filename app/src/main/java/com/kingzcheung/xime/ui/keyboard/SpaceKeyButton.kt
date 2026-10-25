@@ -114,10 +114,11 @@ fun SpaceKeyButton(
                 modifier = Modifier.size(24.dp)
             )
         } else {
+            val fontScale = LocalKeyFontScale.current
             Text(
                 text = schemaName,
                 color = textColor,
-                fontSize = 14.sp,
+                fontSize = (14f * fontScale).sp,
                 fontWeight = FontWeight.Normal,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
@@ -127,7 +128,7 @@ fun SpaceKeyButton(
             Text(
                 text = tr(R.string.s_kongge),
                 color = textColor.copy(alpha = 0.3f),
-                fontSize = 10.sp,
+                fontSize = (10f * fontScale).sp,
                 fontWeight = FontWeight.Normal,
                 textAlign = TextAlign.Start,
                 maxLines = 1,

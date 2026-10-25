@@ -374,6 +374,26 @@ object SettingsPreferences {
     const val LETTER_CASE_LOWER = "lower"
     const val LETTER_CASE_UPPER = "upper"
 
+    /** 键盘按键字符大小（百分比，80–130，默认 100）。 */
+    const val KEY_KEYBOARD_TEXT_SCALE = "keyboard_text_scale"
+    const val KEYBOARD_TEXT_SCALE_MIN = 80
+    const val KEYBOARD_TEXT_SCALE_MAX = 130
+    const val DEFAULT_KEYBOARD_TEXT_SCALE = 100
+
+    fun coerceKeyboardTextScale(percent: Int): Int =
+        percent.coerceIn(KEYBOARD_TEXT_SCALE_MIN, KEYBOARD_TEXT_SCALE_MAX)
+
+    fun getKeyboardTextScale(context: Context): Int =
+        coerceKeyboardTextScale(
+            getPrefs(context).getInt(KEY_KEYBOARD_TEXT_SCALE, DEFAULT_KEYBOARD_TEXT_SCALE)
+        )
+
+    fun setKeyboardTextScale(context: Context, percent: Int) {
+        getPrefs(context).edit()
+            .putInt(KEY_KEYBOARD_TEXT_SCALE, coerceKeyboardTextScale(percent))
+            .apply()
+    }
+
     fun getHapticMode(context: Context): String {
         return getPrefs(context).getString(KEY_HAPTIC_MODE, "following_system") ?: "following_system"
     }

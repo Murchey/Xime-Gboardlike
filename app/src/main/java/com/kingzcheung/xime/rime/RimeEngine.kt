@@ -508,6 +508,14 @@ class RimeEngine {
         }
     }
 
+    /** 确保存在 Rime 会话；方案开关在用户首次打字前点击时也能立刻生效。 */
+    fun ensureSession(): Boolean {
+        if (!isInitialized) return false
+        return tryLocked(false) {
+            nativeHasSession() || nativeCreateSession()
+        }
+    }
+
     fun setOption(option: String, value: Boolean) {
         if (!isInitialized) return
         // 会话/方案状态读写必须与 rimeLock 序列化：后台用户词库操作（readUserDictText /

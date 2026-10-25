@@ -213,6 +213,16 @@ class KeyboardGestureConfigTest {
     }
 
     @Test
+    fun `long_press default_index 解析并夹取范围`() {
+        val lp = parse("""a: { long_press: { default_index: 2, values: ["a", "b", "c"] } }""")["a"]!!.longPress!!
+        assertEquals(2, lp.defaultIndex)
+        val clamped = parse("""a: { long_press: { default_index: 99, values: ["a", "b"] } }""")["a"]!!.longPress!!
+        assertEquals(1, clamped.defaultIndex)
+        val missing = parse("""a: { long_press: { values: ["a"] } }""")["a"]!!.longPress!!
+        assertNull(missing.defaultIndex)
+    }
+
+    @Test
     fun `long_press 显示项无 label 时回退 value`() {
         val lp = parse("""a: { long_press: { values: [{ value: "，" }, { label: "。", value: "。" }] } }""")["a"]!!.longPress!!
         assertEquals(listOf("，", "。"), KeysConfigHelper.longPressDisplayItems(lp))

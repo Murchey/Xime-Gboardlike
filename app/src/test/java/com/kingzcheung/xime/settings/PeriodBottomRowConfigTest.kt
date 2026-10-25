@@ -14,7 +14,7 @@ class PeriodBottomRowConfigTest {
 
     private val chineseSymbols = listOf(
         "^_^", ":)", ":(", ":D", ":P", "&", "$", "^",
-        "%", "_", "；：", "、", "！", "……", "？",
+        "%", "_", "：", "；", "、", "！", "……", "？",
     )
 
     private val englishSymbols = listOf(
@@ -39,9 +39,18 @@ class PeriodBottomRowConfigTest {
     }
 
     @Test
-    fun `中文句号长按是两行八个加七个符号`() {
+    fun `中文句号长按是两行八个加八个符号`() {
         assertEquals(chineseSymbols, longPressLabels(keys("qwerty")["period"]!!))
-        assertEquals(15, chineseSymbols.size)
+        assertEquals(16, chineseSymbols.size)
+    }
+
+    @Test
+    fun `中文句号长按默认选中第二行倒数第二个`() {
+        for (section in listOf("qwerty", "qwerty_14", "qwerty_17", "qwerty_18")) {
+            val lp = keys(section)["period"]!!.longPress!!
+            assertEquals("$section default_index", 14, lp.defaultIndex)
+            assertEquals("$section default value", "……", longPressLabels(keys(section)["period"]!!)[14])
+        }
     }
 
     @Test

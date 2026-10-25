@@ -428,6 +428,7 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
             val rows = (data.longPressItems.size + columns - 1) / columns
             val cellWidth = data.bodyWidth / columns
             val cellHeight = data.bodyHeightPx / rows
+            val textBounds = android.graphics.Rect()
 
             data.longPressItems.forEachIndexed { index, item ->
                 val row = index / columns
@@ -467,12 +468,15 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
                         data.textColor
                     }
                     bubbleLabelPaint.textSize = fontSize
-                    bubbleLabelPaint.textAlign = Paint.Align.CENTER
+                    bubbleLabelPaint.textAlign = Paint.Align.LEFT
                     bubbleLabelPaint.isFakeBoldText = true
                     bubbleLabelPaint.typeface = data.keyLabelTypeface
+                    // 全角标点的字形墨迹偏在 em 方框左侧，按实际墨迹水平居中而不是按 advance。
+                    bubbleLabelPaint.getTextBounds(item, 0, item.length, textBounds)
+                    val inkCenterOffset = (textBounds.left + textBounds.right) / 2f
                     val textY = itemCenterY -
                         (bubbleLabelPaint.fontMetrics.ascent + bubbleLabelPaint.fontMetrics.descent) / 2f
-                    canvas.drawText(item, itemLeft + cellWidth / 2f, textY, bubbleLabelPaint)
+                    canvas.drawText(item, itemLeft + cellWidth / 2f - inkCenterOffset, textY, bubbleLabelPaint)
                 }
             }
             canvas.restore()
@@ -481,12 +485,15 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
             canvas.clipRect(0f, 0f, data.bodyWidth, data.bodyHeightPx)
             bubbleTextPaint.color = data.textColor
             bubbleTextPaint.textSize = data.textSizePx
-            bubbleTextPaint.textAlign = Paint.Align.CENTER
+            bubbleTextPaint.textAlign = Paint.Align.LEFT
             bubbleTextPaint.typeface = data.keyLabelTypeface
             bubbleTextPaint.isFakeBoldText = true
             val textCenterX = data.pathBodyLeft + data.pathBodyWidth / 2f
+            val textBounds = android.graphics.Rect()
+            bubbleTextPaint.getTextBounds(data.displayText, 0, data.displayText.length, textBounds)
+            val inkCenterOffset = (textBounds.left + textBounds.right) / 2f
             val textY = data.bodyHeightPx / 2f - (bubbleTextPaint.fontMetrics.ascent + bubbleTextPaint.fontMetrics.descent) / 2f
-            canvas.drawText(data.displayText, textCenterX, textY, bubbleTextPaint)
+            canvas.drawText(data.displayText, textCenterX - inkCenterOffset, textY, bubbleTextPaint)
             canvas.restore()
         }
 
