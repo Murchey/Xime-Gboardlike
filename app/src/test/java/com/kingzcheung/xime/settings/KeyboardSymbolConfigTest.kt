@@ -19,15 +19,30 @@ class KeyboardSymbolConfigTest {
         )!!
 
     @Test
-    fun `中文全键盘长按符号为半角`() {
+    fun `中文全键盘长按 ASCII 符号为半角`() {
         val expected = mapOf(
             "a" to "@", "s" to "*", "d" to "+", "f" to "-", "g" to "=",
-            "h" to "/", "j" to "#", "k" to "(", "l" to ")",
+            "h" to "/", "j" to "#",
         )
         for (section in listOf("qwerty", "qwerty_tablet")) {
             for ((key, symbol) in expected) {
                 assertEquals("$section/$key", listOf(symbol), labels(section, key))
             }
+        }
+    }
+
+    @Test
+    fun `左右小括号跟随中英文模式`() {
+        for (section in listOf("qwerty", "qwerty_tablet")) {
+            assertEquals("$section/k", listOf("（"), labels(section, "k"))
+            assertEquals("$section/l", listOf("）"), labels(section, "l"))
+        }
+        for (section in listOf("qwerty_en", "qwerty_en_tablet")) {
+            val keys = KeysConfigHelper.parseKeyboardYamlSection(yaml, section)!!
+            val left = keys["k"]!!.swipeUp!!
+            val right = keys["l"]!!.swipeUp!!
+            assertEquals("$section/k", "(", left.label.ifEmpty { left.value })
+            assertEquals("$section/l", ")", right.label.ifEmpty { right.value })
         }
     }
 
@@ -43,10 +58,10 @@ class KeyboardSymbolConfigTest {
 
     @Test
     fun `中文长按的 ASCII 符号不再使用全角形式`() {
-        val fullWidth = "＠＊＋－＝／＃（）"
+        val fullWidth = "＠＊＋－＝／＃"
         for (section in listOf("qwerty", "qwerty_tablet")) {
             val keys = KeysConfigHelper.parseKeyboardYamlSection(yaml, section)!!
-            for (id in listOf("a", "s", "d", "f", "g", "h", "j", "k", "l")) {
+            for (id in listOf("a", "s", "d", "f", "g", "h", "j")) {
                 val values = keys[id]?.longPress?.values ?: continue
                 for (item in values) {
                     val text = item.label.ifEmpty { item.value }
@@ -67,11 +82,13 @@ class KeyboardSymbolConfigTest {
     }
 
     @Test
-    fun `符号面板斜杠为半角`() {
+    fun `符号面板斜杠与星号为半角`() {
         for (section in listOf("common_symbols", "common_symbols_tablet")) {
             val ids = KeysConfigHelper.parsePanelLayoutYamlText(yaml, section)!!.rows.flatten()
             assertTrue("$section 缺少 /", "/" in ids)
             assertFalse("$section 仍有全角 ／", "／" in ids)
+            assertTrue("$section 缺少 *", "*" in ids)
+            assertFalse("$section 仍有全角 ＊", "＊" in ids)
         }
     }
 

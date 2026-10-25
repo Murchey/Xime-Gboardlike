@@ -77,12 +77,12 @@ class KeyboardPanelConfigTest {
             listOf(
                 listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0"),
                 listOf("＠", "＃", "＄", "＆", "＿", "－", "＋", "（", "）", "/"),
-                listOf("open_symbols", "＊", "“", "”", "！", "？", ",", ".", "delete"),
+                listOf("open_symbols", "*", "“", "”", "！", "？", ",", ".", "delete"),
                 listOf("back", "number", "space_key", "enter"),
             ),
             symbols.rows,
         )
-        // 符号默认中文形态（全角）；/、, 与 . 保留半角 ASCII
+        // 符号默认中文形态（全角）；*、/、, 与 . 保留半角 ASCII
         assertTrue(
             "除 / 外的符号键应为全角中文形态",
             symbols.rows[1].filter { it != "/" }.all { it.length == 1 && it[0].code > 0x7E },
@@ -243,13 +243,14 @@ class KeyboardPanelConfigTest {
             listOf(
                 listOf("tab", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "delete"),
                 listOf("caps", "＠", "＃", "＄", "＿", "＆", "－", "＋", "（", "）", "enter"),
-                listOf("open_symbols", "＊", "“", "”", "：", "；", "！", "？", "/", ",", "."),
+                listOf("open_symbols", "*", "“", "”", "：", "；", "！", "？", "/", ",", "."),
                 listOf("back", "number", "space_key", "cursor_left", "cursor_right", "back_right"),
             ),
             symbols.rows,
         )
-        // 与手机同一套字形：符号中文形态，/、, 与 . 半角
+        // 与手机同一套字形：符号中文形态，*、/、, 与 . 半角
         assertTrue("符号键应为全角中文形态", symbols.rows[1].drop(1).dropLast(1).all { it[0].code > 0x7E })
+        assertTrue("* 应使用标准半角星号", "*" in symbols.rows[2])
         assertTrue("/ 应使用标准半角斜杠", "/" in symbols.rows[2])
         assertTrue(", 与 . 应保留半角", "," in symbols.rows[2] && "." in symbols.rows[2])
         assertQuotePair(symbols.rows.flatten(), "平板常用符号段")
