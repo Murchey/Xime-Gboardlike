@@ -547,6 +547,10 @@ private fun LocalPackageCard(
                         }
                     }
                     item.installed -> {
+                        if (item.downloaded) {
+                            OutlinedButton(onClick = onInstall) { Text(tr(R.string.s_gengxin)) }
+                            Spacer(Modifier.width(8.dp))
+                        }
                         OutlinedButton(onClick = onUninstall) { Text(tr(R.string.s_xiezai)) }
                     }
                     item.downloaded -> OutlinedButton(onClick = onInstall) { Text(tr(R.string.s_anzhuang)) }

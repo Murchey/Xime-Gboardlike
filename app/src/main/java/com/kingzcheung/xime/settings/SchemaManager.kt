@@ -256,6 +256,9 @@ object SchemaManager {
                 return@withContext InstallFromDirResult(success = false, failureReason = tr(R.string.s_guidangzhongmeiyouwenjian))
             }
             FileLogger.i(TAG, "installPackageFromMarketDir: found ${targetFiles.size} target files for $packageId")
+            // 升级前记录旧清单，安装成功后清理旧版独有文件
+            val oldFiles = SchemaManifestManager.loadManifest(context, packageId)
+                ?.optJSONObject("files")?.keys()?.asSequence()?.toList().orEmpty()
 
             val sha256Map = computeTargetSha256Map(context, packageId)
             FileLogger.i(TAG, "installPackageFromMarketDir: computed sha256 for ${sha256Map.size} files")
@@ -304,7 +307,7 @@ object SchemaManager {
                 dependencyIds = completion.downloaded
             }
 
-            SchemaManifestManager.createManifest(
+            val manifestOk = SchemaManifestManager.createManifest(
                 context = context,
                 schemeId = packageId,
                 displayName = displayName,
@@ -313,6 +316,13 @@ object SchemaManager {
                 extractedFiles = targetFiles,
                 dependencyIds = dependencyIds,
             )
+            if (manifestOk && parseFailures.isEmpty() && oldFiles.isNotEmpty()) {
+                val preserve = (SchemaManifestManager.sharedFileNames(context) +
+                    oldFiles.filter { SchemaManifestManager.isUserDataFile(it) }).toSet()
+                val obsolete = SchemaManifestManager.obsoleteFilesOnlyInOld(oldFiles, targetFiles, preserve)
+                val pruned = SchemaManifestManager.pruneObsoleteFiles(context, packageId, obsolete)
+                if (pruned > 0) FileLogger.i(TAG, "installPackageFromMarketDir: pruned $pruned obsolete file(s)")
+            }
 
             if (fromMarket) {
                 SettingsPreferences.addInstalledMarketId(context, packageId)

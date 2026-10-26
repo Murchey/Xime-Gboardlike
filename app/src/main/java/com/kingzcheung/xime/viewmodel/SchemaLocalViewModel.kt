@@ -110,7 +110,9 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
             val hasSchemas = withContext(Dispatchers.IO) {
                 SchemaManager.discoverSchemas(context).isNotEmpty()
             }
-            if (hasSchemas) {
+            // 同 ID 已安装视为升级：直接覆盖，保留当前启用列表；不走冲突卸载。
+            val isUpgrade = item.installed
+            if (!isUpgrade && hasSchemas) {
                 val otherInstalled = withContext(Dispatchers.IO) {
                     SchemaManifestManager.getInstalledPackages(context)
                         .map { it.packageId }
@@ -139,6 +141,7 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
                         displayName = item.displayName,
                         version = item.version,
                         fromMarket = !item.isImport,
+                        switchEnabled = !isUpgrade,
                     )
                 }
             } catch (e: Exception) {
