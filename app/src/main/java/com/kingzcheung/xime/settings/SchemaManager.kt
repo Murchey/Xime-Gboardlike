@@ -788,6 +788,7 @@ object SchemaManager {
     fun getEnabledSchemas(context: Context): List<String> {
         val customFile = getCustomYamlFile(context)
         if (!customFile.exists()) {
+            if (BuiltinSeedState.isDisabled(context)) return emptyList()
             setEnabledSchemas(context, BUILTIN_SCHEMAS)
             SettingsPreferences.setBuiltinSchemasMerged(context, true)
             return BUILTIN_SCHEMAS
@@ -813,12 +814,16 @@ object SchemaManager {
                 }
             }
             if (schemas.isNotEmpty()) {
+                // 内置包已卸载：只保留文件仍存在的方案，避免 stale schema_list 触发缺失部署。
+                if (BuiltinSeedState.isDisabled(context)) {
+                    return schemas.filter { File(getRimeDir(context), "$it.schema.yaml").isFile }
+                }
                 // 内置方案补齐只执行一次（新版本首次运行，治老版本升级残留：
                 // 列表无 t9_pinyin → 方案永不部署 → 切九键静默失败）。之后用户
                 // 在方案管理中移除内置方案是有效选择，不得每次读取强行补回。
                 // 补齐写回后 schema_list 计入部署 hash、build 产物按方案校验，
                 // 缺失的方案会自动触发重部署。
-                val merged = if (SettingsPreferences.isBuiltinSchemasMerged(context)) {
+                val merged = if (BuiltinSeedState.isDisabled(context) || SettingsPreferences.isBuiltinSchemasMerged(context)) {
                     schemas
                 } else {
                     val m = mergeBuiltinSchemas(schemas)
@@ -834,7 +839,7 @@ object SchemaManager {
             Log.e(TAG, "Failed to read custom.yaml", e)
         }
 
-        return BUILTIN_SCHEMAS
+        return if (BuiltinSeedState.isDisabled(context)) emptyList() else BUILTIN_SCHEMAS
     }
 
     fun setEnabledSchemas(context: Context, schemaIds: List<String>) {
@@ -923,10 +928,12 @@ object SchemaManager {
             Log.i(TAG, "Legacy uninstall for $schemaId (dict=$dictName)")
         }
 
-        // 从已安装市场列表和启用列表中移除
+        // 从已安装市场列表和启用列表中移除；同时剔除文件已不存在的方案
         SettingsPreferences.removeInstalledMarketId(context, schemaId)
-        val enabled = getEnabledSchemas(context).toMutableList()
-        enabled.remove(schemaId)
+        val rimeDir = getRimeDir(context)
+        val enabled = getEnabledSchemas(context)
+            .filter { it != schemaId && File(rimeDir, "$it.schema.yaml").isFile }
+            .toMutableList()
         setEnabledSchemas(context, enabled)
         return true
     }

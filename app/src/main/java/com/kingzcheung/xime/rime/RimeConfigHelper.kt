@@ -4,6 +4,7 @@ import com.kingzcheung.xime.util.FileLogger
 import android.content.Context
 import android.util.Log
 import com.kingzcheung.xime.BuildConfig
+import com.kingzcheung.xime.settings.BuiltinSeedState
 import com.kingzcheung.xime.settings.PersonalDictManager
 import com.kingzcheung.xime.settings.SchemaConfigHelper
 import com.kingzcheung.xime.settings.SchemaManifestManager
@@ -12,8 +13,10 @@ import com.kingzcheung.xime.settings.RimeDependencyResolver
 import com.kingzcheung.xime.settings.SchemaManager
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.settings.SharedPresetOverrides
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.io.File
 import java.io.FileOutputStream
@@ -282,6 +285,12 @@ object RimeConfigHelper {
     }
 
     private fun copyAssetsToRimeDir(context: Context, targetDir: File): Boolean {
+        // 用户卸载内置方案包后，不再从 assets 自动恢复；恢复入口在方案管理页。
+        if (BuiltinSeedState.isDisabled(context)) {
+            ensureDefaultYaml(context, targetDir)
+            syncBuiltinDefaultCustom(context, targetDir)
+            return false
+        }
         // 判断 rime/ 是否已部署过任何方案（存在任意 <name>.schema.yaml）。
         // 全新安装时 rime/ 为空 → 全量复制内置默认方案与系统文件，保证开箱即用。
         // 一旦已部署过方案（内置旧版或从市场安装的第三方方案），app 更新时
@@ -493,6 +502,24 @@ object RimeConfigHelper {
             }
         }
         return restored
+    }
+
+    /** 从 assets 恢复内置方案包（清掉用户卸载标记后重新复制并部署）。 */
+    suspend fun restoreBuiltinSeed(context: Context): Boolean = withContext(Dispatchers.IO) {
+        val rimeDir = File(context.filesDir, "rime")
+        if (!rimeDir.exists()) rimeDir.mkdirs()
+        val copied = try {
+            copyAssetsRecursively(context, ASSETS_RIME_DIR, rimeDir)
+        } catch (e: IOException) {
+            FileLogger.e(TAG, "Failed to restore builtin assets", e)
+            false
+        }
+        if (!copied) return@withContext false
+        BuiltinSeedState.setDisabled(context, false)
+        seedBuiltinPackageVersion(context)
+        syncBuiltinDefaultCustom(context, rimeDir)
+        SchemaManifestManager.refreshBuiltinManifest(context)
+        deployInstalledSchema(context)
     }
 
     /** 安装/导入后自动部署（补基线 → 词库补丁 → 增量部署，产物不完整再全量重编）。需在后台线程调用。 */

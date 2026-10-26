@@ -7,6 +7,7 @@ import com.kingzcheung.xime.i18n.tr
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.kingzcheung.xime.settings.BuiltinSeedState
 import com.kingzcheung.xime.settings.MarketUpdateChecker
 import com.kingzcheung.xime.settings.FileConflictInfo
 import com.kingzcheung.xime.settings.SchemaManifestManager
@@ -52,6 +53,7 @@ data class SchemaLocalUiState(
     val toastMessage: String? = null,
     val conflictPackageId: String? = null,
     val conflictingSchemeIds: List<String> = emptyList(),
+    val builtinSeedDisabled: Boolean = false,
 )
 
 class SchemaLocalViewModel(application: Application) : AndroidViewModel(application) {
@@ -92,7 +94,10 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
                     fileCount = info?.fileCount ?: 0,
                 )
             }
-            _uiState.update { it.copy(packages = packages, isLoading = false) }
+            val seedDisabled = withContext(Dispatchers.IO) {
+                BuiltinSeedState.isDisabled(context)
+            }
+            _uiState.update { it.copy(packages = packages, isLoading = false, builtinSeedDisabled = seedDisabled) }
         }
     }
 
@@ -106,20 +111,23 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
                 SchemaManager.discoverSchemas(context).isNotEmpty()
             }
             if (hasSchemas) {
-                _uiState.update { it.copy(installingId = null, phase = null) }
                 val otherInstalled = withContext(Dispatchers.IO) {
                     SchemaManifestManager.getInstalledPackages(context)
                         .map { it.packageId }
                         .filter { it != item.packageId }
                 }
-                val targetIds = if (otherInstalled.isNotEmpty()) otherInstalled else listOf("builtin")
-                _uiState.update {
-                    it.copy(
-                        conflictPackageId = item.packageId,
-                        conflictingSchemeIds = targetIds,
-                    )
+                // 内置包已卸载且没有其他包：没有可冲突的旧包，直接安装。
+                if (otherInstalled.isNotEmpty() || !BuiltinSeedState.isDisabled(context)) {
+                    _uiState.update { it.copy(installingId = null, phase = null) }
+                    val targetIds = if (otherInstalled.isNotEmpty()) otherInstalled else listOf("builtin")
+                    _uiState.update {
+                        it.copy(
+                            conflictPackageId = item.packageId,
+                            conflictingSchemeIds = targetIds,
+                        )
+                    }
+                    return@launch
                 }
-                return@launch
             }
 
             // 直接安装，成功后自动部署
@@ -277,20 +285,46 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
 
     fun uninstall(item: LocalPackageItem) {
         viewModelScope.launch {
+            val isBuiltin = item.packageId == SchemaManifestManager.BUILTIN_PACKAGE_ID
+            if (isBuiltin) BuiltinSeedState.setDisabled(context, true)
             withContext(Dispatchers.IO) {
                 SchemaManager.deleteSchemaFiles(context, item.packageId)
                 SchemaManager.deleteSchemeArchive(context, item.packageId)
             }
-            // 若卸载后没有已安装的方案了，全量清理 rime/ 残留
+            // 若卸载后没有已安装的方案了，全量清理 rime/ 残留。
+            // 卸载内置包时跳过：保留用户词库/自定义短语，且避免下次启动被 assets 灌回。
             val remaining = withContext(Dispatchers.IO) {
                 SchemaManifestManager.getInstalledPackages(context)
             }
-            if (remaining.isEmpty()) {
+            if (remaining.isEmpty() && !BuiltinSeedState.isDisabled(context)) {
                 withContext(Dispatchers.IO) {
                     SchemaManager.cleanRimeDir(context)
                 }
             }
             showToast(tr(R.string.s_yixiezai))
+            MarketUpdateChecker.refreshNow(context)
+            loadLocalPackages()
+        }
+    }
+
+    /** 从 assets 恢复内置方案包（用户卸载后可手动恢复）。 */
+    fun restoreBuiltinSeed() {
+        if (_uiState.value.installingId != null) return
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    installingId = SchemaManifestManager.BUILTIN_PACKAGE_ID,
+                    phase = LocalPackagePhase.INSTALLING,
+                )
+            }
+            val ok = withContext(Dispatchers.IO) {
+                RimeConfigHelper.restoreBuiltinSeed(context)
+            }
+            _uiState.update { it.copy(installingId = null, phase = null, builtinSeedDisabled = !ok) }
+            showToast(
+                if (ok) tr(R.string.s_yianzhuang_bingwanchengbushu, tr(R.string.s_huifuneizhifangan))
+                else tr(R.string.s_anzhuangshibai)
+            )
             MarketUpdateChecker.refreshNow(context)
             loadLocalPackages()
         }

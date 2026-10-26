@@ -376,6 +376,8 @@
     <string name="s_ba_fugaidaobenji_huifutongming_4a142">把「%1$s」覆盖到本机：恢复同名配置/方案/插件与设置项；</string>
     <string name="s_zizaocianshijianchuohebing_ben_b0e5d">自造词按时间戳合并，本机新词不会丢。重启应用后生效。</string>
     <string name="s_huifu">恢复</string>
+    <string name="s_huifuneizhifangan">恢复内置方案包</string>
+    <string name="s_huifuneizhifangan_fu">从应用内置资源重新安装五笔、拼音等默认方案；不会删除用户词库与自定义短语。</string>
     <string name="s_congbendihuifuwanzhengbeifen">从本地恢复完整备份</string>
     <string name="s_huifugai_rime_muluxiatongmingp_8d548">会覆盖 rime/ 目录下同名配置与方案文件，并还原插件、插件配置与设置项；</string>
     <string name="s_zizaocianshijianchuohebing_buh_d11d6">自造词按时间戳合并（不会吃掉本机新词）。重启应用后全部生效。</string>
