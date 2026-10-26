@@ -23,8 +23,8 @@ class DoublePinyinFinalsTest {
         assertEquals("iu", map['q'])
         assertEquals("ei", map['w'])
         assertEquals("uan", map['r'])
-        assertEquals("iang/uang", map['l'])
-        assertEquals("ing/uai", map['k'])
+        assertEquals("iang\nuang", map['l'])
+        assertEquals("ing\nuai", map['k'])
         assertFalse(map.containsKey('u'))
         assertEquals("a", map['a'])
     }
@@ -38,9 +38,9 @@ class DoublePinyinFinalsTest {
             - xform/(.)i?ong$/$1Ⓢ/
             """.trimIndent()
         )
-        assertEquals("ia/ua", map['w'])
-        assertEquals("uan/van", map['r'])
-        assertEquals("ong/iong", map['s'])
+        assertEquals("ia\nua", map['w'])
+        assertEquals("uan\nvan", map['r'])
+        assertEquals("ong\niong", map['s'])
         assertTrue(DoublePinyinFinals.isDoublePinyin("double_pinyin_flypy"))
         assertFalse(DoublePinyinFinals.isDoublePinyin("rime_ice"))
     }
@@ -59,6 +59,6 @@ class DoublePinyinFinalsTest {
         assertEquals("ei", map['q'])
         assertEquals("uo", map['e'])
         assertEquals("ian", map['w'])
-        assertEquals("er/iu", map['r'])
+        assertEquals("er\niu", map['r'])
     }
 }

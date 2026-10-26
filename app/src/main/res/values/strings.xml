@@ -977,6 +977,11 @@
     <string name="s_fenxiangshibai">分享失败: %1$s</string>
     <string name="s_moxingxiazaiwancheng">模型下载完成</string>
     <string name="s_moxingyishanchu">模型已删除</string>
+    <string name="s_daorumoxing">导入模型</string>
+    <string name="s_moxingdaoruchenggong">模型导入成功</string>
+    <string name="s_moxingwenjianmingbupipei">模型文件名与清单不匹配</string>
+    <string name="s_wufadakaimoxingwenjian">无法打开模型文件</string>
+    <string name="s_moxingwenjianbuwanzheng">模型文件不完整</string>
     <string name="s_jiazaichajianshichangshibai">加载插件市场失败</string>
     <string name="s_shuaxinshibai">刷新失败：%1$s</string>
     <string name="s_youqitachajianzhengzaixiazai_q_6304d">有其他插件正在下载，请稍候</string>

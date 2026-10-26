@@ -5,11 +5,14 @@ import com.kingzcheung.xime.R
 import com.kingzcheung.xime.i18n.tr
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.kingzcheung.xime.model.ModelCategory
 import com.kingzcheung.xime.model.ModelDownloadState
 import com.kingzcheung.xime.model.ModelInfo
+import com.kingzcheung.xime.model.ModelImporter
+import com.kingzcheung.xime.model.ModelImportCatalog
 import com.kingzcheung.xime.model.ModelManager
 import com.kingzcheung.xime.model.ModelVersion
 import com.kingzcheung.xime.settings.MarketUpdateChecker
@@ -69,7 +72,7 @@ class ModelManagementViewModel(application: Application) : AndroidViewModel(appl
     }
 
     private suspend fun loadModels() {
-        val allModels = ModelManager.getAllModels()
+        val allModels = ModelImportCatalog.merge(ModelManager.getAllModels())
         val versions = withContext(Dispatchers.IO) {
             MarketVersionStore.getAllModelVersions(context)
         }
@@ -79,7 +82,7 @@ class ModelManagementViewModel(application: Application) : AndroidViewModel(appl
             }
             val size = if (downloaded) {
                 withContext(Dispatchers.IO) {
-                    ModelManager.getModelSizeOnDisk(context, model.id)
+                    ModelManager.getModelSizeOnDisk(context, model)
                 }
             } else 0L
             ModelItemState(
@@ -163,12 +166,13 @@ class ModelManagementViewModel(application: Application) : AndroidViewModel(appl
             if (downloadError != null) {
                 updateModelState(index) { it.copy(downloadState = ModelDownloadState.Idle) }
             } else {
+                val currentModel = _uiState.value.models[index].model
                 val downloaded = withContext(Dispatchers.IO) {
-                    ModelManager.isModelDownloaded(context, modelId)
+                    ModelManager.isModelDownloaded(context, currentModel)
                 }
                 val size = if (downloaded) {
                     withContext(Dispatchers.IO) {
-                        ModelManager.getModelSizeOnDisk(context, modelId)
+                        ModelManager.getModelSizeOnDisk(context, currentModel)
                     }
                 } else 0L
                 // 记录本地下载版本（用于更新检测）；下载成功但版本未知时留空
@@ -199,8 +203,9 @@ class ModelManagementViewModel(application: Application) : AndroidViewModel(appl
 
     fun deleteModel(modelId: String) {
         viewModelScope.launch {
+            val model = _uiState.value.models.firstOrNull { it.model.id == modelId }?.model
             val success = withContext(Dispatchers.IO) {
-                ModelManager.deleteModel(context, modelId)
+                model?.let { ModelManager.deleteModel(context, it) } ?: false
             }
             if (success) {
                 withContext(Dispatchers.IO) {
@@ -215,6 +220,29 @@ class ModelManagementViewModel(application: Application) : AndroidViewModel(appl
                 _uiState.update { s -> s.copy(toastMessage = tr(R.string.s_moxingyishanchu)) }
                 // 删除后该项不再计入可更新，立即重算角标
                 MarketUpdateChecker.refreshNow(context)
+            }
+        }
+    }
+
+    fun importModel(modelId: String, uri: Uri) {
+        val index = _uiState.value.models.indexOfFirst { it.model.id == modelId }
+        if (index < 0) return
+        viewModelScope.launch {
+            val model = _uiState.value.models[index].model
+            val result = withContext(Dispatchers.IO) {
+                ModelImporter.importFromUri(context, model, uri)
+            }
+            if (result.isSuccess) {
+                val downloaded = withContext(Dispatchers.IO) { ModelManager.isModelDownloaded(context, model) }
+                val size = withContext(Dispatchers.IO) { ModelManager.getModelSizeOnDisk(context, model) }
+                updateModelState(index) {
+                    it.copy(isDownloaded = downloaded, diskSize = size, downloadState = ModelDownloadState.Idle)
+                }
+                _uiState.update { it.copy(toastMessage = tr(R.string.s_moxingdaoruchenggong)) }
+            } else {
+                _uiState.update {
+                    it.copy(toastMessage = tr(R.string.s_daorushibai_2, result.exceptionOrNull()?.message))
+                }
             }
         }
     }
