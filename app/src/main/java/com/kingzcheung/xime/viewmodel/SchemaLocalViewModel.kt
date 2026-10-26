@@ -142,6 +142,7 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
                         version = item.version,
                         fromMarket = !item.isImport,
                         switchEnabled = !isUpgrade,
+                        withRollback = isUpgrade,
                     )
                 }
             } catch (e: Exception) {
@@ -152,10 +153,22 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
                 // 装完即部署，用户常忘记点「部署」
                 _uiState.update { st -> st.copy(phase = LocalPackagePhase.DEPLOYING) }
                 val deployed = deployAfterInstall()
+                val transaction = result.transaction
+                var rolledBack = false
+                if (deployed) {
+                    transaction?.commit()
+                } else if (transaction != null) {
+                    rolledBack = withContext(Dispatchers.IO) {
+                        val ok = transaction.rollback()
+                        if (ok) RimeConfigHelper.deployInstalledSchema(context)
+                        ok
+                    }
+                }
                 _uiState.update { st -> st.copy(installingId = null, phase = null) }
                 val msg = buildString {
                     append(if (deployed) tr(R.string.s_yianzhuang_bingwanchengbushu, item.displayName)
                            else tr(R.string.s_yianzhuang_qingdian_bushu_shen_cf341, item.displayName))
+                    if (rolledBack) append("\n" + tr(R.string.s_yihuigun))
                     if (result.parseFailures.isNotEmpty()) {
                         append(tr(R.string.s_nyixiafanganjiexishibai))
                         result.parseFailures.forEach { append("\n  · $it") }

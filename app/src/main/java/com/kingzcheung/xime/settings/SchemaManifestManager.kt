@@ -103,6 +103,53 @@ object SchemaManifestManager {
         }
     }
 
+    /** 升级前备份当前包文件/manifest/registry；无旧包或备份失败返回 null。 */
+    suspend fun prepareUpgradeTransaction(
+        context: Context,
+        schemeId: String,
+    ): UpgradeTransaction? = withContext(Dispatchers.IO) {
+        cleanupStaleUpgradeBackups(context)
+        val manifest = loadManifest(context, schemeId) ?: return@withContext null
+        val entries = manifest.optJSONObject("files") ?: return@withContext null
+        val rimeDir = SchemaManager.getRimeDir(context)
+        val oldFiles = entries.keys().asSequence()
+            .filter { File(rimeDir, it).isFile }
+            .toList()
+        if (oldFiles.isEmpty()) return@withContext null
+        val safeId = schemeId.replace('/', '_')
+        val backupDir = File(context.cacheDir, "upgrade_backup/${safeId}_${System.currentTimeMillis()}")
+        try {
+            for (fn in oldFiles) {
+                val src = File(rimeDir, fn)
+                val dst = File(backupDir, "rime/$fn")
+                dst.parentFile?.mkdirs()
+                src.copyTo(dst, overwrite = true)
+            }
+            val manifestFile = getManifestFile(context, schemeId)
+            val registryFile = getRegistryFile(context)
+            UpgradeTransaction(
+                filesDir = context.filesDir,
+                rimeDir = rimeDir,
+                packageId = schemeId,
+                backupDir = backupDir,
+                oldFiles = oldFiles,
+                oldManifestText = manifestFile.takeIf { it.isFile }?.readText(),
+                oldRegistryText = registryFile.takeIf { it.isFile }?.readText(),
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "prepare upgrade backup failed for $schemeId", e)
+            backupDir.deleteRecursively()
+            null
+        }
+    }
+
+    /** 清理 24 小时前遗留的升级备份（进程中断等）。 */
+    fun cleanupStaleUpgradeBackups(context: Context) {
+        val dir = File(context.cacheDir, "upgrade_backup")
+        val cutoff = System.currentTimeMillis() - 24L * 60 * 60 * 1000
+        dir.listFiles()?.forEach { if (it.lastModified() < cutoff) it.deleteRecursively() }
+    }
+
     private suspend fun saveManifest(context: Context, schemeId: String, manifest: JSONObject) {
         withContext(Dispatchers.IO) {
             val file = getManifestFile(context, schemeId)
