@@ -1,7 +1,9 @@
 package com.kingzcheung.xime.ui.settings
 
 import android.graphics.Typeface
+import android.graphics.fonts.SystemFonts
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -66,6 +68,18 @@ fun FontSettingsContent(onBack: () -> Unit) {
     var currentPath by remember { mutableStateOf(FontPreferences.currentGlobalSelection(context)) }
     var pendingDelete by remember { mutableStateOf<String?>(null) }
     val importedFonts = remember(version) { FontImporter.list(context) }
+    val systemFonts = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            runCatching {
+                SystemFonts.getAvailableFonts()
+                    .mapNotNull { font ->
+                        font.file?.takeIf { it.isFile }?.let { SystemFontOption(it.name, it.absolutePath) }
+                    }
+                    .distinctBy { it.path }
+                    .sortedBy { it.name.lowercase() }
+            }.getOrDefault(emptyList())
+        } else emptyList()
+    }
 
     fun applySelection(value: String) {
         FontPreferences.setAll(context, value)
@@ -142,6 +156,20 @@ fun FontSettingsContent(onBack: () -> Unit) {
                         onClick = { applySelection(AppFonts.SYSTEM_SENTINEL) },
                         fontFamily = FontFamily.Default,
                     )
+                    systemFonts.forEach { font ->
+                        FontDivider()
+                        FontOptionRow(
+                            title = font.name,
+                            subtitle = tr(R.string.s_xitongziti_fu),
+                            selected = currentPath == AppFonts.systemFileSelection(font.path),
+                            onClick = { applySelection(AppFonts.systemFileSelection(font.path)) },
+                            fontFamily = remember(font.path) {
+                                runCatching {
+                                    FontFamily(Typeface.createFromFile(File(font.path)))
+                                }.getOrDefault(FontFamily.Default)
+                            },
+                        )
+                    }
                     importedFonts.forEach { font ->
                         FontDivider()
                         FontOptionRow(
@@ -276,13 +304,17 @@ private fun FontOptionRow(
     }
 }
 
+private data class SystemFontOption(val name: String, val path: String)
+
 @Composable
 private fun FontPreviewCard(version: Int, currentPath: String) {
     val context = LocalContext.current
     val keyFamily: FontFamily = remember(version, currentPath) {
         when (currentPath) {
             AppFonts.SYSTEM_SENTINEL, "", AppFonts.BUILTIN_SENTINEL -> FontFamily.Default
-            else -> runCatching {
+            else -> AppFonts.systemFilePath(currentPath)?.let { path ->
+                runCatching { FontFamily(Typeface.createFromFile(File(path))) }.getOrNull()
+            } ?: runCatching {
                 FontFamily(Typeface.createFromFile(File(context.filesDir, "rime/$currentPath")))
             }.getOrDefault(FontFamily.Default)
         }

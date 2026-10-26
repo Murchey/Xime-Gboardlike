@@ -27,6 +27,16 @@ object AppFonts {
     /** 系统默认字体：不加载任何自定义字体，交由系统字体回退链渲染。 */
     const val SYSTEM_SENTINEL = "@system"
 
+    /** 指定系统字体文件：@sysfile:<absolutePath>。 */
+    const val SYSTEM_FILE_PREFIX = "@sysfile:"
+
+    fun systemFileSelection(path: String): String = SYSTEM_FILE_PREFIX + path
+
+    fun systemFilePath(value: String): String? =
+        if (value.startsWith(SYSTEM_FILE_PREFIX)) {
+            value.removePrefix(SYSTEM_FILE_PREFIX).takeIf { it.isNotBlank() }
+        } else null
+
     /** 空值 / 旧内置字体统一回退系统字体；导入字体路径保持不变。 */
     fun normalizeSelection(value: String): String =
         if (value.isBlank() || value == BUILTIN_SENTINEL) SYSTEM_SENTINEL else value
@@ -156,6 +166,16 @@ object AppFonts {
      * @return Typeface 或 null（文件不存在或加载失败）
      */
     private fun loadTypeface(fontPath: String): Typeface? {
+        systemFilePath(fontPath)?.let { path ->
+            val file = File(path)
+            if (!file.isFile) return null
+            return try {
+                Typeface.createFromFile(file)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load system font file: $path", e)
+                null
+            }
+        }
         if (fontPath.isBlank() || fontPath == SYSTEM_SENTINEL || fontPath == BUILTIN_SENTINEL) return null
         val fontFile = resolveFontPath(fontPath)
         if (!fontFile.exists()) {
@@ -176,6 +196,16 @@ object AppFonts {
      * @return FontFamily 或 null（文件不存在或加载失败）
      */
     private fun loadFontFamily(fontPath: String, typeface: Typeface?): FontFamily? {
+        systemFilePath(fontPath)?.let { path ->
+            val file = File(path)
+            if (!file.isFile) return null
+            return try {
+                FontFamily(Typeface.createFromFile(file))
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load system font file: $path", e)
+                null
+            }
+        }
         if (fontPath.isBlank() || fontPath == SYSTEM_SENTINEL || fontPath == BUILTIN_SENTINEL) return null
         if (typeface != null) return FontFamily(typeface)
         val fontFile = resolveFontPath(fontPath)
