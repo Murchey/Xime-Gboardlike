@@ -436,6 +436,7 @@ fun SchemaLocalContent(
                             onInstall = { viewModel.installPackage(item) },
                             onDelete = { viewModel.deleteDownloaded(item) },
                             onUninstall = { viewModel.uninstall(item) },
+                            onRestore = { viewModel.restoreBuiltinPackage(item) },
                         )
                     }
                 }
@@ -481,6 +482,7 @@ private fun LocalPackageCard(
     onInstall: () -> Unit,
     onDelete: () -> Unit,
     onUninstall: () -> Unit,
+    onRestore: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -546,6 +548,9 @@ private fun LocalPackageCard(
                                 style = MaterialTheme.typography.labelSmall,
                             )
                         }
+                    }
+                    item.restorable -> {
+                        OutlinedButton(onClick = onRestore) { Text(tr(R.string.s_huifu)) }
                     }
                     item.installed -> {
                         if (item.downloaded) {

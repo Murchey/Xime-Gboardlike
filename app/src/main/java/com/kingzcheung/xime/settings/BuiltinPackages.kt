@@ -13,6 +13,14 @@ object BuiltinPackages {
 
     fun isBuiltin(packageId: String): Boolean = packageId in ALL
 
+    /** 包版本从代表方案的 version 字段读取；shared 无版本。 */
+    fun versionSchema(packageId: String): String? = when (packageId) {
+        RIME_ICE -> "rime_ice"
+        WUBI86 -> "wubi86"
+        PINYIN_SIMP -> "pinyin_simp"
+        else -> null
+    }
+
     fun displayName(packageId: String): String = when (packageId) {
         RIME_ICE -> "雾凇拼音"
         WUBI86 -> "五笔 86"

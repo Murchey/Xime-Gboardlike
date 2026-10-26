@@ -782,41 +782,65 @@ object SchemaManifestManager {
             untracked[relPath] = f
         }
 
-        if (untracked.isEmpty()) return
+        if (untracked.isNotEmpty()) {
+            val groups = untracked.entries.groupBy { BuiltinPackages.packageFor(it.key) }
+            for ((packageId, entries) in groups) {
+                val existingManifest = loadManifest(context, packageId)
+                val fileEntries = existingManifest?.optJSONObject("files") ?: JSONObject()
+                for ((relPath, file) in entries) {
+                    val sha256 = SchemaManager.fileSha256(file) ?: continue
+                    fileEntries.put(relPath, JSONObject().apply {
+                        put("sha256", sha256)
+                        put("size", file.length())
+                    })
+                    allFiles.put(relPath, JSONObject().apply {
+                        put("sha256", sha256)
+                        put("size", file.length())
+                        put("claimedBy", JSONArray(listOf(packageId)))
+                    })
+                }
+                val manifest = existingManifest ?: JSONObject().apply {
+                    put("schemeId", packageId)
+                    put("displayName", BuiltinPackages.displayName(packageId))
+                    put("version", "")
+                    put("installedAt",
+                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.US).format(Date()))
+                    put("fromMarket", false)
+                    put("legacy", true)
+                }
+                manifest.put("version", readPackageVersion(rimeDir, packageId))
+                manifest.put("files", fileEntries)
+                saveManifest(context, packageId, manifest)
+            }
 
-        val groups = untracked.entries.groupBy { BuiltinPackages.packageFor(it.key) }
-        for ((packageId, entries) in groups) {
-            val existingManifest = loadManifest(context, packageId)
-            val fileEntries = existingManifest?.optJSONObject("files") ?: JSONObject()
-            for ((relPath, file) in entries) {
-                val sha256 = SchemaManager.fileSha256(file) ?: continue
-                fileEntries.put(relPath, JSONObject().apply {
-                    put("sha256", sha256)
-                    put("size", file.length())
-                })
-                allFiles.put(relPath, JSONObject().apply {
-                    put("sha256", sha256)
-                    put("size", file.length())
-                    put("claimedBy", JSONArray(listOf(packageId)))
-                })
-            }
-            val manifest = existingManifest ?: JSONObject().apply {
-                put("schemeId", packageId)
-                put("displayName", BuiltinPackages.displayName(packageId))
-                put("version", "")
-                put("installedAt",
-                    SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.US).format(Date()))
-                put("fromMarket", false)
-                put("legacy", true)
-            }
-            manifest.put("files", fileEntries)
-            saveManifest(context, packageId, manifest)
+            registry.put("files", allFiles)
+            saveRegistry(context, registry)
+            Log.i(TAG, "refreshBuiltinManifest: added ${untracked.size} untracked files across ${groups.size} packages")
         }
 
-        registry.put("files", allFiles)
-        saveRegistry(context, registry)
+        // assets 更新但文件没变化时也同步版本号
+        for (packageId in BuiltinPackages.ALL) {
+            val manifest = loadManifest(context, packageId) ?: continue
+            val version = readPackageVersion(rimeDir, packageId)
+            if (manifest.optString("version") != version) {
+                manifest.put("version", version)
+                saveManifest(context, packageId, manifest)
+            }
+        }
+    }
 
-        Log.i(TAG, "refreshBuiltinManifest: added ${untracked.size} untracked files across ${groups.size} packages")
+    private fun readPackageVersion(rimeDir: File, packageId: String): String {
+        val schema = BuiltinPackages.versionSchema(packageId) ?: return ""
+        val file = File(rimeDir, "$schema.schema.yaml")
+        if (!file.isFile) return ""
+        return try {
+            val line = file.useLines { lines ->
+                lines.firstOrNull { it.trimStart().startsWith("version:") }
+            } ?: return ""
+            line.substringAfter("version:").substringBefore('#').trim().trim('"')
+        } catch (_: Exception) {
+            ""
+        }
     }
 
     /** 从注册表查询指定 schemaId 所属的包 ID。 */
