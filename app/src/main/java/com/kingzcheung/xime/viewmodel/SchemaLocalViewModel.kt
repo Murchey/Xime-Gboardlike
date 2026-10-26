@@ -114,31 +114,10 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             _uiState.update { it.copy(installingId = item.packageId, phase = LocalPackagePhase.INSTALLING) }
 
-            // 检查 rime/ 下是否已有其他方案（无论是否被清单追踪）
-            val hasSchemas = withContext(Dispatchers.IO) {
-                SchemaManager.discoverSchemas(context).isNotEmpty()
-            }
-            // 同 ID 已安装视为升级：直接覆盖，保留当前启用列表；不走冲突卸载。
+            // 同 ID 已安装视为升级：直接覆盖，保留当前启用列表。
+            // 新包先尝试安装，由注册表返回真实冲突文件，只卸载真正冲突的包；
+            // 不再因为“已有任意方案”就预先把所有内置包列成卸载目标。
             val isUpgrade = item.installed
-            if (!isUpgrade && hasSchemas) {
-                val otherInstalled = withContext(Dispatchers.IO) {
-                    SchemaManifestManager.getInstalledPackages(context)
-                        .map { it.packageId }
-                        .filter { it != item.packageId && it != BuiltinPackages.SHARED }
-                }
-                // 内置包已卸载且没有其他包：没有可冲突的旧包，直接安装。
-                if (otherInstalled.isNotEmpty() || !BuiltinSeedState.isDisabled(context)) {
-                    _uiState.update { it.copy(installingId = null, phase = null) }
-                    val targetIds = if (otherInstalled.isNotEmpty()) otherInstalled else BuiltinPackages.USER_VISIBLE
-                    _uiState.update {
-                        it.copy(
-                            conflictPackageId = item.packageId,
-                            conflictingSchemeIds = targetIds,
-                        )
-                    }
-                    return@launch
-                }
-            }
 
             // 直接安装，成功后自动部署
             val result = try {
@@ -185,17 +164,11 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
                 showToast(msg)
             } else if (result.conflicts.isNotEmpty()) {
                 _uiState.update { st -> st.copy(installingId = null, phase = null) }
-                // 注册表冲突 → 进入冲突解决流程
-                val otherInstalled = withContext(Dispatchers.IO) {
-                    SchemaManifestManager.getInstalledPackages(context)
-                        .map { it.packageId }
-                        .filter { it != item.packageId && it != BuiltinPackages.SHARED }
-                }
+                // 注册表冲突 → 只把真正冲突文件的 claimedBy 包列为卸载目标
                 val targetIds = result.conflicts
                     .flatMap { it.claimedBy }
                     .distinct()
-                    .filter { it != item.packageId }
-                    .ifEmpty { otherInstalled }
+                    .filter { it != item.packageId && it != BuiltinPackages.SHARED }
                     .ifEmpty { BuiltinPackages.USER_VISIBLE }
                 _uiState.update {
                     it.copy(
