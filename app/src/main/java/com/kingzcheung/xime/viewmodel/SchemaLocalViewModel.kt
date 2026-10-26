@@ -34,10 +34,12 @@ data class LocalPackageItem(
     val installed: Boolean,
     val schemaCount: Int = 0,
     val fileCount: Int = 0,
+    val restorable: Boolean = false,
 ) {
     val isImport: Boolean get() = packageId.startsWith("import_")
     val statusLabel: String
         get() = when {
+            restorable -> tr(R.string.s_yixiezai)
             installed && downloaded -> tr(R.string.s_yianzhuang)
             installed -> tr(R.string.s_yianzhuang)
             downloaded -> tr(R.string.s_yixiazai)
@@ -102,10 +104,28 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
                     fileCount = info?.fileCount ?: 0,
                 )
             }
-            val seedDisabled = withContext(Dispatchers.IO) {
-                BuiltinSeedState.isDisabled(context)
+            val disabled = withContext(Dispatchers.IO) {
+                BuiltinSeedState.disabledPackages(context)
             }
-            _uiState.update { it.copy(packages = packages, isLoading = false, builtinSeedDisabled = seedDisabled) }
+            val restorable = BuiltinPackages.USER_VISIBLE
+                .filter { it in disabled && it !in installedMap }
+                .map { id ->
+                    LocalPackageItem(
+                        packageId = id,
+                        displayName = BuiltinPackages.displayName(id),
+                        version = "",
+                        downloaded = false,
+                        installed = false,
+                        restorable = true,
+                    )
+                }
+            _uiState.update {
+                it.copy(
+                    packages = packages + restorable,
+                    isLoading = false,
+                    builtinSeedDisabled = disabled.isNotEmpty(),
+                )
+            }
         }
     }
 
@@ -361,7 +381,30 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    /** 从 assets 恢复内置方案包（用户卸载后可手动恢复）。 */
+    /** 恢复单个内置包，其他已卸载包保持卸载。 */
+    fun restoreBuiltinPackage(item: LocalPackageItem) {
+        if (_uiState.value.installingId != null) return
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(installingId = item.packageId, phase = LocalPackagePhase.INSTALLING)
+            }
+            val ok = withContext(Dispatchers.IO) {
+                RimeConfigHelper.restoreBuiltinPackage(context, item.packageId)
+            }
+            val disabled = withContext(Dispatchers.IO) { BuiltinSeedState.isDisabled(context) }
+            _uiState.update {
+                it.copy(installingId = null, phase = null, builtinSeedDisabled = disabled)
+            }
+            showToast(
+                if (ok) tr(R.string.s_yianzhuang_bingwanchengbushu, item.displayName)
+                else tr(R.string.s_anzhuangshibai)
+            )
+            MarketUpdateChecker.refreshNow(context)
+            loadLocalPackages()
+        }
+    }
+
+    /** 从 assets 恢复全部内置方案包（用户卸载后可手动恢复）。 */
     fun restoreBuiltinSeed() {
         if (_uiState.value.installingId != null) return
         viewModelScope.launch {

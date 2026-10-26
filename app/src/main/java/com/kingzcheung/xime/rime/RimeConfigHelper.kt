@@ -516,9 +516,39 @@ object RimeConfigHelper {
             FileLogger.e(TAG, "Failed to restore builtin assets", e)
             false
         }
-        if (!copied) {
+        if (!copied && !File(rimeDir, "rime_ice.schema.yaml").isFile &&
+            !File(rimeDir, "pinyin_simp.schema.yaml").isFile &&
+            !File(rimeDir, "wubi86.schema.yaml").isFile
+        ) {
             previous.forEach { BuiltinSeedState.setDisabled(context, it, true) }
             return@withContext false
+        }
+        seedBuiltinPackageVersion(context)
+        syncBuiltinDefaultCustom(context, rimeDir)
+        SchemaManifestManager.refreshBuiltinManifest(context)
+        deployInstalledSchema(context)
+    }
+
+    /** 从 assets 恢复单个内置包（其他已卸载包保持卸载状态）。 */
+    suspend fun restoreBuiltinPackage(context: Context, packageId: String): Boolean = withContext(Dispatchers.IO) {
+        if (!BuiltinPackages.isBuiltin(packageId) || packageId == BuiltinPackages.SHARED) return@withContext false
+        val wasDisabled = BuiltinSeedState.isDisabled(context, packageId)
+        BuiltinSeedState.setDisabled(context, packageId, false)
+        val rimeDir = File(context.filesDir, "rime")
+        rimeDir.mkdirs()
+        val copied = try {
+            copyAssetsRecursively(context, ASSETS_RIME_DIR, rimeDir)
+        } catch (e: IOException) {
+            FileLogger.e(TAG, "Failed to restore builtin package $packageId", e)
+            false
+        }
+        if (!copied) {
+            // 文件可能已被其他包/上次残留保留：只要代表方案还在就继续补清单
+            val schema = BuiltinPackages.versionSchema(packageId)
+            if (schema == null || !File(rimeDir, "$schema.schema.yaml").isFile) {
+                if (wasDisabled) BuiltinSeedState.setDisabled(context, packageId, true)
+                return@withContext false
+            }
         }
         seedBuiltinPackageVersion(context)
         syncBuiltinDefaultCustom(context, rimeDir)
