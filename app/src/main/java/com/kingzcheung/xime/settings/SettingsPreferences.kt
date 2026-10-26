@@ -190,7 +190,7 @@ object SettingsPreferences {
         }
         val legacy = prefs.getString(KEY_CURRENT_SCHEMA, null)
         if (!legacy.isNullOrBlank()) return legacy
-        return "wubi86"
+        return "rime_ice"
     }
 
     fun setCurrentSchema(context: Context, schemaId: String) {

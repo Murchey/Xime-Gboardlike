@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -37,6 +38,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -67,6 +69,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kingzcheung.xime.settings.SchemaManager
 import com.kingzcheung.xime.settings.SchemaMeta
+import com.kingzcheung.xime.settings.SchemaPresets
 import com.kingzcheung.xime.viewmodel.SchemaSettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -261,6 +264,38 @@ fun SchemaSettingsContent(
                         onClick = onNavigateToImported,
                         modifier = Modifier.padding(top = 12.dp),
                     )
+                }
+
+                item {
+                    Column(modifier = Modifier.padding(top = 4.dp)) {
+                        Text(
+                            text = tr(R.string.s_fanganyushe),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = tr(R.string.s_fanganyushe_fu),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(top = 8.dp),
+                        ) {
+                            items(SchemaPresets.ALL, key = { it.schemaId }) { preset ->
+                                val meta = uiState.allSchemas.firstOrNull { it.schemaId == preset.schemaId }
+                                FilterChip(
+                                    selected = uiState.currentSchema == preset.schemaId,
+                                    onClick = { viewModel.applyPreset(preset.schemaId) },
+                                    enabled = !uiState.isDeploying,
+                                    label = {
+                                        Text(meta?.name?.takeIf { it.isNotBlank() } ?: preset.fallbackName)
+                                    },
+                                )
+                            }
+                        }
+                    }
                 }
 
                 item {

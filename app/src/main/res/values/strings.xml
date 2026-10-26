@@ -699,6 +699,8 @@
     <string name="s_quxuanze">去选择</string>
     <string name="s_bujianrong">不兼容</string>
     <string name="s_yiqiyong">已启用</string>
+    <string name="s_fanganyushe">方案预设</string>
+    <string name="s_fanganyushe_fu">一键切换雾凇全拼或双拼；保留其他已启用方案</string>
     <string name="s_weiqiyong">未启用</string>
     <string name="s_qingzaiyingyongxinxiyemianxiezai">请在应用信息页面卸载</string>
     <string name="s_wufadakai">无法打开: %1$s</string>
