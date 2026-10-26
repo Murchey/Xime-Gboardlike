@@ -80,6 +80,7 @@ import com.kingzcheung.xime.plugin.core.model.PluginInfo
 import com.kingzcheung.xime.plugin.core.runtime.PluginManager
 import com.kingzcheung.xime.settings.BackupManager
 import com.kingzcheung.xime.settings.RimeDataExporter
+import com.kingzcheung.xime.settings.RimeStorage
 import com.kingzcheung.xime.settings.RimeExportManager
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.settings.SyncManager
@@ -151,6 +152,41 @@ fun BackupSettingsContent(
     var pendingRestoreEntry by remember { mutableStateOf<RemoteBackupEntry?>(null) }
     var pendingDeleteEntry by remember { mutableStateOf<RemoteBackupEntry?>(null) }
     var pendingLocalImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var showRestartDialog by remember { mutableStateOf(false) }
+    var storageBusy by remember { mutableStateOf(false) }
+    var storagePath by remember { mutableStateOf(RimeStorage.currentPath(context)) }
+
+    val storageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+        val path = RimeStorage.pathFromTreeUri(uri)
+        if (path == null) {
+            scope.launch { snackbar.showSnackbar(tr(R.string.s_daochushibai, "不支持的目录")) }
+            return@rememberLauncherForActivityResult
+        }
+        storageBusy = true
+        scope.launch(Dispatchers.IO) {
+            val result = RimeStorage.switchTo(context, path)
+            withContext(Dispatchers.Main) {
+                storageBusy = false
+                result.fold(
+                    onSuccess = {
+                        storagePath = RimeStorage.currentPath(context)
+                        showRestartDialog = true
+                    },
+                    onFailure = { snackbar.showSnackbar(tr(R.string.s_daochushibai, it.message)) },
+                )
+            }
+        }
+    }
 
     // 词条同步：上次时间 + 云端各设备快照（只读；合并由主动作完成）
     var lastSyncAt by remember { mutableStateOf(SettingsPreferences.getLastRimeSyncAt(context)) }
@@ -551,6 +587,44 @@ fun BackupSettingsContent(
                     )
                     SettingsItem(
                         icon = Icons.Outlined.FolderOpen,
+                        title = tr(R.string.s_shuju_cunchu_weizhi),
+                        subtitle = storagePath,
+                        showArrow = true,
+                        onClick = {
+                            if (!RimeStorage.hasAllFilesAccess()) {
+                                RimeStorage.requestAllFilesAccess(context)
+                                scope.launch {
+                                    snackbar.showSnackbar(tr(R.string.s_suoyouwenjianquanxian_tishi))
+                                }
+                            } else {
+                                storageLauncher.launch(null)
+                            }
+                        }
+                    )
+                    if (RimeStorage.isCustom(context)) {
+                        SettingsItem(
+                            icon = Icons.Outlined.SettingsBackupRestore,
+                            title = tr(R.string.s_huifumoren),
+                            subtitle = tr(R.string.s_shuju_cunchu_weizhi_fu),
+                            showArrow = true,
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    val result = RimeStorage.restoreDefault(context)
+                                    withContext(Dispatchers.Main) {
+                                        result.fold(
+                                            onSuccess = {
+                                                storagePath = RimeStorage.currentPath(context)
+                                                showRestartDialog = true
+                                            },
+                                            onFailure = { snackbar.showSnackbar(tr(R.string.s_daochushibai, it.message)) },
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    SettingsItem(
+                        icon = Icons.Outlined.FolderOpen,
                         title = tr(R.string.s_daochu_rime_shuju),
                         subtitle = tr(R.string.s_daochu_rime_shuju_fu),
                         badgeText = if (busyOp == "exportBrowsable") tr(R.string.s_jinxingzhong) else null,
@@ -718,6 +792,29 @@ fun BackupSettingsContent(
             },
             dismissButton = {
                 TextButton(onClick = { pendingLocalImportUri = null }) { Text(tr(R.string.s_quxiao)) }
+            }
+        )
+    }
+
+    if (showRestartDialog) {
+        AlertDialog(
+            onDismissRequest = { showRestartDialog = false },
+            title = { Text(tr(R.string.s_chongqiyingshi)) },
+            text = { Text(storagePath, style = MaterialTheme.typography.bodySmall) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRestartDialog = false
+                    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                    intent?.addFlags(
+                        android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK or
+                            android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                    if (intent != null) context.startActivity(intent)
+                    android.os.Process.killProcess(android.os.Process.myPid())
+                }) { Text(tr(R.string.s_lijichongqi)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestartDialog = false }) { Text(tr(R.string.s_quxiao)) }
             }
         )
     }

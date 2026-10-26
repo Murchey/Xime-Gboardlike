@@ -366,6 +366,12 @@
     <string name="s_daochushibai">导出失败：%1$s</string>
     <string name="s_baocunwanzhengbeifendaoxiazaimulu">保存完整备份到下载目录</string>
     <string name="s_daochu_rime_shuju">导出 Rime 数据到文件管理器</string>
+    <string name="s_shuju_cunchu_weizhi">数据存储位置</string>
+    <string name="s_shuju_cunchu_weizhi_fu">默认使用应用私有目录；自定义目录需所有文件访问权限，修改后需重启</string>
+    <string name="s_xuanze_mulu">选择目录</string>
+    <string name="s_suoyouwenjianquanxian_tishi">请先授予“所有文件访问权限”，再重新选择目录</string>
+    <string name="s_chongqiyingshi">需要重启应用后生效</string>
+    <string name="s_lijichongqi">立即重启</string>
     <string name="s_shuangpin_yunmu_tihuan_fuhao">字母键显示双拼韵母</string>
     <string name="s_shuangpin_yunmu_tihuan_fuhao_fu">用当前双拼方案的韵母替换键面右上角符号</string>
     <string name="s_daochu_rime_shuju_fu">保存到 Download/XimeGboard/rime，可直接浏览、复制、编辑</string>
