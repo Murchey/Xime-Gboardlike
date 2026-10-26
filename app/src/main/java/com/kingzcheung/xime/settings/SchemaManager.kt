@@ -810,12 +810,21 @@ object SchemaManager {
     }
 
     fun getEnabledSchemas(context: Context): List<String> {
+        val rimeDir = getRimeDir(context)
+        fun available(schemaId: String): Boolean =
+            File(rimeDir, "$schemaId.schema.yaml").isFile &&
+                !BuiltinSeedState.isDisabled(
+                    context,
+                    BuiltinPackages.packageFor("$schemaId.schema.yaml"),
+                )
+
         val customFile = getCustomYamlFile(context)
         if (!customFile.exists()) {
-            if (BuiltinSeedState.isDisabled(context)) return emptyList()
-            setEnabledSchemas(context, BUILTIN_SCHEMAS)
+            val initial = BUILTIN_SCHEMAS.filter { available(it) }
+            if (initial.isEmpty()) return emptyList()
+            setEnabledSchemas(context, initial)
             SettingsPreferences.setBuiltinSchemasMerged(context, true)
-            return BUILTIN_SCHEMAS
+            return initial
         }
 
         try {
@@ -838,32 +847,28 @@ object SchemaManager {
                 }
             }
             if (schemas.isNotEmpty()) {
-                // 内置包已卸载：只保留文件仍存在的方案，避免 stale schema_list 触发缺失部署。
-                if (BuiltinSeedState.isDisabled(context)) {
-                    return schemas.filter { File(getRimeDir(context), "$it.schema.yaml").isFile }
-                }
-                // 内置方案补齐只执行一次（新版本首次运行，治老版本升级残留：
-                // 列表无 t9_pinyin → 方案永不部署 → 切九键静默失败）。之后用户
-                // 在方案管理中移除内置方案是有效选择，不得每次读取强行补回。
-                // 补齐写回后 schema_list 计入部署 hash、build 产物按方案校验，
-                // 缺失的方案会自动触发重部署。
-                val merged = if (BuiltinSeedState.isDisabled(context) || SettingsPreferences.isBuiltinSchemasMerged(context)) {
-                    schemas
-                } else {
-                    val m = mergeBuiltinSchemas(schemas)
-                    if (m != schemas) {
-                        setEnabledSchemas(context, m)
+                val existing = schemas.filter { available(it) }
+                if (existing.isNotEmpty()) {
+                    // 有内置包被卸载时不再自动补回，避免把用户刚删的包灌回来。
+                    if (BuiltinSeedState.disabledPackages(context).isNotEmpty()) return existing
+                    // 内置方案补齐只执行一次（新版本首次运行，治老版本升级残留）。
+                    val merged = if (SettingsPreferences.isBuiltinSchemasMerged(context)) {
+                        existing
+                    } else {
+                        val m = mergeBuiltinSchemas(existing)
+                        if (m != existing) setEnabledSchemas(context, m)
+                        SettingsPreferences.setBuiltinSchemasMerged(context, true)
+                        m
                     }
-                    SettingsPreferences.setBuiltinSchemasMerged(context, true)
-                    m
+                    return merged
                 }
-                return merged
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to read custom.yaml", e)
         }
 
-        return if (BuiltinSeedState.isDisabled(context)) emptyList() else BUILTIN_SCHEMAS
+        val fallback = BUILTIN_SCHEMAS.filter { available(it) }
+        return fallback
     }
 
     fun setEnabledSchemas(context: Context, schemaIds: List<String>) {

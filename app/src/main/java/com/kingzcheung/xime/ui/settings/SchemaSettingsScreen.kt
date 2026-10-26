@@ -288,7 +288,7 @@ fun SchemaSettingsContent(
                                 FilterChip(
                                     selected = uiState.currentSchema == preset.schemaId,
                                     onClick = { viewModel.applyPreset(preset.schemaId) },
-                                    enabled = !uiState.isDeploying,
+                                    enabled = !uiState.isDeploying && meta != null,
                                     label = {
                                         Text(meta?.name?.takeIf { it.isNotBlank() } ?: preset.fallbackName)
                                     },

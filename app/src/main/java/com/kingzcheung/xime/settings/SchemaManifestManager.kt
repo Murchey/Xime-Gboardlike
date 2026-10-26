@@ -7,6 +7,8 @@ import com.kingzcheung.xime.i18n.tr
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -386,6 +388,12 @@ object SchemaManifestManager {
         context: Context,
         schemeId: String,
     ): UninstallResult = withContext(Dispatchers.IO) {
+        if (schemeId == BuiltinPackages.SHARED) {
+            return@withContext UninstallResult(
+                success = false,
+                message = "内置共享资源不可单独卸载",
+            )
+        }
         val manifest = loadManifest(context, schemeId)
         if (manifest == null) {
             return@withContext UninstallResult(
@@ -508,7 +516,7 @@ object SchemaManifestManager {
     // ── Migration ──
 
     private const val KEY_MIGRATION_VERSION = "manifest_migration_version"
-    private const val MIGRATION_VERSION_CURRENT = 3
+    private const val MIGRATION_VERSION_CURRENT = 4
     internal const val BUILTIN_PACKAGE_ID = "builtin"
 
     /**
@@ -571,7 +579,37 @@ object SchemaManifestManager {
         }
     }
 
+    /** v4：移除聚合 builtin 的 manifest/registry 声明，让 refresh 重新按方案族认领。 */
+    private suspend fun migrateBuiltinPackages(context: Context) {
+        try {
+            val registry = loadRegistry(context)
+            val allFiles = registry.optJSONObject("files") ?: JSONObject()
+            val keys = allFiles.keys()
+            while (keys.hasNext()) {
+                val fn = keys.next() as String
+                val entry = allFiles.optJSONObject(fn) ?: continue
+                val claimants = entry.optJSONArray("claimedBy")?.let(::jsonArrayToList) ?: emptyList()
+                if (!claimants.contains(BUILTIN_PACKAGE_ID)) continue
+                val rest = claimants.filter { it != BUILTIN_PACKAGE_ID }
+                if (rest.isEmpty()) allFiles.remove(fn)
+                else entry.put("claimedBy", JSONArray(rest))
+            }
+            registry.put("files", allFiles)
+            saveRegistry(context, registry)
+            getManifestFile(context, BUILTIN_PACKAGE_ID).delete()
+            Log.i(TAG, "v4: split legacy builtin package")
+        } catch (e: Exception) {
+            Log.e(TAG, "v4 builtin split failed", e)
+        }
+    }
+
+    private val migrationMutex = Mutex()
+
     suspend fun migrateLegacySchemas(context: Context) {
+        migrationMutex.withLock { migrateLegacySchemasLocked(context) }
+    }
+
+    private suspend fun migrateLegacySchemasLocked(context: Context) {
         val prefs = SettingsPreferences.getPrefsPublic(context)
         val prevVersion = prefs.getInt(KEY_MIGRATION_VERSION, 0)
 
@@ -579,6 +617,14 @@ object SchemaManifestManager {
             try {
                 // v3: 把 .manifests/ 和 .registry.json 从 rime/ 移到 filesDir/
                 migrateManifestsLocation(context)
+
+                // v4: 聚合 builtin 拆成按方案族的内置包
+                if (prevVersion < 4) {
+                    migrateBuiltinPackages(context)
+                    refreshBuiltinManifest(context)
+                    prefs.edit().putInt(KEY_MIGRATION_VERSION, MIGRATION_VERSION_CURRENT).apply()
+                    return@withContext
+                }
 
                 // 确保 market/builtin/ 存在（迁移前没有此目录的旧版本会在此补齐）
                 ensureBuiltinBackup(context)
@@ -736,68 +782,41 @@ object SchemaManifestManager {
             untracked[relPath] = f
         }
 
-        val existingManifest = loadManifest(context, BUILTIN_PACKAGE_ID)
-        val fileEntries = existingManifest?.optJSONObject("files") ?: JSONObject()
+        if (untracked.isEmpty()) return
 
-        // 同步 registry 中 builtin 声明的文件到 manifest（防止 manifest 与 registry 不同步）
-        val keysIt = allFiles.keys()
-        while (keysIt.hasNext()) {
-            val fn = keysIt.next() as String
-            if (fileEntries.has(fn)) continue
-            val entry = allFiles.optJSONObject(fn) ?: continue
-            val claimants = entry.optJSONArray("claimedBy")
-            if (claimants != null && jsonArrayToList(claimants).contains(BUILTIN_PACKAGE_ID)) {
-                fileEntries.put(fn, JSONObject().apply {
-                    put("sha256", entry.optString("sha256", ""))
-                    put("size", entry.optLong("size", 0))
+        val groups = untracked.entries.groupBy { BuiltinPackages.packageFor(it.key) }
+        for ((packageId, entries) in groups) {
+            val existingManifest = loadManifest(context, packageId)
+            val fileEntries = existingManifest?.optJSONObject("files") ?: JSONObject()
+            for ((relPath, file) in entries) {
+                val sha256 = SchemaManager.fileSha256(file) ?: continue
+                fileEntries.put(relPath, JSONObject().apply {
+                    put("sha256", sha256)
+                    put("size", file.length())
+                })
+                allFiles.put(relPath, JSONObject().apply {
+                    put("sha256", sha256)
+                    put("size", file.length())
+                    put("claimedBy", JSONArray(listOf(packageId)))
                 })
             }
-        }
-
-        if (untracked.isEmpty() && fileEntries.length() == (existingManifest?.optJSONObject("files")?.length() ?: 0)) return
-
-        for ((relPath, file) in untracked) {
-            val sha256 = SchemaManager.fileSha256(file) ?: continue
-            fileEntries.put(relPath, JSONObject().apply {
-                put("sha256", sha256)
-                put("size", file.length())
-            })
-            allFiles.put(relPath, JSONObject().apply {
-                put("sha256", sha256)
-                put("size", file.length())
-                put("claimedBy", JSONArray(listOf(BUILTIN_PACKAGE_ID)))
-            })
-        }
-
-        // 更新或创建 builtin 清单
-        if (existingManifest != null) {
-            existingManifest.put("files", fileEntries)
-            saveManifest(context, BUILTIN_PACKAGE_ID, existingManifest)
-        } else {
-            val manifest = JSONObject().apply {
-                put("schemeId", BUILTIN_PACKAGE_ID)
-                put("displayName", tr(R.string.s_xitongneizhifangan))
+            val manifest = existingManifest ?: JSONObject().apply {
+                put("schemeId", packageId)
+                put("displayName", BuiltinPackages.displayName(packageId))
                 put("version", "")
                 put("installedAt",
                     SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.US).format(Date()))
                 put("fromMarket", false)
                 put("legacy", true)
-                put("files", fileEntries)
             }
-            saveManifest(context, BUILTIN_PACKAGE_ID, manifest)
+            manifest.put("files", fileEntries)
+            saveManifest(context, packageId, manifest)
         }
 
         registry.put("files", allFiles)
         saveRegistry(context, registry)
 
-        // 同步备份到 market/builtin/
-        val builtinDir = SchemaManager.getMarketDir(context, BUILTIN_PACKAGE_ID)
-        builtinDir.mkdirs()
-        for ((relPath, file) in untracked) {
-            copyToBuiltinBackup(file, builtinDir, relPath)
-        }
-
-        Log.i(TAG, "refreshBuiltinManifest: added ${untracked.size} untracked files")
+        Log.i(TAG, "refreshBuiltinManifest: added ${untracked.size} untracked files across ${groups.size} packages")
     }
 
     /** 从注册表查询指定 schemaId 所属的包 ID。 */
