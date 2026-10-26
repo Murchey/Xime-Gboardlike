@@ -53,7 +53,14 @@ object FontImporter {
 
         val dir = fontsDir(context)
         val base = original.substringBeforeLast('.')
-            .replace(Regex("[^A-Za-z0-9_\\-]"), "_")
+            .map { char ->
+                when {
+                    char.isLetterOrDigit() || char == '_' || char == '-' -> char
+                    else -> '_'
+                }
+            }
+            .joinToString("")
+            .replace(Regex("_+"), "_")
             .take(40)
             .ifBlank { "font" }
         var target = File(dir, "$base.$ext")
