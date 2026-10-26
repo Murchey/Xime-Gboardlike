@@ -52,6 +52,8 @@ object RimeConfigHelper {
         }
         
         copyAssetsToRimeDir(context, rimeDir)
+        // 首次安装/升级后补建内置包的 per-package 清单
+        SchemaManifestManager.refreshBuiltinManifest(context)
         // F1: assets 会用内置 default.yaml 覆盖，这里把启用方案重新写回 schema_list
         SchemaManager.applyEnabledSchemasToDefaultYaml(context)
         // 为所有启用方案打个人词库补丁
