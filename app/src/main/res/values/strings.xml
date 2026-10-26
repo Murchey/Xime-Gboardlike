@@ -1038,7 +1038,7 @@
     <string name="s_zidingyibeijing">自定义背景</string>
     <string name="s_zitiguanli">字体</string>
     <string name="s_ziti_guanli_fu">导入本地字体，替换键盘与界面字体</string>
-    <string name="s_zitishuoming">默认跟随系统字体；支持导入 ttf / otf / ttc，导入一次即全局生效（键盘按键、候选栏、整个界面），文件保存在应用私有目录，不会上传。</string>
+    <string name="s_zitishuoming">默认跟随系统字体；可选择系统已注册字体，或导入 ttf / otf / ttc。选择后全局生效（键盘按键、候选栏、整个界面），导入文件保存在应用私有目录，不会上传。</string>
     <string name="s_quanjuziti">全局字体</string>
     <string name="s_neizhiziti">内置字体（思源 + Google Sans）</string>
     <string name="s_ziti_yingyongfanwei">键盘按键、候选栏与界面统一使用</string>
@@ -1076,6 +1076,7 @@
     <string name="s_yingyongdaoshense">应用到深色</string>
     <string name="s_xitongmorenziti">系统默认</string>
     <string name="s_xitongmorenziti_fu">跟随手机系统字体</string>
+    <string name="s_xitongziti_fu">系统已注册字体文件</string>
     <string name="s_neizhiziti_fu">随应用打包，离线可用</string>
     <string name="s_yidaoruziti_fu">已导入的字体文件</string>
     <string name="s_daoruziti">导入字体</string>
