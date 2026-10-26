@@ -669,8 +669,10 @@ fun SwipeableKeyButton(
     val longPressBubbleDelayMs = SettingsPreferences.getLongPressBubbleDelayMs(LocalContext.current)
     
     val density = LocalDensity.current
-    val swipeUpThreshold = with(density) { (-50).dp.toPx() }
-    val swipeDownThreshold = with(density) { 50.dp.toPx() }
+    val verticalThreshold = GestureThresholds.vertical(buttonBounds.height, density.density)
+    val horizontalThreshold = GestureThresholds.horizontal(buttonBounds.width, density.density)
+    val swipeUpThreshold = -verticalThreshold
+    val swipeDownThreshold = verticalThreshold
     val bubbleShowThresholdUp = swipeUpThreshold
     val bubbleShowThresholdDown = swipeDownThreshold
     // 水平位移超过该值视为横向手势（如键盘区滑动移动光标），不再触发点击。
@@ -678,8 +680,8 @@ fun SwipeableKeyButton(
     // 消除 30~60dp 位移区间"点击被取消但光标手势未激活"的死区（打字吃键）。
     val horizontalClickCancelThreshold = with(density) { 60.dp.toPx() }
     // 左/右滑触发阈值
-    val swipeLeftThreshold = with(density) { (-50).dp.toPx() }
-    val swipeRightThreshold = with(density) { 50.dp.toPx() }
+    val swipeLeftThreshold = -horizontalThreshold
+    val swipeRightThreshold = horizontalThreshold
     // 横向接管阈值：低于父层光标手势激活阈值（60dp），使配置了左右滑的键优先接管横向滑动
     val horizontalSwipeSuppressThreshold = with(density) { 30.dp.toPx() }
     val suppressCursorMove = LocalSuppressCursorMove.current
@@ -1483,10 +1485,12 @@ fun SwipeableIconKeyButton(
     val keyLabelFontFamily = AppFonts.keyLabelFontFamily
     
     val density = LocalDensity.current
-    val swipeUpThreshold = with(density) { (-50).dp.toPx() }
-    val swipeDownThreshold = with(density) { 50.dp.toPx() }
-    val swipeLeftThreshold = with(density) { (-50).dp.toPx() }
-    val swipeRightThreshold = with(density) { 50.dp.toPx() }
+    val verticalThreshold = GestureThresholds.vertical(buttonBounds.height, density.density)
+    val horizontalThreshold = GestureThresholds.horizontal(buttonBounds.width, density.density)
+    val swipeUpThreshold = -verticalThreshold
+    val swipeDownThreshold = verticalThreshold
+    val swipeLeftThreshold = -horizontalThreshold
+    val swipeRightThreshold = horizontalThreshold
     // 横向接管阈值：低于父层光标手势激活阈值（60dp），使配置了左右滑的键优先接管横向滑动
     val horizontalSwipeSuppressThreshold = with(density) { 30.dp.toPx() }
     val suppressCursorMove = LocalSuppressCursorMove.current
@@ -1494,8 +1498,8 @@ fun SwipeableIconKeyButton(
     val bubbleShowThresholdDown = swipeDownThreshold
     
     // 上滑清空/下滑撤回需要更大的滑动距离，防止误触
-    val clearActionThreshold = with(density) { (-50).dp.toPx() }
-    val undoActionThreshold = with(density) { 50.dp.toPx() }
+    val clearActionThreshold = -verticalThreshold
+    val undoActionThreshold = verticalThreshold
     // 水平位移超过该值视为横向手势（如键盘区滑动移动光标），不再触发点击。
     // 与 KeyboardView 光标手势激活阈值（activationThresholdPx = 60dp）对齐，
     // 消除 30~60dp 位移区间"点击被取消但光标手势未激活"的死区（打字吃键）。
