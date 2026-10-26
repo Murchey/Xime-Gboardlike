@@ -27,6 +27,8 @@ data class InstallResult(
     val sha256Status: Sha256Status = null,
     /** 清单系统判定的文件冲突明细；非空时安装被阻止，供 UI 展示冲突详情。 */
     val conflicts: List<FileConflictInfo> = emptyList(),
+    /** 升级事务；调用方部署成功后 commit，失败时 rollback。 */
+    val transaction: UpgradeTransaction? = null,
 )
 
 /** 方案列表拉取结果（含命中的来源主机名，供 UI 显示「从哪个端点拉的」）。 */
@@ -549,6 +551,7 @@ object XimeIndexSource {
         scheme: MarketScheme,
         resolveDepUrl: (String) -> String? = { null },
         switchEnabled: Boolean = true,
+        withRollback: Boolean = false,
     ): InstallResult = withContext(Dispatchers.IO) {
         if (!SchemaManager.isSchemeDownloaded(context, scheme.id)) {
             return@withContext InstallResult(false, failureReason = tr(R.string.s_yasuobaobucunzai_qingxianxiazai))
@@ -562,6 +565,7 @@ object XimeIndexSource {
             dependencies = scheme.dependencies,
             resolveDepUrl = resolveDepUrl,
             switchEnabled = switchEnabled,
+            withRollback = withRollback,
         )
         if (!result.success) {
             val reason = result.failureReason ?: result.conflicts.joinToString("、") { c ->
@@ -573,6 +577,10 @@ object XimeIndexSource {
                 conflicts = result.conflicts,
             )
         }
-        InstallResult(success = true, unresolvedDeps = result.unresolvedDeps)
+        InstallResult(
+            success = true,
+            unresolvedDeps = result.unresolvedDeps,
+            transaction = result.transaction,
+        )
     }
 }
