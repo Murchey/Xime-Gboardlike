@@ -17,6 +17,9 @@ class DoublePinyinFinalsTest {
             - xform/[iu]ang$/Ⓛ/
             - xform/ing$|uai$/Ⓚ/
             - xform/^sh/Ⓤ/
+            - xform/^ch/Ⓘ/
+            - xform/^zh/Ⓥ/
+            - xform/ui$/Ⓥ/
             - xform/^[aoe]/Ⓞ/
             """.trimIndent()
         )
@@ -25,7 +28,9 @@ class DoublePinyinFinalsTest {
         assertEquals("uan", map['r'])
         assertEquals("iang\nuang", map['l'])
         assertEquals("ing\nuai", map['k'])
-        assertFalse(map.containsKey('u'))
+        assertEquals("sh", map['u'])
+        assertEquals("ch", map['i'])
+        assertEquals("zh\nui", map['v'])
         assertEquals("a", map['a'])
     }
 
