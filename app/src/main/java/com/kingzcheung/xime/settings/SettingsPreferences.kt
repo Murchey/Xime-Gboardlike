@@ -368,6 +368,9 @@ object SettingsPreferences {
     /** 在字母键右上角显示长按/上滑符号提示（默认显示）。 */
     private const val KEY_SHOW_LETTER_HINT_SYMBOLS = "show_letter_hint_symbols"
 
+    /** 双拼方案下用韵母替换字母键右上角符号（默认关闭）。 */
+    private const val KEY_SHOW_DOUBLE_PINYIN_FINALS = "show_double_pinyin_finals"
+
     /** 字母键显示大小写：小写 / 大写；小写时可跟随 Shift。 */
     private const val KEY_LETTER_DISPLAY_CASE = "letter_display_case"
     private const val KEY_LETTER_CASE_FOLLOW_SHIFT = "letter_case_follow_shift"
@@ -464,6 +467,13 @@ object SettingsPreferences {
 
     fun setShowLetterHintSymbols(context: Context, show: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_SHOW_LETTER_HINT_SYMBOLS, show).apply()
+    }
+
+    fun showDoublePinyinFinals(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_SHOW_DOUBLE_PINYIN_FINALS, false)
+
+    fun setShowDoublePinyinFinals(context: Context, show: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_SHOW_DOUBLE_PINYIN_FINALS, show).apply()
     }
 
     fun getLetterDisplayCase(context: Context): String =

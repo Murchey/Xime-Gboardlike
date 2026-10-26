@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.kingzcheung.xime.settings.DoublePinyinFinals
 import com.kingzcheung.xime.settings.SettingsPreferences
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -242,6 +243,44 @@ fun LayoutDisplaySettingsContent(
                         thickness = 0.5.dp,
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
+
+                    if (DoublePinyinFinals.isDoublePinyin(SettingsPreferences.getCurrentSchema(context))) {
+                        var showDoublePinyinFinals by remember {
+                            mutableStateOf(SettingsPreferences.showDoublePinyinFinals(context))
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = tr(R.string.s_shuangpin_yunmu_tihuan_fuhao),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = tr(R.string.s_shuangpin_yunmu_tihuan_fuhao_fu),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = showDoublePinyinFinals,
+                                onCheckedChange = { enabled ->
+                                    showDoublePinyinFinals = enabled
+                                    SettingsPreferences.setShowDoublePinyinFinals(context, enabled)
+                                }
+                            )
+                        }
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                    }
 
                     var letterCaseUpper by remember {
                         mutableStateOf(

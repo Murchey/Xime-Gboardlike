@@ -366,6 +366,8 @@
     <string name="s_daochushibai">导出失败：%1$s</string>
     <string name="s_baocunwanzhengbeifendaoxiazaimulu">保存完整备份到下载目录</string>
     <string name="s_daochu_rime_shuju">导出 Rime 数据到文件管理器</string>
+    <string name="s_shuangpin_yunmu_tihuan_fuhao">字母键显示双拼韵母</string>
+    <string name="s_shuangpin_yunmu_tihuan_fuhao_fu">用当前双拼方案的韵母替换键面右上角符号</string>
     <string name="s_daochu_rime_shuju_fu">保存到 Download/XimeGboard/rime，可直接浏览、复制、编辑</string>
     <string name="s_yidaochu_rime_shuju">已导出 %1$d 个文件到 %2$s</string>
     <string name="s_huanji_lixiankeyong_yuyunduant_78157">换机 / 离线可用；与云端同一个包格式</string>
