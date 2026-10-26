@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -1188,26 +1189,46 @@ fun SwipeableKeyButton(
                 val hintLineCount = keyLabel.count { it == '\n' } + 1
                 val displayText = if (hintLineCount > 1) keyLabel
                     else if (keyLabel.length <= 4) keyLabel else keyLabel.take(4)
-                Text(
-                    text = displayText,
-                    color = textColor.copy(alpha = if (hintExtraScale > 1f) hintAlpha else 0.6f),
-                    fontSize = effectiveSwipeFontSize,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    maxLines = hintLineCount,
-                    // 角标模式压掉默认行框：标签字体 metrics 的 ascent 大，不压行高字形会
-                    // 沉在行框下半部，视觉上贴不到键顶（与下方 badge 的 1.sp 同款）
-                    lineHeight = if (swipeHintCorner && hintLineCount == 1) 1.sp else androidx.compose.ui.unit.TextUnit.Unspecified,
-                    modifier = if (swipeHintCorner) Modifier
-                        .align(Alignment.TopEnd)
-                        // 平板大键上标离角更远（贴角顶点太局促），手机横屏维持紧凑 2/4dp
-                        .padding(
-                            top = if (hintExtraScale > 1f) 5.dp else 2.dp,
-                            end = if (hintExtraScale > 1f) 10.dp else 4.dp,
-                        )
-                    else Modifier.offset(y = -hintOffset),
-                    fontFamily = keyLabelFontFamily
-                )
+                val hintModifier = if (swipeHintCorner) Modifier
+                    .align(Alignment.TopEnd)
+                    // 平板大键上标离角更远（贴角顶点太局促），手机横屏维持紧凑 2/4dp
+                    .padding(
+                        top = if (hintExtraScale > 1f) 5.dp else 2.dp,
+                        end = if (hintExtraScale > 1f) 10.dp else 4.dp,
+                    )
+                else Modifier.offset(y = -hintOffset)
+                if (hintLineCount > 1) {
+                    // 多个韵母固定在同一列中逐行绘制，避免 Text 的多行基线和字宽造成视觉错位。
+                    Column(
+                        modifier = hintModifier.width(30.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        displayText.lineSequence().forEach { line ->
+                            Text(
+                                text = line,
+                                color = textColor.copy(alpha = if (hintExtraScale > 1f) hintAlpha else 0.6f),
+                                fontSize = effectiveSwipeFontSize,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                lineHeight = effectiveSwipeFontSize,
+                                fontFamily = keyLabelFontFamily,
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = displayText,
+                        color = textColor.copy(alpha = if (hintExtraScale > 1f) hintAlpha else 0.6f),
+                        fontSize = effectiveSwipeFontSize,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        lineHeight = if (swipeHintCorner) 1.sp else androidx.compose.ui.unit.TextUnit.Unspecified,
+                        modifier = hintModifier,
+                        fontFamily = keyLabelFontFamily,
+                    )
+                }
             }
 
             if (!swipeDownKeyLabel.isNullOrEmpty()) {
