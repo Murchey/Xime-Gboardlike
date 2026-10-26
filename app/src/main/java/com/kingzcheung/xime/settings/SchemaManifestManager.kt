@@ -254,6 +254,53 @@ object SchemaManifestManager {
         }
     }
 
+    /** 旧包独有、且不属于用户数据/共享文件的文件（纯函数，便于单测）。 */
+    internal fun obsoleteFilesOnlyInOld(
+        oldFiles: Collection<String>,
+        newFiles: Collection<String>,
+        preserved: Collection<String>,
+    ): List<String> = oldFiles
+        .filter { it !in newFiles && it !in preserved }
+        .distinct()
+
+    /**
+     * 升级后清理旧包独有文件：只删除仍由本包 claim 的文件；
+     * 用户数据（userdb/custom_phrase/custom.yaml）和共享预设不删。
+     */
+    suspend fun pruneObsoleteFiles(
+        context: Context,
+        schemeId: String,
+        obsolete: List<String>,
+    ): Int = withContext(Dispatchers.IO) {
+        if (obsolete.isEmpty()) return@withContext 0
+        val rimeDir = SchemaManager.getRimeDir(context)
+        val registry = loadRegistry(context)
+        val allFiles = registry.optJSONObject("files") ?: return@withContext 0
+        val preserved = sharedFileNames(context) + obsolete.filter { isUserDataFile(it) }
+        var removed = 0
+        for (fileName in obsolete.distinct()) {
+            if (fileName in preserved) continue
+            val entry = allFiles.optJSONObject(fileName) ?: continue
+            val claimants = entry.optJSONArray("claimedBy")?.let(::jsonArrayToList) ?: emptyList()
+            if (!claimants.contains(schemeId)) continue
+            val remaining = claimants.filter { it != schemeId }
+            if (remaining.isEmpty()) {
+                val file = File(rimeDir, fileName)
+                if (file.isFile) {
+                    file.delete()
+                    removed++
+                }
+                allFiles.remove(fileName)
+            } else {
+                entry.put("claimedBy", JSONArray(remaining))
+            }
+        }
+        registry.put("files", allFiles)
+        saveRegistry(context, registry)
+        Log.i(TAG, "pruned $removed obsolete file(s) for $schemeId")
+        removed
+    }
+
     /** 在安装依赖后，把依赖包 id 追加到主方案的清单中。 */
     suspend fun appendDependencies(
         context: Context,
