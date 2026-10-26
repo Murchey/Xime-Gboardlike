@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kingzcheung.xime.settings.BuiltinPackages
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.viewmodel.LocalPackageItem
 import com.kingzcheung.xime.viewmodel.LocalPackagePhase
@@ -556,7 +557,7 @@ private fun LocalPackageCard(
                     item.downloaded -> OutlinedButton(onClick = onInstall) { Text(tr(R.string.s_anzhuang)) }
                 }
                 Spacer(Modifier.weight(1f))
-                if (item.packageId != "builtin" && item.downloaded) {
+                if (!BuiltinPackages.isBuiltin(item.packageId) && item.downloaded) {
                     IconButton(
                         onClick = onDelete,
                         modifier = Modifier.size(36.dp),

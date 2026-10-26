@@ -4,6 +4,7 @@ import com.kingzcheung.xime.util.FileLogger
 import android.content.Context
 import android.util.Log
 import com.kingzcheung.xime.BuildConfig
+import com.kingzcheung.xime.settings.BuiltinPackages
 import com.kingzcheung.xime.settings.BuiltinSeedState
 import com.kingzcheung.xime.settings.PersonalDictManager
 import com.kingzcheung.xime.settings.SchemaConfigHelper
@@ -285,12 +286,6 @@ object RimeConfigHelper {
     }
 
     private fun copyAssetsToRimeDir(context: Context, targetDir: File): Boolean {
-        // 用户卸载内置方案包后，不再从 assets 自动恢复；恢复入口在方案管理页。
-        if (BuiltinSeedState.isDisabled(context)) {
-            ensureDefaultYaml(context, targetDir)
-            syncBuiltinDefaultCustom(context, targetDir)
-            return false
-        }
         // 判断 rime/ 是否已部署过任何方案（存在任意 <name>.schema.yaml）。
         // 全新安装时 rime/ 为空 → 全量复制内置默认方案与系统文件，保证开箱即用。
         // 一旦已部署过方案（内置旧版或从市场安装的第三方方案），app 更新时
@@ -298,7 +293,8 @@ object RimeConfigHelper {
         // 需要更新的方案统一走方案市场。此判定不依赖具体方案 id/文件名，天然鲁棒。
         val alreadyHasSchemas = targetDir.listFiles()
             ?.any { it.isFile && it.name.endsWith(".schema.yaml") } == true
-        if (alreadyHasSchemas) {
+        // 有内置包被卸载时也走增量路径，避免全量复制把已卸载的包灌回来。
+        if (alreadyHasSchemas || BuiltinSeedState.isDisabled(context)) {
             // 仅兜底确保 default.yaml 存在（librime 入口必需），缺失时补一份，不覆盖已有。
             ensureDefaultYaml(context, targetDir)
             // 默认方案强制更新（维护者决策）：默认方案随 app 发布、由维护者统一
@@ -455,6 +451,7 @@ object RimeConfigHelper {
      */
     private fun updateBuiltinAssets(context: Context, targetDir: File): Int {
         var updated = 0
+        val disabled = BuiltinSeedState.disabledPackages(context)
         fun sync(assetSub: String, targetSub: File) {
             val assetPath = if (assetSub.isEmpty()) ASSETS_RIME_DIR else "$ASSETS_RIME_DIR/$assetSub"
             for (fileName in context.assets.list(assetPath) ?: return) {
@@ -469,6 +466,7 @@ object RimeConfigHelper {
                     fileName.endsWith(".txt") || fileName.endsWith(".json") ||
                     fileName.endsWith(".db")
                 ) {
+                    if (BuiltinPackages.packageFor(childAsset) in disabled) continue
                     // *.custom.yaml 是补丁层文件（用户定制 + app 运行时写入：
                     // setEnabledSchemas 的启用列表、DoEnsureT9SchemaPatches 的
                     // T9 注入与个人词库 packs），覆盖会抹掉用户配置与第三方方案——
@@ -508,14 +506,18 @@ object RimeConfigHelper {
     suspend fun restoreBuiltinSeed(context: Context): Boolean = withContext(Dispatchers.IO) {
         val rimeDir = File(context.filesDir, "rime")
         if (!rimeDir.exists()) rimeDir.mkdirs()
+        val previous = BuiltinSeedState.disabledPackages(context)
+        BuiltinSeedState.clearAll(context)
         val copied = try {
             copyAssetsRecursively(context, ASSETS_RIME_DIR, rimeDir)
         } catch (e: IOException) {
             FileLogger.e(TAG, "Failed to restore builtin assets", e)
             false
         }
-        if (!copied) return@withContext false
-        BuiltinSeedState.setDisabled(context, false)
+        if (!copied) {
+            previous.forEach { BuiltinSeedState.setDisabled(context, it, true) }
+            return@withContext false
+        }
         seedBuiltinPackageVersion(context)
         syncBuiltinDefaultCustom(context, rimeDir)
         SchemaManifestManager.refreshBuiltinManifest(context)
@@ -584,7 +586,13 @@ object RimeConfigHelper {
         }
     }
 
-    private fun copyAssetsRecursively(context: Context, assetPath: String, targetDir: File): Boolean {
+    private fun copyAssetsRecursively(
+        context: Context,
+        assetPath: String,
+        targetDir: File,
+        relativePath: String = "",
+        disabled: Set<String> = BuiltinSeedState.disabledPackages(context),
+    ): Boolean {
         val files = context.assets.list(assetPath)
         
         if (files.isNullOrEmpty()) {
@@ -596,6 +604,7 @@ object RimeConfigHelper {
         for (fileName in files) {
             val fullAssetPath = "$assetPath/$fileName"
             val targetFile = File(targetDir, fileName)
+            val relPath = if (relativePath.isEmpty()) fileName else "$relativePath/$fileName"
             
             try {
                 val subFiles = context.assets.list(fullAssetPath)
@@ -603,7 +612,7 @@ object RimeConfigHelper {
                     if (!targetFile.exists()) {
                         targetFile.mkdirs()
                     }
-                    if (copyAssetsRecursively(context, fullAssetPath, targetFile)) {
+                    if (copyAssetsRecursively(context, fullAssetPath, targetFile, relPath, disabled)) {
                         copiedAny = true
                     }
                 } else if (
@@ -614,6 +623,7 @@ object RimeConfigHelper {
                     // 除 yaml/lua 外，OpenCC 词典（.txt/.json）与 lua 数据（.db）也必须随
                     // assets 同步到用户 rime 目录，否则 simplifier 找不到 s2t.json/词典，
                     // 简繁切换会静默失效。
+                    if (BuiltinPackages.packageFor(relPath) in disabled) continue
                     val needsCopy = !targetFile.exists() ||
                         !assetContentEquals(context, fullAssetPath, targetFile)
                     if (needsCopy) {
