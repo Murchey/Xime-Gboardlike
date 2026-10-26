@@ -98,6 +98,7 @@ object KeyTapLogger {
     fun pushKeyGeometry() {
         // 缺键时不要用半张真实表混静态表，等 26 键齐全再切
         if (!geometryReady || geometryCount < 26) return
+        Log.i(TAG, "pushKeyGeometry: 26 keys")
         runCatching { CorrectionNative.setKeyGeometry(keyCenters, keySizes) }
     }
 
