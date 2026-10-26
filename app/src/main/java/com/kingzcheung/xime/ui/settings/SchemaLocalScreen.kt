@@ -392,6 +392,9 @@ fun SchemaLocalContent(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            if (uiState.builtinSeedDisabled) {
+                RestoreBuiltinCard(onRestore = { viewModel.restoreBuiltinSeed() })
+            }
             if (uiState.packages.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -435,6 +438,36 @@ fun SchemaLocalContent(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RestoreBuiltinCard(onRestore: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(top = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(
+                text = tr(R.string.s_huifuneizhifangan),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = tr(R.string.s_huifuneizhifangan_fu),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(onClick = onRestore) {
+                Text(tr(R.string.s_huifu))
             }
         }
     }
