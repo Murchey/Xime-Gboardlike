@@ -523,6 +523,11 @@ void correction_set_taps(const char* letters, const float* off_x,
   rime::CorrectionPriors::Instance().SetTaps(taps);
 }
 
+void correction_set_key_geometry(const float* centers_xy,
+                                 const float* sizes_wh, int n) {
+  rime::correction::SetKeyGeometry(centers_xy, sizes_wh, n);
+}
+
 void correction_set_enabled(int enabled) {
   rime::CorrectionPriors::Instance().SetEnabled(enabled != 0);
 }

@@ -8,6 +8,7 @@
 #define RIME_CORRECTION_GEOMETRY_H_
 
 #include <array>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -31,19 +32,32 @@ constexpr float kRowPitch = 0.2604f;      // 行距（按键区高归一化，�
 // jiucuo 对 TSI 的统计；跨行候选加 cross_row_penalty 抑制）
 bool SameRow(int a, int b);
 
+// 用 Kotlin 实测的 26 键几何覆盖静态表。
+// centers_xy: [x0,y0,...,x25,y25]，x/键盘宽、y/按键区高；
+// sizes_wh:   [w0,h0,...,w25,h25]，键宽/键盘宽、键高/按键区高。
+// 无效项（NaN/<=0）回退静态值。
+void SetKeyGeometry(const float* centers_xy, const float* sizes_wh, int n);
+
 class NeighborTable {
  public:
   static const NeighborTable& Instance();
 
-  // 字母 index（0..25）→ 邻键 index 列表
-  const std::vector<int>& Neighbors(int letter) const { return neighbors_[letter]; }
+  // 字母 index（0..25）→ 邻键 index 列表（返回值拷贝，避免重建时读到半张表）
+  std::vector<int> Neighbors(int letter) const {
+    std::lock_guard<std::mutex> lock(neighbors_mutex_);
+    return neighbors_[letter];
+  }
 
   // 距离（键宽/高归一化），用于几何信道打分
   float Distance(int a, int b) const;
 
+  // 几何变化后重建邻键表
+  void Rebuild() const;
+
  private:
   NeighborTable();
-  std::array<std::vector<int>, 26> neighbors_;
+  mutable std::array<std::vector<int>, 26> neighbors_;
+  mutable std::mutex neighbors_mutex_;
 };
 
 
