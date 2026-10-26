@@ -41,7 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.kingzcheung.xime.R
@@ -53,7 +52,7 @@ import com.kingzcheung.xime.ui.keyboard.AppFonts
 import java.io.File
 
 /**
- * 字体设置：在「系统默认 / 内置字体 / 已导入字体」之间选择，一次选择全局生效。
+ * 字体设置：在「系统默认 / 已导入字体」之间选择，一次选择全局生效。
  *
  * 五个字体槽位（按键主字 / 字根 / 候选词 / 注释 / 界面）始终指向同一款字体；
  * 导入的字体按 SHA-256 去重，文件保存在应用私有目录。
@@ -89,8 +88,8 @@ fun FontSettingsContent(onBack: () -> Unit) {
 
     fun deleteFont(path: String) {
         if (currentPath == path) {
-            FontPreferences.setAll(context, AppFonts.BUILTIN_SENTINEL)
-            currentPath = AppFonts.BUILTIN_SENTINEL
+            FontPreferences.setAll(context, AppFonts.SYSTEM_SENTINEL)
+            currentPath = AppFonts.SYSTEM_SENTINEL
             KeysConfigHelper.reloadFonts(context)
         }
         FontImporter.delete(context, path)
@@ -142,16 +141,6 @@ fun FontSettingsContent(onBack: () -> Unit) {
                         selected = currentPath == AppFonts.SYSTEM_SENTINEL,
                         onClick = { applySelection(AppFonts.SYSTEM_SENTINEL) },
                         fontFamily = FontFamily.Default,
-                    )
-                    FontDivider()
-                    FontOptionRow(
-                        title = tr(R.string.s_neizhiziti),
-                        subtitle = tr(R.string.s_neizhiziti_fu),
-                        selected = currentPath.isBlank() || currentPath == AppFonts.BUILTIN_SENTINEL,
-                        onClick = { applySelection(AppFonts.BUILTIN_SENTINEL) },
-                        fontFamily = remember {
-                            FontFamily(Font(AppFonts.BUILTIN_FONT_ASSET, context.assets))
-                        },
                     )
                     importedFonts.forEach { font ->
                         FontDivider()
@@ -292,10 +281,7 @@ private fun FontPreviewCard(version: Int, currentPath: String) {
     val context = LocalContext.current
     val keyFamily: FontFamily = remember(version, currentPath) {
         when (currentPath) {
-            AppFonts.SYSTEM_SENTINEL -> FontFamily.Default
-            "", AppFonts.BUILTIN_SENTINEL -> runCatching {
-                FontFamily(Font(AppFonts.BUILTIN_FONT_ASSET, context.assets))
-            }.getOrDefault(FontFamily.Default)
+            AppFonts.SYSTEM_SENTINEL, "", AppFonts.BUILTIN_SENTINEL -> FontFamily.Default
             else -> runCatching {
                 FontFamily(Typeface.createFromFile(File(context.filesDir, "rime/$currentPath")))
             }.getOrDefault(FontFamily.Default)

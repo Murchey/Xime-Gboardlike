@@ -36,19 +36,33 @@ object FontPreferences {
         prefs(context).edit().remove(slot.prefKey).apply()
     }
 
-    /** 五个槽位写入同一值（系统默认 / 内置 / 导入字体路径）。 */
+    /** 五个槽位写入同一值（系统默认 / 导入字体路径）。 */
     fun setAll(context: Context, value: String) {
         prefs(context).edit().apply {
             FontSlot.entries.forEach { putString(it.prefKey, value) }
         }.apply()
     }
 
-    /** 当前全局字体：以按键主字槽位为准；空值代表历史配置，仍按内置字体处理。 */
+    /** 当前全局字体：以按键主字槽位为准；空值/旧内置字体统一回退系统字体。 */
     fun currentGlobalSelection(context: Context): String =
-        get(context, FontSlot.KEY)
+        AppFonts.normalizeSelection(get(context, FontSlot.KEY))
 
     fun clearAll(context: Context) {
         prefs(context).edit().clear().apply()
+    }
+
+    /** 旧版内置字体已从 APK 移除：把持久化的 @builtin 迁移为 @system。 */
+    fun migrateLegacyBuiltin(context: Context) {
+        val p = prefs(context)
+        val editor = p.edit()
+        var changed = false
+        for (slot in FontSlot.entries) {
+            if (p.getString(slot.prefKey, "") == AppFonts.BUILTIN_SENTINEL) {
+                editor.putString(slot.prefKey, AppFonts.SYSTEM_SENTINEL)
+                changed = true
+            }
+        }
+        if (changed) editor.apply()
     }
 
     /** 界面字体是否生效（默认开启，选过字体就换整个 App 的字体）。 */
@@ -61,8 +75,8 @@ object FontPreferences {
 
     /** 把用户选择叠加到 YAML 解析出的字体配置上（用户值优先）。 */
     fun applyOverrides(context: Context, base: KeyboardFontConfig): KeyboardFontConfig {
-        // 未选字体时统一用内置字体（思源 + Google Sans）；@system 表示显式选择系统默认
-        fun pick(slot: FontSlot): String = get(context, slot).ifBlank { AppFonts.BUILTIN_SENTINEL }
+        // 未选字体 / 旧 @builtin 统一跟随系统；导入字体路径原样使用
+        fun pick(slot: FontSlot): String = AppFonts.normalizeSelection(get(context, slot))
 
         return base.copy(
             keyFont = pick(FontSlot.KEY),

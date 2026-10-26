@@ -15,6 +15,7 @@ import com.kingzcheung.xime.plugin.core.runtime.PluginManager
 import com.kingzcheung.xime.rime.RimeConfigHelper
 import com.kingzcheung.xime.model.ModelRuntime
 import com.kingzcheung.xime.rime.RimeEngine
+import com.kingzcheung.xime.settings.FontPreferences
 import com.kingzcheung.xime.settings.KeysConfigHelper
 import com.kingzcheung.xime.ui.keyboard.AppFonts
 import com.kingzcheung.xime.settings.SettingsPreferences
@@ -84,6 +85,7 @@ class XimeApplication : Application(), ImageLoaderFactory {
             }.start()
         }
         AppFonts.initialize(this)
+        FontPreferences.migrateLegacyBuiltin(this)
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {

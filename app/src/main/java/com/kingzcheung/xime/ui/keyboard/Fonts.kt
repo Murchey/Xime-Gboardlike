@@ -21,12 +21,15 @@ object AppFonts {
     private const val TAG = "AppFonts"
     private const val CHAI_PUA_FONT = "ChaiPUA-0.2.7-snow.ttf"
 
-    /** 内置默认字体（思源 + Google Sans VF），随 APK 打包；配置里用 [BUILTIN_SENTINEL] 表示它。 */
-    const val BUILTIN_FONT_ASSET = "fonts/app_default.ttf"
+    /** 旧版内置字体标记：资源已移除，仅用于迁移旧配置；读取时按系统字体处理。 */
     const val BUILTIN_SENTINEL = "@builtin"
 
     /** 系统默认字体：不加载任何自定义字体，交由系统字体回退链渲染。 */
     const val SYSTEM_SENTINEL = "@system"
+
+    /** 空值 / 旧内置字体统一回退系统字体；导入字体路径保持不变。 */
+    fun normalizeSelection(value: String): String =
+        if (value.isBlank() || value == BUILTIN_SENTINEL) SYSTEM_SENTINEL else value
 
     private var initialized = false
     private lateinit var assetManager: AssetManager
@@ -153,15 +156,7 @@ object AppFonts {
      * @return Typeface 或 null（文件不存在或加载失败）
      */
     private fun loadTypeface(fontPath: String): Typeface? {
-        if (fontPath.isBlank() || fontPath == SYSTEM_SENTINEL) return null
-        if (fontPath == BUILTIN_SENTINEL) {
-            return try {
-                Typeface.createFromAsset(assetManager, BUILTIN_FONT_ASSET)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to load builtin font", e)
-                null
-            }
-        }
+        if (fontPath.isBlank() || fontPath == SYSTEM_SENTINEL || fontPath == BUILTIN_SENTINEL) return null
         val fontFile = resolveFontPath(fontPath)
         if (!fontFile.exists()) {
             Log.w(TAG, "Font file not found: ${fontFile.absolutePath}")
@@ -181,15 +176,7 @@ object AppFonts {
      * @return FontFamily 或 null（文件不存在或加载失败）
      */
     private fun loadFontFamily(fontPath: String, typeface: Typeface?): FontFamily? {
-        if (fontPath.isBlank() || fontPath == SYSTEM_SENTINEL) return null
-        if (fontPath == BUILTIN_SENTINEL) {
-            return try {
-                FontFamily(Font(BUILTIN_FONT_ASSET, assetManager))
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to load builtin font family", e)
-                null
-            }
-        }
+        if (fontPath.isBlank() || fontPath == SYSTEM_SENTINEL || fontPath == BUILTIN_SENTINEL) return null
         if (typeface != null) return FontFamily(typeface)
         val fontFile = resolveFontPath(fontPath)
         if (!fontFile.exists()) {
