@@ -6,8 +6,8 @@ import java.io.File
 /**
  * 从双拼 schema 的 speller/algebra 中提取“韵母 -> 按键”映射。
  *
- * 只取 xform 到带圈字母的规则（如 iu$/Ⓠ/），跳过 zh/ch/sh 声母规则、
- * 零声母派生规则和 xlit。结果用于键面右上角显示当前双拼的韵母。
+ * 读取 xform 到带圈字母的规则（如 iu$/Ⓠ/），并保留小鹤方案的 sh/ch/zh
+ * 声母提示；跳过零声母派生规则和 xlit。结果用于键面右上角显示当前双拼提示。
  */
 object DoublePinyinFinals {
 
@@ -86,7 +86,6 @@ object DoublePinyinFinals {
 
     private fun expand(pattern: String): List<String> {
         var p = pattern.trim()
-        if (p.startsWith("^sh") || p.startsWith("^ch") || p.startsWith("^zh")) return emptyList()
         if (p.startsWith("^([aoe]")) return emptyList() // 零声母派生，不是韵母键位
         p = p.removePrefix("^").removeSuffix("$")
         // (.) 只是辅音占位，不进入韵母
