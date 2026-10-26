@@ -51,7 +51,13 @@ object RimeStorage {
 
     /** SAF 选中的目录转真实路径；只支持本地存储。 */
     fun pathFromTreeUri(uri: Uri): File? = runCatching {
-        val docId = DocumentsContract.getTreeDocumentId(uri)
+        pathFromDocumentId(DocumentsContract.getTreeDocumentId(uri))
+    }.getOrNull()
+
+    internal fun pathFromDocumentId(docId: String): File? = runCatching {
+        if (docId.startsWith("raw:", ignoreCase = true)) {
+            return File(docId.removePrefix("raw:")).takeIf { it.isDirectory }
+        }
         val parts = docId.split(':', limit = 2)
         if (parts.size != 2) return null
         val volume = parts[0]
@@ -70,10 +76,13 @@ object RimeStorage {
         val default = defaultDir(context)
         val dest = target.canonicalFile
         require(dest.isDirectory || dest.mkdirs()) { "无法创建目标目录" }
-        require(!dest.path.startsWith(default.canonicalPath + File.separator)) {
+        if (isCustom(context) && customTarget(context)?.canonicalPath == dest.path) {
+            return@runCatching
+        }
+        val privateRoot = context.filesDir.canonicalFile
+        require(!dest.path.startsWith(privateRoot.path + File.separator) && dest != privateRoot) {
             "不能选择应用私有数据目录内部"
         }
-        if (isCustom(context) && customTarget(context)?.canonicalPath == dest.path) return@runCatching
 
         // 把现有数据合入目标目录；不覆盖目标里已有文件，避免破坏用户手动修改
         copyTree(default, dest)

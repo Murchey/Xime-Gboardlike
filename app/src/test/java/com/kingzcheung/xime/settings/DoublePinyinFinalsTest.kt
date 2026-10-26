@@ -44,4 +44,21 @@ class DoublePinyinFinalsTest {
         assertTrue(DoublePinyinFinals.isDoublePinyin("double_pinyin_flypy"))
         assertFalse(DoublePinyinFinals.isDoublePinyin("rime_ice"))
     }
+
+    @Test
+    fun `键位映射跟随方案自身 xlit`() {
+        val map = DoublePinyinFinals.parse(
+            """
+            - xform/ei$/Ⓠ/
+            - xform/uo$/Ⓔ/
+            - xform/ian$/Ⓦ/
+            - xform/er$|iu$/Ⓡ/
+            - xlit/ⓆⓌⒺⓇⓉⓎⓄⓅⒶⓈⒹⒻⒼⒽⒿⓀⓁⓏⓍⒸⓋⒷⓃⓂ/qwertyopasdfghjklzxcvbnm/
+            """.trimIndent()
+        )
+        assertEquals("ei", map['q'])
+        assertEquals("uo", map['e'])
+        assertEquals("ian", map['w'])
+        assertEquals("er/iu", map['r'])
+    }
 }

@@ -42,17 +42,34 @@ object DoublePinyinFinals {
     }
 
     internal fun parse(text: String): Map<Char, String> {
+        // 不同双拼方案的 xlit 键位并不相同（如智能 ABC 的 Ⓔ=e、紫光的 Ⓐ=a），
+        // 优先从方案自身的 xlit 规则建立“带圈字母 -> 键位”映射；旧方案没有
+        // xlit 时再回退到小鹤排列，保证自定义/精简 schema 也能解析。
+        val symbolToKey = linkedMapOf<Char, Char>().apply {
+            putAll(circledToKey)
+            text.lineSequence().forEach { line ->
+                val trimmed = line.substringBefore('#').trim()
+                if (!trimmed.startsWith("- xlit/")) return@forEach
+                val parts = trimmed.removePrefix("- xlit/").split('/')
+                if (parts.size < 2) return@forEach
+                val symbols = parts[0]
+                val keys = parts[1]
+                symbols.zip(keys).forEach { (symbol, key) ->
+                    if (symbol != key && key.isLetter()) this[symbol] = key.lowercaseChar()
+                }
+            }
+        }
         val result = linkedMapOf<Char, MutableList<String>>()
         text.lineSequence().forEach { line ->
-            val trimmed = line.trim()
+            val trimmed = line.substringBefore('#').trim()
             if (!trimmed.startsWith("- xform/")) return@forEach
             val body = trimmed.removePrefix("- xform/")
             val parts = body.split('/')
             if (parts.size < 2) return@forEach
             val source = parts[0]
             val replacement = parts[1]
-            val key = replacement.lastOrNull { circledToKey.containsKey(it) }
-                ?.let { circledToKey[it] } ?: return@forEach
+            val key = replacement.lastOrNull { symbolToKey.containsKey(it) }
+                ?.let { symbolToKey[it] } ?: return@forEach
             if (!key.isLetter()) return@forEach
             val finals = expand(source)
             if (finals.isEmpty()) return@forEach
