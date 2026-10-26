@@ -19,6 +19,7 @@ import com.kingzcheung.xime.settings.KeysConfigHelper
 import com.kingzcheung.xime.settings.PersonalDictManager
 import com.kingzcheung.xime.settings.SchemaManifestManager
 import com.kingzcheung.xime.settings.SchemaManager
+import com.kingzcheung.xime.settings.SchemaPresets
 import com.kingzcheung.xime.ui.theme.KeyboardThemes
 import com.kingzcheung.xime.settings.SchemaMeta
 import com.kingzcheung.xime.settings.SettingsPreferences
@@ -36,7 +37,7 @@ import kotlinx.coroutines.withContext
 data class SchemaUiState(
     val allSchemas: List<SchemaMeta> = emptyList(),
     val enabledSchemas: List<String> = emptyList(),
-    val currentSchema: String = "wubi86",
+    val currentSchema: String = "rime_ice",
     val isDeploying: Boolean = false,
     val isDownloading: Boolean = false,
     val toastMessage: String? = null,
@@ -117,6 +118,45 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
                 rollbackSchemaSelection(previous)
                 showToast(tr(R.string.s_qingdianji_bushu_anniu))
             }
+        }
+    }
+
+    /** 应用方案预设：启用目标方案、部署、切换当前方案。 */
+    fun applyPreset(schemaId: String) {
+        if (_uiState.value.isDeploying) return
+        val preset = SchemaPresets.ALL.firstOrNull { it.schemaId == schemaId } ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDeploying = true) }
+            val current = withContext(Dispatchers.IO) { SchemaManager.getEnabledSchemas(context) }
+            // 双拼预设互斥，保留五笔/拼音等非预设方案
+            val newEnabled = (current.filter { it !in SchemaPresets.schemaIds } + schemaId).distinct()
+            val (deployed, available) = withContext(Dispatchers.IO) {
+                SchemaManager.setEnabledSchemas(context, newEnabled)
+                RimeConfigHelper.ensureBuiltinBaseFiles(context)
+                PersonalDictManager.ensureSchemaPacks(context)
+                KeysConfigHelper.loadConfig(context)
+                KeyboardThemes.reload(context)
+                val engine = RimeEngine.getInstance()
+                val ok = engine.deploy()
+                if (ok) RimeConfigHelper.storeDeploymentHash(context)
+                ok to if (ok) engine.getAvailableSchemas() else emptyArray<String>()
+            }
+            _uiState.update { it.copy(isDeploying = false, enabledSchemas = newEnabled) }
+            if (deployed && schemaId in available) {
+                SettingsPreferences.setCurrentSchema(context, schemaId)
+                val switched = RimeEngine.getInstance().switchSchema(schemaId)
+                if (switched) {
+                    _uiState.update { it.copy(currentSchema = schemaId) }
+                    val name = _uiState.value.allSchemas.firstOrNull { it.schemaId == schemaId }?.name
+                        ?: preset.fallbackName
+                    showToast(tr(R.string.s_yiqiehuandao, name))
+                } else {
+                    showToast(tr(R.string.s_cikubushuzhong_qingshaohouzaiq_7d5ce))
+                }
+            } else {
+                showToast(tr(R.string.s_bushushibai))
+            }
+            refresh()
         }
     }
 
