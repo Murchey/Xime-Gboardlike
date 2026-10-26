@@ -13,6 +13,7 @@ import com.kingzcheung.xime.settings.FileConflictInfo
 import com.kingzcheung.xime.settings.SchemaManifestManager
 import com.kingzcheung.xime.settings.SchemaManager
 import com.kingzcheung.xime.settings.SchemaManager.InstallFromDirResult
+import com.kingzcheung.xime.settings.UpgradeTransaction
 import com.kingzcheung.xime.rime.RimeConfigHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -211,11 +212,22 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
             _uiState.update {
                 it.copy(conflictPackageId = null, installingId = pkgId, phase = LocalPackagePhase.INSTALLING)
             }
+            // 卸载前备份旧包；安装/部署失败时整体回滚
+            val backups = mutableListOf<UpgradeTransaction>()
             for (sid in _uiState.value.conflictingSchemeIds) {
-                val uninstallOk = withContext(Dispatchers.IO) {
+                val backup = withContext(Dispatchers.IO) {
                     try {
                         // 先刷新 builtin 清单：APP 更新后可能新增了未被清单追踪的文件
                         SchemaManifestManager.refreshBuiltinManifest(context)
+                        SchemaManifestManager.prepareUpgradeTransaction(context, sid)
+                    } catch (e: Exception) {
+                        android.util.Log.e("SchemaLocalViewModel", "backup $sid failed", e)
+                        null
+                    }
+                }
+                if (backup != null) backups += backup
+                val uninstallOk = withContext(Dispatchers.IO) {
+                    try {
                         SchemaManifestManager.uninstallWithManifest(context, sid).success
                     } catch (e: Exception) {
                         android.util.Log.e("SchemaLocalViewModel", "uninstall $sid failed", e)
@@ -223,6 +235,10 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
                     }
                 }
                 if (!uninstallOk) {
+                    withContext(Dispatchers.IO) {
+                        backups.asReversed().forEach { it.rollback() }
+                        RimeConfigHelper.deployInstalledSchema(context)
+                    }
                     _uiState.update {
                         it.copy(installingId = null, phase = null, conflictPackageId = null, conflictingSchemeIds = emptyList())
                     }
@@ -248,12 +264,24 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
             if (result.success) {
                 _uiState.update { st -> st.copy(phase = LocalPackagePhase.DEPLOYING) }
                 val deployed = deployAfterInstall()
+                var restored = false
+                if (deployed) {
+                    withContext(Dispatchers.IO) { backups.forEach { it.commit() } }
+                } else if (backups.isNotEmpty()) {
+                    restored = withContext(Dispatchers.IO) {
+                        runCatching { SchemaManifestManager.uninstallWithManifest(context, pkgId) }
+                        backups.asReversed().forEach { it.rollback() }
+                        RimeConfigHelper.deployInstalledSchema(context)
+                        true
+                    }
+                }
                 _uiState.update { st ->
                     st.copy(installingId = null, phase = null, conflictingSchemeIds = emptyList())
                 }
                 val msg = buildString {
                     append(if (deployed) tr(R.string.s_yianzhuang_bingwanchengbushu, item.displayName)
                            else tr(R.string.s_yianzhuang_qingdian_bushu_shen_cf341, item.displayName))
+                    if (restored) append("\n" + tr(R.string.s_yihuigun))
                     if (result.parseFailures.isNotEmpty()) {
                         append(tr(R.string.s_nyixiafanganjiexishibai))
                         result.parseFailures.forEach { append("\n  · $it") }
@@ -261,6 +289,14 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
                 }
                 showToast(msg)
             } else {
+                val restored = withContext(Dispatchers.IO) {
+                    if (backups.isEmpty()) false else {
+                        runCatching { SchemaManifestManager.uninstallWithManifest(context, pkgId) }
+                        backups.asReversed().forEach { it.rollback() }
+                        RimeConfigHelper.deployInstalledSchema(context)
+                        true
+                    }
+                }
                 _uiState.update { st -> st.copy(installingId = null, phase = null, conflictingSchemeIds = emptyList()) }
                 val reason = if (result.failureReason != null) {
                     result.failureReason
@@ -271,7 +307,7 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
                 } else {
                     tr(R.string.s_anzhuangshibai)
                 }
-                showToast(reason)
+                showToast(if (restored) reason + "\n" + tr(R.string.s_yihuigun) else reason)
             }
             loadLocalPackages()
         }
