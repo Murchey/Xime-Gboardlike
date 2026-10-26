@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
+import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.SettingsBackupRestore
 import androidx.compose.material.icons.twotone.Backup
@@ -78,6 +79,7 @@ import com.kingzcheung.xime.plugin.core.model.PluginCategory
 import com.kingzcheung.xime.plugin.core.model.PluginInfo
 import com.kingzcheung.xime.plugin.core.runtime.PluginManager
 import com.kingzcheung.xime.settings.BackupManager
+import com.kingzcheung.xime.settings.RimeDataExporter
 import com.kingzcheung.xime.settings.RimeExportManager
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.settings.SyncManager
@@ -539,6 +541,36 @@ fun BackupSettingsContent(
                                         snackbar.showSnackbar(
                                             result.fold(
                                                 onSuccess = { tr(R.string.s_yidaochuwanzhengbeifendaoxiaza_c8a5d, it.fileName) },
+                                                onFailure = { tr(R.string.s_daochushibai, it.message) }
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    )
+                    SettingsItem(
+                        icon = Icons.Outlined.FolderOpen,
+                        title = tr(R.string.s_daochu_rime_shuju),
+                        subtitle = tr(R.string.s_daochu_rime_shuju_fu),
+                        badgeText = if (busyOp == "exportBrowsable") tr(R.string.s_jinxingzhong) else null,
+                        showArrow = true,
+                        onClick = {
+                            if (busyOp == null) {
+                                busyOp = "exportBrowsable"
+                                scope.launch(Dispatchers.IO) {
+                                    val result = RimeDataExporter.export(context)
+                                    withContext(Dispatchers.Main) {
+                                        busyOp = null
+                                        snackbar.showSnackbar(
+                                            result.fold(
+                                                onSuccess = {
+                                                    tr(
+                                                        R.string.s_yidaochu_rime_shuju,
+                                                        it.fileCount,
+                                                        it.folder,
+                                                    )
+                                                },
                                                 onFailure = { tr(R.string.s_daochushibai, it.message) }
                                             )
                                         )
