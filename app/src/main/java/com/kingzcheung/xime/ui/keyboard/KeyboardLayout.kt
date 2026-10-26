@@ -2069,7 +2069,7 @@ fun KeyboardRowWithConfig(
                 a11yDescription = rawDisplayText.takeIf { hideMainLabel },
                 swipeText = swipeUpText,
                 swipeDownText = swipeDownText,
-                swipeUpKeyLabel = if (hideCornerHint) "" else cornerHintLabel,
+                swipeUpKeyLabel = if (hideCornerHint) "" else effectiveCornerHint,
                 swipeDownKeyLabel = if (hideMainLabel) "" else swipeDownKeyLabel,
                 onSwipe = onSwipeUp,
                 onSwipeDown = onSwipeDown,
