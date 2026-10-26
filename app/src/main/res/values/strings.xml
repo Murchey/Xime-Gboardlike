@@ -89,6 +89,7 @@
     <string name="s_zhengzaibushu">正在部署...</string>
     <string name="s_bushuchenggong">部署成功</string>
     <string name="s_bushushibai">部署失败</string>
+    <string name="s_yihuigun">已回滚到升级前版本</string>
     <string name="s_dangqianxianshiquyubuzhichifud_d72e1">当前显示区域不支持浮动键盘</string>
     <string name="s_tupianyibuzaibendi_wufafasong">图片已不在本地，无法发送</string>
     <string name="s_yifuzhitupian_zhanganshurukuan_96610">已复制图片，长按输入框粘贴</string>

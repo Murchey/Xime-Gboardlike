@@ -227,6 +227,7 @@ object SchemaManager {
         val unresolvedDeps: List<String> = emptyList(),
         val failureReason: String? = null,
         val parseFailures: List<String> = emptyList(),
+        val transaction: UpgradeTransaction? = null,
     )
 
     /**
@@ -242,7 +243,9 @@ object SchemaManager {
         dependencies: List<String> = emptyList(),
         resolveDepUrl: (String) -> String? = { null },
         switchEnabled: Boolean = true,
+        withRollback: Boolean = false,
     ): InstallFromDirResult = withContext(Dispatchers.IO) {
+        var transaction: UpgradeTransaction? = null
         try {
             val dir = getMarketDir(context, packageId)
             if (!dir.exists() || dir.listFiles()?.none { it.isFile } != false) {
@@ -271,9 +274,13 @@ object SchemaManager {
 
             val before = discoverSchemas(context).map { it.schemaId }.toSet()
             FileLogger.i(TAG, "installPackageFromMarketDir: schemas before install: $before")
+            if (withRollback) {
+                transaction = SchemaManifestManager.prepareUpgradeTransaction(context, packageId)
+            }
 
             val ok = installFromMarketToRime(context, packageId)
             if (!ok) {
+                transaction?.rollback()
                 FileLogger.e(TAG, "installPackageFromMarketDir: installFromMarketToRime returned false")
                 return@withContext InstallFromDirResult(success = false, failureReason = tr(R.string.s_anzhuangshibai))
             }
@@ -338,8 +345,15 @@ object SchemaManager {
             }
 
             FileLogger.i(TAG, "installPackageFromMarketDir: success for $packageId, firstSchema=$firstSchema")
-            InstallFromDirResult(success = true, newSchemaIds = newIds, unresolvedDeps = unresolved, parseFailures = parseFailures)
+            InstallFromDirResult(
+                success = true,
+                newSchemaIds = newIds,
+                unresolvedDeps = unresolved,
+                parseFailures = parseFailures,
+                transaction = transaction,
+            )
         } catch (e: Exception) {
+            transaction?.rollback()
             FileLogger.e(TAG, "installPackageFromMarketDir: UNCAUGHT exception for $packageId", e)
             return@withContext InstallFromDirResult(success = false, failureReason = tr(R.string.s_anzhuangyichang, e.message))
         }
