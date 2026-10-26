@@ -14,6 +14,7 @@ import com.kingzcheung.xime.settings.MarketUpdateChecker
 import com.kingzcheung.xime.settings.MarketVersionStore
 import com.kingzcheung.xime.settings.SchemaManager
 import com.kingzcheung.xime.settings.XimeIndexSource
+import com.kingzcheung.xime.rime.RimeConfigHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -263,8 +264,37 @@ class SchemaMarketViewModel(application: Application) : AndroidViewModel(applica
                 return@launch
             }
 
+            // 已安装方案视为升级：安装后立即部署，失败则回滚旧包。
+            val isUpgrade = item.installedVersion != null
             val install = withContext(Dispatchers.IO) {
-                XimeIndexSource.installFromMarket(context, item.scheme, switchEnabled = false)
+                XimeIndexSource.installFromMarket(
+                    context = context,
+                    scheme = item.scheme,
+                    switchEnabled = false,
+                    withRollback = isUpgrade,
+                )
+            }
+
+            if (install.success && isUpgrade) {
+                val deployed = withContext(Dispatchers.IO) { RimeConfigHelper.deployInstalledSchema(context) }
+                if (!deployed) {
+                    val rolledBack = withContext(Dispatchers.IO) {
+                        val tx = install.transaction
+                        if (tx == null) false else {
+                            val ok = tx.rollback()
+                            if (ok) RimeConfigHelper.deployInstalledSchema(context)
+                            ok
+                        }
+                    }
+                    _uiState.update { it.copy(downloadingId = null, downloadProgress = 0f) }
+                    val msg = buildString {
+                        append(tr(R.string.s_bushushibai))
+                        if (rolledBack) append("\n" + tr(R.string.s_yihuigun))
+                    }
+                    showToast(msg)
+                    return@launch
+                }
+                withContext(Dispatchers.IO) { install.transaction?.commit() }
             }
 
             val newVersion = selectedVersion ?: item.scheme.resolvedVersion()?.version
