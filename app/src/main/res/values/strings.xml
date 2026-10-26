@@ -797,6 +797,10 @@
     <string name="s_yidaoru">已导入</string>
     <string name="s_chakanyixiazaihuodaorudefanganbao">查看已下载或导入的方案包</string>
     <string name="s_dangqianfangan">当前方案</string>
+    <string name="s_mohuyin">模糊音</string>
+    <string name="s_mohuyin_fu">zh/z、n/l 等近似音互认</string>
+    <string name="s_mohuyin_shuoming">选择后保存并部署；只对当前方案生效。双拼方案会先做模糊音派生，再做双拼键位映射。</string>
+    <string name="s_baocunbingbushu">保存并部署</string>
     <string name="s_yibianyi">已编译</string>
     <string name="s_sousuocitiaohuobianma">搜索词条或编码</string>
     <string name="s_qingchusousuo">清除搜索</string>
