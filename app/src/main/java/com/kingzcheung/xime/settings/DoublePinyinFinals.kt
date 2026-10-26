@@ -80,7 +80,7 @@ object DoublePinyinFinals {
             if (result[key].isNullOrEmpty()) result[key] = mutableListOf(key.toString())
         }
         return result.mapValues { (_, finals) ->
-            finals.distinct().joinToString("/") { if (it == "v") "ü" else it }
+            finals.distinct().joinToString("\n") { if (it == "v") "ü" else it }
         }
     }
 

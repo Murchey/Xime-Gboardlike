@@ -1966,6 +1966,12 @@ fun KeyboardRowWithConfig(
                 isShifted = isShifted,
                 setting = letterCase,
             )
+            // 双拼韵母使用多行角标显示完整映射；字号略放大，避免短键高下的字形过小。
+            val effectiveSwipeFontSize = if (finalHint != null) {
+                maxOf(config.swipeFontSize.value, 10f).sp
+            } else {
+                config.swipeFontSize
+            }
 
             // tap 动作接线：非 COMMIT/SEND_RIME 的动作（复制/粘贴/面板切换等）走手势分发，
             // 其余沿用原有上屏路径（shift 大写与输入法组合语义不变）
@@ -2051,7 +2057,7 @@ fun KeyboardRowWithConfig(
                     longPressItems = longPressLabels,
                     longPressDefaultIndex = effectiveLongPressDefaultIndex,
                     fontSize = config.fontSize,
-                    swipeFontSize = config.swipeFontSize,
+                    swipeFontSize = effectiveSwipeFontSize,
                     shadowEnabled = config.shadowEnabled,
                     shadowElevation = config.shadowElevation,
                     shadowShapeRadius = config.shadowShapeRadius,
@@ -2082,7 +2088,7 @@ fun KeyboardRowWithConfig(
                 longPressItems = longPressLabels,
                 longPressDefaultIndex = effectiveLongPressDefaultIndex,
                 fontSize = config.fontSize,
-                swipeFontSize = config.swipeFontSize,
+                swipeFontSize = effectiveSwipeFontSize,
                 shadowEnabled = config.shadowEnabled,
                 shadowElevation = config.shadowElevation,
                 shadowShapeRadius = config.shadowShapeRadius,

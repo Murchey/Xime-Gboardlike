@@ -5,6 +5,8 @@ import com.kingzcheung.xime.R
 import com.kingzcheung.xime.i18n.tr
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -76,6 +79,34 @@ fun ModelLocalContent(
     }
 
     var pendingDelete by remember { mutableStateOf<ModelItemState?>(null) }
+    var pendingImportModel by remember { mutableStateOf<ModelItemState?>(null) }
+    var showImportPicker by remember { mutableStateOf(false) }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val model = pendingImportModel
+        pendingImportModel = null
+        if (uri != null && model != null) viewModel.importModel(model.model.id, uri)
+    }
+
+    if (showImportPicker) {
+        AlertDialog(
+            onDismissRequest = { showImportPicker = false },
+            title = { Text(tr(R.string.s_xuanzemoxing)) },
+            text = {
+                Column {
+                    uiState.models.forEach { item ->
+                        TextButton(onClick = {
+                            showImportPicker = false
+                            pendingImportModel = item
+                            importLauncher.launch(arrayOf("*/*"))
+                        }) { Text(item.model.name) }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showImportPicker = false }) { Text(tr(R.string.s_quxiao)) }
+            },
+        )
+    }
 
     pendingDelete?.let { model ->
         AlertDialog(
@@ -108,6 +139,9 @@ fun ModelLocalContent(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showImportPicker = true }) {
+                        Icon(Icons.Outlined.FileUpload, contentDescription = tr(R.string.s_daorumoxing))
+                    }
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(Icons.Default.Refresh, contentDescription = tr(R.string.s_shuaxin))
                     }
@@ -133,6 +167,12 @@ fun ModelLocalContent(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        if (!uiState.isLoading && uiState.models.isNotEmpty()) {
+                            Spacer(Modifier.height(12.dp))
+                            OutlinedButton(onClick = { showImportPicker = true }) {
+                                Text(tr(R.string.s_daorumoxing))
+                            }
+                        }
                     }
                 }
             } else {

@@ -82,6 +82,10 @@ object ModelManager {
 
     fun getModelSizeOnDisk(context: Context, id: String): Long {
         val model = getModel(id) ?: return 0
+        return getModelSizeOnDisk(context, model)
+    }
+
+    fun getModelSizeOnDisk(context: Context, model: ModelInfo): Long {
         val dir = getModelStorageDir(context, model) ?: return 0
         if (!dir.exists()) return 0
 
