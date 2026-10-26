@@ -1023,6 +1023,7 @@ fun SwipeableKeyButton(
             }
             .onGloballyPositioned { coordinates ->
                 buttonBounds = coordinates.boundsInRoot()
+                KeyTapLogger.recordKeyGeometry(currentText, buttonBounds)
             }
             .padding(LocalKeyVisualPadding.current)
             .then(shadowModifier)
@@ -2306,6 +2307,7 @@ fun SwipeableKeyButtonLandscape(
             }
             .onGloballyPositioned { coordinates ->
                 buttonBounds = coordinates.boundsInRoot()
+                KeyTapLogger.recordKeyGeometry(currentText, buttonBounds)
             }
             .padding(LocalKeyVisualPadding.current)
             .then(shadowModifier)

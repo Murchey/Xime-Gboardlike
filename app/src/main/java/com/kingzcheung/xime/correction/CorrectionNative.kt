@@ -72,6 +72,17 @@ object CorrectionNative {
         }
     }
 
+    /** 26 键真实几何：centers/sizes 各 52 个 float（x/y 与 w/h，均按键盘矩形归一化）。 */
+    fun setKeyGeometry(centers: FloatArray, sizes: FloatArray) {
+        if (!loaded) return
+        if (centers.size < 52 || sizes.size < 52) return
+        try {
+            nativeSetKeyGeometry(centers, sizes)
+        } catch (e: Throwable) {
+            Log.e(TAG, "nativeSetKeyGeometry failed", e)
+        }
+    }
+
     fun clearTaps() {
         if (!loaded) return
         try {
@@ -104,6 +115,7 @@ object CorrectionNative {
 
     private external fun nativeSetLogFile(path: String)
     private external fun nativeSetTaps(letters: ByteArray, offX: FloatArray, offY: FloatArray)
+    private external fun nativeSetKeyGeometry(centers: FloatArray, sizes: FloatArray)
     private external fun nativeClearTaps()
     private external fun nativeSetEnabled(enabled: Boolean)
     private external fun nativeSetModelPaths(channelPath: String, codeTablePath: String)

@@ -47,6 +47,14 @@ object KeyTapLogger {
     @Volatile
     var keyboardBounds: Rect = Rect(0f, 0f, 0f, 0f)
 
+    // 26 键真实几何（x/y 与 w/h，各 52 个 float，按键盘矩形归一化）
+    private val keyCenters = FloatArray(52) { Float.NaN }
+    private val keySizes = FloatArray(52) { Float.NaN }
+    private val keySeen = BooleanArray(26)
+    private var geometryCount = 0
+    @Volatile
+    private var geometryReady = false
+
     private var logFile: File? = null
     private val seq = AtomicLong(0)
 
@@ -59,6 +67,40 @@ object KeyTapLogger {
         logFile = File(context.filesDir, FILE_NAME)
     }
 
+    /** 键盘布局完成后上报单键几何；只收 a..z 字母键。 */
+    fun recordKeyGeometry(key: String, bounds: Rect) {
+        if (key.length != 1) return
+        val ch = key[0].lowercaseChar()
+        if (ch !in 'a'..'z') return
+        val kb = keyboardBounds
+        if (kb.width <= 0f || kb.height <= 0f || bounds.width <= 0f || bounds.height <= 0f) return
+        val idx = ch - 'a'
+        val nx = (bounds.center.x - kb.left) / kb.width
+        val ny = (bounds.center.y - kb.top) / kb.height
+        val nw = bounds.width / kb.width
+        val nh = bounds.height / kb.height
+        if (keyCenters[idx * 2] == nx && keyCenters[idx * 2 + 1] == ny &&
+            keySizes[idx * 2] == nw && keySizes[idx * 2 + 1] == nh
+        ) return
+        keyCenters[idx * 2] = nx
+        keyCenters[idx * 2 + 1] = ny
+        keySizes[idx * 2] = nw
+        keySizes[idx * 2 + 1] = nh
+        if (!keySeen[idx]) {
+            keySeen[idx] = true
+            geometryCount++
+        }
+        geometryReady = true
+        if (CorrectionPriors.enabled) pushKeyGeometry()
+    }
+
+    /** 把已收集的 26 键几何送给 native（纠错开启时调用）。 */
+    fun pushKeyGeometry() {
+        // 缺键时不要用半张真实表混静态表，等 26 键齐全再切
+        if (!geometryReady || geometryCount < 26) return
+        runCatching { CorrectionNative.setKeyGeometry(keyCenters, keySizes) }
+    }
+
     /** 记录一次按键（几何）。仅在 [enabled] 时写盘，异常全部吞掉（采集不得影响输入）。 */
     fun recordTap(
         key: String,
@@ -68,6 +110,7 @@ object KeyTapLogger {
         density: Float,
     ) {
         val kb = keyboardBounds
+        recordKeyGeometry(key, buttonBounds)
         if (enabled) {
             write("tap") {
                 put("key", key)

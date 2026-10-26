@@ -1,6 +1,7 @@
 #include "correction_geometry.h"
 
 #include <cmath>
+#include <mutex>
 
 namespace rime {
 namespace correction {
@@ -35,13 +36,29 @@ const std::array<KeyGeom, 26> kKeyCenters = {{
     {0.1997f, 0.6299f},  // z
 }};
 
+namespace {
+
+std::mutex g_geometry_mutex;
+std::array<KeyGeom, 26> g_centers = kKeyCenters;
+float g_avg_key_w = kKeyW;
+float g_avg_key_h = kKeyH;
+float g_row_pitch = kRowPitch;
+
+}  // namespace
+
 const NeighborTable& NeighborTable::Instance() {
   static NeighborTable table;
   return table;
 }
 
 NeighborTable::NeighborTable() {
+  Rebuild();
+}
+
+void NeighborTable::Rebuild() const {
+  std::lock_guard<std::mutex> lock(neighbors_mutex_);
   for (int i = 0; i < 26; ++i) {
+    neighbors_[i].clear();
     for (int j = 0; j < 26; ++j) {
       if (i == j)
         continue;
@@ -52,13 +69,43 @@ NeighborTable::NeighborTable() {
 }
 
 float NeighborTable::Distance(int a, int b) const {
-  const float dx = (kKeyCenters[a].x - kKeyCenters[b].x) / kKeyW;
-  const float dy = (kKeyCenters[a].y - kKeyCenters[b].y) / kKeyH;
+  std::lock_guard<std::mutex> lock(g_geometry_mutex);
+  const float dx = (g_centers[a].x - g_centers[b].x) / g_avg_key_w;
+  const float dy = (g_centers[a].y - g_centers[b].y) / g_avg_key_h;
   return std::sqrt(dx * dx + dy * dy);
 }
 
 bool SameRow(int a, int b) {
-  return std::fabs(kKeyCenters[a].y - kKeyCenters[b].y) < 0.5f * kRowPitch;
+  std::lock_guard<std::mutex> lock(g_geometry_mutex);
+  return std::fabs(g_centers[a].y - g_centers[b].y) < 0.5f * g_row_pitch;
+}
+
+void SetKeyGeometry(const float* centers_xy, const float* sizes_wh, int n) {
+  if (!centers_xy || !sizes_wh || n < 52)
+    return;
+  std::array<KeyGeom, 26> centers;
+  float sum_w = 0.0f, sum_h = 0.0f;
+  for (int i = 0; i < 26; ++i) {
+    const float x = centers_xy[i * 2];
+    const float y = centers_xy[i * 2 + 1];
+    const float w = sizes_wh[i * 2];
+    const float h = sizes_wh[i * 2 + 1];
+    if (!std::isfinite(x) || !std::isfinite(y) ||
+        !std::isfinite(w) || !std::isfinite(h) || w <= 0.0f || h <= 0.0f) {
+      return;  // 缺键：整张表不切，避免真实/静态混用
+    }
+    centers[i] = {x, y};
+    sum_w += w;
+    sum_h += h;
+  }
+  {
+    std::lock_guard<std::mutex> lock(g_geometry_mutex);
+    g_centers = centers;
+    g_avg_key_w = sum_w / 26.0f;
+    g_avg_key_h = sum_h / 26.0f;
+    g_row_pitch = g_avg_key_h * 1.186f;
+  }
+  NeighborTable::Instance().Rebuild();
 }
 
 }  // namespace correction

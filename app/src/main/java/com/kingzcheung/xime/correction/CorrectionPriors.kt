@@ -92,6 +92,7 @@ object CorrectionPriors {
             if (value) {
                 val ok = ensureLoaded()
                 lastPush = if (ok) tr(R.string.s_yiqiyong_dengdaianjian) else tr(R.string.s_qiyongshibai_moxing_mabiaobukeyong)
+                if (ok) KeyTapLogger.pushKeyGeometry()
                 FileLogger.i(TAG, "enabled=$ok ctx=${appContext != null}")
             } else {
                 if (nativeActive) {

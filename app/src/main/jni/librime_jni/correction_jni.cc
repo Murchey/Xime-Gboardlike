@@ -124,6 +124,21 @@ Java_com_kingzcheung_xime_correction_CorrectionNative_nativeSetTaps(
 }
 
 JNIEXPORT void JNICALL
+Java_com_kingzcheung_xime_correction_CorrectionNative_nativeSetKeyGeometry(
+    JNIEnv* env, jclass, jfloatArray centers_xy, jfloatArray sizes_wh) {
+  if (!centers_xy || !sizes_wh ||
+      env->GetArrayLength(centers_xy) < 52 ||
+      env->GetArrayLength(sizes_wh) < 52) {
+    return;
+  }
+  jfloat* xy = env->GetFloatArrayElements(centers_xy, nullptr);
+  jfloat* wh = env->GetFloatArrayElements(sizes_wh, nullptr);
+  correction_set_key_geometry(xy, wh, 52);
+  env->ReleaseFloatArrayElements(centers_xy, xy, JNI_ABORT);
+  env->ReleaseFloatArrayElements(sizes_wh, wh, JNI_ABORT);
+}
+
+JNIEXPORT void JNICALL
 Java_com_kingzcheung_xime_correction_CorrectionNative_nativeClearTaps(JNIEnv*,
                                                                      jclass) {
   correction_clear_taps();

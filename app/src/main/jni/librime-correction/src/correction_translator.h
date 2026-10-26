@@ -119,6 +119,9 @@ extern "C" {
 // 设置几何先验：letters/off_x/off_y 等长；off 可为 NaN（无真实坐标）
 void correction_set_taps(const char* letters, const float* off_x,
                          const float* off_y, int n);
+// 设置 26 键真实几何（各 52 个 float：x/y 或 w/h）
+void correction_set_key_geometry(const float* centers_xy,
+                                 const float* sizes_wh, int n);
 void correction_set_enabled(int enabled);
 void correction_clear_taps();
 void correction_set_model_paths(const char* channel_path, const char* code_table_path);
