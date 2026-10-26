@@ -39,7 +39,7 @@ object RimeConfigHelper {
     private val deploymentLock = Any()
     
     suspend fun initializeRimeDataAsync(context: Context): Pair<String, String> {
-        val rimeDir = File(context.filesDir, "rime")
+        val rimeDir = SchemaManager.getRimeDir(context)
         
         // 迁移旧目录结构 (rime/shared/ + rime/user/) → 单一 rime/ 目录
         migrateOldStructure(context, rimeDir)
@@ -115,7 +115,7 @@ object RimeConfigHelper {
     }
     
     fun initializeRimeData(context: Context): Pair<String, String> {
-        val rimeDir = File(context.filesDir, "rime")
+        val rimeDir = SchemaManager.getRimeDir(context)
         
         migrateOldStructure(context, rimeDir)
         
@@ -173,7 +173,7 @@ object RimeConfigHelper {
     }
 
     fun isDeploymentComplete(context: Context): Boolean {
-        val rimeDir = File(context.filesDir, "rime")
+        val rimeDir = SchemaManager.getRimeDir(context)
         val buildDir = File(rimeDir, "build")
         if (!buildDir.exists()) return false
 
@@ -228,7 +228,7 @@ object RimeConfigHelper {
     }
 
     private fun computeDeploymentHash(context: Context): String {
-        val rimeDir = File(context.filesDir, "rime")
+        val rimeDir = SchemaManager.getRimeDir(context)
         val digest = java.security.MessageDigest.getInstance("SHA-256")
 
         val enabledSchemas = SchemaManager.getEnabledSchemas(context)
@@ -489,7 +489,7 @@ object RimeConfigHelper {
 
     /** 补齐缺失/空的内置共享文件（不覆盖已有内容），返回补齐数。 */
     fun ensureBuiltinBaseFiles(context: Context): Int {
-        val rimeDir = File(context.filesDir, "rime")
+        val rimeDir = SchemaManager.getRimeDir(context)
         if (!rimeDir.exists()) rimeDir.mkdirs()
         var restored = 0
         for (name in SchemaManifestManager.sharedFileNames(context)) {
@@ -506,7 +506,7 @@ object RimeConfigHelper {
 
     /** 从 assets 恢复内置方案包（清掉用户卸载标记后重新复制并部署）。 */
     suspend fun restoreBuiltinSeed(context: Context): Boolean = withContext(Dispatchers.IO) {
-        val rimeDir = File(context.filesDir, "rime")
+        val rimeDir = SchemaManager.getRimeDir(context)
         if (!rimeDir.exists()) rimeDir.mkdirs()
         val previous = BuiltinSeedState.disabledPackages(context)
         BuiltinSeedState.clearAll(context)
@@ -534,7 +534,7 @@ object RimeConfigHelper {
         if (!BuiltinPackages.isBuiltin(packageId) || packageId == BuiltinPackages.SHARED) return@withContext false
         val wasDisabled = BuiltinSeedState.isDisabled(context, packageId)
         BuiltinSeedState.setDisabled(context, packageId, false)
-        val rimeDir = File(context.filesDir, "rime")
+        val rimeDir = SchemaManager.getRimeDir(context)
         rimeDir.mkdirs()
         val copied = try {
             copyAssetsRecursively(context, ASSETS_RIME_DIR, rimeDir)
@@ -575,7 +575,7 @@ object RimeConfigHelper {
      * 主词典，反查词典要它自己的方案被部署才生成产物。返回 方案 id → 缺失词典名。
      */
     fun missingReverseLookupTables(context: Context): List<Pair<String, String>> {
-        val rimeDir = File(context.filesDir, "rime")
+        val rimeDir = SchemaManager.getRimeDir(context)
         val buildDir = File(rimeDir, "build")
         val missing = mutableListOf<Pair<String, String>>()
         for (schemaId in SchemaManager.getEnabledSchemas(context)) {

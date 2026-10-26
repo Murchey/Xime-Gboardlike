@@ -58,6 +58,7 @@ import com.kingzcheung.xime.correction.KeyTapLogger
 import com.kingzcheung.xime.R
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.ui.isTablet
+import com.kingzcheung.xime.settings.DoublePinyinFinals
 import com.kingzcheung.xime.settings.DisplayMode
 import com.kingzcheung.xime.settings.ButtonLayout
 import com.kingzcheung.xime.settings.KeyAction
@@ -120,6 +121,9 @@ import androidx.compose.ui.unit.TextUnit
 
 /** 字母键上方符号提示开关；由键盘根层订阅设置变化，切换后立即生效。 */
 internal val LocalShowLetterHintSymbols = staticCompositionLocalOf { true }
+
+/** 当前双拼方案键位韵母；空表示不替换符号。 */
+internal val LocalDoublePinyinFinals = staticCompositionLocalOf<Map<Char, String>> { emptyMap() }
 
 /** 字母键显示大小写：大写固定 / 小写是否跟随 Shift。 */
 internal data class LetterCaseSetting(
@@ -227,6 +231,9 @@ fun KeyboardLayout(
     var showLetterHintSymbols by remember {
         mutableStateOf(SettingsPreferences.showLetterHintSymbols(context))
     }
+    var showDoublePinyinFinals by remember {
+        mutableStateOf(SettingsPreferences.showDoublePinyinFinals(context))
+    }
     var letterCaseSetting by remember {
         mutableStateOf(
             LetterCaseSetting(
@@ -248,6 +255,8 @@ fun KeyboardLayout(
                             SettingsPreferences.isLandscapeSplitKeyboardEnabled(context)
                     "show_letter_hint_symbols" ->
                         showLetterHintSymbols = SettingsPreferences.showLetterHintSymbols(context)
+                    "show_double_pinyin_finals" ->
+                        showDoublePinyinFinals = SettingsPreferences.showDoublePinyinFinals(context)
                     "letter_display_case", "letter_case_follow_shift" ->
                         letterCaseSetting = LetterCaseSetting(
                             upperCase = SettingsPreferences.getLetterDisplayCase(context) ==
@@ -269,6 +278,16 @@ fun KeyboardLayout(
 
     // 监听手势配置版本号，部署后强制刷新键帽显示
     val cfgVer by KeysConfigHelper.configVersion.collectAsState()
+    val currentSchemaId = remember(uiState.schemaName) {
+        SettingsPreferences.getCurrentSchema(context)
+    }
+    val doublePinyinFinals = remember(showDoublePinyinFinals, currentSchemaId, cfgVer) {
+        if (showDoublePinyinFinals) {
+            DoublePinyinFinals.forSchema(context, currentSchemaId)
+        } else {
+            emptyMap()
+        }
+    }
 
     fun processSwipeState(state: SwipeState, bounds: Rect) {
         val newState = if (state.isSwipeDown && state.swipeText != null) {
@@ -310,6 +329,7 @@ fun KeyboardLayout(
 
     CompositionLocalProvider(
         LocalShowLetterHintSymbols provides showLetterHintSymbols,
+        LocalDoublePinyinFinals provides doublePinyinFinals,
         LocalLetterCaseSetting provides letterCaseSetting,
         LocalKeyCornerRadius provides qwertyCornerRadius,
         // 键面提示档与主键盘同一规则（退格的「清空」等提示的放大倍率与画法）
@@ -1850,6 +1870,7 @@ fun KeyboardRowWithConfig(
         val context = LocalContext.current
     val hideKeyLabels = SettingsPreferences.isKeyLabelsHidden(context)
     val showLetterHintSymbols = LocalShowLetterHintSymbols.current
+    val doublePinyinFinals = LocalDoublePinyinFinals.current
     val letterCase = LocalLetterCaseSetting.current
     keys.forEachIndexed { index, key ->
             val rawSwipeUpLabel = KeysConfigHelper.getSwipeUpLabel(key, isAsciiMode)
@@ -1931,7 +1952,11 @@ fun KeyboardRowWithConfig(
             // 隐藏键面字符：只影响字符键主标签，功能键图标/回车图标不受影响。
             val hideMainLabel = hideKeyLabels && key.any { it.isLetterOrDigit() }
             // 只隐藏字母键上方的符号角标；数字行、功能键不受这个开关影响。
-            val hideLetterCornerHint = key.length == 1 && key[0].isLetter() && !showLetterHintSymbols
+            val finalHint = if (doublePinyinFinals.isNotEmpty() && key.length == 1 && key[0].isLetter()) {
+                doublePinyinFinals[key[0].lowercaseChar()].orEmpty()
+            } else null
+            val effectiveCornerHint = finalHint ?: cornerHintLabel
+            val hideLetterCornerHint = finalHint == null && key.length == 1 && key[0].isLetter() && !showLetterHintSymbols
             val hideCornerHint = hideMainLabel || hideLetterCornerHint
             // 键面大小写：大写固定 / 小写固定 / 小写跟随 Shift（默认）。
             val isLetterKey = key.length == 1 && key[0].isLetter()
@@ -2013,7 +2038,7 @@ fun KeyboardRowWithConfig(
                     modifier = Modifier.weight(keyWidths?.getOrNull(index) ?: 1f),
                     swipeText = swipeUpText,
                     swipeDownText = swipeDownText,
-                    swipeUpKeyLabel = if (hideCornerHint) "" else cornerHintLabel,
+                    swipeUpKeyLabel = if (hideCornerHint) "" else effectiveCornerHint,
                     swipeDownKeyLabel = if (hideMainLabel) "" else swipeDownKeyLabel,
                     onSwipe = onSwipeUp,
                     onSwipeDown = onSwipeDown,
