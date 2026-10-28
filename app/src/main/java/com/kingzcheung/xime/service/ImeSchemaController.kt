@@ -128,6 +128,8 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
     }
     
     private var editSelAnchor = -1
+    /** 选择模式下当前活动端点；不能用 getTextBeforeCursor 推断，因为选区建立后它指向较小端点。 */
+    private var editSelCaret = -1
 
     internal fun handleToolbarEditingAction(action: String) {
         val ic = service.currentInputConnection ?: return
@@ -143,72 +145,92 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
                 ic.setSelection(before.length + after.length, before.length + after.length)
             }
             "arrow_up" -> {
-                val t = SystemClock.uptimeMillis()
-                ic.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP, 0))
-                ic.sendKeyEvent(KeyEvent(t, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_UP, 0))
+                moveEditorCaret(ic, -1)
             }
             "arrow_down" -> {
-                val t = SystemClock.uptimeMillis()
-                ic.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN, 0))
-                ic.sendKeyEvent(KeyEvent(t, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_DOWN, 0))
+                moveEditorCaret(ic, 1)
             }
             "arrow_left" -> {
-                val t = SystemClock.uptimeMillis()
-                ic.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, 0))
-                ic.sendKeyEvent(KeyEvent(t, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_LEFT, 0))
+                moveEditorCaret(ic, -1)
             }
             "arrow_right" -> {
-                val t = SystemClock.uptimeMillis()
-                ic.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT, 0))
-                ic.sendKeyEvent(KeyEvent(t, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT, 0))
+                moveEditorCaret(ic, 1)
             }
 
             "select_begin" -> {
-                editSelAnchor = (ic.getTextBeforeCursor(XimeInputMethodService.SAFE_TEXT_LIMIT, 0) ?: "").length
+                val selection = readEditorSelection(ic)
+                editSelAnchor = selection?.second ?: (
+                    ic.getTextBeforeCursor(XimeInputMethodService.SAFE_TEXT_LIMIT, 0) ?: ""
+                ).length
+                editSelCaret = editSelAnchor
             }
             "select_end" -> {
                 editSelAnchor = -1
+                editSelCaret = -1
             }
             "select_arrow_left" -> extendSelection(ic, -1)
             "select_arrow_right" -> extendSelection(ic, 1)
             "select_arrow_up" -> {
-                val before = ic.getTextBeforeCursor(XimeInputMethodService.SAFE_TEXT_LIMIT, 0) ?: ""
-                val pos = before.length
+                val extracted = readEditorText(ic) ?: return
+                val pos = editSelCaret.takeIf { it >= 0 } ?: extracted.selectionEnd
                 if (pos > 0) {
-                    val prevNewline = before.lastIndexOf('\n', pos - 2)
+                    val prevNewline = extracted.text.lastIndexOf('\n', (pos - 2).coerceAtLeast(0))
                     val lineStart = if (prevNewline >= 0) prevNewline + 1 else 0
                     ic.beginBatchEdit()
                     ic.setSelection(editSelAnchor, lineStart)
                     ic.endBatchEdit()
+                    editSelCaret = lineStart
                 }
             }
             "select_arrow_down" -> {
-                val before = ic.getTextBeforeCursor(XimeInputMethodService.SAFE_TEXT_LIMIT, 0) ?: ""
-                val after = ic.getTextAfterCursor(XimeInputMethodService.SAFE_TEXT_LIMIT, 0) ?: ""
-                val pos = before.length
-                val total = before.length + after.length
+                val extracted = readEditorText(ic) ?: return
+                val pos = editSelCaret.takeIf { it >= 0 } ?: extracted.selectionEnd
+                val total = extracted.text.length
                 if (pos < total) {
-                    val nextNewline = after.indexOf('\n')
-                    val lineEnd = if (nextNewline >= 0) pos + nextNewline else total
+                    val nextNewline = extracted.text.indexOf('\n', pos)
+                    val lineEnd = if (nextNewline >= 0) nextNewline else total
                     ic.beginBatchEdit()
                     ic.setSelection(editSelAnchor, lineEnd)
                     ic.endBatchEdit()
+                    editSelCaret = lineEnd
                 }
             }
         }
     }
 
     private fun extendSelection(ic: InputConnection, direction: Int) {
-        val before = ic.getTextBeforeCursor(XimeInputMethodService.SAFE_TEXT_LIMIT, 0) ?: ""
-        val after = ic.getTextAfterCursor(XimeInputMethodService.SAFE_TEXT_LIMIT, 0) ?: ""
-        val pos = before.length
-        val total = before.length + after.length
+        val extracted = readEditorText(ic) ?: return
+        val pos = editSelCaret.takeIf { it >= 0 } ?: extracted.selectionEnd
+        val total = extracted.text.length
         val next = (pos + direction).coerceIn(0, total)
         if (next != pos) {
             ic.beginBatchEdit()
             ic.setSelection(editSelAnchor, next)
             ic.endBatchEdit()
+            editSelCaret = next
         }
+    }
+
+    private fun readEditorText(ic: InputConnection): android.view.inputmethod.ExtractedText? =
+        runCatching {
+            ic.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0)
+        }.getOrNull()?.takeIf { it.text != null && it.selectionEnd >= 0 }
+
+    private fun readEditorSelection(ic: InputConnection): Pair<Int, Int>? =
+        readEditorText(ic)?.let { it.selectionStart to it.selectionEnd }
+
+    private fun moveEditorCaret(ic: InputConnection, direction: Int) {
+        val extracted = readEditorText(ic)
+        if (extracted != null) {
+            val current = extracted.selectionEnd
+            val next = (current + direction).coerceIn(0, extracted.text.length)
+            ic.setSelection(next, next)
+            return
+        }
+        val keyCode = if (direction < 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
+        val t = SystemClock.uptimeMillis()
+        ic.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, keyCode, 0))
+        ic.sendKeyEvent(KeyEvent(t, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, keyCode, 0))
     }
 
     internal fun applyPageSizeSetting(schemaId: String) {
