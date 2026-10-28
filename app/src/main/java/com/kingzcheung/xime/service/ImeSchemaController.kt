@@ -201,28 +201,30 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         readEditorText(ic)?.let { it.selectionStart to it.selectionEnd }
 
     private fun extendVerticalSelection(ic: InputConnection, direction: Int) {
-        val extracted = readEditorText(ic)
-        if (extracted == null) {
-            sendEditorKey(ic, if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN, extend = true)
-            return
-        }
-        val pos = editSelCaret.takeIf { it >= 0 } ?: extracted.selectionEnd
-        val target = verticalCaretTarget(extracted.text, pos, direction) ?: return
-        ic.beginBatchEdit()
-        ic.setSelection(editSelAnchor, target)
-        ic.endBatchEdit()
-        editSelCaret = target
+        // 上下方向必须交给编辑器处理：只有编辑器知道自动换行后的视觉行位置。
+        // 按换行符计算会把一整段折行文本误判为一行，直接跳到段首/段尾。
+        sendEditorKey(
+            ic,
+            if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN,
+            extend = true,
+        )
+        editSelCaret = -1
     }
 
     private fun moveEditorCaret(ic: InputConnection, direction: Int, vertical: Boolean) {
+        if (vertical) {
+            // Flutter EditableText 等编辑器的视觉行包含自动折行，InputConnection
+            // 无法从文本内容还原像素行，只能使用编辑器自身的 DPAD 上下语义。
+            sendEditorKey(
+                ic,
+                if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN,
+            )
+            return
+        }
         val extracted = readEditorText(ic)
         if (extracted != null) {
             val current = extracted.selectionEnd
-            val next = if (vertical) {
-                verticalCaretTarget(extracted.text, current, direction) ?: current
-            } else {
-                (current + direction).coerceIn(0, extracted.text.length)
-            }
+            val next = (current + direction).coerceIn(0, extracted.text.length)
             ic.setSelection(next, next)
             return
         }
@@ -240,27 +242,6 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         val meta = if (extend) KeyEvent.META_SHIFT_ON else 0
         ic.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, keyCode, 0, meta))
         ic.sendKeyEvent(KeyEvent(t, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, keyCode, 0, meta))
-    }
-
-    /** 按当前列计算上一行/下一行的目标位置，避免把上下键错误当成左右移动。 */
-    private fun verticalCaretTarget(text: CharSequence, position: Int, direction: Int): Int? {
-        val pos = position.coerceIn(0, text.length)
-        val lineStart = text.lastIndexOf('\n', (pos - 1).coerceAtLeast(0)) + 1
-        val column = pos - lineStart
-        return if (direction < 0) {
-            if (lineStart == 0) 0 else {
-                val previousEnd = lineStart - 1
-                val previousStart = text.lastIndexOf('\n', previousEnd - 1) + 1
-                previousStart + column.coerceAtMost(previousEnd - previousStart)
-            }
-        } else {
-            val currentEnd = text.indexOf('\n', pos).let { if (it >= 0) it else text.length }
-            if (currentEnd >= text.length) text.length else {
-                val nextStart = currentEnd + 1
-                val nextEnd = text.indexOf('\n', nextStart).let { if (it >= 0) it else text.length }
-                nextStart + column.coerceAtMost(nextEnd - nextStart)
-            }
-        }
     }
 
     internal fun applyPageSizeSetting(schemaId: String) {
