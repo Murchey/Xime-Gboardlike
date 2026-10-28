@@ -31,6 +31,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +53,9 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private data class Quadrant(
     val label: String,
@@ -220,6 +224,8 @@ private fun CircularDPad(
     val innerFraction = 0.38f
 
     var pressedAction by remember { mutableStateOf<String?>(null) }
+    var longPressConsumed by remember { mutableStateOf(false) }
+    val repeatScope = rememberCoroutineScope()
     val density = LocalDensity.current
     val shadowModifier = remember(shadowEnabled, shadowElevation, density, keyBg) {
         if (shadowEnabled) {
@@ -251,21 +257,35 @@ private fun CircularDPad(
                         val dist = sqrt((offset.x - cx) * (offset.x - cx) + (offset.y - cy) * (offset.y - cy))
                         val outerR = w / 2f * outerFraction
                         val innerR = w / 2f * innerFraction
-                        when {
-                            dist < innerR -> pressedAction = "center"
+                        val action = when {
+                            dist < innerR -> "center"
                             dist < outerR -> {
                                 val angle = atan2(offset.y - cy, offset.x - cx)
                                 val deg = ((Math.toDegrees(angle.toDouble()) + 360) % 360).toFloat()
-                                pressedAction = when {
+                                when {
                                     deg in 225f..314f -> quadrants[0].actionBase
                                     deg in 315f..359f || deg in 0f..44f -> quadrants[1].actionBase
                                     deg in 45f..134f -> quadrants[2].actionBase
                                     else -> quadrants[3].actionBase
                                 }
                             }
-                            else -> pressedAction = null
+                            else -> null
+                        }
+                        pressedAction = action
+                        longPressConsumed = false
+                        var repeatJob: Job? = null
+                        if (action != null && action.startsWith("arrow_")) {
+                            repeatJob = repeatScope.launch {
+                                delay(380)
+                                longPressConsumed = true
+                                while (true) {
+                                    onDirection(action)
+                                    delay(75)
+                                }
+                            }
                         }
                         tryAwaitRelease()
+                        repeatJob?.cancel()
                         pressedAction = null
                     },
                     onTap = { offset ->
@@ -287,9 +307,10 @@ private fun CircularDPad(
                                     deg in 45f..134f -> quadrants[2].actionBase
                                     else -> quadrants[3].actionBase
                                 }
-                                onDirection(dirAction)
+                                if (!longPressConsumed) onDirection(dirAction)
                             }
                         }
+                        longPressConsumed = false
                     }
                 )
             }
