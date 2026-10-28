@@ -145,16 +145,16 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
                 ic.setSelection(before.length + after.length, before.length + after.length)
             }
             "arrow_up" -> {
-                moveEditorCaret(ic, -1)
+                moveEditorCaret(ic, -1, vertical = true)
             }
             "arrow_down" -> {
-                moveEditorCaret(ic, 1)
+                moveEditorCaret(ic, 1, vertical = true)
             }
             "arrow_left" -> {
-                moveEditorCaret(ic, -1)
+                moveEditorCaret(ic, -1, vertical = false)
             }
             "arrow_right" -> {
-                moveEditorCaret(ic, 1)
+                moveEditorCaret(ic, 1, vertical = false)
             }
 
             "select_begin" -> {
@@ -171,29 +171,10 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
             "select_arrow_left" -> extendSelection(ic, -1)
             "select_arrow_right" -> extendSelection(ic, 1)
             "select_arrow_up" -> {
-                val extracted = readEditorText(ic) ?: return
-                val pos = editSelCaret.takeIf { it >= 0 } ?: extracted.selectionEnd
-                if (pos > 0) {
-                    val prevNewline = extracted.text.lastIndexOf('\n', (pos - 2).coerceAtLeast(0))
-                    val lineStart = if (prevNewline >= 0) prevNewline + 1 else 0
-                    ic.beginBatchEdit()
-                    ic.setSelection(editSelAnchor, lineStart)
-                    ic.endBatchEdit()
-                    editSelCaret = lineStart
-                }
+                extendVerticalSelection(ic, -1)
             }
             "select_arrow_down" -> {
-                val extracted = readEditorText(ic) ?: return
-                val pos = editSelCaret.takeIf { it >= 0 } ?: extracted.selectionEnd
-                val total = extracted.text.length
-                if (pos < total) {
-                    val nextNewline = extracted.text.indexOf('\n', pos)
-                    val lineEnd = if (nextNewline >= 0) nextNewline else total
-                    ic.beginBatchEdit()
-                    ic.setSelection(editSelAnchor, lineEnd)
-                    ic.endBatchEdit()
-                    editSelCaret = lineEnd
-                }
+                extendVerticalSelection(ic, 1)
             }
         }
     }
@@ -219,18 +200,67 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
     private fun readEditorSelection(ic: InputConnection): Pair<Int, Int>? =
         readEditorText(ic)?.let { it.selectionStart to it.selectionEnd }
 
-    private fun moveEditorCaret(ic: InputConnection, direction: Int) {
+    private fun extendVerticalSelection(ic: InputConnection, direction: Int) {
+        val extracted = readEditorText(ic)
+        if (extracted == null) {
+            sendEditorKey(ic, if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN, extend = true)
+            return
+        }
+        val pos = editSelCaret.takeIf { it >= 0 } ?: extracted.selectionEnd
+        val target = verticalCaretTarget(extracted.text, pos, direction) ?: return
+        ic.beginBatchEdit()
+        ic.setSelection(editSelAnchor, target)
+        ic.endBatchEdit()
+        editSelCaret = target
+    }
+
+    private fun moveEditorCaret(ic: InputConnection, direction: Int, vertical: Boolean) {
         val extracted = readEditorText(ic)
         if (extracted != null) {
             val current = extracted.selectionEnd
-            val next = (current + direction).coerceIn(0, extracted.text.length)
+            val next = if (vertical) {
+                verticalCaretTarget(extracted.text, current, direction) ?: current
+            } else {
+                (current + direction).coerceIn(0, extracted.text.length)
+            }
             ic.setSelection(next, next)
             return
         }
-        val keyCode = if (direction < 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
+        val keyCode = when {
+            vertical && direction < 0 -> KeyEvent.KEYCODE_DPAD_UP
+            vertical -> KeyEvent.KEYCODE_DPAD_DOWN
+            direction < 0 -> KeyEvent.KEYCODE_DPAD_LEFT
+            else -> KeyEvent.KEYCODE_DPAD_RIGHT
+        }
+        sendEditorKey(ic, keyCode)
+    }
+
+    private fun sendEditorKey(ic: InputConnection, keyCode: Int, extend: Boolean = false) {
         val t = SystemClock.uptimeMillis()
-        ic.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, keyCode, 0))
-        ic.sendKeyEvent(KeyEvent(t, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, keyCode, 0))
+        val meta = if (extend) KeyEvent.META_SHIFT_ON else 0
+        ic.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, keyCode, 0, meta))
+        ic.sendKeyEvent(KeyEvent(t, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, keyCode, 0, meta))
+    }
+
+    /** 按当前列计算上一行/下一行的目标位置，避免把上下键错误当成左右移动。 */
+    private fun verticalCaretTarget(text: CharSequence, position: Int, direction: Int): Int? {
+        val pos = position.coerceIn(0, text.length)
+        val lineStart = text.lastIndexOf('\n', (pos - 1).coerceAtLeast(0)) + 1
+        val column = pos - lineStart
+        return if (direction < 0) {
+            if (lineStart == 0) 0 else {
+                val previousEnd = lineStart - 1
+                val previousStart = text.lastIndexOf('\n', previousEnd - 1) + 1
+                previousStart + column.coerceAtMost(previousEnd - previousStart)
+            }
+        } else {
+            val currentEnd = text.indexOf('\n', pos).let { if (it >= 0) it else text.length }
+            if (currentEnd >= text.length) text.length else {
+                val nextStart = currentEnd + 1
+                val nextEnd = text.indexOf('\n', nextStart).let { if (it >= 0) it else text.length }
+                nextStart + column.coerceAtMost(nextEnd - nextStart)
+            }
+        }
     }
 
     internal fun applyPageSizeSetting(schemaId: String) {
