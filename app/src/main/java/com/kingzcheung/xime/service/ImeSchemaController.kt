@@ -197,7 +197,10 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
 
     private fun readEditorText(ic: InputConnection): android.view.inputmethod.ExtractedText? =
         runCatching {
-            ic.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0)
+            ic.getExtractedText(
+                android.view.inputmethod.ExtractedTextRequest(),
+                InputConnection.GET_EXTRACTED_TEXT_MONITOR,
+            )
         }.getOrNull()?.takeIf { it.text != null && it.selectionEnd >= 0 }
 
     private fun readEditorSelection(ic: InputConnection): Pair<Int, Int>? =
@@ -242,7 +245,7 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
                     ic.setSelection(anchor, moved)
                     ic.endBatchEdit()
                     editSelCaret = moved
-                } else if (attempt < 3) {
+                } else if (attempt < 7) {
                     // Flutter 可能在多个消息循环后才回报 selection，继续短轮询。
                     scheduleVerticalSelectionProbe(ic, direction, current, anchor, serial, attempt + 1)
                 } else {
