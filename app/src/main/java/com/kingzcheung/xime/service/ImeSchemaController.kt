@@ -241,11 +241,9 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
             runCatching {
                 val moved = readEditorText(ic)?.selectionEnd
                 if (moved != null && moved != current) {
-                    ic.beginBatchEdit()
-                    ic.setSelection(anchor, moved)
-                    ic.endBatchEdit()
-                    editSelCaret = moved
-                } else if (attempt < 7) {
+                    applyVerticalSelection(ic, anchor, moved)
+                    reinforceVerticalSelection(ic, anchor, moved, serial, attempt = 0)
+                } else if (attempt < 50) {
                     // Flutter 可能在多个消息循环后才回报 selection，继续短轮询。
                     scheduleVerticalSelectionProbe(ic, direction, current, anchor, serial, attempt + 1)
                 } else {
@@ -258,6 +256,40 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
                 }
             }
         }, delayMs)
+    }
+
+    /**
+     * 部分编辑器会在 setSelection 后异步回写一次折叠光标，短暂覆盖刚建立的选区。
+     * 在同一轮操作内确认几次，避免 UI 偶尔只显示光标而不显示选中背景。
+     */
+    private fun applyVerticalSelection(ic: InputConnection, anchor: Int, caret: Int) {
+        ic.beginBatchEdit()
+        try {
+            ic.setSelection(anchor, caret)
+        } finally {
+            ic.endBatchEdit()
+        }
+        editSelCaret = caret
+    }
+
+    private fun reinforceVerticalSelection(
+        ic: InputConnection,
+        anchor: Int,
+        caret: Int,
+        serial: Long,
+        attempt: Int,
+    ) {
+        if (attempt >= 5) return
+        service.mainHandler.postDelayed({
+            if (serial != verticalSelectionSerial || editSelAnchor != anchor) return@postDelayed
+            val selection = readEditorSelection(ic) ?: return@postDelayed
+            val isExpected = selection.first == anchor && selection.second == caret ||
+                selection.first == caret && selection.second == anchor
+            if (!isExpected) {
+                applyVerticalSelection(ic, anchor, caret)
+            }
+            reinforceVerticalSelection(ic, anchor, caret, serial, attempt + 1)
+        }, 24L + attempt * 32L)
     }
 
     private fun moveEditorCaret(ic: InputConnection, direction: Int, vertical: Boolean) {
