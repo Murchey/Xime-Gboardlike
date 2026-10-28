@@ -201,14 +201,35 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         readEditorText(ic)?.let { it.selectionStart to it.selectionEnd }
 
     private fun extendVerticalSelection(ic: InputConnection, direction: Int) {
-        // 上下方向必须交给编辑器处理：只有编辑器知道自动换行后的视觉行位置。
-        // 按换行符计算会把一整段折行文本误判为一行，直接跳到段首/段尾。
-        sendEditorKey(
-            ic,
-            if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN,
-            extend = true,
-        )
-        editSelCaret = -1
+        // 先让编辑器执行普通上下移动，借用它对自动折行的视觉行判断；
+        // 再读取移动后的绝对位置，用 setSelection 建立选区。部分 Flutter 输入连接
+        // 不会处理带 Shift 的 DPAD 事件，因此不能只依赖 Shift+DPAD。
+        val before = readEditorText(ic)
+        val current = editSelCaret.takeIf { it >= 0 } ?: before?.selectionEnd
+        if (current == null) {
+            sendEditorKey(
+                ic,
+                if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN,
+                extend = true,
+            )
+            return
+        }
+        sendEditorKey(ic, if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN)
+        val moved = readEditorText(ic)?.selectionEnd
+        if (moved != null && moved != current) {
+            ic.beginBatchEdit()
+            ic.setSelection(editSelAnchor, moved)
+            ic.endBatchEdit()
+            editSelCaret = moved
+        } else {
+            // 编辑器拒绝普通 DPAD 时，最后再尝试原生扩展语义。
+            sendEditorKey(
+                ic,
+                if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN,
+                extend = true,
+            )
+            editSelCaret = -1
+        }
     }
 
     private fun moveEditorCaret(ic: InputConnection, direction: Int, vertical: Boolean) {
