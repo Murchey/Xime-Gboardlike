@@ -220,6 +220,11 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
             )
             return
         }
+        // 已有选区时，先把活动端点明确设为折叠光标。否则部分编辑器会在
+        // 普通 DPAD 前后交替折叠到锚点/活动端点，表现为奇数次有选中、偶数次无选中。
+        if (editSelAnchor >= 0 && current != editSelAnchor) {
+            ic.setSelection(current, current)
+        }
         sendEditorKey(ic, if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN)
         val serial = ++verticalSelectionSerial
         val anchor = editSelAnchor
