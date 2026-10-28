@@ -130,6 +130,7 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
     private var editSelAnchor = -1
     /** 选择模式下当前活动端点；不能用 getTextBeforeCursor 推断，因为选区建立后它指向较小端点。 */
     private var editSelCaret = -1
+    private var verticalSelectionSerial = 0L
 
     internal fun handleToolbarEditingAction(action: String) {
         val ic = service.currentInputConnection ?: return
@@ -158,6 +159,7 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
             }
 
             "select_begin" -> {
+                verticalSelectionSerial++
                 val selection = readEditorSelection(ic)
                 editSelAnchor = selection?.second ?: (
                     ic.getTextBeforeCursor(XimeInputMethodService.SAFE_TEXT_LIMIT, 0) ?: ""
@@ -165,6 +167,7 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
                 editSelCaret = editSelAnchor
             }
             "select_end" -> {
+                verticalSelectionSerial++
                 editSelAnchor = -1
                 editSelCaret = -1
             }
@@ -215,21 +218,30 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
             return
         }
         sendEditorKey(ic, if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN)
-        val moved = readEditorText(ic)?.selectionEnd
-        if (moved != null && moved != current) {
-            ic.beginBatchEdit()
-            ic.setSelection(editSelAnchor, moved)
-            ic.endBatchEdit()
-            editSelCaret = moved
-        } else {
-            // 编辑器拒绝普通 DPAD 时，最后再尝试原生扩展语义。
-            sendEditorKey(
-                ic,
-                if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN,
-                extend = true,
-            )
-            editSelCaret = -1
-        }
+        val serial = ++verticalSelectionSerial
+        val anchor = editSelAnchor
+        editSelCaret = -1
+        // Flutter 输入连接的 selection 回报可能晚于 sendKeyEvent 一个消息循环。
+        // 延迟读取，避免偶发读到旧位置而导致选区不显示。
+        service.mainHandler.postDelayed({
+            if (serial != verticalSelectionSerial || editSelAnchor != anchor) return@postDelayed
+            runCatching {
+                val moved = readEditorText(ic)?.selectionEnd
+                if (moved != null && moved != current) {
+                    ic.beginBatchEdit()
+                    ic.setSelection(anchor, moved)
+                    ic.endBatchEdit()
+                    editSelCaret = moved
+                } else {
+                    // 编辑器拒绝普通 DPAD 时，最后再尝试原生扩展语义。
+                    sendEditorKey(
+                        ic,
+                        if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN,
+                        extend = true,
+                    )
+                }
+            }
+        }, 32L)
     }
 
     private fun moveEditorCaret(ic: InputConnection, direction: Int, vertical: Boolean) {
