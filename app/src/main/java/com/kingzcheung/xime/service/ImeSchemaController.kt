@@ -221,8 +221,18 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         val serial = ++verticalSelectionSerial
         val anchor = editSelAnchor
         editSelCaret = -1
-        // Flutter 输入连接的 selection 回报可能晚于 sendKeyEvent 一个消息循环。
-        // 延迟读取，避免偶发读到旧位置而导致选区不显示。
+        scheduleVerticalSelectionProbe(ic, direction, current, anchor, serial, attempt = 0)
+    }
+
+    private fun scheduleVerticalSelectionProbe(
+        ic: InputConnection,
+        direction: Int,
+        current: Int,
+        anchor: Int,
+        serial: Long,
+        attempt: Int,
+    ) {
+        val delayMs = 16L
         service.mainHandler.postDelayed({
             if (serial != verticalSelectionSerial || editSelAnchor != anchor) return@postDelayed
             runCatching {
@@ -232,8 +242,11 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
                     ic.setSelection(anchor, moved)
                     ic.endBatchEdit()
                     editSelCaret = moved
+                } else if (attempt < 3) {
+                    // Flutter 可能在多个消息循环后才回报 selection，继续短轮询。
+                    scheduleVerticalSelectionProbe(ic, direction, current, anchor, serial, attempt + 1)
                 } else {
-                    // 编辑器拒绝普通 DPAD 时，最后再尝试原生扩展语义。
+                    // 编辑器始终不回报移动位置时，最后尝试原生扩展语义。
                     sendEditorKey(
                         ic,
                         if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN,
@@ -241,7 +254,7 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
                     )
                 }
             }
-        }, 32L)
+        }, delayMs)
     }
 
     private fun moveEditorCaret(ic: InputConnection, direction: Int, vertical: Boolean) {
