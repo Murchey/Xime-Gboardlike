@@ -160,14 +160,16 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
 
             "select_begin" -> {
                 verticalSelectionSerial++
-                val selection = readEditorSelection(ic)
-                editSelAnchor = selection?.second ?: (
-                    ic.getTextBeforeCursor(XimeInputMethodService.SAFE_TEXT_LIMIT, 0) ?: ""
-                ).length
-                editSelCaret = editSelAnchor
+                editSelAnchor = -1
+                editSelCaret = -1
             }
             "select_end" -> {
                 verticalSelectionSerial++
+                // 退出选择模式：折叠选区到活动端点（参考 fcitx5 cancelSelection）
+                val sel = readEditorSelection(ic)
+                if (sel != null && sel.first != sel.second) {
+                    ic.setSelection(sel.second, sel.second)
+                }
                 editSelAnchor = -1
                 editSelCaret = -1
             }
@@ -206,25 +208,12 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         move()
     }
 
+    /**
+     * 选择模式左右扩展选区。同样只发 Shift+DPAD 组合键，让编辑器自己管理。
+     */
     private fun extendSelection(ic: InputConnection, direction: Int) {
-        val extracted = readEditorText(ic) ?: return
-        val total = extracted.text.length
-        val rawPos = editSelCaret.takeIf { it >= 0 } ?: extracted.selectionEnd
-        val anchor = resolveEditAnchor(ic, rawPos)
-        // 端点被编辑器钳制到文本末尾时，下一次向左也要从这里起步，
-        // 否则端点停在越界值上，方向键会一次都动不了。
-        val pos = EditorCaretLogic.clampCaret(rawPos, total)
-        val next = EditorCaretLogic.stepCaret(pos, direction, total)
-        if (next == pos) {
-            // 已到文本首/尾：保持选区形状不变，不要把选区折叠成单点
-            editSelCaret = pos
-            if (rawPos != pos) applySelectionQuietly(ic, anchor, pos)
-            return
-        }
-        ic.beginBatchEdit()
-        ic.setSelection(anchor, next)
-        ic.endBatchEdit()
-        editSelCaret = next
+        val keyCode = if (direction < 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
+        sendEditorKey(ic, keyCode, extend = true)
     }
 
     /** 当前位置是否已经顶到整段文本的首/尾（此时编辑器不会再响应同方向移动）。 */
@@ -261,45 +250,16 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
     private fun readEditorSelection(ic: InputConnection): Pair<Int, Int>? =
         readEditorText(ic)?.let { it.selectionStart to it.selectionEnd }
 
+    /**
+     * 选择模式上下扩展选区。
+     *
+     * 参考 fcitx5-android 的实现：只发 Shift+DPAD 组合键事件，让编辑器自己
+     * 管理选区扩展，不调用 setSelection——之前的「折叠光标→发键→轮询→还原选区」
+     * 流程每步都触发视觉更新，导致选区闪动。
+     */
     private fun extendVerticalSelection(ic: InputConnection, direction: Int) {
-        // 先让编辑器执行普通上下移动，借用它对自动折行的视觉行判断；
-        // 再读取移动后的绝对位置，用 setSelection 建立选区。部分 Flutter 输入连接
-        // 不会处理带 Shift 的 DPAD 事件，因此不能只依赖 Shift+DPAD。
-        val before = readEditorText(ic)
-        // 锚点必须在移动前落实：编辑器可能在移动过程中异步回调选区，
-        // 等到移动后再读取就取不到原来的起点，扩展方向会反过来。
-        val current = editSelCaret.takeIf { it >= 0 } ?: before?.selectionEnd
-        if (current != null) resolveEditAnchor(ic, current)
-        if (current == null) {
-            sendEditorKey(
-                ic,
-                if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN,
-                extend = true,
-            )
-            return
-        }
         val keyCode = if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN
-        // 上一次探测还在运行（长按连发）：只补发方向键，不折叠——连发间隔 75ms，
-        // 编辑器可能还没回报上一次的位置，此时读到的是过期值，折叠到过期位置
-        // 会让光标跳回去，表现为选区来回翻转/错乱。仍启动新探测追踪最新位置。
-        if (editSelCaret < 0) {
-            sendEditorKey(ic, keyCode)
-            val repeatSerial = ++verticalSelectionSerial
-            scheduleVerticalSelectionProbe(
-                ic, direction, current ?: 0, editSelAnchor, repeatSerial, attempt = 0
-            )
-            return
-        }
-        // 已有选区时，先把活动端点明确设为折叠光标。否则部分编辑器会在
-        // 普通 DPAD 前后交替折叠到锚点/活动端点，表现为奇数次有选中、偶数次无选中。
-        if (editSelAnchor >= 0 && current != editSelAnchor) {
-            ic.setSelection(current, current)
-        }
-        sendEditorKey(ic, keyCode)
-        val serial = ++verticalSelectionSerial
-        val anchor = editSelAnchor
-        editSelCaret = -1
-        scheduleVerticalSelectionProbe(ic, direction, current, anchor, serial, attempt = 0)
+        sendEditorKey(ic, keyCode, extend = true)
     }
 
     private fun scheduleVerticalSelectionProbe(
@@ -399,11 +359,29 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         sendEditorKey(ic, keyCode)
     }
 
+    /**
+     * 发送方向键到编辑器。[extend] 时发送带真实 Shift 修饰键的组合键事件
+     * （参考 fcitx5-android 的 sendCombinationKeyEvents）——只设 metaState 不发
+     * Shift 按键事件，部分编辑器（含 Flutter）不会识别为扩展选区。
+     */
     private fun sendEditorKey(ic: InputConnection, keyCode: Int, extend: Boolean = false) {
         val t = SystemClock.uptimeMillis()
-        val meta = if (extend) KeyEvent.META_SHIFT_ON else 0
+        val meta = if (extend) {
+            KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON
+        } else 0
+        if (extend) {
+            ic.sendKeyEvent(
+                KeyEvent(t, t, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SHIFT_LEFT, 0,
+                    KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON)
+            )
+        }
         ic.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, keyCode, 0, meta))
         ic.sendKeyEvent(KeyEvent(t, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, keyCode, 0, meta))
+        if (extend) {
+            ic.sendKeyEvent(
+                KeyEvent(t, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_SHIFT_LEFT, 0, 0)
+            )
+        }
     }
 
     internal fun applyPageSizeSetting(schemaId: String) {
