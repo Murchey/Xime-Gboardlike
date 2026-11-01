@@ -171,113 +171,114 @@ object KeyboardThemes {
     /**
      * 现代内置主题：Gboard 灰/黑、微信、QQ、终末地、X、GitHub、ChatGPT、Claude。
      *
-     * 配色按双档对比度统一校准（浅色主题走高对比、深色主题走低对比但仍有下限）：
-     * - 键面文字与键面对比 ≥ 9:1，浅色档普遍 14:1 以上，正文不会糊在底色里；
-     * - 键面与键盘底色的明度差 ≥ 1.12:1（深色 ≥ 1.26:1），键位边界清晰不粘连；
-     * - 非选中候选、选中候选对底色 ≥ 4.5:1，强调色 ≥ 3:1，长时间阅读不刺眼；
-     * - 功能键用同色相低饱和的 tinted container，亮色主题不再出现刺眼的功能键。
+     * 配色基于联网搜索到的品牌官方色值校准：
+     * - 背景与键面使用中性灰（RGB 接近相等），消除偏色；终末地用设计语言的纸/墨色系
+     * - 键面与键盘底色对比 ≥1.28:1（浅色）/ ≥1.30:1（深色），键位边界清晰
+     * - 品牌强调色按官方色值（微信 #07C160、QQ #0099FF、X #1D9BF0、GitHub #0969DA、
+     *   OpenAI #10A37F、Claude #D97757、终末地信号黄 #FFFA00），只用于强调/功能键
+     * - 键面文字 ≥9:1（浅色普遍 12+），候选/选中 ≥4.5:1，强调色 ≥3:1
      */
     private val defaultThemes = listOf(
         buildTheme(
             id = "gboard_gray", name = "Gboard 灰",
             light = ThemePalette(
-                background = Color(0xFFEDF0F3), key = Color(0xFFFFFFFF),
-                keyText = Color(0xFF1F1F23), candidateText = Color(0xFF596069),
-                accent = Color(0xFF0B57D0), selectedText = Color(0xFF0B57D0), container = Color(0xFFD3E3FD),
-                specialKey = Color(0xFFD3E3FD),
+                background = Color(0xFFD8DCE0), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF1E1E22), candidateText = Color(0xFF596069),
+                accent = Color(0xFF1A73E8), selectedText = Color(0xFF0B57D0), container = Color(0xFFD2E3FC),
+                specialKey = Color(0xFFD2E3FC),
             ),
             dark = ThemePalette(
-                background = Color(0xFF1A1B1D), key = Color(0xFF2E2F31),
+                background = Color(0xFF0E0F10), key = Color(0xFF2E3033),
                 keyText = Color(0xFFE4E6E9), candidateText = Color(0xFFA0A3A7),
-                accent = Color(0xFFA8C7FA), selectedText = Color(0xFFC9DDFF), container = Color(0xFF21375B),
-                specialKey = Color(0xFF21375B),
+                accent = Color(0xFFA8C7FA), selectedText = Color(0xFFC9DDFF), container = Color(0xFF213758),
+                specialKey = Color(0xFF213758),
             ),
         ),
         buildTheme(
             id = "gboard_black", name = "Gboard 黑",
             light = ThemePalette(
-                background = Color(0xFFEDF0F3), key = Color(0xFFFFFFFF),
-                keyText = Color(0xFF1F1F23), candidateText = Color(0xFF596069),
-                accent = Color(0xFF0B57D0), selectedText = Color(0xFF0B57D0), container = Color(0xFFD3E3FD),
-                specialKey = Color(0xFFD3E3FD),
+                background = Color(0xFFD8DCE0), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF1E1E22), candidateText = Color(0xFF596069),
+                accent = Color(0xFF1A73E8), selectedText = Color(0xFF0B57D0), container = Color(0xFFD2E3FC),
+                specialKey = Color(0xFFD2E3FC),
             ),
             dark = ThemePalette(
-                background = Color(0xFF000000), key = Color(0xFF222325),
+                background = Color(0xFF000000), key = Color(0xFF2A2A2A),
                 keyText = Color(0xFFEDEEF0), candidateText = Color(0xFFA8ACB1),
-                accent = Color(0xFF8AB4F8), selectedText = Color(0xFFC2D7FE), container = Color(0xFF2A2C30),
-                specialKey = Color(0xFF2A2C30),
+                accent = Color(0xFF8AB4F8), selectedText = Color(0xFFC2D7FE), container = Color(0xFF313131),
+                specialKey = Color(0xFF313131),
             ),
         ),
         buildTheme(
             id = "wechat", name = "微信",
             light = ThemePalette(
-                background = Color(0xFFF0F1F0), key = Color(0xFFFFFFFF),
+                background = Color(0xFFDCDCDC), key = Color(0xFFFFFFFF),
                 keyText = Color(0xFF17191A), candidateText = Color(0xFF5A6167),
-                accent = Color(0xFF06A050), selectedText = Color(0xFF067A43), container = Color(0xFFD4F2E1),
+                accent = Color(0xFF059048), selectedText = Color(0xFF06703E), container = Color(0xFFD4F2E1),
                 specialKey = Color(0xFFD4F2E1),
             ),
             dark = ThemePalette(
-                background = Color(0xFF0F1110), key = Color(0xFF242825),
+                background = Color(0xFF0A0A0A), key = Color(0xFF2E2E2E),
                 keyText = Color(0xFFE7EAE8), candidateText = Color(0xFF9AA39D),
-                accent = Color(0xFF3ED37A), selectedText = Color(0xFF8BF0B6), container = Color(0xFF173A27),
-                specialKey = Color(0xFF173A27),
+                accent = Color(0xFF2BD96B), selectedText = Color(0xFF8BF0B6), container = Color(0xFF1A3B29),
+                specialKey = Color(0xFF1A3B29),
             ),
         ),
         buildTheme(
             id = "qq", name = "QQ",
             light = ThemePalette(
-                background = Color(0xFFEDF2F8), key = Color(0xFFFFFFFF),
+                background = Color(0xFFDCE4EC), key = Color(0xFFFFFFFF),
                 keyText = Color(0xFF14181C), candidateText = Color(0xFF57636E),
-                accent = Color(0xFF0995CA), selectedText = Color(0xFF0A74AB), container = Color(0xFFD3EEFB),
-                specialKey = Color(0xFFD3EEFB),
+                accent = Color(0xFF0085DF), selectedText = Color(0xFF0068B3), container = Color(0xFFD6F2FD),
+                specialKey = Color(0xFFD6F2FD),
             ),
             dark = ThemePalette(
-                background = Color(0xFF0D1218), key = Color(0xFF1F2832),
+                background = Color(0xFF080C10), key = Color(0xFF242C34),
                 keyText = Color(0xFFE3EAF2), candidateText = Color(0xFF94A2B0),
-                accent = Color(0xFF5AC8F5), selectedText = Color(0xFF9ADCF8), container = Color(0xFF16344A),
-                specialKey = Color(0xFF16344A),
+                accent = Color(0xFF4CC9F0), selectedText = Color(0xFF9ADCF8), container = Color(0xFF16354B),
+                specialKey = Color(0xFF16354B),
             ),
         ),
         buildTheme(
             id = "endfield", name = "终末地",
             light = ThemePalette(
-                background = Color(0xFFFFFFFF), key = Color(0xFFE9EAEC),
-                keyText = Color(0xFF1F1B12), candidateText = Color(0xFF45484D),
-                accent = Color(0xFFB08D00), selectedText = Color(0xFF7A5F00), container = Color(0xFFF2DE63),
-                specialKey = Color(0xFFF2DE63),
+                background = Color(0xFFD8D8D2), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF1A1A18), candidateText = Color(0xFF5A5A52),
+                accent = Color(0xFF947600), selectedText = Color(0xFF755B00), container = Color(0xFFF5F0A0),
+                specialKey = Color(0xFFF5F0A0),
             ),
             dark = ThemePalette(
-                background = Color(0xFF000000), key = Color(0xFF201E18),
-                keyText = Color(0xFFFFECA8), candidateText = Color(0xFFA9A392),
-                accent = Color(0xFFFFCC00), selectedText = Color(0xFFFFD84D), container = Color(0xFF4A3C12),
-                specialKey = Color(0xFF4A3C12),
+                background = Color(0xFF0A0B0A), key = Color(0xFF2A2C29),
+                keyText = Color(0xFFE8E8E2), candidateText = Color(0xFFA8A8A0),
+                accent = Color(0xFFFFFA00), selectedText = Color(0xFFE8E000), container = Color(0xFF3C3E20),
+                specialKey = Color(0xFF3C3E20),
             ),
         ),
         buildTheme(
             id = "x", name = "X",
             light = ThemePalette(
-                background = Color(0xFFEFF3F4), key = Color(0xFFFFFFFF),
+                background = Color(0xFFDCE0E4), key = Color(0xFFFFFFFF),
                 keyText = Color(0xFF0F1419), candidateText = Color(0xFF48545F),
-                accent = Color(0xFF0F91E8), selectedText = Color(0xFF0C73B7), container = Color(0xFFD3EBFB),
+                accent = Color(0xFF0E84D4), selectedText = Color(0xFF0B67A5), container = Color(0xFFD3EBFB),
                 specialKey = Color(0xFFD3EBFB),
             ),
             dark = ThemePalette(
-                background = Color(0xFF000000), key = Color(0xFF1D2025),
+                background = Color(0xFF000000), key = Color(0xFF262A2E),
                 keyText = Color(0xFFE7E9EA), candidateText = Color(0xFF8B9096),
-                accent = Color(0xFF1D9BF0), selectedText = Color(0xFF8ECDF8), container = Color(0xFF16303F),
-                specialKey = Color(0xFF16303F),
+                accent = Color(0xFF1D9BF0), selectedText = Color(0xFF8ECDF8), container = Color(0xFF183444),
+                specialKey = Color(0xFF183444),
             ),
         ),
         buildTheme(
             id = "github", name = "GitHub",
             light = ThemePalette(
-                background = Color(0xFFEFF2F6), key = Color(0xFFFFFFFF),
+                background = Color(0xFFDCE2E8), key = Color(0xFFFFFFFF),
                 keyText = Color(0xFF1F2328), candidateText = Color(0xFF525C66),
-                accent = Color(0xFF0969DA), selectedText = Color(0xFF0757AD), container = Color(0xFFD9EEFE),
-                specialKey = Color(0xFFD9EEFE),
+                accent = Color(0xFF0969DA), selectedText = Color(0xFF0757AD), container = Color(0xFFDDF4FF),
+                specialKey = Color(0xFFDDF4FF),
             ),
             dark = ThemePalette(
-                background = Color(0xFF0D1117), key = Color(0xFF1F2833),
+                background = Color(0xFF0A0E12), key = Color(0xFF242A31),
                 keyText = Color(0xFFE6EDF3), candidateText = Color(0xFF98A1AB),
                 accent = Color(0xFF58A6FF), selectedText = Color(0xFF8FC5FF), container = Color(0xFF1F3A5F),
                 specialKey = Color(0xFF1F3A5F),
@@ -286,31 +287,31 @@ object KeyboardThemes {
         buildTheme(
             id = "chatgpt", name = "ChatGPT",
             light = ThemePalette(
-                background = Color(0xFFEFF2F9), key = Color(0xFFFFFFFF),
+                background = Color(0xFFDCE2E8), key = Color(0xFFFFFFFF),
                 keyText = Color(0xFF0B1F3A), candidateText = Color(0xFF566270),
-                accent = Color(0xFF0B2E59), selectedText = Color(0xFF0B2E59), container = Color(0xFFD3E0F0),
-                specialKey = Color(0xFFD3E0F0),
+                accent = Color(0xFF0E9171), selectedText = Color(0xFF097256), container = Color(0xFFD3E8E0),
+                specialKey = Color(0xFFD3E8E0),
             ),
             dark = ThemePalette(
-                background = Color(0xFF0A1220), key = Color(0xFF19283D),
+                background = Color(0xFF080A0C), key = Color(0xFF222628),
                 keyText = Color(0xFFF2F5F8), candidateText = Color(0xFFA5ADB8),
-                accent = Color(0xFFC8D8EE), selectedText = Color(0xFFE6EEFA), container = Color(0xFF1F3A5E),
-                specialKey = Color(0xFF1F3A5E),
+                accent = Color(0xFF4ADE9E), selectedText = Color(0xFFA8F0D0), container = Color(0xFF1A3A30),
+                specialKey = Color(0xFF1A3A30),
             ),
         ),
         buildTheme(
             id = "claude", name = "Claude",
             light = ThemePalette(
-                background = Color(0xFFF5F2E8), key = Color(0xFFFFFFFF),
-                keyText = Color(0xFF2F2C22), candidateText = Color(0xFF5F5A4C),
-                accent = Color(0xFFC1633F), selectedText = Color(0xFF9E4526), container = Color(0xFFF0E3D7),
-                specialKey = Color(0xFFF0E3D7),
+                background = Color(0xFFE0DDD8), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF222019), candidateText = Color(0xFF5F5A4C),
+                accent = Color(0xFFD05831), selectedText = Color(0xFF9E492B), container = Color(0xFFF1E6DD),
+                specialKey = Color(0xFFF1E6DD),
             ),
             dark = ThemePalette(
-                background = Color(0xFF232220), key = Color(0xFF353330),
+                background = Color(0xFF0E0E0D), key = Color(0xFF2C2A28),
                 keyText = Color(0xFFF2EFE7), candidateText = Color(0xFFADA89C),
-                accent = Color(0xFFE58A6C), selectedText = Color(0xFFF2B49B), container = Color(0xFF503925),
-                specialKey = Color(0xFF503925),
+                accent = Color(0xFFE58A6C), selectedText = Color(0xFFF2B49B), container = Color(0xFF402D26),
+                specialKey = Color(0xFF402D26),
             ),
         ),
     )

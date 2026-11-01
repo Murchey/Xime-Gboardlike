@@ -54,29 +54,30 @@ class ThemeCatalogTest {
     }
 
     @Test
-    fun `终末地使用精调深浅色`() {
+    fun `终末地使用设计语言纸墨色系`() {
         val theme = KeyboardThemes.getThemeById("endfield")
-        assertEquals(Color(0xFFFFCC00), theme.accentDark)
-        assertEquals(Color(0xFFB08D00), theme.accentLight)
+        // 信号黄 #FFFA00 只做强调，浅色用深金保证可读
+        assertEquals(Color(0xFFFFFA00), theme.accentDark)
+        assertEquals(Color(0xFF947600), theme.accentLight)
         assertTrue(theme.accentLight.luminance() < theme.accentDark.luminance())
-        assertEquals(Color(0xFF000000), theme.keyboardBgDark)
-        assertEquals(Color(0xFF201E18), theme.keyBgDark)
-        // 功能键用暗金容器，避免整键高饱和明黄在暗光下发刺
-        assertEquals(Color(0xFF4A3C12), theme.specialKeyDark)
-        assertEquals(Color(0xFFFFECA8), theme.keyTextColorDark)
-        assertEquals(Color(0xFFA9A392), theme.candidateTextColorDark)
-        assertEquals(Color(0xFFFFFFFF), theme.keyboardBgLight)
-        assertEquals(Color(0xFFE9EAEC), theme.keyBgLight)
-        assertEquals(Color(0xFFF2DE63), theme.specialKeyLight)
-        assertEquals(Color(0xFF45484D), theme.candidateTextColorLight)
+        // 中性偏绿灰，不偏咖啡色
+        assertEquals(Color(0xFF0A0B0A), theme.keyboardBgDark)
+        assertEquals(Color(0xFF2A2C29), theme.keyBgDark)
+        assertEquals(Color(0xFF3C3E20), theme.specialKeyDark)
+        assertEquals(Color(0xFFE8E8E2), theme.keyTextColorDark)
+        assertEquals(Color(0xFFA8A8A0), theme.candidateTextColorDark)
+        assertEquals(Color(0xFFD8D8D2), theme.keyboardBgLight)
+        assertEquals(Color(0xFFFFFFFF), theme.keyBgLight)
+        assertEquals(Color(0xFFF5F0A0), theme.specialKeyLight)
+        assertEquals(Color(0xFF5A5A52), theme.candidateTextColorLight)
     }
 
     @Test
-    fun `ChatGPT 主题为深蓝与浅蓝`() {
+    fun `ChatGPT 主题使用 OpenAI 绿色强调`() {
         val theme = KeyboardThemes.getThemeById("chatgpt")
-        assertEquals(Color(0xFF0B2E59), theme.accentLight)
-        assertEquals(Color(0xFFC8D8EE), theme.accentDark)
-        assertEquals(Color(0xFF0A1220), theme.keyboardBgDark)
+        assertEquals(Color(0xFF0E9171), theme.accentLight)
+        assertEquals(Color(0xFF4ADE9E), theme.accentDark)
+        assertEquals(Color(0xFF080A0C), theme.keyboardBgDark)
     }
 
     @Test
@@ -102,11 +103,11 @@ class ThemeCatalogTest {
             .forEach { theme ->
                 assertTrue(
                     "${theme.id} 浅色键面与底色过于接近",
-                    KeyboardThemes.contrastRatio(theme.keyBgLight, theme.keyboardBgLight) >= 1.11f
+                    KeyboardThemes.contrastRatio(theme.keyBgLight, theme.keyboardBgLight) >= 1.25f
                 )
                 assertTrue(
                     "${theme.id} 深色键面与底色过于接近",
-                    KeyboardThemes.contrastRatio(theme.keyBgDark, theme.keyboardBgDark) >= 1.2f
+                    KeyboardThemes.contrastRatio(theme.keyBgDark, theme.keyboardBgDark) >= 1.25f
                 )
             }
     }
