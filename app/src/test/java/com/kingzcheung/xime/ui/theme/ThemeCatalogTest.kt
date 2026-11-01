@@ -63,7 +63,7 @@ class ThemeCatalogTest {
         // 中性偏绿灰，不偏咖啡色
         assertEquals(Color(0xFF0A0B0A), theme.keyboardBgDark)
         assertEquals(Color(0xFF2A2C29), theme.keyBgDark)
-        assertEquals(Color(0xFF3C3A10), theme.specialKeyDark)
+        assertEquals(Color(0xFF6B6420), theme.specialKeyDark)
         assertEquals(Color(0xFFE8E8E2), theme.keyTextColorDark)
         assertEquals(Color(0xFFA8A8A0), theme.candidateTextColorDark)
         assertEquals(Color(0xFFD8D8D2), theme.keyboardBgLight)

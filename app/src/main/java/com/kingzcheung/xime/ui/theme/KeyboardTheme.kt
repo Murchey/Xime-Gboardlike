@@ -250,8 +250,8 @@ object KeyboardThemes {
             dark = ThemePalette(
                 background = Color(0xFF0A0B0A), key = Color(0xFF2A2C29),
                 keyText = Color(0xFFE8E8E2), candidateText = Color(0xFFA8A8A0),
-                accent = Color(0xFFFFCC00), selectedText = Color(0xFFE8C000), container = Color(0xFF3C3A10),
-                specialKey = Color(0xFF3C3A10),
+                accent = Color(0xFFFFCC00), selectedText = Color(0xFFE8C000), container = Color(0xFF6B6420),
+                specialKey = Color(0xFF6B6420),
             ),
         ),
         buildTheme(
