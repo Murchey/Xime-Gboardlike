@@ -1322,7 +1322,12 @@ fun KeyboardRow(
             val rowOnPress: (() -> Unit)? = remember(key, onKeyPressDown) { { onKeyPressDown?.invoke(key); Unit } }
             val rowOnRelease: (() -> Unit)? = remember(key, onKeyRelease) { { onKeyRelease?.invoke(key); Unit } }
             SwipeableKeyButton(
-                text = if (isShifted) key.uppercase() else key,
+                text = applyLetterDisplayCase(
+                    text = key,
+                    isLetterKey = key.length == 1 && key[0].isLetter(),
+                    isShifted = isShifted,
+                    setting = LocalLetterCaseSetting.current,
+                ),
                 onClick = rowOnClick,
                 backgroundColor = keyBackgroundColor,
                 textColor = keyTextColor,

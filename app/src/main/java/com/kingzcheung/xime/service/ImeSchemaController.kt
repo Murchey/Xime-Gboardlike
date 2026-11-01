@@ -146,16 +146,16 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
                 ic.setSelection(before.length + after.length, before.length + after.length)
             }
             "arrow_up" -> {
-                moveEditorCaret(ic, -1, vertical = true)
+                moveCaretOutsideSelection(ic, -1, vertical = true) { moveEditorCaret(ic, -1, true) }
             }
             "arrow_down" -> {
-                moveEditorCaret(ic, 1, vertical = true)
+                moveCaretOutsideSelection(ic, 1, vertical = true) { moveEditorCaret(ic, 1, true) }
             }
             "arrow_left" -> {
-                moveEditorCaret(ic, -1, vertical = false)
+                moveCaretOutsideSelection(ic, -1, vertical = false) { moveEditorCaret(ic, -1, false) }
             }
             "arrow_right" -> {
-                moveEditorCaret(ic, 1, vertical = false)
+                moveCaretOutsideSelection(ic, 1, vertical = false) { moveEditorCaret(ic, 1, false) }
             }
 
             "select_begin" -> {
@@ -165,6 +165,9 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
                     ic.getTextBeforeCursor(XimeInputMethodService.SAFE_TEXT_LIMIT, 0) ?: ""
                 ).length
                 editSelCaret = editSelAnchor
+                // 选择模式起点归一为折叠光标：编辑器里残留的旧选区会让方向键
+                // 按旧方向折叠，导致第一次扩展的起点和预期不符。
+                applySelectionQuietly(ic, editSelAnchor, editSelAnchor)
             }
             "select_end" -> {
                 verticalSelectionSerial++
@@ -182,16 +185,65 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         }
     }
 
+    /**
+     * 普通方向键：先按方向折叠选区，横向到此为止、纵向继续移动一行。
+     * 编辑器在选区边界再收到方向键会把选区原地折叠成单点，
+     * 表现为「到顶/到底以后选中内容莫名消失」。
+     */
+    private fun moveCaretOutsideSelection(
+        ic: InputConnection,
+        direction: Int,
+        vertical: Boolean,
+        move: () -> Unit
+    ) {
+        val extracted = readEditorText(ic)
+        if (extracted == null || extracted.selectionStart == extracted.selectionEnd) {
+            move()
+            return
+        }
+        val collapseTo = EditorCaretLogic.collapseTarget(
+            extracted.selectionStart, extracted.selectionEnd, direction
+        )
+        ic.setSelection(collapseTo, collapseTo)
+        if (!vertical) return
+        move()
+    }
+
     private fun extendSelection(ic: InputConnection, direction: Int) {
         val extracted = readEditorText(ic) ?: return
-        val pos = editSelCaret.takeIf { it >= 0 } ?: extracted.selectionEnd
         val total = extracted.text.length
-        val next = (pos + direction).coerceIn(0, total)
-        if (next != pos) {
-            ic.beginBatchEdit()
-            ic.setSelection(editSelAnchor, next)
+        val rawPos = editSelCaret.takeIf { it >= 0 } ?: extracted.selectionEnd
+        val anchor = resolveEditAnchor(ic, rawPos)
+        // 端点被编辑器钳制到文本末尾时，下一次向左也要从这里起步，
+        // 否则端点停在越界值上，方向键会一次都动不了。
+        val pos = EditorCaretLogic.clampCaret(rawPos, total)
+        val next = EditorCaretLogic.stepCaret(pos, direction, total)
+        if (next == pos) {
+            // 已到文本首/尾：保持选区形状不变，不要把选区折叠成单点
+            editSelCaret = pos
+            if (rawPos != pos) applySelectionQuietly(ic, anchor, pos)
+            return
+        }
+        ic.beginBatchEdit()
+        ic.setSelection(anchor, next)
+        ic.endBatchEdit()
+        editSelCaret = next
+    }
+
+    /** 选择模式下建立选区的一端；未初始化时以编辑器当前折叠位置为准。 */
+    private fun resolveEditAnchor(ic: InputConnection, fallback: Int): Int {
+        if (editSelAnchor >= 0) return editSelAnchor
+        val anchor = readEditorText(ic)?.selectionStart ?: fallback
+        editSelAnchor = anchor
+        return anchor
+    }
+
+    private fun applySelectionQuietly(ic: InputConnection, anchor: Int, caret: Int) {
+        ic.beginBatchEdit()
+        try {
+            ic.setSelection(anchor, caret)
+        } finally {
             ic.endBatchEdit()
-            editSelCaret = next
         }
     }
 
@@ -211,7 +263,10 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         // 再读取移动后的绝对位置，用 setSelection 建立选区。部分 Flutter 输入连接
         // 不会处理带 Shift 的 DPAD 事件，因此不能只依赖 Shift+DPAD。
         val before = readEditorText(ic)
+        // 锚点必须在移动前落实：编辑器可能在移动过程中异步回调选区，
+        // 等到移动后再读取就取不到原来的起点，扩展方向会反过来。
         val current = editSelCaret.takeIf { it >= 0 } ?: before?.selectionEnd
+        if (current != null) resolveEditAnchor(ic, current)
         if (current == null) {
             sendEditorKey(
                 ic,
@@ -229,6 +284,16 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         val serial = ++verticalSelectionSerial
         val anchor = editSelAnchor
         editSelCaret = -1
+        // 同步型编辑器按键事件返回时已经移动完毕：直接建立选区，不走轮询。
+        // 到达段落或文本框边界时位置不变，同样立刻把折叠光标还原成原选区，
+        // 避免边界上短暂（最长一个轮询周期）只剩一个光标。
+        val movedNow = readEditorText(ic)?.selectionEnd
+        if (movedNow != null && movedNow != current) {
+            applyVerticalSelection(ic, anchor, movedNow)
+            reinforceVerticalSelection(ic, anchor, movedNow, serial, attempt = 0)
+            return
+        }
+        applyVerticalSelection(ic, anchor, current)
         scheduleVerticalSelectionProbe(ic, direction, current, anchor, serial, attempt = 0)
     }
 
@@ -252,12 +317,12 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
                     // Flutter 可能在多个消息循环后才回报 selection，继续短轮询。
                     scheduleVerticalSelectionProbe(ic, direction, current, anchor, serial, attempt + 1)
                 } else {
-                    // 编辑器始终不回报移动位置时，最后尝试原生扩展语义。
-                    sendEditorKey(
-                        ic,
-                        if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN,
-                        extend = true,
-                    )
+                    // 轮询结束位置仍未变：已经到段落/文本框的顶部或结尾，编辑器不再接受移动。
+                    // 这里不回退 Shift+DPAD —— 原生扩展语义在边界会把选区整行跳变，
+                    // 表现为「到顶/到底后选中内容异常改变」。保持当前选区不动。
+                    val clamped = current.coerceIn(0, readEditorText(ic)?.text?.length ?: current)
+                    editSelCaret = clamped
+                    applySelectionQuietly(ic, anchor, clamped)
                 }
             }
         }, delayMs)

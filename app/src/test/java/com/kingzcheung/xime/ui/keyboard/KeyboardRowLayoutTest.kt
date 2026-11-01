@@ -156,6 +156,20 @@ class KeyboardRowLayoutTest {
     }
 
     @Test
+    fun `英文模式字母键键面只随 Shift 变化且默认小写`() {
+        val lowerFollow = LetterCaseSetting(upperCase = false, followShift = true)
+        // 布局里的 tap.label 写成大写，键面也必须按小写显示
+        listOf("q", "a", "z").forEach { letter ->
+            val source = letterCaseSourceText(true, true, letter, letter.uppercase())
+            assertEquals(letter, applyLetterDisplayCase(source, true, false, lowerFollow))
+            assertEquals(letter.uppercase(), applyLetterDisplayCase(source, true, true, lowerFollow))
+        }
+        // 非字母键与非英文模式仍用布局里的显示文本
+        assertEquals("1", letterCaseSourceText(true, false, "1", "1"))
+        assertEquals("，", letterCaseSourceText(false, false, "，", "，"))
+    }
+
+    @Test
     fun `按键描边替代底部阴影且深浅键自动取反色`() {
         assertEquals(Color.Black.copy(alpha = 0.10f), keyOutlineColor(Color.White))
         assertEquals(Color.White.copy(alpha = 0.10f), keyOutlineColor(Color(0xFF1F1F1F)))

@@ -1036,6 +1036,10 @@ internal object UiTextFallback {
         R.string.s_wenjianming_shibie_shibai to "「%1\$s」没能识别出目标词库，请重命名为 <词典名>.txt",
         R.string.s_yongmougefangan_daguozi to "用某个方案打过字之后，引擎会自动生成对应的 .userdb",
         R.string.s_zidingyibeijing to "自定义背景",
+        R.string.s_xitongziti to "系统字体",
+        R.string.s_xitongziti_xuanze_fu to "共 %1\$d 款，点击打开抽屉选择",
+        R.string.s_zitixuanze_sousuo to "搜索字体名称",
+        R.string.s_zitixuanze_wujieguo to "没有匹配的字体",
         )
     }
 

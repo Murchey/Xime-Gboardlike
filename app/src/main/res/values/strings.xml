@@ -1095,6 +1095,10 @@
     <string name="s_xitongziti_fu">系统已注册字体文件</string>
     <string name="s_neizhiziti_fu">随应用打包，离线可用</string>
     <string name="s_yidaoruziti_fu">已导入的字体文件</string>
+    <string name="s_xitongziti">系统字体</string>
+    <string name="s_xitongziti_xuanze_fu">共 %1$d 款，点击打开抽屉选择</string>
+    <string name="s_zitixuanze_sousuo">搜索字体名称</string>
+    <string name="s_zitixuanze_wujieguo">没有匹配的字体</string>
     <string name="s_daoruziti">导入字体</string>
     <string name="s_shanchuziti">删除字体</string>
     <string name="s_shanchuziti_queren">确定删除字体「%1$s」？</string>

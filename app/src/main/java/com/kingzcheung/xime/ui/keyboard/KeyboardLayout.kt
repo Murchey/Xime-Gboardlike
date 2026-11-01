@@ -143,6 +143,17 @@ internal fun prependAsciiLongPressSymbol(
     return listOf(symbol) + labels.filterNot { it == symbol }
 }
 
+/**
+ * 键面大小写的文本来源：英文模式的字母键只认上屏值（q/a…），
+ * 布局里 tap.label 写成大写也不影响键面，大小写只随 Shift 设置变化。
+ */
+internal fun letterCaseSourceText(
+    isAsciiMode: Boolean,
+    isLetterKey: Boolean,
+    commitValue: String,
+    displayLabel: String,
+): String = if (isAsciiMode && isLetterKey) commitValue else displayLabel
+
 /** 按设置计算字母键的显示文本；非字母键原样返回。 */
 internal fun applyLetterDisplayCase(
     text: String,
@@ -1960,8 +1971,14 @@ fun KeyboardRowWithConfig(
             val hideCornerHint = hideMainLabel || hideLetterCornerHint
             // 键面大小写：大写固定 / 小写固定 / 小写跟随 Shift（默认）。
             val isLetterKey = key.length == 1 && key[0].isLetter()
+            val caseSourceText = letterCaseSourceText(
+                isAsciiMode = isAsciiMode,
+                isLetterKey = isLetterKey,
+                commitValue = commitValue,
+                displayLabel = rawDisplayText,
+            )
             val displayText = if (hideMainLabel) "" else applyLetterDisplayCase(
-                text = rawDisplayText,
+                text = caseSourceText,
                 isLetterKey = isLetterKey,
                 isShifted = isShifted,
                 setting = letterCase,

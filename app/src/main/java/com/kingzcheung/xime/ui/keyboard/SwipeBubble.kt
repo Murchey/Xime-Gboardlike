@@ -78,6 +78,9 @@ data class BubbleDrawData(
     val isCircularPress: Boolean = false,
 )
 
+/** 圆形/圆角气泡的半径增量（px）；高度按半径的两倍加高。 */
+private const val BUBBLE_RADIUS_DELTA_PX = 2f
+
 /** 按压气泡抬起后的滞留时长：随抬起瞬间消失看不清键位提示（主流输入法约 50~80ms），取中值。 */
 private const val PRESS_BUBBLE_RELEASE_DELAY_MS = 60L
 
@@ -161,19 +164,26 @@ fun rememberSwipeBubbleDrawData(
     val longPressRows = if (isLongPressMode && longPressColumns > 0) {
         (swipeState.longPressItems.size + longPressColumns - 1) / longPressColumns
     } else 1
-    val bodyHeightPx = rowHeightPx * longPressRows
     // 单项长按、字母键按压气泡都画成圆形，不再向下伸出尖角。
     val singleLongPress = isLongPressMode && swipeState.longPressItems.size == 1
     val circularPress = swipeState.isPressed && !swipeState.isLongPress && swipeState.isLetterPress
+    // 圆形气泡（字母键点击、单项长按）的半径等于高度的一半：
+    // 直径加高两个增量，半径才正好 +2px，键面反馈更跟手；其余气泡尺寸不变。
+    val isRoundBubble = singleLongPress || circularPress
+    val bodyHeightPx = rowHeightPx * longPressRows +
+        if (isRoundBubble) BUBBLE_RADIUS_DELTA_PX * 2f else 0f
     // 尖端完整覆盖按下的按键（与按键同高），宽体锚定按键顶部悬在上方（见 boxTop）。
     // 全部基于真实按键 bounds 计算，不再用 KeyHeight 估算值——
     // 键盘高度被调大时估算失准，宽体会下沉进按键被手指挡住。
     // 长按气泡统一悬浮在按键上方，不带向下的方块/尖角；点按与滑动气泡保留指示尖角。
     val pointerHeightPx = if (isLongPressMode || circularPress) 0f else keyBounds.height
-    val cornerRadiusPx = if (isLongPressMode || circularPress) {
-        bodyHeightPx / 2f
-    } else {
-        with(density) { BubbleCornerRadius.toPx() } * bubbleScale
+    val cornerRadiusPx = when {
+        // 圆形气泡：半径取自加高后的高度
+        isRoundBubble -> bodyHeightPx / 2f
+        // 多项长按气泡：圆角同样 +2px，与点击气泡的放大幅度保持一致
+        isLongPressMode -> with(density) { BubbleCornerRadius.toPx() } * bubbleScale +
+            BUBBLE_RADIUS_DELTA_PX
+        else -> with(density) { BubbleCornerRadius.toPx() } * bubbleScale
     }
     val screenMarginPx = with(density) { BubbleScreenMargin.toPx() }
     val keyWidthPx = keyWidth

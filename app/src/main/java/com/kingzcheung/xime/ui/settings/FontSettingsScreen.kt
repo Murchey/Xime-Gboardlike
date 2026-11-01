@@ -17,16 +17,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.twotone.Add
 import androidx.compose.material.icons.twotone.DeleteOutline
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -34,17 +42,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.kingzcheung.xime.R
 import com.kingzcheung.xime.i18n.tr
 import com.kingzcheung.xime.settings.FontImporter
@@ -112,6 +124,26 @@ fun FontSettingsContent(onBack: () -> Unit) {
         version++
     }
 
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    val selectedSystemFont = systemFonts.firstOrNull {
+        currentPath == AppFonts.systemFileSelection(it.path)
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        // 抽屉宽度占满，系统字体数量可能上百个，需要完整的列表与搜索区域
+        drawerContent = {
+            SystemFontDrawer(
+                fonts = systemFonts,
+                currentPath = currentPath,
+                onSelect = { font ->
+                    applySelection(AppFonts.systemFileSelection(font.path))
+                    scope.launch { drawerState.close() }
+                },
+            )
+        }
+    ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
@@ -156,20 +188,33 @@ fun FontSettingsContent(onBack: () -> Unit) {
                         onClick = { applySelection(AppFonts.SYSTEM_SENTINEL) },
                         fontFamily = FontFamily.Default,
                     )
-                    systemFonts.forEach { font ->
-                        FontDivider()
-                        FontOptionRow(
-                            title = font.name,
-                            subtitle = tr(R.string.s_xitongziti_fu),
-                            selected = currentPath == AppFonts.systemFileSelection(font.path),
-                            onClick = { applySelection(AppFonts.systemFileSelection(font.path)) },
-                            fontFamily = remember(font.path) {
+                    // 系统已注册字体数量可能上百，收进抽屉按需搜索选择，
+                    // 选中项直接作为一行摘要放在这里，便于确认当前取值。
+                    FontDivider()
+                    FontOptionRow(
+                        title = selectedSystemFont?.name ?: tr(R.string.s_xitongziti_fu),
+                        subtitle = if (selectedSystemFont != null) {
+                            tr(R.string.s_xitongziti_fu)
+                        } else {
+                            tr(R.string.s_xitongziti_xuanze_fu, systemFonts.size)
+                        },
+                        selected = false,
+                        onClick = { scope.launch { drawerState.open() } },
+                        fontFamily = selectedSystemFont?.let { font ->
+                            remember(font.path) {
                                 runCatching {
                                     FontFamily(Typeface.createFromFile(File(font.path)))
                                 }.getOrDefault(FontFamily.Default)
-                            },
-                        )
-                    }
+                            }
+                        },
+                        trailing = {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                    )
                     importedFonts.forEach { font ->
                         FontDivider()
                         FontOptionRow(
@@ -257,6 +302,119 @@ fun FontSettingsContent(onBack: () -> Unit) {
                 TextButton(onClick = { pendingDelete = null }) { Text(tr(R.string.s_quxiao)) }
             }
         )
+    }
+    }
+}
+
+/** 系统已注册字体抽屉：搜索 + 全量列表，选中即应用并收起。 */
+@Composable
+private fun SystemFontDrawer(
+    fonts: List<SystemFontOption>,
+    currentPath: String,
+    onSelect: (SystemFontOption) -> Unit,
+) {
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(fonts, query) {
+        val keyword = query.trim()
+        if (keyword.isEmpty()) {
+            fonts
+        } else {
+            fonts.filter { it.name.contains(keyword, ignoreCase = true) }
+        }
+    }
+
+    ModalDrawerSheet(
+        modifier = Modifier.fillMaxWidth(),
+        drawerContainerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+            Text(
+                text = tr(R.string.s_xitongziti),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = tr(R.string.s_xitongziti_fu),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(tr(R.string.s_zitixuanze_sousuo)) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = tr(R.string.s_quxiao),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                },
+            )
+        }
+
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            if (filtered.isEmpty()) {
+                item {
+                    Text(
+                        text = tr(R.string.s_zitixuanze_wujieguo),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(20.dp)
+                    )
+                }
+            }
+            items(filtered, key = { it.path }) { font ->
+                val selected = currentPath == AppFonts.systemFileSelection(font.path)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelect(font) }
+                        .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(selected = selected, onClick = { onSelect(font) })
+                    Spacer(modifier = Modifier.size(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = font.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontFamily = remember(font.path) {
+                                runCatching {
+                                    FontFamily(Typeface.createFromFile(File(font.path)))
+                                }.getOrDefault(FontFamily.Default)
+                            },
+                        )
+                        Text(
+                            text = font.path,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 20.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+            }
+        }
     }
 }
 
