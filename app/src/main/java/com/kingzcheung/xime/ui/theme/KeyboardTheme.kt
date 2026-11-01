@@ -250,8 +250,8 @@ object KeyboardThemes {
             dark = ThemePalette(
                 background = Color(0xFF0A0B0A), key = Color(0xFF2A2C29),
                 keyText = Color(0xFFE8E8E2), candidateText = Color(0xFFA8A8A0),
-                accent = Color(0xFFFFFA00), selectedText = Color(0xFFE8E000), container = Color(0xFF3C3E20),
-                specialKey = Color(0xFF3C3E20),
+                accent = Color(0xFFFFCC00), selectedText = Color(0xFFE8C000), container = Color(0xFF3C3A10),
+                specialKey = Color(0xFF3C3A10),
             ),
         ),
         buildTheme(
@@ -289,14 +289,14 @@ object KeyboardThemes {
             light = ThemePalette(
                 background = Color(0xFFDCE2E8), key = Color(0xFFFFFFFF),
                 keyText = Color(0xFF0B1F3A), candidateText = Color(0xFF566270),
-                accent = Color(0xFF0E9171), selectedText = Color(0xFF097256), container = Color(0xFFD3E8E0),
-                specialKey = Color(0xFFD3E8E0),
+                accent = Color(0xFF006EFE), selectedText = Color(0xFF0058CC), container = Color(0xFFD0E0F8),
+                specialKey = Color(0xFFD0E0F8),
             ),
             dark = ThemePalette(
                 background = Color(0xFF080A0C), key = Color(0xFF222628),
                 keyText = Color(0xFFF2F5F8), candidateText = Color(0xFFA5ADB8),
-                accent = Color(0xFF4ADE9E), selectedText = Color(0xFFA8F0D0), container = Color(0xFF1A3A30),
-                specialKey = Color(0xFF1A3A30),
+                accent = Color(0xFF006EFE), selectedText = Color(0xFF7AB8FF), container = Color(0xFF1C2E46),
+                specialKey = Color(0xFF1C2E46),
             ),
         ),
         buildTheme(

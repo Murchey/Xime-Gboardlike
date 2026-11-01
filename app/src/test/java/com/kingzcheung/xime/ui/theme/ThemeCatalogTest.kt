@@ -56,14 +56,14 @@ class ThemeCatalogTest {
     @Test
     fun `终末地使用设计语言纸墨色系`() {
         val theme = KeyboardThemes.getThemeById("endfield")
-        // 信号黄 #FFFA00 只做强调，浅色用深金保证可读
-        assertEquals(Color(0xFFFFFA00), theme.accentDark)
+        // 信号黄 #FFCC00 只做强调，浅色用深金保证可读
+        assertEquals(Color(0xFFFFCC00), theme.accentDark)
         assertEquals(Color(0xFF947600), theme.accentLight)
         assertTrue(theme.accentLight.luminance() < theme.accentDark.luminance())
         // 中性偏绿灰，不偏咖啡色
         assertEquals(Color(0xFF0A0B0A), theme.keyboardBgDark)
         assertEquals(Color(0xFF2A2C29), theme.keyBgDark)
-        assertEquals(Color(0xFF3C3E20), theme.specialKeyDark)
+        assertEquals(Color(0xFF3C3A10), theme.specialKeyDark)
         assertEquals(Color(0xFFE8E8E2), theme.keyTextColorDark)
         assertEquals(Color(0xFFA8A8A0), theme.candidateTextColorDark)
         assertEquals(Color(0xFFD8D8D2), theme.keyboardBgLight)
@@ -73,10 +73,10 @@ class ThemeCatalogTest {
     }
 
     @Test
-    fun `ChatGPT 主题使用 OpenAI 绿色强调`() {
+    fun `ChatGPT 主题使用品牌蓝强调`() {
         val theme = KeyboardThemes.getThemeById("chatgpt")
-        assertEquals(Color(0xFF0E9171), theme.accentLight)
-        assertEquals(Color(0xFF4ADE9E), theme.accentDark)
+        assertEquals(Color(0xFF006EFE), theme.accentLight)
+        assertEquals(Color(0xFF006EFE), theme.accentDark)
         assertEquals(Color(0xFF080A0C), theme.keyboardBgDark)
     }
 
