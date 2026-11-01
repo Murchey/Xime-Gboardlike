@@ -278,12 +278,24 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
             )
             return
         }
+        val keyCode = if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN
+        // 上一次探测还在运行（长按连发）：只补发方向键，不折叠——连发间隔 75ms，
+        // 编辑器可能还没回报上一次的位置，此时读到的是过期值，折叠到过期位置
+        // 会让光标跳回去，表现为选区来回翻转/错乱。仍启动新探测追踪最新位置。
+        if (editSelCaret < 0) {
+            sendEditorKey(ic, keyCode)
+            val repeatSerial = ++verticalSelectionSerial
+            scheduleVerticalSelectionProbe(
+                ic, direction, current ?: 0, editSelAnchor, repeatSerial, attempt = 0
+            )
+            return
+        }
         // 已有选区时，先把活动端点明确设为折叠光标。否则部分编辑器会在
         // 普通 DPAD 前后交替折叠到锚点/活动端点，表现为奇数次有选中、偶数次无选中。
         if (editSelAnchor >= 0 && current != editSelAnchor) {
             ic.setSelection(current, current)
         }
-        sendEditorKey(ic, if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN)
+        sendEditorKey(ic, keyCode)
         val serial = ++verticalSelectionSerial
         val anchor = editSelAnchor
         editSelCaret = -1
