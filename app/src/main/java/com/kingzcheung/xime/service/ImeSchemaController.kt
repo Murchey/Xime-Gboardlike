@@ -165,9 +165,6 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
                     ic.getTextBeforeCursor(XimeInputMethodService.SAFE_TEXT_LIMIT, 0) ?: ""
                 ).length
                 editSelCaret = editSelAnchor
-                // 选择模式起点归一为折叠光标：编辑器里残留的旧选区会让方向键
-                // 按旧方向折叠，导致第一次扩展的起点和预期不符。
-                applySelectionQuietly(ic, editSelAnchor, editSelAnchor)
             }
             "select_end" -> {
                 verticalSelectionSerial++
@@ -230,6 +227,12 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         editSelCaret = next
     }
 
+    /** 当前位置是否已经顶到整段文本的首/尾（此时编辑器不会再响应同方向移动）。 */
+    private fun isAtVerticalBoundary(ic: InputConnection, position: Int, direction: Int): Boolean {
+        val total = readEditorText(ic)?.text?.length ?: return false
+        return EditorCaretLogic.isAtBoundary(position, direction, total)
+    }
+
     /** 选择模式下建立选区的一端；未初始化时以编辑器当前折叠位置为准。 */
     private fun resolveEditAnchor(ic: InputConnection, fallback: Int): Int {
         if (editSelAnchor >= 0) return editSelAnchor
@@ -284,16 +287,6 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         val serial = ++verticalSelectionSerial
         val anchor = editSelAnchor
         editSelCaret = -1
-        // 同步型编辑器按键事件返回时已经移动完毕：直接建立选区，不走轮询。
-        // 到达段落或文本框边界时位置不变，同样立刻把折叠光标还原成原选区，
-        // 避免边界上短暂（最长一个轮询周期）只剩一个光标。
-        val movedNow = readEditorText(ic)?.selectionEnd
-        if (movedNow != null && movedNow != current) {
-            applyVerticalSelection(ic, anchor, movedNow)
-            reinforceVerticalSelection(ic, anchor, movedNow, serial, attempt = 0)
-            return
-        }
-        applyVerticalSelection(ic, anchor, current)
         scheduleVerticalSelectionProbe(ic, direction, current, anchor, serial, attempt = 0)
     }
 
@@ -313,16 +306,22 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
                 if (moved != null && moved != current) {
                     applyVerticalSelection(ic, anchor, moved)
                     reinforceVerticalSelection(ic, anchor, moved, serial, attempt = 0)
+                } else if (isAtVerticalBoundary(ic, current, direction)) {
+                    // 已经贴到整段文本的首/尾：编辑器不会再移动，别再空转轮询。
+                    // 这里也不回退 Shift+DPAD —— 原生扩展语义在边界会把选区整行跳变。
+                    // 把折叠光标还原成原选区，边界上选中内容才不会消失。
+                    applyVerticalSelection(ic, anchor, current)
                 } else if (attempt < 50) {
                     // Flutter 可能在多个消息循环后才回报 selection，继续短轮询。
                     scheduleVerticalSelectionProbe(ic, direction, current, anchor, serial, attempt + 1)
                 } else {
-                    // 轮询结束位置仍未变：已经到段落/文本框的顶部或结尾，编辑器不再接受移动。
-                    // 这里不回退 Shift+DPAD —— 原生扩展语义在边界会把选区整行跳变，
-                    // 表现为「到顶/到底后选中内容异常改变」。保持当前选区不动。
-                    val clamped = current.coerceIn(0, readEditorText(ic)?.text?.length ?: current)
-                    editSelCaret = clamped
-                    applySelectionQuietly(ic, anchor, clamped)
+                    // 位置没变但不在文本首尾（多行文本框的段落边界 / Flutter 异步回报
+                    // 始终不来）：沿用历史行为，最后尝试原生扩展语义。
+                    sendEditorKey(
+                        ic,
+                        if (direction < 0) KeyEvent.KEYCODE_DPAD_UP else KeyEvent.KEYCODE_DPAD_DOWN,
+                        extend = true,
+                    )
                 }
             }
         }, delayMs)
