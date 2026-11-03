@@ -359,8 +359,8 @@ object XimeIndexSource {
             Log.e(TAG, "read raw layout failed", e)
             return null
         }
-        if (text.isBlank() || !text.contains("keyboard:")) {
-            Log.w(TAG, "raw layout missing keyboard section")
+        if (!XimeIndexParser.isValidCustomConfigYaml(text)) {
+            Log.w(TAG, "raw layout is not a valid yaml map")
             return null
         }
         val rimeDir = File(context.filesDir, "rime")
@@ -448,7 +448,8 @@ object XimeIndexSource {
         if (!rimeDir.exists()) rimeDir.mkdirs()
         val rimeCanonical = rimeDir.canonicalFile
         val written = mutableListOf<String>()
-        var hasCustom = false
+        // 包内 xime.custom.yaml 可选（主题/字体包可以只有资源）；有则必须是合法 YAML 映射。
+        if (!validateZipCustomConfig(zipFile)) return null
         java.util.zip.ZipInputStream(zipFile.inputStream().buffered()).use { zis ->
             var entry = zis.nextEntry
             while (entry != null) {
@@ -461,9 +462,14 @@ object XimeIndexSource {
                         val target = File(rimeDir, rel).canonicalFile
                         if (target.path.startsWith(rimeCanonical.path + File.separator)) {
                             target.parentFile?.mkdirs()
-                            target.outputStream().use { out -> zis.copyTo(out) }
-                            written.add(rel)
-                            if (rel == "xime.custom.yaml") hasCustom = true
+                            // 先写临时文件再改名：进程被杀时不会留下半截 YAML
+                            val tmp = File(target.parentFile, target.name + ".tmp")
+                            tmp.outputStream().use { out -> zis.copyTo(out) }
+                            if (tmp.renameTo(target)) {
+                                written.add(rel)
+                            } else {
+                                tmp.delete()
+                            }
                         } else {
                             Log.w(TAG, "skip zip-slip layout entry: $name")
                         }
@@ -473,7 +479,26 @@ object XimeIndexSource {
                 entry = zis.nextEntry
             }
         }
-        return if (hasCustom) written else null
+        return written.ifEmpty { null }
+    }
+
+    /** 包内 xime.custom.yaml 可选；存在时必须是非空、可解析的 YAML 映射。 */
+    private fun validateZipCustomConfig(zipFile: File): Boolean {
+        java.util.zip.ZipInputStream(zipFile.inputStream().buffered()).use { zis ->
+            var entry = zis.nextEntry
+            while (entry != null) {
+                if (!entry.isDirectory && !isAppleDoubleName(entry.name)) {
+                    val rel = entry.name.removePrefix("./").trimStart('/')
+                    if (rel == "xime.custom.yaml") {
+                        val text = zis.readBytes().toString(Charsets.UTF_8)
+                        return XimeIndexParser.isValidCustomConfigYaml(text)
+                    }
+                }
+                zis.closeEntry()
+                entry = zis.nextEntry
+            }
+        }
+        return true // 没有 xime.custom.yaml：纯主题/字体包，字段全部走内置默认
     }
 
     private fun isAppleDoubleName(name: String): Boolean =
