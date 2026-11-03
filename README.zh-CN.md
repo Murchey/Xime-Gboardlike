@@ -1,19 +1,22 @@
 <p align="center">
-  <img src="docs/logo.jpg" alt="XimeGboard Logo" width="600">
+  <img src="docs/branding/app-icon.png" alt="XimeGboard Logo" width="128">
 </p>
 
-<h1 align="center">XimeGboard - 五笔/拼音输入法</h1>
+<h1 align="center">XimeGboard — 五笔/拼音输入法</h1>
 
 <p align="center">
   <a href="README.md">English</a> · <a href="README.zh-TW.md">繁體中文</a>
+</p>
+
+<p align="center">
+  <sub>基于 <a href="https://github.com/ximeiorg/Xime">Xime</a>（Kingz Cheung 与贡献者）的个人分支 — 不是上游项目。</sub>
 </p>
 
 [<img src="https://f-droid.org/badge/get-it-on.png"
     alt="Get it on F-Droid"
     height="80">](https://f-droid.org/packages/com.kingzcheung.xime)
 
-<sub>此 F-Droid 徽章指向原项目 Xime；本分支需自行构建。</sub>
-
+<sub>此 F-Droid 徽章指向**上游** Xime 包；本分支需从源码构建，未在 F-Droid 发布。</sub>
 
 [Xime 输入法 (Windows 版)](https://github.com/ximeiorg/XimeYao) | [Xime 输入法 (Linux 版)](https://github.com/ximeiorg/XimeChe) | [联想词预测模型](https://github.com/ximeiorg/predictive-text) | [手写输入法模型](https://github.com/ximeiorg/ochwpro)
 
@@ -32,6 +35,7 @@
 - Gboard 风格候选栏：更宽的候选格、竖向分隔线、更多候选下箭头；编码注释默认关闭。
 - 剪贴板自动清理支持 1 小时到 90 天，保留条数支持手动输入，并兼容旧版按天设置。
 - 提供公共打包密钥与 `build_apk.bat`，便于生成按 ABI 分开的已签名个人安装包。
+- 重新设计应用图标：原创 SVG 标识（蓝色圆角底、白色键盘、青色 X 键），借鉴 Gboard 清爽圆润的风格但不照搬其图形。源文件见 [docs/branding/app-icon.svg](docs/branding/app-icon.svg)，可用 `python scripts/generate-icons.py` 重新生成 Android 资源。
 
 **尊重原作者的代码与劳动。** Rime 引擎接入、插件体系、整体架构、文档以及绝大部分代码，均来自 **Kingz Cheung 与 Xime 贡献者**。本分支只在其成果之上做增量修改，并沿用 **GPLv3** 许可证；原项目的全部荣誉归原作者及贡献者所有。上游才是项目的源头：如果你希望使用原始行为、官方发布或官方支持，请使用 [ximeiorg/Xime](https://github.com/ximeiorg/Xime)。
 
@@ -41,56 +45,41 @@
 
 ---
 
-> 本输入法支持五笔/拼音输入，只是本人以五笔为主，拼音为辅，因此资源会倾向于五笔为主。
-如果你是拼音用户，默认的拼音不是很强大，你可以到扩展市场里下载如`凇雾拼音` 之类的方案。
+> 本输入法支持五笔/拼音输入，只是本人以五笔为主，拼音为辅，因此资源会倾向于五笔为主。如果你是拼音用户，可以在方案市场下载其他拼音方案增强体验。
+
+## 界面截图
+
+以下截图取自本构建在真机（Android 13）上通过 ADB 实拍：
 
 <table align="center">
   <tr>
-    <td><img src="docs/Screenshot/full_keyboard_light.jpg" width="180"><br><p align="center">全键盘（亮色）</p></td>
-    <td><img src="docs/Screenshot/full_keyboard_dark.jpg" width="180"><br><p align="center">全键盘（暗色）</p></td>
-    <td><img src="docs/Screenshot/全键盘_下滑_light.jpg" width="180"><br><p align="center">字根下滑</p></td>
-    <td><img src="docs/Screenshot/shotcut_light.jpg" width="180"><br><p align="center">快捷操作</p></td>
-  </tr>
-  <tr>
-    <td><img src="docs/Screenshot/floating.jpg" width="180"><br><p align="center">悬浮键盘</p></td>
-    <td><img src="docs/Screenshot/t9_pinyin.jpg" width="180"><br><p align="center">T9 九宫格拼音</p></td>
-    <td><img src="docs/Screenshot/number.jpg" width="180"><br><p align="center">数字键盘</p></td>
-    <td><img src="docs/Screenshot/symbol.jpg" width="180"><br><p align="center">符号键盘</p></td>
-  </tr>
-  <tr>
-    <td><img src="docs/Screenshot/hw.png" width="180"><br><p align="center">手写输入</p></td>
-    <td><img src="docs/Screenshot/hw2.png" width="180"><br><p align="center">手写找字（候选）</p></td>
-    <td><img src="docs/Screenshot/voice.jpg" width="180"><br><p align="center">语音输入</p></td>
-    <td><img src="docs/Screenshot/emoji.jpg" width="180"><br><p align="center">Emoji 键盘</p></td>
-  </tr>
-  <tr>
-    <td><img src="docs/Screenshot/theme_light.jpg" width="180"><br><p align="center">主题设置（亮色）</p></td>
-    <td><img src="docs/Screenshot/theme_dark.jpg" width="180"><br><p align="center">主题设置（暗色）</p></td>
-    <td><img src="docs/Screenshot/plugin_light.jpg" width="180"><br><p align="center">插件管理</p></td>
-    <td><img src="docs/Screenshot/扩展商店.png" width="180"><br><p align="center">扩展商店</p></td>
+    <td><img src="docs/screenshots/keyboard-light.png" width="180"><br><p align="center">键盘（亮色）</p></td>
+    <td><img src="docs/screenshots/keyboard-dark.png" width="180"><br><p align="center">键盘（暗色）</p></td>
+    <td><img src="docs/screenshots/settings-main.png" width="180"><br><p align="center">设置主页</p></td>
+    <td><img src="docs/screenshots/theme-settings.png" width="180"><br><p align="center">主题与定制</p></td>
   </tr>
 </table>
 
 ## 功能特点
 
-- **多种输入方案** - 内置五笔86/98、拼音、混输方案，支持自定义（双拼、笔画等），可通过方案市场下载或无线导入
-- **Rime 引擎** - 使用成熟稳定的 Rime 输入法引擎，精准可靠的中文输入体验
-- **丰富键盘布局** - QWERTY 全键盘、T9 九宫格拼音、九宫格笔画、手写、数字（含计算器）
-- **悬浮键盘** - 悬浮卡片样式，支持拖拽移动、半透明圆角设计
-- **语音转文本** - 本地离线语音识别（内置流式 zipformer2 引擎），也支持在线 ASR 插件（FunAsr、Volc 等）
-- **AI 智能增强** - 基于 Transformer 的联想词预测，输入更高效
-- **简洁界面** - Material Design 3 风格，支持浅色/深色主题及多种配色方案
-- **键盘调节** - 支持键盘高度调整和位置移动
-- **工具栏定制** - 可自定义工具栏按钮布局和功能
-- **按键反馈** - 可调节音效和振动强度
-- **滑动手势** - 光标移动、删除、符号输入等滑动手势操作
-- **剪贴板管理** - 剪贴板历史记录，支持快捷发送和置顶
-- **剪贴板同步** - 通过插件与远端设备双向同步剪贴板（WebDAV、ximed 等）
-- **候选词编码提示** - 候选词可显示五笔编码，辅助学习（默认关闭，可在「布局与显示」开启）
-- **字根显示** - 下滑按钮显示五笔字根，方便健忘用户
-- **实体键盘支持** - 连接物理/蓝牙键盘时显示浮动候选栏
-- **WebDAV 同步** - 通过 WebDAV 备份和恢复方案与配置
-- **插件市场** - 通过内置扩展商店安装可扩展 Lua 插件（表情、剪贴板同步、在线 ASR 等）
+- **多种输入方案** — 内置五笔86/98、拼音、混输方案，支持自定义（双拼、笔画等），可通过方案市场下载或无线导入
+- **Rime 引擎** — 使用成熟稳定的 Rime 输入法引擎，精准可靠的中文输入体验
+- **丰富键盘布局** — QWERTY 全键盘、T9 九宫格拼音、九宫格笔画、手写、数字（含计算器）
+- **悬浮键盘** — 悬浮卡片样式，支持拖拽移动、半透明圆角设计
+- **语音转文本** — 可选语音识别能力：内置离线模型与在线 ASR 插件（FunAsr、火山等；在线服务需联网并配置密钥）
+- **AI 智能增强** — 可选联想词预测，输入更高效
+- **简洁界面** — Material Design 3 风格，浅色/深色主题多配色，支持浅色与深色分别选择
+- **键盘调节** — 支持键盘高度调整和位置移动
+- **工具栏定制** — 可自定义工具栏按钮布局和功能
+- **按键反馈** — 可调节音效和振动强度
+- **滑动手势** — 光标移动、删除、符号输入等滑动手势操作
+- **剪贴板管理** — 剪贴板历史记录，支持快捷发送、置顶与可配置保留策略
+- **剪贴板同步** — 通过插件与远端设备双向同步剪贴板（WebDAV、ximed、S3 等）
+- **候选词编码提示** — 候选词可显示五笔编码，辅助学习（默认关闭）
+- **字根显示** — 下滑按钮显示五笔字根，方便健忘用户
+- **实体键盘支持** — 连接物理/蓝牙键盘时显示浮动候选栏
+- **WebDAV 同步** — 通过 WebDAV 备份和恢复方案与配置
+- **插件市场** — 通过内置扩展商店安装可扩展 TypeScript 插件（颜文字、剪贴板同步、在线 ASR 等）
 
 ## 系统要求
 
@@ -98,30 +87,15 @@
 
 ## 安装
 
-### 主程序下载
-
-选择对应架构的 APK：
-- **arm64-v8a**: 适用于大多数现代手机（**绝大部分人的手机都是这个**）
-- **armeabi-v7a**: 适用于旧款32位手机
-- **x86_64**: 适用于模拟器
-- **universal**: 包含所有架构，体积较大
-
-### 插件下载（可选）
-
-插件为 Lua 脚本插件（.xipk 格式），可在主应用"设置 > 扩展商店"中安装和启用：
-- **kaomoji**: 颜文字插件（提供精选颜文字）
-- **meme-bunny**: 恶搞兔表情包插件（提供8个表情）
-- **xime-fluent-emoji**: Fluent UI 3D 风格表情插件（222 个精选 3D 表情，9 大分类）
-- **funasr-asr**: 阿里百炼 FunAsr 在线语音识别
-- **volc-asr**: 火山引擎在线语音识别
-- **webdav-clipboard-sync**: 基于 WebDAV 的剪贴板同步
-- **ximed-clipboard-sync**: 基于 ximed 服务的剪贴板同步
-
-更多插件请查看 [插件中心列表](https://ime.ximei.me/plugin-list.html)，或直接到手机应用的"设置 > 扩展商店"中浏览安装。
-
 ### 从 Release 下载
 
-1. 在 [本分支 Releases](https://github.com/Murchey/Xime-Gboardlike/releases) 页面下载最新版本的 APK（也可以使用 [上游 Releases](https://github.com/ximeiorg/Xime/releases)）
+1. 在 [本分支 Releases](https://github.com/Murchey/Xime-Gboardlike/releases) 页面下载与设备架构匹配的最新 APK：
+
+   - **arm64-v8a**: 适用于大多数现代手机（**绝大部分人的手机都是这个**）
+   - **armeabi-v7a**: 适用于旧款32位手机
+   - **x86_64**: 适用于模拟器
+   - **universal**: 包含所有架构，体积较大
+
 2. 安装应用
 3. 在系统设置中启用 XimeGboard 输入法
 4. 将 XimeGboard 设为当前输入法
@@ -130,12 +104,57 @@
 
 由于 APK 包是通过 GitHub Actions 自动构建的，国内的仓库没有免费的功能使用，因此如果你觉得 GitHub Release 下载不稳定，请自行构建安装，或者通过 [https://github.akams.cn](https://github.akams.cn) 来下载。
 
-### 手动构建安装
+### 从源码构建
 
-1. 克隆项目并构建 APK
-2. 安装应用
-3. 在系统设置中启用 XimeGboard 输入法
-4. 将 XimeGboard 设为当前输入法
+环境要求：JDK 17+、Android SDK/NDK（见 `local.properties`）、CMake 3.22+，并初始化 git 子模块。
+
+```bash
+# 克隆本分支（包含子模块）
+git clone --recursive https://github.com/Murchey/Xime-Gboardlike.git
+
+# 或者在已克隆的项目中初始化子模块
+git submodule update --init --recursive
+
+# Debug 构建（开发验证用）
+./gradlew assembleDebug
+
+# Release 构建（存在 app/keystore.properties 时自动签名）
+./gradlew assembleRelease
+```
+
+Windows 下在仓库根目录运行 `build_apk.bat`，会生成按 ABI 分开的已签名 release APK，并复制到 `dist/`。
+
+> 构建中间产物（`app/build/`、`app/.cxx/`）可能达到数 GB；它们是生成文件而非源码，打包完成后可以安全删除。
+
+### 个人签名打包
+
+本分支随仓库提供公共社区证书（`app/xime-gboard.jks` + `app/keystore.properties`），无需额外配置即可生成可安装、签名一致的 APK。该密钥**仅用于个人侧载构建**；如需对外正式发布，请替换为你自己的密钥。
+
+## 插件（可选）
+
+插件为 TypeScript 模块打包的 `.xipk` 归档，可在主应用"设置 > 扩展商店"中安装和启用。本仓库维护的部分插件：
+
+- **kaomoji**: 颜文字插件（提供精选颜文字）
+- **meme-bunny**: 恶搞兔表情包插件
+- **funasr-asr** / **volc-asr** / **tencent-asr**: 在线语音识别服务
+- **webdav-clipboard-sync** / **ximed-clipboard-sync** / **s3-clipboard-sync**: 剪贴板同步服务
+- **webdav-backup**: WebDAV 备份与恢复
+- **ai-reply** / **ai-write** / **qwen-translate**: AI 辅助插件
+- **quick-phrase** / **typing-stats**: 输入效率工具
+
+更多插件请查看 [插件中心列表](https://ime.ximei.me/plugin-list.html)，或直接到手机应用的"设置 > 扩展商店"中浏览安装。部分插件仅托管在远程插件中心，不随本仓库附带。
+
+### 插件开发
+
+插件源码为 TypeScript 模块（`plugins/<name>/main.ts` + `manifest.json` + `resources/`），用 `definePlugin({...})` 定义扩展点，由 `xipm` CLI 编译为 QuickJS 可执行的单文件 `main.js`，再打包为 `.xipk`：
+
+```bash
+xipm build          # 编译全部插件 -> build/plugin-js/
+xipm pack           # 打包全部插件 -> build/plugin-release/*.xipk
+xipm test           # 运行插件测试（QuickJS + mock host，无需真机）
+```
+
+完整 CLI 用法见 [tools/xime-plugin/README.md](tools/xime-plugin/README.md)。
 
 ## 使用文档
 
@@ -145,33 +164,6 @@
 - [Rime 方案列表](https://ime.ximei.me/rime-list.html)
 - [插件列表](https://ime.ximei.me/plugin-list.html)
 - [AI 模型列表](https://ime.ximei.me/model-list.html)
-
-## 构建
-
-```bash
-# 克隆本分支（包含子模块）
-git clone --recursive https://github.com/Murchey/Xime-Gboardlike.git
-
-# 或者在已克隆的项目中初始化子模块
-git submodule update --init --recursive
-
-# 使用仓库内公共证书构建 Release APK
-./gradlew assembleRelease
-```
-
-### 个人签名打包
-
-本分支随仓库提供公共社区证书（`app/xime-gboard.jks` + `app/keystore.properties`），无需额外配置即可生成可安装、签名一致的 APK。
-
-Windows 下在仓库根目录运行 `build_apk.bat`，会生成按 ABI 分开的已签名 release APK，并复制到 `dist/`：
-
-```bat
-build_apk.bat
-```
-
-如需对外正式发布，请替换为你自己的密钥。
-
-> 构建中间产物（`app/build/`、`app/.cxx/`）可能达到数 GB；它们是生成文件而非源码，打包完成后可以安全删除。
 
 ## 技术栈
 
@@ -201,6 +193,6 @@ build_apk.bat
 
 GPLv3 License
 
-Copyright © 2026 Kingz Cheung
+原 Xime 项目 © Kingz Cheung 与贡献者；本分支的新增修改同样以 GPLv3 发布，详见 [LICENSE](LICENSE)。
 
 "Xime" 名称、Logo 及其他品牌资产**不在** GPLv3 开源授权范围内，详见 [TRADEMARKS.md](TRADEMARKS.md)。
