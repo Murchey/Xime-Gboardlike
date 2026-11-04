@@ -69,3 +69,11 @@ app/src/main/jni/third_party/
 !app/xime-gboard.jks
 # build_apk.bat 输出目录
 /dist/
+
+# ModelTrainning 生成物（语料/模型/日志/打包产物）
+ModelTrainning/data/
+ModelTrainning/models/
+ModelTrainning/models*/
+ModelTrainning/dist/
+ModelTrainning/logs/
+ModelTrainning/**/__pycache__/
