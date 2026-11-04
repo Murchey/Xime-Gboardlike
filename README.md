@@ -30,7 +30,9 @@ An Android input method built on the [Rime](https://rime.im/) engine, designed f
 
 **Changes in this fork (on top of upstream):**
 
-- **Grammar model (gram)** — a bundled Rime octagram language model (`XimeGboard.gram`) that re-ranks candidates by the full context, with in-app import/export/management. See [Grammar model (gram)](#grammar-model-gram).
+- Smarter candidate ordering: a built-in "collocation model" reads what you just typed and pulls fitting words to the front — type 就 and 绪 rises up to form 就绪. Works out of the box, no setup.
+- Fewer wrong picks among same-code characters: if Shuangpin/Pinyin leaves you staring at rows of homophones, tests show "the first one is right" goes from about 6 in 10 to 9 in 10, so you press digit keys far less; Wubi-style unique codes are unaffected.
+- The model is yours: it is a plain local file — import, export, delete, or disable it; no network, no uploads, and the data location stays under your control. You can even train the association model on your own typing data. Technical details in [Grammar model (gram)](#grammar-model-gram).
 - Font picker: system default / bundled font / imported fonts, applied globally.
 - A curated modern theme set — WeChat, QQ, Telegram, X, GitHub, ChatGPT, Gboard Gray, Gboard Black, and Claude — with light/dark palettes and independent light/dark selection, plus a personalization color panel with JSON import/export.
 - Gboard-style candidate bar: wider cells, vertical separators, down-chevron for more candidates; candidate code hints are off by default.
@@ -96,7 +98,19 @@ Captured on a real device (Android 13) via ADB from this build:
 | Model management | — | Import / export / delete / disable in-app, with file-format validation |
 | Custom models | — | Import any compatible `.gram`; full training pipeline for the association model in [`ModelTrainning/`](ModelTrainning/) |
 
-**How it works.** Activation writes `grammar/language` and `translator/contextual_suggestions` into each schema's custom config; the Rime engine then re-ranks candidates against the whole preceding sentence (e.g. promoting 绪 after 就 to form 就绪). This acts on the candidate list itself and complements the application-layer association.
+**How it works.** Activation writes `grammar/language` and `translator/contextual_suggestions` into each schema's custom config; the Rime engine then re-ranks candidates against the whole preceding sentence. This acts on the candidate list itself and complements the application-layer association.
+
+**Scoring (for the curious).** Ranking runs through `Octagram::Query(context, word)`: up to 3 trailing context characters + up to 3 leading candidate characters form 2–6 character keys, probed by longest-prefix match against a Darts double-array trie. Each hit scores `ln P(gram|prefix) + 10` with a length-dependent penalty (`collocation_penalty = -12`, `weak = -24`; no hit is always `-12`), and the maximum wins. The training tool emits values in exactly this range (`value = P·e¹⁰`, weak collocations floored out).
+
+**Measured discrimination.** On 26 same-code homophone sets, comparing gram re-ranking against corpus character frequency (a proxy for plain dictionary order):
+
+| Ranking | Correct candidate at #1 | MRR |
+| --- | --- | --- |
+| gram re-ranking | 24/26 (92%) | 0.96 |
+| character frequency (plain-dictionary proxy) | 15/26 (58%) | 0.77 |
+| random | ≈19% | — |
+
+(Offline probe measuring ranking power; end-to-end commit accuracy also depends on dictionary recall and your personal frequencies — words you type often already rank first, so gram's gains concentrate on rare words and first-time collocations.)
 
 **Works out of the box.** The model is bundled and enabled by default. It is a plain local file: export, back up, delete, or disable it at will (ranking then falls back to the engine default) — the location of your data stays under your control.
 
