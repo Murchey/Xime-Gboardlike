@@ -49,7 +49,7 @@ An Android input method built on the [Rime](https://rime.im/) engine, designed f
 
 ---
 
-> This input method supports both Wubi (五笔) and Pinyin input. The author primarily uses Wubi with Pinyin as a fallback, so resources lean toward Wubi.
+> This input method bundles all Rime Ice (雾凇拼音) schemas out of the box. The author primarily uses Xiaohe Shuangpin (小鹤双拼) with full Pinyin as a fallback, so resources focus on full Pinyin and Shuangpin. If you are a Wubi user, the upstream project is recommended — or import a better Wubi schema built for RIME.
 
 ## Screenshots
 
