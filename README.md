@@ -66,7 +66,7 @@ Captured on a real device (Android 13) via ADB from this build:
 
 ## Features
 
-- **Multiple Input Schemas** — Built-in Wubi 86/98, Pinyin, and mixed schemas; supports custom schemas (Shuangpin, Stroke, etc.) via the schema marketplace or wireless import
+- **Multiple Input Schemas** — All Rime Ice (雾凇拼音) schemas bundled (full Pinyin plus every Shuangpin variant: Xiaohe, Ziranma, MSPY, …), with Wubi 86/98 kept; custom schemas (Stroke, etc.) can be added via the schema marketplace or wireless import
 - **Rime Engine** — Powered by the mature and reliable Rime input method engine for accurate Chinese input
 - **Rich Keyboard Layouts** — QWERTY full keyboard, T9 Pinyin, Stroke 9-key, Handwriting, Numpad (with calculator)
 - **Floating Keyboard** — Floating card style with drag support, semi-transparent rounded design
