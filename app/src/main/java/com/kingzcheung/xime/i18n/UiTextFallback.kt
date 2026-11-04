@@ -353,6 +353,8 @@ internal object UiTextFallback {
         R.string.s_xuexishuju_fu to "联想记录的词对与词组，支持搜索、多选、删除",
         R.string.s_yonghuciku_liyong_siyoushuju_fu to "输入时自动积累的词条，支持搜索、多选、删除",
         R.string.s_sousuoxuexishuju to "搜索学习数据",
+        R.string.s_zanwuxuexishuju_guanli to "还没有学习数据",
+        R.string.s_zanwuxuexishuju_guanli_fu to "开启智能联想并输入一些内容后，词对与词组会记在这里",
         R.string.s_ngram_miaoshu to "%1\$s 词组 · 出现 %2\$s 次",
         R.string.s_yishanchu_tiaoxuexishuju to "已删除 %1\$s 条学习数据",
         R.string.s_jiangshanchu_xuanzhong_xuexishuju to "将删除选中的 %1\$s 条学习数据，删除后联想不再参考这些词对。",

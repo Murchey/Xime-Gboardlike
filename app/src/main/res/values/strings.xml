@@ -352,6 +352,8 @@
     <string name="s_xuexishuju_fu">联想记录的词对与词组，支持搜索、多选、删除</string>
     <string name="s_yonghuciku_liyong_siyoushuju_fu">输入时自动积累的词条，支持搜索、多选、删除</string>
     <string name="s_sousuoxuexishuju">搜索学习数据</string>
+    <string name="s_zanwuxuexishuju_guanli">还没有学习数据</string>
+    <string name="s_zanwuxuexishuju_guanli_fu">开启智能联想并输入一些内容后，词对与词组会记在这里</string>
     <string name="s_ngram_miaoshu">%1$s 词组 · 出现 %2$s 次</string>
     <string name="s_yishanchu_tiaoxuexishuju">已删除 %1$s 条学习数据</string>
     <string name="s_jiangshanchu_xuanzhong_xuexishuju">将删除选中的 %1$s 条学习数据，删除后联想不再参考这些词对。</string>

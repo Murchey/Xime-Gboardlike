@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -133,10 +134,11 @@ fun UserLearningDataContent(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(8.dp))
 
             uiState.message?.let { message ->
-                LearningMessageBanner(
+                SettingsMessageBanner(
                     message = message,
                     isError = uiState.messageIsError,
-                    onDismiss = viewModel::dismissMessage
+                    onDismiss = viewModel::dismissMessage,
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -172,8 +174,8 @@ fun UserLearningDataContent(onBack: () -> Unit) {
                 uiState.entries.isEmpty() -> {
                     Centered {
                         UsageHint(
-                            title = tr(R.string.s_zanwuxuexishuju),
-                            message = tr(R.string.s_yongzhegefanganjixushuru_citia_3a000)
+                            title = tr(R.string.s_zanwuxuexishuju_guanli),
+                            message = tr(R.string.s_zanwuxuexishuju_guanli_fu)
                         )
                     }
                 }
@@ -270,33 +272,4 @@ private fun LearningEntryRow(
     }
 }
 
-@Composable
-private fun LearningMessageBanner(message: String, isError: Boolean, onDismiss: () -> Unit) {
-    val container = if (isError) MaterialTheme.colorScheme.errorContainer
-    else MaterialTheme.colorScheme.secondaryContainer
-    val onContainer = if (isError) MaterialTheme.colorScheme.onErrorContainer
-    else MaterialTheme.colorScheme.onSecondaryContainer
-    Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-        color = container
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                message,
-                style = MaterialTheme.typography.bodySmall,
-                color = onContainer,
-                modifier = Modifier.weight(1f).padding(vertical = 12.dp)
-            )
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    Icons.Default.Close, contentDescription = tr(R.string.s_guanbitishi),
-                    modifier = Modifier.size(18.dp), tint = onContainer
-                )
-            }
-        }
-    }
-}
+

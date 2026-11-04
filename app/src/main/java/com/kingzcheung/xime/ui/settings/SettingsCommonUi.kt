@@ -173,6 +173,48 @@ fun ContextSelectorCard(
 }
 
 /**
+ * 一次性结果提示条（导出/导入/批量操作成败），右侧可关闭。
+ * [isError] 决定容器与文字色：成功用 secondaryContainer，失败用 errorContainer。
+ */
+@Composable
+fun SettingsMessageBanner(
+    message: String,
+    isError: Boolean,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val container = if (isError) MaterialTheme.colorScheme.errorContainer
+    else MaterialTheme.colorScheme.secondaryContainer
+    val onContainer = if (isError) MaterialTheme.colorScheme.onErrorContainer
+    else MaterialTheme.colorScheme.onSecondaryContainer
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = container
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                message,
+                style = MaterialTheme.typography.bodySmall,
+                color = onContainer,
+                modifier = Modifier.weight(1f).padding(vertical = 12.dp)
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    Icons.Default.Clear,
+                    contentDescription = tr(R.string.s_guanbitishi),
+                    modifier = Modifier.size(18.dp),
+                    tint = onContainer
+                )
+            }
+        }
+    }
+}
+
+/**
  * 空态提示：图标 + 标题 + 说明 + 一行行动指引，整块可点开帮助页。
  */
 @Composable

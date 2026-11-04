@@ -351,6 +351,8 @@
     <string name="s_xuexishuju_fu">聯想記錄的詞對與詞組，支持搜尋、多選、刪除</string>
     <string name="s_yonghuciku_liyong_siyoushuju_fu">輸入時自動積累的詞條，支持搜尋、多選、刪除</string>
     <string name="s_sousuoxuexishuju">搜尋學習數據</string>
+    <string name="s_zanwuxuexishuju_guanli">還沒有學習數據</string>
+    <string name="s_zanwuxuexishuju_guanli_fu">開啟智能聯想並輸入一些內容後，詞對與詞組會記在這裏</string>
     <string name="s_ngram_miaoshu">%1$s 詞組 · 出現 %2$s 次</string>
     <string name="s_yishanchu_tiaoxuexishuju">已刪除 %1$s 條學習數據</string>
     <string name="s_jiangshanchu_xuanzhong_xuexishuju">將刪除選中的 %1$s 條學習數據，刪除後聯想不再參考這些詞對。</string>
