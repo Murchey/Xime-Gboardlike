@@ -26,10 +26,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -98,16 +102,35 @@ fun UserDictContent(onBack: () -> Unit) {
     var showMenu by remember { mutableStateOf(false) }
     var showAddSheet by remember { mutableStateOf(false) }
     var entryToDelete by remember { mutableStateOf<DictEntry?>(null) }
+    var showBatchDeleteDialog by remember { mutableStateOf(false) }
     val selectedDict = uiState.selectedDict
     val selectedMeta = uiState.dicts.find { it.name == selectedDict }
+    val selectionMode = uiState.isSelectionMode
+    val selectedCount = uiState.selectedKeys.size
+    // 当前搜索结果是否已全选：决定「全选」按钮是选全部还是取消（单选/多选各写一份文案太碎，用一个）
+    val allFilteredSelected = uiState.filteredEntries.isNotEmpty() && uiState.filteredEntries.all {
+        UserDictIoManager.entryKey(it.word, it.code) in uiState.selectedKeys
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(tr(R.string.s_yonghuciku)) },
+                title = {
+                    Text(
+                        if (selectionMode) tr(R.string.s_yixuan_xiang, selectedCount)
+                        else tr(R.string.s_yonghuciku)
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr(R.string.s_fanhui))
+                    IconButton(
+                        onClick = { if (selectionMode) viewModel.exitSelectionMode() else onBack() }
+                    ) {
+                        Icon(
+                            if (selectionMode) Icons.Default.Close
+                            else Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = if (selectionMode) tr(R.string.s_tuichuduoxuan)
+                            else tr(R.string.s_fanhui)
+                        )
                     }
                 },
                 actions = {
@@ -116,6 +139,25 @@ fun UserDictContent(onBack: () -> Unit) {
                             modifier = Modifier.padding(end = 16.dp).size(20.dp),
                             strokeWidth = 2.dp
                         )
+                    } else if (selectionMode) {
+                        IconButton(onClick = viewModel::toggleSelectAll) {
+                            Icon(
+                                Icons.Default.DoneAll,
+                                contentDescription = if (allFilteredSelected) tr(R.string.s_quxiaoquanxuan)
+                                else tr(R.string.s_quanxuan)
+                            )
+                        }
+                        IconButton(
+                            onClick = { showBatchDeleteDialog = true },
+                            enabled = selectedCount > 0
+                        ) {
+                            Icon(
+                                Icons.Default.DeleteSweep,
+                                contentDescription = tr(R.string.s_shanchuxuanzhong),
+                                tint = if (selectedCount > 0) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     } else if (selectedDict != null) {
                         Box {
                             IconButton(onClick = { showMenu = true }) {
@@ -147,7 +189,8 @@ fun UserDictContent(onBack: () -> Unit) {
             )
         },
         floatingActionButton = {
-            if (selectedDict != null) {
+            // 多选态用顶栏的批量删除，FAB 让位，避免误触添加
+            if (selectedDict != null && !selectionMode) {
                 FloatingActionButton(
                     onClick = { showAddSheet = true },
                     containerColor = MaterialTheme.colorScheme.primary
@@ -209,13 +252,27 @@ fun UserDictContent(onBack: () -> Unit) {
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    Text(
-                        text = if (uiState.searchQuery.isEmpty()) tr(R.string.s_gong_tiao, uiState.entries.size)
-                        else tr(R.string.s_pipei_tiao_2, uiState.filteredEntries.size, uiState.entries.size),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (uiState.searchQuery.isEmpty()) tr(R.string.s_gong_tiao, uiState.entries.size)
+                            else tr(R.string.s_pipei_tiao_2, uiState.filteredEntries.size, uiState.entries.size),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f).padding(vertical = 4.dp)
+                        )
+                        // 多选入口放这里：不进顶栏溢出菜单，也不与「添加」FAB 抢位置
+                        if (!selectionMode && uiState.filteredEntries.isNotEmpty()) {
+                            TextButton(
+                                onClick = viewModel::enterSelectionMode,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(tr(R.string.s_duoxuan), style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
 
                     when {
                         uiState.isReading -> {
@@ -255,9 +312,16 @@ fun UserDictContent(onBack: () -> Unit) {
                             ) {
                                 items(
                                     items = uiState.filteredEntries,
-                                    key = { "${it.word}\t${it.code}" }
+                                    key = { UserDictIoManager.entryKey(it.word, it.code) }
                                 ) { entry ->
-                                    UserDictEntryRow(entry, onDelete = { entryToDelete = entry })
+                                    UserDictEntryRow(
+                                        entry = entry,
+                                        selectionMode = selectionMode,
+                                        selected = UserDictIoManager.entryKey(entry.word, entry.code)
+                                            in uiState.selectedKeys,
+                                        onToggle = { viewModel.toggleSelection(entry) },
+                                        onDelete = { entryToDelete = entry }
+                                    )
                                 }
                             }
                         }
@@ -275,6 +339,18 @@ fun UserDictContent(onBack: () -> Unit) {
                 viewModel.addEntry(input)
             },
             onDismiss = { showAddSheet = false }
+        )
+    }
+
+    // 批量删除：一次写入多行负频率码表，只重建一次输入会话
+    if (showBatchDeleteDialog) {
+        DeleteSelectedDialog(
+            count = selectedCount,
+            onConfirm = {
+                showBatchDeleteDialog = false
+                viewModel.deleteSelected()
+            },
+            onDismiss = { showBatchDeleteDialog = false }
         )
     }
 
@@ -394,6 +470,29 @@ private fun DeleteEntryDialog(entry: DictEntry, onConfirm: () -> Unit, onDismiss
     )
 }
 
+/** 批量删除确认：措辞与单条一致——引擎写的是删除标记，不是物理删除。 */
+@Composable
+private fun DeleteSelectedDialog(count: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(tr(R.string.s_shanchuxuanzhong)) },
+        text = {
+            Text(
+                tr(R.string.s_jiangshanchu_xuanzhong_tiaocitiao, count) +
+                    tr(R.string.s_nizhihouruguozaishurubingxuanz_f4558)
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(tr(R.string.s_shanchu), color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(tr(R.string.s_quxiao)) }
+        }
+    )
+}
+
 @Composable
 private fun Centered(content: @Composable () -> Unit) {
     Box(
@@ -402,16 +501,39 @@ private fun Centered(content: @Composable () -> Unit) {
     ) { content() }
 }
 
+/**
+ * 词条行。多选模式下整行可点、左侧显示勾选框，右侧的单条删除按钮隐藏
+ * （批量删除统一走顶栏，避免一个页面里两套删除入口）。
+ */
 @Composable
-private fun UserDictEntryRow(entry: DictEntry, onDelete: () -> Unit) {
+private fun UserDictEntryRow(
+    entry: DictEntry,
+    selectionMode: Boolean,
+    selected: Boolean,
+    onToggle: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val container = if (selectionMode && selected) MaterialTheme.colorScheme.secondaryContainer
+    else MaterialTheme.colorScheme.surface
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (selectionMode) Modifier.clickable(onClick = onToggle) else Modifier
+            ),
+        colors = CardDefaults.cardColors(containerColor = container)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (selectionMode) {
+                Checkbox(
+                    checked = selected,
+                    onCheckedChange = { onToggle() },
+                    modifier = Modifier.padding(end = 4.dp)
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(entry.word, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 Spacer(Modifier.height(2.dp))
@@ -424,11 +546,13 @@ private fun UserDictEntryRow(entry: DictEntry, onDelete: () -> Unit) {
                     )
                 }
             }
-            IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    Icons.Default.Delete, contentDescription = tr(R.string.s_shanchu),
-                    tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)
-                )
+            if (!selectionMode) {
+                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.Delete, contentDescription = tr(R.string.s_shanchu),
+                        tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }

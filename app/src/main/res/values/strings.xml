@@ -345,6 +345,16 @@
     <string name="s_tianwancainengyunduantongbuyub_96d80">填完才能云端同步与备份</string>
     <string name="s_qupeizhi">去配置</string>
     <string name="s_yonghuciku">用户词库</string>
+    <string name="s_yonghusiyoushuju">用户私有数据</string>
+    <string name="s_xuexishuju">学习数据</string>
+    <string name="s_guanlixuexishuju">管理学习数据</string>
+    <string name="s_guanliyonghuciku">管理用户词库</string>
+    <string name="s_xuexishuju_fu">联想记录的词对与词组，支持搜索、多选、删除</string>
+    <string name="s_yonghuciku_liyong_siyoushuju_fu">输入时自动积累的词条，支持搜索、多选、删除</string>
+    <string name="s_sousuoxuexishuju">搜索学习数据</string>
+    <string name="s_ngram_miaoshu">%1$s 词组 · 出现 %2$s 次</string>
+    <string name="s_yishanchu_tiaoxuexishuju">已删除 %1$s 条学习数据</string>
+    <string name="s_jiangshanchu_xuanzhong_xuexishuju">将删除选中的 %1$s 条学习数据，删除后联想不再参考这些词对。</string>
     <string name="s_yonghucikutongbu">用户词库同步</string>
     <string name="s_shangcichenggong">"上次成功 "</string>
     <string name="s_yunduan_taishebei">" · 云端 %1$s 台设备"</string>
@@ -959,6 +969,10 @@
     <string name="s_ci">词</string>
     <string name="s_pinlv_kexuan_yuedayueyouxian">频率（可选，越大越优先）</string>
     <string name="s_shanchucitiao">删除词条</string>
+    <string name="s_shanchuxuanzhong">删除选中</string>
+    <string name="s_quxiaoquanxuan">取消全选</string>
+    <string name="s_yishanchu_tiaocitiao">已删除 %1$s 条词条</string>
+    <string name="s_jiangshanchu_xuanzhong_tiaocitiao">将删除选中的 %1$s 条词条，本机词库不再为它们提供候选。</string>
     <string name="s_huicongyonghucikuzhongqudiao_y_c6896">「%1$s」（%2$s）会从用户词库中去掉，也不再由用户词库提供候选；</string>
     <string name="s_fanganzidaicibiaoliruoyeyouta_0c530">方案自带词表里若也有它，仍然会出现。</string>
     <string name="s_nizhihouruguozaishurubingxuanz_f4558">你之后如果再输入并选中它，引擎会重新记录。</string>

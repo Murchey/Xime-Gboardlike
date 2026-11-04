@@ -142,6 +142,60 @@ class UserNgramCache(private val context: Context) {
     }
     
     fun getCacheSize(): Int = bigramTrie.size() + trigramTrie.size()
+
+    // ── 用户私有数据管理（「学习数据」页搜索 / 多选 / 删除用） ──
+
+    /** 一条 n-gram 记录：[tokens] 是词元序列（2 词对 / 3 词三元组），[count] 是出现次数。 */
+    data class NgramEntry(val tokens: List<String>, val count: Int)
+
+    /**
+     * 列出全部可管理的 n-gram 记录（先二元组后三元组，各自按词元序）。
+     * 只读，不改动缓存。
+     */
+    fun getAllEntries(): List<NgramEntry> =
+        (bigramTrie.getAllEntries() + trigramTrie.getAllEntries())
+            .map { (tokens, count) -> NgramEntry(tokens, count) }
+
+    /**
+     * 删除指定记录并立即落盘。
+     *
+     * 删除二元组「A B」时连带删除以它为前缀的三元组「A B *」——
+     * 否则三元组还会给 A B 之后的候选续写，用户会觉得没删干净。
+     *
+     * @return 实际删除的记录数（不存在于缓存的键会被忽略）
+     */
+    fun removeEntries(keys: Set<String>): Int {
+        if (keys.isEmpty()) return 0
+        val bigrams = bigramTrie.getAllEntries()
+        val trigrams = trigramTrie.getAllEntries()
+
+        val removedBigrams = bigrams.filter { entryKey(it.first) in keys }
+        // 被删除的二元组的词元序列 ⇒ 用来连带裁掉以它开头的三元组
+        val removedBigramTokens = removedBigrams.map { it.first }.toSet()
+        val removedTrigrams = trigrams.filter { (tokens, _) ->
+            entryKey(tokens) in keys || (tokens.size == 3 && tokens.take(2) in removedBigramTokens)
+        }
+
+        val removedCount = removedBigrams.size + removedTrigrams.size
+        if (removedCount == 0) return 0
+
+        rebuild(bigrams - removedBigrams.toSet(), trigrams - removedTrigrams.toSet())
+        return removedCount
+    }
+
+    /** 记录的身份键：词元无分隔拼接（词元均为单字符，不会歧义）。纯函数。 */
+    internal fun entryKey(tokens: List<String>): String = tokens.joinToString("")
+
+    /** 清空后用剩余记录重建两个 trie（条目上限 1000，重建比实现 trie 删除更稳）。 */
+    private fun rebuild(
+        bigrams: List<Pair<List<String>, Int>>,
+        trigrams: List<Pair<List<String>, Int>>,
+    ) {
+        bigramTrie.clear()
+        trigramTrie.clear()
+        for ((tokens, count) in bigrams) repeat(count) { bigramTrie.insert(tokens) }
+        for ((tokens, count) in trigrams) repeat(count) { trigramTrie.insert(tokens) }
+    }
     
     private fun toJson(): JSONObject {
         val json = JSONObject()

@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -76,6 +77,8 @@ fun SmartPredictionSettingsContent(
     onBack: () -> Unit,
     onNavigateToModelManagement: () -> Unit = {},
     onNavigateToModelDetail: (String) -> Unit = {},
+    onNavigateToLearningData: () -> Unit = {},
+    onNavigateToUserDict: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val viewModel: SmartPredictionSettingsViewModel = viewModel()
@@ -383,6 +386,31 @@ fun SmartPredictionSettingsContent(
                         title = tr(R.string.s_moxingguanli),
                         subtitle = tr(R.string.s_guanlisuoyouyixiazaide_ai_moxing),
                         onClick = onNavigateToModelManagement,
+                        showArrow = true
+                    )
+                })
+            }
+
+            // 用户私有数据：联想学习到的 n-gram 与输入时积累的用户词库，都能搜索、多选、删除
+            item {
+                SettingsSection(title = tr(R.string.s_yonghusiyoushuju), content = {
+                    SettingsItem(
+                        icon = Icons.Default.Storage,
+                        title = tr(R.string.s_guanlixuexishuju),
+                        subtitle = tr(R.string.s_xuexishuju_fu),
+                        onClick = onNavigateToLearningData,
+                        showArrow = true
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 72.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsItem(
+                        icon = Icons.Default.Storage,
+                        title = tr(R.string.s_guanliyonghuciku),
+                        subtitle = tr(R.string.s_yonghuciku_liyong_siyoushuju_fu),
+                        onClick = onNavigateToUserDict,
                         showArrow = true
                     )
                 })

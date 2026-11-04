@@ -275,6 +275,39 @@ class UserDictIoManagerTest {
         )
     }
 
+    // ---- 批量删除 ----
+
+    @Test
+    fun `buildDeletedCodeTable writes one negative row per entry`() {
+        val text = UserDictIoManager.buildDeletedCodeTable(
+            listOf(
+                DictEntry("劝学", "clip", 3),
+                DictEntry("焉", "ghg", null),
+            )
+        )
+
+        assertEquals("劝学\tclip\t-1\n焉\tghg\t-1\n", text)
+    }
+
+    @Test
+    fun `batch delete table passes the same import validation`() {
+        // 批量删除走的仍是「导入文本码表」通道 ⇒ 多行负频率码表也必须过校验
+        val text = UserDictIoManager.buildDeletedCodeTable(
+            listOf(DictEntry("劝学", "clip"), DictEntry("焉", "ghg"))
+        )
+
+        assertNull(UserDictIoManager.validateImportText(text))
+    }
+
+    @Test
+    fun `entryKey distinguishes same word with different codes`() {
+        // 同一个词在不同编码下是两条独立词条，多选不能把它们当成一条
+        assertEquals("劝学\tclip", UserDictIoManager.entryKey("劝学", "clip"))
+        assertTrue(
+            UserDictIoManager.entryKey("劝学", "clip") != UserDictIoManager.entryKey("劝学", "qx")
+        )
+    }
+
     @Test
     fun `delete row passes the same import validation as a real code table`() {
         // 单条删除也走「导入文本码表」那条通道 ⇒ 必须能过导入前的校验（含负频率）

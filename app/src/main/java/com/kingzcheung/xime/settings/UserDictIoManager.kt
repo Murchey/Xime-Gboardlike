@@ -189,6 +189,26 @@ object UserDictIoManager {
     fun deleteEntry(context: Context, dictName: String, word: String, code: String): Result<Int> =
         applyCodeTable(context, dictName, codeTableText(word, code, DELETED_COMMITS))
 
+    /**
+     * 批量删除词条：把多行负频率码表一次性交给引擎的导入通道，
+     * 只销毁/重建一次输入会话（逐条删除要做 N 次，选几百条会卡很久）。
+     *
+     * @return 引擎接受的条目数；空选择直接返回 0，不算失败
+     */
+    fun deleteEntries(context: Context, dictName: String, entries: List<DictEntry>): Result<Int> {
+        if (entries.isEmpty()) return Result.success(0)
+        return applyCodeTable(context, dictName, buildDeletedCodeTable(entries))
+    }
+
+    /** 多行删除标记码表：每行都是「词 \t 码 \t -1」。纯函数。 */
+    internal fun buildDeletedCodeTable(entries: List<DictEntry>): String =
+        buildString {
+            for (entry in entries) append(codeTableText(entry.word, entry.code, DELETED_COMMITS))
+        }
+
+    /** 词条的身份键（词 + 编码），供多选集合使用。纯函数。 */
+    internal fun entryKey(word: String, code: String): String = "$word\t$code"
+
     /** 单行文本码表：`词<TAB>码<TAB>频率`。 */
     internal fun codeTableText(word: String, code: String, commits: Int): String =
         "$word\t$code\t$commits\n"

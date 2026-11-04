@@ -24,6 +24,7 @@ object SettingsRoutes {
     const val Plugins = "plugins"
     const val PluginSettings = "plugin_settings"
     const val SmartPrediction = "smart_prediction"
+    const val UserLearningData = "user_learning_data"
     const val Correction = "correction"
     const val FuzzyPinyin = "fuzzy_pinyin"
     const val SpeechToText = "speech_to_text"

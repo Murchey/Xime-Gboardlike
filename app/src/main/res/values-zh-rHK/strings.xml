@@ -344,6 +344,16 @@
     <string name="s_tianwancainengyunduantongbuyub_96d80">填完才能雲端同步與備份</string>
     <string name="s_qupeizhi">去配置</string>
     <string name="s_yonghuciku">用戶詞庫</string>
+    <string name="s_yonghusiyoushuju">用戶私有數據</string>
+    <string name="s_xuexishuju">學習數據</string>
+    <string name="s_guanlixuexishuju">管理學習數據</string>
+    <string name="s_guanliyonghuciku">管理用戶詞庫</string>
+    <string name="s_xuexishuju_fu">聯想記錄的詞對與詞組，支持搜尋、多選、刪除</string>
+    <string name="s_yonghuciku_liyong_siyoushuju_fu">輸入時自動積累的詞條，支持搜尋、多選、刪除</string>
+    <string name="s_sousuoxuexishuju">搜尋學習數據</string>
+    <string name="s_ngram_miaoshu">%1$s 詞組 · 出現 %2$s 次</string>
+    <string name="s_yishanchu_tiaoxuexishuju">已刪除 %1$s 條學習數據</string>
+    <string name="s_jiangshanchu_xuanzhong_xuexishuju">將刪除選中的 %1$s 條學習數據，刪除後聯想不再參考這些詞對。</string>
     <string name="s_yonghucikutongbu">用戶詞庫同步</string>
     <string name="s_shangcichenggong">"上次成功 "</string>
     <string name="s_yunduan_taishebei">" · 雲端 %1$s 台裝置"</string>
@@ -939,6 +949,10 @@
     <string name="s_ci">詞</string>
     <string name="s_pinlv_kexuan_yuedayueyouxian">頻率（可選，越大越優先）</string>
     <string name="s_shanchucitiao">刪除詞條</string>
+    <string name="s_shanchuxuanzhong">刪除選中</string>
+    <string name="s_quxiaoquanxuan">取消全選</string>
+    <string name="s_yishanchu_tiaocitiao">已刪除 %1$s 條詞條</string>
+    <string name="s_jiangshanchu_xuanzhong_tiaocitiao">將刪除選中的 %1$s 條詞條，本機詞庫不再為它們提供候選。</string>
     <string name="s_huicongyonghucikuzhongqudiao_y_c6896">「%1$s」（%2$s）會從用戶詞庫中去掉，也不再由用戶詞庫提供候選；</string>
     <string name="s_fanganzidaicibiaoliruoyeyouta_0c530">方案自帶詞表裏若也有它，仍然會出現。</string>
     <string name="s_nizhihouruguozaishurubingxuanz_f4558">你之後如果再輸入並選中它，引擎會重新記錄。</string>

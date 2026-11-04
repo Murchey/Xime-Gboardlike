@@ -36,7 +36,11 @@ data class UserDictUiState(
     val isTransferring: Boolean = false,
     /** 一次性结果提示（导出/导入的成败与条数），看完可关掉。 */
     val message: String? = null,
-    val messageIsError: Boolean = false
+    val messageIsError: Boolean = false,
+    /** 多选模式：词条行左侧出现勾选框，点击整行切换选中而不触发删除。 */
+    val isSelectionMode: Boolean = false,
+    /** 已选词条的身份键（词 + 编码），切词库/刷新时清空。 */
+    val selectedKeys: Set<String> = emptySet()
 )
 
 /**
@@ -78,6 +82,66 @@ class UserDictViewModel(application: Application) : AndroidViewModel(application
     }
 
     /** 切换要查看的词库。 */
+    // ── 多选 ──
+
+    /** 进入多选模式；当前没有词条时不做任何事（没有可选项）。 */
+    fun enterSelectionMode() {
+        if (_uiState.value.entries.isEmpty()) return
+        _uiState.update { it.copy(isSelectionMode = true, selectedKeys = emptySet()) }
+    }
+
+    fun exitSelectionMode() {
+        _uiState.update { it.copy(isSelectionMode = false, selectedKeys = emptySet()) }
+    }
+
+    /** 点一行切换选中。只在多选模式生效。 */
+    fun toggleSelection(entry: DictEntry) {
+        val state = _uiState.value
+        if (!state.isSelectionMode) return
+        val key = UserDictIoManager.entryKey(entry.word, entry.code)
+        val next = if (key in state.selectedKeys) state.selectedKeys - key else state.selectedKeys + key
+        _uiState.update { it.copy(selectedKeys = next) }
+    }
+
+    /** 全选 / 取消全选当前搜索结果（只作用于 [UserDictUiState.filteredEntries]）。 */
+    fun toggleSelectAll() {
+        val state = _uiState.value
+        if (!state.isSelectionMode) return
+        val allKeys = state.filteredEntries.map { UserDictIoManager.entryKey(it.word, it.code) }.toSet()
+        val next = if (allKeys.isNotEmpty() && state.selectedKeys.containsAll(allKeys)) {
+            state.selectedKeys - allKeys
+        } else {
+            state.selectedKeys + allKeys
+        }
+        _uiState.update { it.copy(selectedKeys = next) }
+    }
+
+    /** 已选中的词条（按当前词库顺序）。 */
+    fun selectedEntries(): List<DictEntry> {
+        val state = _uiState.value
+        return state.entries.filter { UserDictIoManager.entryKey(it.word, it.code) in state.selectedKeys }
+    }
+
+    /** 批量删除已选词条：一次写入多行删除标记，成功后退出多选。 */
+    fun deleteSelected() {
+        val dictName = _uiState.value.selectedDict ?: return
+        val targets = selectedEntries()
+        if (targets.isEmpty()) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isTransferring = true, message = null) }
+            val result = withContext(Dispatchers.IO) {
+                UserDictIoManager.deleteEntries(context, dictName, targets)
+            }
+            _uiState.update { it.copy(isSelectionMode = false, selectedKeys = emptySet()) }
+            afterWrite(dictName, result) { r ->
+                r.fold(
+                    onSuccess = { tr(R.string.s_yishanchu_tiaocitiao, targets.size) },
+                    onFailure = { e -> tr(R.string.s_shanchushibai_2, e.message) }
+                )
+            }
+        }
+    }
+
     fun selectDict(dictName: String) {
         if (dictName == _uiState.value.selectedDict) return
         readEntries(dictName)
@@ -91,7 +155,9 @@ class UserDictViewModel(application: Application) : AndroidViewModel(application
                     entries = emptyList(),
                     filteredEntries = emptyList(),
                     searchQuery = "",
-                    isReading = false
+                    isReading = false,
+                    isSelectionMode = false,
+                    selectedKeys = emptySet()
                 )
             }
             return
@@ -104,7 +170,9 @@ class UserDictViewModel(application: Application) : AndroidViewModel(application
                     entries = emptyList(),
                     filteredEntries = emptyList(),
                     searchQuery = "",
-                    message = null
+                    message = null,
+                    isSelectionMode = false,
+                    selectedKeys = emptySet()
                 )
             }
             val entries = withContext(Dispatchers.IO) { UserDictIoManager.readEntries(dictName) }
@@ -217,11 +285,15 @@ class UserDictViewModel(application: Application) : AndroidViewModel(application
             if (state.selectedDict != dictName) {
                 state
             } else {
+                val nextEntries = entries ?: state.entries
+                // 词条可能已被删除 ⇒ 把已选集合里失效的键剔除，避免统计出隐形选中项
+                val aliveKeys = nextEntries.map { UserDictIoManager.entryKey(it.word, it.code) }.toSet()
                 state.copy(
                     isTransferring = false,
-                    entries = entries ?: state.entries,
+                    entries = nextEntries,
                     filteredEntries = entries?.let { filterEntries(it, state.searchQuery) }
                         ?: state.filteredEntries,
+                    selectedKeys = state.selectedKeys intersect aliveKeys,
                     message = message(result),
                     messageIsError = result.isFailure
                 )

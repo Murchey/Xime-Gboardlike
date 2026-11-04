@@ -209,8 +209,13 @@ fun SettingsScreen(
                 onNavigateToModelManagement = { navController.navigate(SettingsRoutes.ModelLocal) },
                 onNavigateToModelDetail = { modelId ->
                     navController.navigate("model_market_detail/$modelId")
-                }
+                },
+                onNavigateToLearningData = { navController.navigate(SettingsRoutes.UserLearningData) },
+                onNavigateToUserDict = { navController.navigate(SettingsRoutes.DictionaryUserDict) }
             )
+        }
+        composable(SettingsRoutes.UserLearningData) {
+            UserLearningDataContent(onBack = { navController.popBackStack() })
         }
         composable(SettingsRoutes.Correction) {
             CorrectionSettingsContent(

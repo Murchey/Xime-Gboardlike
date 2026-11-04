@@ -129,6 +129,18 @@ object AssociationManager {
     fun getCacheSize(): Int {
         return if (isInitialized) fusionEngine.getCacheSize() else 0
     }
+
+    /** 学习数据条目（「学习数据」页展示用；未初始化时返回空表，调用方回退读文件）。 */
+    fun getUserNgramEntries(): List<UserNgramCache.NgramEntry> =
+        if (isInitialized) fusionEngine.getUserNgramEntries() else emptyList()
+
+    /** 删除学习数据条目并落盘：作用于当前进程的内存缓存，然后立即写回 JSON。 */
+    suspend fun removeUserNgramEntries(keys: Set<String>): Int = withContext(Dispatchers.IO) {
+        if (!isInitialized) return@withContext 0
+        val removed = fusionEngine.removeUserNgramEntries(keys)
+        if (removed > 0) fusionEngine.saveCache()
+        removed
+    }
     
     fun isInitialized(): Boolean = isInitialized
     

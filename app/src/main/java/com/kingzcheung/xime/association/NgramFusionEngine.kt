@@ -88,6 +88,10 @@ class NgramFusionEngine(private val context: Context) {
     }
     
     fun getCacheSize(): Int = userNgramCache.getCacheSize()
+
+    fun getUserNgramEntries(): List<UserNgramCache.NgramEntry> = userNgramCache.getAllEntries()
+
+    fun removeUserNgramEntries(keys: Set<String>): Int = userNgramCache.removeEntries(keys)
     
     fun isInitialized(): Boolean = isInitialized
 }
