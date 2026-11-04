@@ -27,6 +27,7 @@ object SettingsRoutes {
     const val UserLearningData = "user_learning_data"
     const val Correction = "correction"
     const val FuzzyPinyin = "fuzzy_pinyin"
+    const val GrammarModel = "grammar_model"
     const val SpeechToText = "speech_to_text"
     const val About = "about"
     const val Developer = "developer"

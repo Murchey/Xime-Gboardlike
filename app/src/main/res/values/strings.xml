@@ -824,6 +824,15 @@
     <string name="s_mohuyin">模糊音</string>
     <string name="s_mohuyin_fu">zh/z、n/l 等近似音互认</string>
     <string name="s_mohuyin_shuoming">选择后保存并部署；只对当前方案生效。双拼方案会先做模糊音派生，再做双拼键位映射。</string>
+    <string name="s_yufamoxing">语法模型</string>
+    <string name="s_yufamoxing_fu">导入 .gram 语言模型，全局提升候选排序</string>
+    <string name="s_yufamoxing_shuoming">语言模型根据上文重排候选顺序（纯本地，不联网）。选择一个模型后保存并部署，对所有输入方案全局生效；停用后候选恢复引擎默认排序。</string>
+    <string name="s_yufamoxing_tingyong">停用</string>
+    <string name="s_yufamoxing_daoru">导入 .gram 文件</string>
+    <string name="s_yufamoxing_daochu">导出</string>
+    <string name="s_yufamoxing_daochuchenggong">导出成功</string>
+    <string name="s_yufamoxing_shanchu">删除</string>
+    <string name="s_yufamoxing_shanchuqueren">删除后不可恢复，确定删除该语法模型？</string>
     <string name="s_baocunbingbushu">保存并部署</string>
     <string name="s_yibianyi">已编译</string>
     <string name="s_sousuocitiaohuobianma">搜索词条或编码</string>

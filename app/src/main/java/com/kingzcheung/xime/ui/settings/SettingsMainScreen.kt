@@ -36,6 +36,7 @@ import androidx.compose.material.icons.twotone.Info
 import androidx.compose.material.icons.twotone.Keyboard
 import androidx.compose.material.icons.twotone.KeyboardAlt
 import androidx.compose.material.icons.twotone.Palette
+import androidx.compose.material.icons.twotone.Sort
 import androidx.compose.material.icons.twotone.Storefront
 import androidx.compose.material.icons.twotone.Straighten
 import androidx.compose.material.icons.twotone.TableChart
@@ -89,6 +90,7 @@ fun SettingsMainContent(
     onNavigateToSmartPrediction: () -> Unit,
     onNavigateToCorrection: () -> Unit = {},
     onNavigateToFuzzyPinyin: () -> Unit = {},
+    onNavigateToGrammarModel: () -> Unit = {},
     onNavigateToSpeechToText: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToClipboard: () -> Unit = {},
@@ -288,6 +290,18 @@ fun SettingsMainContent(
                         title = tr(R.string.s_mohuyin),
                         subtitle = tr(R.string.s_mohuyin_fu),
                         onClick = onNavigateToFuzzyPinyin,
+                        showArrow = true
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 56.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsItem(
+                        icon = Icons.TwoTone.Sort,
+                        title = tr(R.string.s_yufamoxing),
+                        subtitle = tr(R.string.s_yufamoxing_fu),
+                        onClick = onNavigateToGrammarModel,
                         showArrow = true
                     )
                     HorizontalDivider(
