@@ -30,10 +30,12 @@ An Android input method built on the [Rime](https://rime.im/) engine, designed f
 
 **Changes in this fork (on top of upstream):**
 
+- **Grammar model (gram)** — a bundled Rime octagram language model (`XimeGboard.gram`) that re-ranks candidates by the full context, with in-app import/export/management. See [Grammar model (gram)](#grammar-model-gram).
 - Font picker: system default / bundled font / imported fonts, applied globally.
 - A curated modern theme set — WeChat, QQ, Telegram, X, GitHub, ChatGPT, Gboard Gray, Gboard Black, and Claude — with light/dark palettes and independent light/dark selection, plus a personalization color panel with JSON import/export.
 - Gboard-style candidate bar: wider cells, vertical separators, down-chevron for more candidates; candidate code hints are off by default.
-- Clipboard retention from 1 hour up to 90 days, manual history-size input, and migration from the old day-based setting.
+- Clipboard retention from 1 hour up to 90 days, manual history-size input, and migration from the old day-based setting; expired entries are actively purged on a timer.
+- Schema settings: a smart deploy/rebuild button and one-tap clearing of compiled schema caches to free up storage.
 - A public signing key and `build_apk.bat` for signed, ABI-split personal builds.
 - A redesigned application icon: an original SVG mark (blue tile, white keyboard, turquoise X key) in the clean, rounded spirit of Gboard — not a copy of it. Source at [docs/branding/app-icon.svg](docs/branding/app-icon.svg); regenerate Android assets with `python scripts/generate-icons.py`.
 
@@ -68,6 +70,7 @@ Captured on a real device (Android 13) via ADB from this build:
 - **Floating Keyboard** — Floating card style with drag support, semi-transparent rounded design
 - **Voice-to-Text** — Optional speech recognition via built-in offline models and online ASR plugins (FunAsr, Volc, etc.; online providers require network and credentials)
 - **AI Enhancement** — Optional predictive text for faster input
+- **Contextual Grammar Model (gram)** — a bundled octagram language model re-ranks candidates against the full context; models are user-managed local files
 - **Clean UI** — Material Design 3, light/dark themes with multiple color schemes and independent light/dark selection
 - **Keyboard Adjustment** — Adjustable keyboard height and position
 - **Toolbar Customization** — Customizable toolbar button layout and functions
@@ -80,6 +83,24 @@ Captured on a real device (Android 13) via ADB from this build:
 - **Physical Keyboard Support** — Floating candidate bar when using hardware/bluetooth keyboards
 - **WebDAV Sync** — Backup and restore schemas and settings via WebDAV
 - **Plugin Marketplace** — Extensible TypeScript plugins (kaomoji, clipboard sync, online ASR, etc.) via the built-in extension store
+
+## Grammar model (gram)
+
+**Upstream Xime does not include this design.** Its intelligent prediction works at the **application layer**: an ONNX association model plus a self-learned bigram/trigram cache of your own typing (persisted as JSON), fused to re-rank association candidates — a `.gram` file there is only treated as a generic binary in its file manager. This fork adds a complete **Rime engine-layer** grammar model (librime-octagram `*.gram`) pipeline on top of that:
+
+| | Upstream Xime | This fork |
+| --- | --- | --- |
+| Prediction layer | Application layer (ONNX association + user n-gram cache) | The same, plus a Rime engine-layer octagram grammar model |
+| Grammar model | — | Bundled `XimeGboard.gram` (character n-gram, ~26 MB), shipped inside the APK |
+| Scope | Association candidates | Candidate ranking of every enabled schema (global activation) |
+| Model management | — | Import / export / delete / disable in-app, with file-format validation |
+| Custom models | — | Import any compatible `.gram`; full training pipeline for the association model in [`ModelTrainning/`](ModelTrainning/) |
+
+**How it works.** Activation writes `grammar/language` and `translator/contextual_suggestions` into each schema's custom config; the Rime engine then re-ranks candidates against the whole preceding sentence (e.g. promoting 绪 after 就 to form 就绪). This acts on the candidate list itself and complements the application-layer association.
+
+**Works out of the box.** The model is bundled and enabled by default. It is a plain local file: export, back up, delete, or disable it at will (ranking then falls back to the engine default) — the location of your data stays under your control.
+
+**Train your own.** Import any octagram-compatible `.gram` to replace the bundled one. For the association model, [`ModelTrainning/`](ModelTrainning/) contains the complete pipeline (corpus → training → int8 quantization → importable package) with a step-by-step guide in [`ModelTrainning/modelGuide.md`](ModelTrainning/modelGuide.md).
 
 ## Requirements
 
