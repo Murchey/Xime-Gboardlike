@@ -254,6 +254,8 @@
     <string name="s_dingzhigongjulan">自訂工具列</string>
     <string name="s_jianpandiaojie">鍵盤調節</string>
     <string name="s_bushufangan">部署方案</string>
+    <string name="s_chongxinbianyi">重新編譯</string>
+    <string name="s_qingchuyibianyineirong">清除已編譯內容</string>
     <string name="s_guanbicaidan">關閉選單</string>
     <string name="s_shezhi">設定</string>
     <string name="s_fanhuizimujianpan">返回字母鍵盤</string>

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -87,6 +88,24 @@ fun SchemaSettingsContent(
     // F6: 从方案市场/导入返回时自动重扫描，新装方案立即出现
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     var showMenu by remember { mutableStateOf(false) }
+    var showClearCacheDialog by remember { mutableStateOf(false) }
+
+    if (showClearCacheDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearCacheDialog = false },
+            title = { Text(tr(R.string.s_qingchuyibianyineirong)) },
+            text = { Text(tr(R.string.s_jiangshanchushurufangandebiany_b1f06)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showClearCacheDialog = false
+                    viewModel.clearCompiledCache()
+                }) { Text(tr(R.string.s_qingli_2)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCacheDialog = false }) { Text(tr(R.string.s_quxiao)) }
+            },
+        )
+    }
 
     if (uiState.showUninstallDialog) {
         val packages = uiState.marketPackages
@@ -366,17 +385,34 @@ fun SchemaSettingsContent(
                 }
             }
 
-            Button(
-                onClick = { viewModel.deploySchema() },
+            // 选中（已启用）方案里有已编译产物时，部署等于重编这些方案，按钮改叫「重新编译」
+            val anyCompiled = uiState.enabledSchemas.any {
+                SchemaManager.isSchemaCompiled(context, it)
+            }
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .navigationBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (uiState.isDeploying) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                    Spacer(Modifier.width(8.dp))
+                Button(
+                    onClick = { viewModel.deploySchema() },
+                    enabled = !uiState.isDeploying,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    if (uiState.isDeploying) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(tr(if (anyCompiled) R.string.s_chongxinbianyi else R.string.s_bushufangan))
                 }
-                Text(tr(R.string.s_bushufangan))
+                TextButton(
+                    onClick = { showClearCacheDialog = true },
+                    enabled = !uiState.isDeploying,
+                ) {
+                    Text(tr(R.string.s_qingchuyibianyineirong))
+                }
             }
         }
     }

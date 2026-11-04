@@ -20,6 +20,7 @@ import com.kingzcheung.xime.settings.PersonalDictManager
 import com.kingzcheung.xime.settings.SchemaManifestManager
 import com.kingzcheung.xime.settings.SchemaManager
 import com.kingzcheung.xime.settings.SchemaPresets
+import com.kingzcheung.xime.settings.StorageStats
 import com.kingzcheung.xime.ui.theme.KeyboardThemes
 import com.kingzcheung.xime.settings.SchemaMeta
 import com.kingzcheung.xime.settings.SettingsPreferences
@@ -286,6 +287,31 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
                     missing.isEmpty() -> tr(R.string.s_bushuwancheng)
                     // 反查词典由它自己的方案编译：缺产物时运行期会报 table.bin 不存在
                     else -> tr(R.string.s_bushuwancheng_fanchacidian, missing.joinToString("、"))
+                }
+            )
+            refresh()
+        }
+    }
+
+    /**
+     * 清除已编译内容（rime/build 编译产物与编译日志）释放空间。
+     * 不动词库与自定义配置；清完刷新，让底部按钮回到「部署方案」。
+     */
+    fun clearCompiledCache() {
+        if (_uiState.value.isDeploying) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDeploying = true) }
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    StorageStats.clearCategory(context, StorageStats.ID_SCHEMA_CACHE)
+                }.getOrNull()
+            }
+            _uiState.update { it.copy(isDeploying = false) }
+            val title = tr(R.string.s_fanganbianyihuancun)
+            showToast(
+                when (ok) {
+                    true -> tr(R.string.s_yiqingli, title)
+                    else -> tr(R.string.s_qinglishibai_qingzhongshi, title)
                 }
             )
             refresh()

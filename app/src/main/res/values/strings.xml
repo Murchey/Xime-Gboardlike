@@ -255,6 +255,8 @@
     <string name="s_dingzhigongjulan">定制工具栏</string>
     <string name="s_jianpandiaojie">键盘调节</string>
     <string name="s_bushufangan">部署方案</string>
+    <string name="s_chongxinbianyi">重新编译</string>
+    <string name="s_qingchuyibianyineirong">清除已编译内容</string>
     <string name="s_guanbicaidan">关闭菜单</string>
     <string name="s_shezhi">设置</string>
     <string name="s_fanhuizimujianpan">返回字母键盘</string>
