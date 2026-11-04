@@ -159,21 +159,10 @@ object ModelManager {
         val dir = getModelStorageDir(context, model) ?: return false
         if (!dir.exists()) return false
 
+        // 直接清空模型目录下全部文件（自训练/第三方模型的文件名可能不在索引里）
         var success = true
-        // 预测模型删除目录下全部文件（自训练模型的文件名可能不在索引里）
-        if (model.category == ModelCategory.PREDICTION) {
-            dir.listFiles()?.forEach { if (it.isFile && !it.delete()) success = false }
-        } else {
-            for (fileInfo in model.files) {
-                val file = if (model.archiveUrl != null) {
-                    findFileInDir(dir, fileInfo.name)
-                } else {
-                    File(dir, fileInfo.name)
-                }
-                if (file.exists() && !file.delete()) {
-                    success = false
-                }
-            }
+        dir.listFiles()?.forEach {
+            if (it.isFile && !it.delete()) success = false
         }
         if (success) {
             com.kingzcheung.xime.settings.MarketVersionStore.removeModelVersion(context, model.id)

@@ -47,6 +47,41 @@ object ModelImportCatalog {
                 ),
             ),
         )
+        // 预测模型始终提供导入目标（远程索引未加载时也能导入自训练模型）
+        add(
+            ModelInfo(
+                id = "predictive-text-small",
+                name = "智能联想模型 small 版本",
+                description = "智能联想预测模型（small）",
+                category = ModelCategory.PREDICTION,
+                size = "18.9 MB",
+                versions = listOf(
+                    ModelVersion(
+                        files = listOf(
+                            ModelFile("vocab.json", ""),
+                            ModelFile("model_int8_dynamic.onnx", ""),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        add(
+            ModelInfo(
+                id = "predictive-text-base",
+                name = "智能联想模型 base 版本",
+                description = "智能联想预测模型（base）",
+                category = ModelCategory.PREDICTION,
+                size = "36.35MB",
+                versions = listOf(
+                    ModelVersion(
+                        files = listOf(
+                            ModelFile("vocab.json", ""),
+                            ModelFile("model_int8_dynamic.onnx", ""),
+                        ),
+                    ),
+                ),
+            ),
+        )
     }
 
     fun merge(remote: List<ModelInfo>): List<ModelInfo> {
