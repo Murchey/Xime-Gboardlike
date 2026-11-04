@@ -22,7 +22,7 @@ object GramImporter {
     private const val MAX_BYTES = 128L * 1024 * 1024
     private val NAME_REGEX = Regex("^[A-Za-z0-9._-]{1,64}$")
 
-    /** 一条已导入的语法模型；name 形如 xime.gram。 */
+    /** 一条已导入的语法模型；name 形如 XimeGboard.gram。 */
     data class GramFile(val name: String, val sizeBytes: Long, val lastModified: Long)
 
     class ImportException(message: String) : Exception(message)
