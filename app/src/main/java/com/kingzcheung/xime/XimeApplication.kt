@@ -177,6 +177,9 @@ class XimeApplication : Application(), ImageLoaderFactory {
                 val engine = RimeEngine.getInstance()
                 engine.initialize(userDataDir, sharedDataDir)
 
+                // 内置语法模型：首次安装默认落盘并启用，patch 在下方部署前写好即一并生效
+                com.kingzcheung.xime.settings.GramBundledModel.ensureDefault(this@XimeApplication)
+
                 // 首次安装/升级后静默编译词库。ensureDeployment 内部带互斥且 hash 一致时跳过，
                 // 统一负责 deploymentDone/hash 状态，避免与输入法服务的初始化重复触发全量编译。
                 RimeConfigHelper.ensureDeployment(this@XimeApplication)

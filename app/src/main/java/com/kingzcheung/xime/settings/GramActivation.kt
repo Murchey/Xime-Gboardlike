@@ -20,6 +20,10 @@ object GramPreferences {
     fun setActiveLanguage(context: Context, language: String) {
         prefs(context).edit().putString(KEY_ACTIVE, language).apply()
     }
+
+    /** 用户是否已配置过语法模型（含停用/删除）；未配置时首次启动默认启用内置模型。 */
+    fun isConfigured(context: Context): Boolean =
+        prefs(context).contains(KEY_ACTIVE)
 }
 
 /**
