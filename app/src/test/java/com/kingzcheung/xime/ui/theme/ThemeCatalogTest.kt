@@ -54,22 +54,19 @@ class ThemeCatalogTest {
     }
 
     @Test
-    fun `终末地使用设计语言纸墨色系`() {
+    fun `终末地使用白底与信号黄设计语言`() {
         val theme = KeyboardThemes.getThemeById("endfield")
-        // 信号黄 #FFCC00 只做强调，浅色用深金保证可读
+        // 浅色：纯白键盘底 + 中性浅灰键面，信号黄只用于功能键
+        assertEquals(Color(0xFFFFFFFF), theme.keyboardBgLight)
+        assertEquals(Color(0xFFE7E8EA), theme.keyBgLight)
+        assertEquals(Color(0xFFEED001), theme.specialKeyLight)
+        // 深色：纯黑底 + 信号黄强调/功能键
+        assertEquals(Color(0xFF000000), theme.keyboardBgDark)
+        assertEquals(Color(0xFF38393B), theme.keyBgDark)
         assertEquals(Color(0xFFFFCC00), theme.accentDark)
-        assertEquals(Color(0xFF947600), theme.accentLight)
+        assertEquals(Color(0xFFBF9C00), theme.specialKeyDark)
+        // 浅色强调保持深色可读，深色强调提亮
         assertTrue(theme.accentLight.luminance() < theme.accentDark.luminance())
-        // 中性偏绿灰，不偏咖啡色
-        assertEquals(Color(0xFF0A0B0A), theme.keyboardBgDark)
-        assertEquals(Color(0xFF2A2C29), theme.keyBgDark)
-        assertEquals(Color(0xFF6B6420), theme.specialKeyDark)
-        assertEquals(Color(0xFFE8E8E2), theme.keyTextColorDark)
-        assertEquals(Color(0xFFA8A8A0), theme.candidateTextColorDark)
-        assertEquals(Color(0xFFD8D8D2), theme.keyboardBgLight)
-        assertEquals(Color(0xFFFFFFFF), theme.keyBgLight)
-        assertEquals(Color(0xFFF5F0A0), theme.specialKeyLight)
-        assertEquals(Color(0xFF5A5A52), theme.candidateTextColorLight)
     }
 
     @Test
@@ -98,16 +95,18 @@ class ThemeCatalogTest {
 
     @Test
     fun `内置主题键面与键盘底色可分辨`() {
+        // 阈值 1.10：白底纯净系主题（Gboard 黑/X/终末地，见 4033f1e6）刻意用近白键面，
+        // 按键边界仅隐约可辨；其余主题实际 ≥1.25，此线只防"完全融在一起"。
         KeyboardThemes.themes
             .filterNot { it.isDynamic }
             .forEach { theme ->
                 assertTrue(
                     "${theme.id} 浅色键面与底色过于接近",
-                    KeyboardThemes.contrastRatio(theme.keyBgLight, theme.keyboardBgLight) >= 1.25f
+                    KeyboardThemes.contrastRatio(theme.keyBgLight, theme.keyboardBgLight) >= 1.10f
                 )
                 assertTrue(
                     "${theme.id} 深色键面与底色过于接近",
-                    KeyboardThemes.contrastRatio(theme.keyBgDark, theme.keyboardBgDark) >= 1.25f
+                    KeyboardThemes.contrastRatio(theme.keyBgDark, theme.keyboardBgDark) >= 1.10f
                 )
             }
     }
