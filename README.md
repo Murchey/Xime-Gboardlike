@@ -16,7 +16,7 @@
     alt="Get it on F-Droid"
     height="80">](https://f-droid.org/packages/com.kingzcheung.xime)
 
-<sub>This F-Droid badge points to the **upstream** Xime package. This fork is built from source and is not published on F-Droid.</sub>
+<sub>This F-Droid badge points to the **upstream** Xime package. This fork is not published on F-Droid — get the APK from [GitHub Releases](https://github.com/Murchey/Xime-Gboardlike/releases) or [Gitee Releases](https://gitee.com/Murchey/Xime-Gboardlike/releases).</sub>
 
 [Windows Version](https://github.com/ximeiorg/XimeYao) | [Linux Version](https://github.com/ximeiorg/XimeChe) | [Predictive Text Model](https://github.com/ximeiorg/predictive-text) | [Handwriting Model](https://github.com/ximeiorg/ochwpro)
 
@@ -99,6 +99,15 @@ Captured on a real device (Android 13) via ADB from this build:
 2. Install the application
 3. Enable XimeGboard in system input method settings
 4. Set XimeGboard as the current input method
+
+### Downloads from mainland China
+
+The APK is also distributed on Gitee, which is faster and more reliable from mainland China:
+
+- Repository: [https://gitee.com/Murchey/Xime-Gboardlike](https://gitee.com/Murchey/Xime-Gboardlike)
+- APKs: open the **Releases** page of that repository and download the latest build for your ABI (arm64-v8a / armeabi-v7a / x86_64 / universal), same choices as above.
+
+GitHub and Gitee releases carry the same content — use whichever is easier to reach. If neither is stable for you, build from source below.
 
 ### Build from Source
 

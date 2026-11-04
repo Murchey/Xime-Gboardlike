@@ -12,7 +12,7 @@
     alt="Get it on F-Droid"
     height="80">](https://f-droid.org/packages/com.kingzcheung.xime)
 
-<sub>此 F-Droid 徽章指向上游專案 Xime；本分支需自行建置。</sub>
+<sub>此 F-Droid 徽章指向上游專案 Xime。本分支未在 F-Droid 發布，安裝包請從 [GitHub Releases](https://github.com/Murchey/Xime-Gboardlike/releases) 或 [Gitee Releases](https://gitee.com/Murchey/Xime-Gboardlike/releases) 下載。</sub>
 
 
 [Xime 輸入法 (Windows 版)](https://github.com/ximeiorg/XimeYao) | [Xime 輸入法 (Linux 版)](https://github.com/ximeiorg/XimeChe) | [聯想詞預測模型](https://github.com/ximeiorg/predictive-text) | [手寫輸入法模型](https://github.com/ximeiorg/ochwpro)
@@ -128,7 +128,12 @@
 
 ### 國內下載
 
-由於 APK 包是透過 GitHub Actions 自動構建的，國內的倉庫沒有免費的功能使用，因此如果你覺得 GitHub Release 下載不穩定，請自行構建安裝，或者透過 [https://github.akams.cn](https://github.akams.cn) 來下載。
+本分支在 Gitee 同步分發安裝包，國內存取更快、更穩定：
+
+- 儲存庫：[https://gitee.com/Murchey/Xime-Gboardlike](https://gitee.com/Murchey/Xime-Gboardlike)
+- 安裝包：到該儲存庫的 **發行版（Releases）** 頁面下載與裝置架構相符的最新 APK，選擇方式同上（arm64-v8a / armeabi-v7a / x86_64 / universal）。
+
+GitHub 與 Gitee 的 Release 內容一致，任選其一即可；若兩邊下載都不穩定，也可以[從原始碼構建](#手動構建安裝)後自行安裝。
 
 ### 手動構建安裝
 
