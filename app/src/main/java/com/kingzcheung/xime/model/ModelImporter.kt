@@ -34,7 +34,10 @@ object ModelImporter {
                 }
             }
         } ?: error(tr(R.string.s_wufadakaimoxingwenjian))
-        if (!ModelManager.isModelDownloaded(context, model)) error(tr(R.string.s_moxingwenjianbuwanzheng))
+        // 导入后直接验证解压文件是否有效，不依赖远程索引的文件清单比对：
+        // 自训练/第三方模型的文件名可能与索引声明不同，走 isModelDownloaded 会误报"不完整"
+        val extracted = targetDir.listFiles()?.filter { it.isFile && it.length() > 0 }.orEmpty()
+        if (extracted.isEmpty()) error(tr(R.string.s_moxingwenjianbuwanzheng))
     }
 
     private fun queryName(context: Context, uri: Uri): String =

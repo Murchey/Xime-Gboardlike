@@ -60,7 +60,18 @@ object ModelManager {
         val dir = getModelStorageDir(context, model) ?: return false
         if (!dir.exists()) return false
 
-        return model.files.all { fileInfo ->
+        // 预测模型直接检查核心文件，不依赖远程索引声明的文件名：
+        // 自训练/第三方模型的文件名可能与索引不同，走 model.files.all 会误判为未下载
+        if (model.category == ModelCategory.PREDICTION) {
+            val essential = listOf("vocab.json", "model_int8_dynamic.onnx")
+            return essential.all { name ->
+                val f = File(dir, name)
+                f.exists() && f.length() > 0
+            }
+        }
+
+        // 按远程索引声明的文件清单校验
+        val indexMatched = model.files.all { fileInfo ->
             val file = if (model.archiveUrl != null) {
                 findFileInDir(dir, fileInfo.name)
             } else {
@@ -68,6 +79,11 @@ object ModelManager {
             }
             file.exists() && file.length() > 0
         }
+        if (indexMatched) return true
+
+        // 回退：目录里有有效文件即视为已下载（兼容导入的自训练/第三方模型，
+        // 其文件名可能与远程索引声明不同）
+        return dir.listFiles()?.any { it.isFile && it.length() > 0 } == true
     }
 
     fun getModelStorageDir(context: Context, model: ModelInfo): File? {
@@ -89,7 +105,12 @@ object ModelManager {
         val dir = getModelStorageDir(context, model) ?: return 0
         if (!dir.exists()) return 0
 
-        return model.files.sumOf { fileInfo ->
+        // 预测模型直接统计目录内所有文件（自训练模型的文件名可能不在索引里）
+        if (model.category == ModelCategory.PREDICTION) {
+            return dir.listFiles()?.sumOf { if (it.isFile) it.length() else 0L } ?: 0L
+        }
+
+        val indexSize = model.files.sumOf { fileInfo ->
             val file = if (model.archiveUrl != null) {
                 findFileInDir(dir, fileInfo.name)
             } else {
@@ -97,6 +118,10 @@ object ModelManager {
             }
             if (file.exists()) file.length() else 0
         }
+        if (indexSize > 0) return indexSize
+
+        // 回退：统计目录内全部文件（兼容导入的自训练/第三方模型）
+        return dir.listFiles()?.sumOf { if (it.isFile) it.length() else 0L } ?: 0L
     }
 
     fun getDownloadedModels(context: Context): List<ModelInfo> {
@@ -135,14 +160,19 @@ object ModelManager {
         if (!dir.exists()) return false
 
         var success = true
-        for (fileInfo in model.files) {
-            val file = if (model.archiveUrl != null) {
-                findFileInDir(dir, fileInfo.name)
-            } else {
-                File(dir, fileInfo.name)
-            }
-            if (file.exists() && !file.delete()) {
-                success = false
+        // 预测模型删除目录下全部文件（自训练模型的文件名可能不在索引里）
+        if (model.category == ModelCategory.PREDICTION) {
+            dir.listFiles()?.forEach { if (it.isFile && !it.delete()) success = false }
+        } else {
+            for (fileInfo in model.files) {
+                val file = if (model.archiveUrl != null) {
+                    findFileInDir(dir, fileInfo.name)
+                } else {
+                    File(dir, fileInfo.name)
+                }
+                if (file.exists() && !file.delete()) {
+                    success = false
+                }
             }
         }
         if (success) {
