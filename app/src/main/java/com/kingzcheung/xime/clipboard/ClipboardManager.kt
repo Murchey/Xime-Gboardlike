@@ -22,6 +22,8 @@ import com.kingzcheung.xime.plugin.core.api.ClipboardProfile
 import com.kingzcheung.xime.settings.SettingsPreferences
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -76,6 +78,15 @@ class ClipboardManager private constructor(private val context: Context) {
 
         /** 拒收提示（图片过大/尺寸过大）的去重窗口，避免连续复制时连环弹 Toast。 */
         private const val REJECT_TOAST_INTERVAL_MS = 10_000L
+
+        /**
+         * 下一次到点清理的等待毫秒数（最早过期条目 − now）。
+         * 返回 null 表示无需排程（未启用保留策略或无普通条目）。
+         */
+        internal fun nextPurgeDelayMs(now: Long, oldest: Long?, retentionMinutes: Int): Long? {
+            if (retentionMinutes <= 0 || oldest == null) return null
+            return oldest + retentionMinutes * 60_000L - now
+        }
 
         /**
          * 同步导入图片的**绝对**上限 = 设置允许的最大单张（1–20MB 的最大值）。
@@ -356,6 +367,7 @@ class ClipboardManager private constructor(private val context: Context) {
             // 回读入库结果（带 id；极端情况下容量超限且其余条目全受保护时可能已被淘汰）
             val row = dao.findImageByHash(hash) ?: return@withLock null
             _clipboardChanged.emit(row.toClipboardItem())
+            scheduleNextPurge()
             row.imagePath
         }
     }
@@ -495,6 +507,9 @@ class ClipboardManager private constructor(private val context: Context) {
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    /** 到点主动清理的排程任务（见 [scheduleNextPurge]），重复排程会取消旧任务。 */
+    private var scheduledPurge: Job? = null
+
     init {
         migrateLegacyData()
         scope.launch {
@@ -547,21 +562,48 @@ class ClipboardManager private constructor(private val context: Context) {
     /**
      * 按「自动清理时间」删除过期条目（置顶与快捷发送不参与）。
      *
-     * 触发时机：进程启动、设置里改完保留策略、以及打开剪贴板面板时。
+     * 触发时机：进程启动、设置里改完保留策略、打开剪贴板面板时，
+     * 以及 [scheduleNextPurge] 排定的到点时刻——条目到期后即被删，
+     * 不再依赖用户打开面板或重启进程。
      * 图片条目被删后其磁盘文件由 [deleteEntriesAndFiles] 一并回收。
      */
     fun purgeExpired(now: Long = System.currentTimeMillis()) {
         val minutes = SettingsPreferences.getClipboardRetentionMinutes(context)
-        if (minutes <= 0) return
+        if (minutes <= 0) {
+            Log.d(TAG, "purgeExpired disabled (minutes=$minutes)")
+            scheduledPurge?.cancel()
+            return
+        }
         scope.launch {
             runCatching {
                 val cutoff = now - minutes * 60_000L
                 val expired = dao.findExpired(cutoff)
+                Log.d(TAG, "purgeExpired: cutoff=$cutoff expired=${expired.size}")
                 if (expired.isNotEmpty()) {
                     deleteEntriesAndFiles(expired.map { it.id })
                     Log.d(TAG, "purged ${expired.size} expired clipboard entries (>${minutes}min)")
                 }
             }.onFailure { Log.w(TAG, "purgeExpired failed", it) }
+            scheduleNextPurge()
+        }
+    }
+
+    /**
+     * 按最早过期的普通条目排定下一次 [purgeExpired]，到点即删。
+     * 条目写入、清理完成、保留策略变更后调用；重复调用取消旧排程。
+     */
+    fun scheduleNextPurge() {
+        val minutes = SettingsPreferences.getClipboardRetentionMinutes(context)
+        scheduledPurge?.cancel()
+        if (minutes <= 0) return
+        scheduledPurge = scope.launch {
+            val oldest = runCatching { dao.oldestUnpinned(1).firstOrNull()?.timestamp }.getOrNull()
+            val wait = nextPurgeDelayMs(System.currentTimeMillis(), oldest, minutes)
+            Log.d(TAG, "scheduleNextPurge: oldest=$oldest wait=$wait minutes=$minutes")
+            if (wait == null) return@launch
+            // 防抖下限 1s：条目恰好压线过期时避免反复空跑
+            delay(wait.coerceAtLeast(1_000L))
+            purgeExpired()
         }
     }
 
@@ -718,6 +760,8 @@ class ClipboardManager private constructor(private val context: Context) {
                     timestamp = System.currentTimeMillis()
                 )
             )
+            // 首条/清空后再写入时需要重新排定到点清理
+            scheduleNextPurge()
         }
     }
 
