@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -58,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kingzcheung.xime.model.ModelExporter
 import com.kingzcheung.xime.viewmodel.ModelItemState
 import com.kingzcheung.xime.viewmodel.ModelManagementViewModel
 
@@ -81,6 +83,14 @@ fun ModelLocalContent(
     var pendingDelete by remember { mutableStateOf<ModelItemState?>(null) }
     var pendingImportModel by remember { mutableStateOf<ModelItemState?>(null) }
     var showImportPicker by remember { mutableStateOf(false) }
+    var pendingExportModel by remember { mutableStateOf<ModelItemState?>(null) }
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        val model = pendingExportModel
+        pendingExportModel = null
+        if (uri != null && model != null) viewModel.exportModel(model.model.id, uri)
+    }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         val model = pendingImportModel
         pendingImportModel = null
@@ -218,6 +228,10 @@ fun ModelLocalContent(
                         ModelLocalCard(
                             item = item,
                             onDelete = { pendingDelete = item },
+                            onExport = {
+                                pendingExportModel = item
+                                exportLauncher.launch(ModelExporter.suggestFileName(item.model))
+                            },
                         )
                     }
                 }
@@ -230,6 +244,7 @@ fun ModelLocalContent(
 private fun ModelLocalCard(
     item: ModelItemState,
     onDelete: () -> Unit,
+    onExport: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -281,6 +296,20 @@ private fun ModelLocalCard(
                     color = MaterialTheme.colorScheme.outline,
                 )
                 Spacer(Modifier.weight(1f))
+                OutlinedButton(
+                    onClick = onExport,
+                    shape = RoundedCornerShape(50),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+                ) {
+                    Icon(
+                        Icons.Outlined.FileDownload,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(tr(R.string.s_daochumoxing), style = MaterialTheme.typography.labelSmall)
+                }
+                Spacer(Modifier.width(8.dp))
                 OutlinedButton(
                     onClick = onDelete,
                     shape = RoundedCornerShape(50),

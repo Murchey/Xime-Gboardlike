@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.kingzcheung.xime.model.ModelCategory
 import com.kingzcheung.xime.model.ModelDownloadState
 import com.kingzcheung.xime.model.ModelInfo
+import com.kingzcheung.xime.model.ModelExporter
 import com.kingzcheung.xime.model.ModelImporter
 import com.kingzcheung.xime.model.ModelImportCatalog
 import com.kingzcheung.xime.model.ModelManager
@@ -244,6 +245,28 @@ class ModelManagementViewModel(application: Application) : AndroidViewModel(appl
                     it.copy(toastMessage = tr(R.string.s_daorushibai_2, result.exceptionOrNull()?.message))
                 }
             }
+        }
+    }
+
+    /** 导出已下载模型到 SAF uri；不改变列表状态（导出不影响本地数据）。 */
+    fun exportModel(modelId: String, uri: Uri) {
+        viewModelScope.launch {
+            val model = _uiState.value.models.firstOrNull { it.model.id == modelId }?.model
+            if (model == null) {
+                _uiState.update { it.copy(toastMessage = tr(R.string.s_moxingwenjianbuzai_wufadaochu)) }
+                return@launch
+            }
+            val result = ModelExporter.exportTo(context, model, uri)
+            result.fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(toastMessage = tr(R.string.s_daochumoxingchenggong, ModelExporter.suggestFileName(model)))
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update { it.copy(toastMessage = error.message ?: tr(R.string.s_daochushibai, "")) }
+                }
+            )
         }
     }
 

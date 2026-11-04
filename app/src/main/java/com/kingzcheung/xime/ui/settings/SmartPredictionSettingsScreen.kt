@@ -4,6 +4,8 @@ import com.kingzcheung.xime.R
 
 import com.kingzcheung.xime.i18n.tr
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -62,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kingzcheung.xime.association.UserDataExporter
 import com.kingzcheung.xime.model.ModelCategory
 import com.kingzcheung.xime.model.ModelManager
 import com.kingzcheung.xime.settings.SettingsPreferences
@@ -81,6 +84,17 @@ fun SmartPredictionSettingsContent(
     // 模型清单来自远程 index，响应式收集以在加载完成后刷新（仅 PREDICTION 类别）
     val allModels by ModelManager.modelsFlow.collectAsStateWithLifecycle()
     val predictionModels = allModels.filter { it.category == ModelCategory.PREDICTION }
+
+    val userDataExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) viewModel.exportUserData(uri)
+    }
+    val modelExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        if (uri != null) viewModel.exportModel(uri)
+    }
 
     val savedModelId = remember {
         SettingsPreferences.getPredictionSelectedModel(context)
@@ -327,6 +341,33 @@ fun SmartPredictionSettingsContent(
                                         Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(tr(R.string.s_shuaxin))
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            userDataExportLauncher.launch(UserDataExporter.suggestFileName())
+                                        },
+                                        enabled = !uiState.isExportingUserData,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        if (uiState.isExportingUserData) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(16.dp),
+                                                strokeWidth = 2.dp
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                        }
+                                        Text(
+                                            if (uiState.isExportingUserData) tr(R.string.s_daochuzhong)
+                                            else tr(R.string.s_daochuxuexishuju)
+                                        )
                                     }
                                 }
                             }

@@ -879,6 +879,12 @@
     <string name="s_jiluyonghushuruxiguanyitisheng_3888f">記錄用戶輸入習慣以提升預測準確度</string>
     <string name="s_baocunzhong">儲存中...</string>
     <string name="s_baocunshuju">儲存數據</string>
+    <string name="s_daochumoxing">匯出模型</string>
+    <string name="s_daochuxuexishuju">匯出學習數據</string>
+    <string name="s_daochumoxingchenggong">已匯出模型：%1$s</string>
+    <string name="s_daochuxuexishujuchenggong">已匯出學習數據（%1$d 條 n-gram）</string>
+    <string name="s_zanwuxuexishuju">暫無學習數據，先輸入一些內容再匯出</string>
+    <string name="s_moxingwenjianbuzai_wufadaochu">模型檔案不完整，無法匯出</string>
     <string name="s_guanlisuoyouyixiazaide_ai_moxing">管理所有已下載的 AI 模型</string>
     <string name="s_shiyongzhong">使用中</string>
     <string name="s_shiyong">使用</string>

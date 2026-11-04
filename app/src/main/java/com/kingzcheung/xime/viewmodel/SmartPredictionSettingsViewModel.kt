@@ -9,6 +9,8 @@ import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.kingzcheung.xime.association.AssociationManager
+import com.kingzcheung.xime.association.UserDataExporter
+import com.kingzcheung.xime.model.ModelExporter
 import com.kingzcheung.xime.model.ModelManager
 import com.kingzcheung.xime.model.ModelRuntime
 import com.kingzcheung.xime.model.ModelStorage
@@ -30,6 +32,7 @@ data class SmartPredictionUiState(
     val isInitialized: Boolean = false,
     val cacheSize: Int = 0,
     val isSaving: Boolean = false,
+    val isExportingUserData: Boolean = false,
     val isLoading: Boolean = false,
     val isDownloading: Boolean = false,
     val downloadProgress: Float = 0f,
@@ -150,6 +153,60 @@ class SmartPredictionSettingsViewModel(application: Application) : AndroidViewMo
         }
     }
     
+    /** 首次进入时按需刷新一次缓存条数，避免与导出并发写盘。 */
+    fun exportUserData(uri: android.net.Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isExportingUserData = true) }
+            val result = UserDataExporter.exportTo(context, uri)
+            _uiState.update { it.copy(isExportingUserData = false) }
+            result.fold(
+                onSuccess = { snapshot ->
+                    _uiState.update {
+                        it.copy(
+                            cacheSize = snapshot.bigramCount + snapshot.trigramCount,
+                            toastMessage = tr(
+                                R.string.s_daochuxuexishujuchenggong,
+                                snapshot.bigramCount + snapshot.trigramCount
+                            )
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(toastMessage = error.message ?: tr(R.string.s_daochushibai, ""))
+                    }
+                }
+            )
+        }
+    }
+
+    /** 导出当前选中的预测模型目录（智能联想页入口）。 */
+    fun exportModel(uri: android.net.Uri) {
+        val modelId = SettingsPreferences.getPredictionSelectedModel(context)
+        val model = ModelManager.getModel(modelId)
+        if (model == null) {
+            _uiState.update { it.copy(toastMessage = tr(R.string.s_moxingwenjianbuzai_wufadaochu)) }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isExportingUserData = true) }
+            val result = ModelExporter.exportTo(context, model, uri)
+            _uiState.update { it.copy(isExportingUserData = false) }
+            result.fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(toastMessage = tr(R.string.s_daochumoxingchenggong, ModelExporter.suggestFileName(model)))
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(toastMessage = error.message ?: tr(R.string.s_daochushibai, ""))
+                    }
+                }
+            )
+        }
+    }
+
     fun refreshCacheSize() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {

@@ -11,7 +11,7 @@ import java.io.File
 class UserNgramCache(private val context: Context) {
     companion object {
         private const val TAG = "UserNgramCache"
-        private const val CACHE_FILE_NAME = "user_ngram_cache.json"
+        internal const val CACHE_FILE_NAME = "user_ngram_cache.json"
         private const val MAX_ENTRIES = 1000
         private const val MAX_HISTORY_SIZE = 100
     }
