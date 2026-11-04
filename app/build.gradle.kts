@@ -101,10 +101,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // 只在本地有 keystore.properties 时才使用签名配置
-            // GitHub Actions 使用自己的签名方式
-            if (keystorePropertiesFile.exists()) {
-                signingConfig = signingConfigs.getByName("release")
+            // -PuseDebugSigning=true：用 debug 证书签 release 变体——与 Android Studio
+            // 日常安装同签名，可 adb install -r 原地覆盖 debug 包（体积按 release 算）；
+            // 分发构建不加此属性，仍走社区证书，GitHub Actions 使用自己的签名方式。
+            signingConfig = when {
+                project.findProperty("useDebugSigning") == "true" ->
+                    signingConfigs.getByName("debug")
+                keystorePropertiesFile.exists() ->
+                    signingConfigs.getByName("release")
+                else -> null
             }
         }
     }
