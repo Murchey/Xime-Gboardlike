@@ -32,6 +32,7 @@ object SettingsRoutes {
     const val About = "about"
     const val Developer = "developer"
     const val StorageSpace = "storage_space"
+    const val UpdateSettings = "update_settings"
     const val Privacy = "privacy"
     const val Licenses = "licenses"
     const val LogViewer = "log_viewer"

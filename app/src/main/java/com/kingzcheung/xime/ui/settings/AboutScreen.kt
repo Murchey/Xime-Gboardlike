@@ -39,11 +39,15 @@ import androidx.compose.material.icons.twotone.PrivacyTip
 import androidx.compose.material.icons.twotone.Storage
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -53,8 +57,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -63,7 +69,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kingzcheung.xime.BuildConfig
+import com.kingzcheung.xime.settings.AppUpdateChecker
+import com.kingzcheung.xime.settings.AppUpdateDownloader
 import com.kingzcheung.xime.settings.SettingsPreferences
+import com.kingzcheung.xime.settings.UpdateInfo
+import com.kingzcheung.xime.settings.PROXY_SOURCES
+import kotlinx.coroutines.launch
 import com.kingzcheung.xime.util.FileLogger
 
 data class LicenseItem(
@@ -143,6 +154,7 @@ fun AboutContent(
     onNavigateToLogViewer: () -> Unit = {},
     onNavigateToDeveloper: () -> Unit = {},
     onNavigateToStorageSpace: () -> Unit = {},
+    onNavigateToUpdateSettings: () -> Unit = {},
 ) {
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
@@ -230,11 +242,68 @@ fun AboutContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        
+
+                        // 上游追踪面板
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text("上游追踪状态", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                Spacer(Modifier.height(6.dp))
+                                Text("已整合上游 v3.4.3（2026-11-01）之前的功能修复", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.height(4.dp))
+                                Text("已整合：模糊拼音配置、插件超时修复、userdb 主进程预初始化", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("未整合：english 方案、OpenCC 简繁转换、方案轮换、候选选中背景色、快捷发送不写剪贴板", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // 更新检测
+                        var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+                        var checking by remember { mutableStateOf(false) }
+                        var showUpdateDialog by remember { mutableStateOf(false) }
+                        val updateScope = rememberCoroutineScope()
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedButton(onClick = {
+                                checking = true
+                                updateScope.launch {
+                                    val found = AppUpdateChecker.checkAll(context)
+                                    updateInfo = found
+                                    checking = false
+                                    if (found != null) showUpdateDialog = true
+                                    else android.widget.Toast.makeText(context, "已是最新版本", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }, enabled = !checking) {
+                                if (checking) {
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("检查中...")
+                                } else {
+                                    Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("检查更新")
+                                }
+                            }
+                        }
+
+                        if (showUpdateDialog && updateInfo != null) {
+                            UpdateDownloadDialog(
+                                updateInfo = updateInfo!!,
+                                onDismiss = { showUpdateDialog = false }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { uriHandler.openUri("https://github.com/ximeiorg/Xime/releases") },
+                                .clickable { uriHandler.openUri("https://github.com/Murchey/Xime-Gboardlike/releases") },
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -438,6 +507,16 @@ fun AboutContent(
                             icon = Icons.TwoTone.Storage,
                             title = tr(R.string.s_cunchukongjian),
                             onClick = onNavigateToStorageSpace
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 72.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                        SettingsItem(
+                            icon = Icons.Default.CloudDownload,
+                            title = "更新设置",
+                            onClick = onNavigateToUpdateSettings
                         )
                         if (devUnlocked) {
                             HorizontalDivider(

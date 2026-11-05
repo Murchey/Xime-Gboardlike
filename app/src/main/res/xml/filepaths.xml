@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <cache-path name="emoji_cache" path="emoji_cache/" />
+    <!-- 应用更新：下载的 APK 存在 cache/updates/，安装时经 FileProvider 暴露 -->
+    <cache-path name="updates" path="updates/" />
     <files-path name="files" path="." />
 </paths>

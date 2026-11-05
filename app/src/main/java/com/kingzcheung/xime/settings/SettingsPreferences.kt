@@ -1124,4 +1124,49 @@ object SettingsPreferences {
             .remove(KEY_APPLIED_LAYOUT_FILES)
             .apply()
     }
+
+    // ── 应用更新：检测仓库与下载源 ──────────────────────────────
+
+    private const val KEY_UPDATE_REPO_GITHUB = "update_repo_github"
+    private const val KEY_UPDATE_REPO_GITEE = "update_repo_gitee"
+    private const val KEY_UPDATE_PROXY = "update_proxy"
+    private const val KEY_UPDATE_USE_PROXY = "update_use_proxy"
+
+    /** 更新检测用的 GitHub 仓库（owner/repo），空表示用内置默认值。 */
+    fun getUpdateGithubRepo(context: Context): String =
+        getPrefs(context).getString(KEY_UPDATE_REPO_GITHUB, "") ?: ""
+
+    fun setUpdateGithubRepo(context: Context, repo: String) {
+        getPrefs(context).edit().putString(KEY_UPDATE_REPO_GITHUB, repo.trim()).apply()
+    }
+
+    /** 更新检测用的 Gitee 仓库（owner/repo），空表示不检测 Gitee。 */
+    fun getUpdateGiteeRepo(context: Context): String =
+        getPrefs(context).getString(KEY_UPDATE_REPO_GITEE, "") ?: ""
+
+    fun setUpdateGiteeRepo(context: Context, repo: String) {
+        getPrefs(context).edit().putString(KEY_UPDATE_REPO_GITEE, repo.trim()).apply()
+    }
+
+    /** 自定义 GitHub 加速代理前缀，空表示用内置列表。 */
+    fun getUpdateProxy(context: Context): String =
+        getPrefs(context).getString(KEY_UPDATE_PROXY, "") ?: ""
+
+    fun setUpdateProxy(context: Context, proxy: String) {
+        getPrefs(context).edit().putString(KEY_UPDATE_PROXY, proxy.trim()).apply()
+    }
+
+    /** 是否默认启用代理下载。 */
+    fun isUpdateUseProxy(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_UPDATE_USE_PROXY, false)
+
+    fun setUpdateUseProxy(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_UPDATE_USE_PROXY, enabled).apply()
+    }
+
+    /** 解析有效代理前缀：用户自定义优先，否则用内置第一个。 */
+    fun resolveUpdateProxy(context: Context): String {
+        val custom = getUpdateProxy(context)
+        return custom.ifBlank { "https://gh-proxy.org/" }
+    }
 }

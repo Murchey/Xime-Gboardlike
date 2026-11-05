@@ -296,8 +296,12 @@ fun SettingsScreen(
                 onNavigateToLicenses = { navController.navigate(SettingsRoutes.Licenses) },
                 onNavigateToLogViewer = { navController.navigate(SettingsRoutes.LogViewer) },
                 onNavigateToDeveloper = { navController.navigate(SettingsRoutes.Developer) },
-                onNavigateToStorageSpace = { navController.navigate(SettingsRoutes.StorageSpace) }
+                onNavigateToStorageSpace = { navController.navigate(SettingsRoutes.StorageSpace) },
+                onNavigateToUpdateSettings = { navController.navigate(SettingsRoutes.UpdateSettings) }
             )
+        }
+        composable(SettingsRoutes.UpdateSettings) {
+            UpdateSettingsContent(onBack = { navController.popBackStack() })
         }
         composable(SettingsRoutes.Developer) {
             DeveloperContent(
