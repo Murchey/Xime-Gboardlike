@@ -183,15 +183,11 @@ fun KeyboardResizeOverlay(
                 label = tr(R.string.s_zhongzhi),
                 onClick = onReset,
             )
-            OverallDragButton { dx, dy ->
+            // 中央把手只垂直移动键盘（底部留白升降），不做水平位移
+            OverallDragButton { _, dy ->
                 val newPadding = (latestBottomPadding - dy).roundToInt()
                     .coerceIn(0, KeyboardResizeBounds.MAX_BOTTOM_PADDING_DP)
                 latestOnBottomPaddingChange(newPadding)
-                val shift = dx.roundToInt()
-                if (shift != 0) {
-                    latestOnMarginStartChange((latestMarginStart + shift).coerceIn(0, maxMargin))
-                    latestOnMarginEndChange((latestMarginEnd - shift).coerceIn(0, maxMargin))
-                }
             }
             ResizeActionButton(
                 icon = Icons.Default.Check,

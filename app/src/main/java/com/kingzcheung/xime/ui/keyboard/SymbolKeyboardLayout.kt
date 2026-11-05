@@ -80,9 +80,10 @@ fun SymbolKeyboardLayout(
     val (keySpacingX, keySpacingY) = kbKey.spacingFor("symbol")
     val columnGap = ((keySpacingX ?: 2f) * 2).dp
     val rowGap = ((keySpacingY ?: 2f) * 2).dp
-    // 最近使用（LRU）：点按符号后立即刷新列表，无需退出符号面板再进入。
-    var recentSymbols by remember {
-        mutableStateOf(RecentUsageStore.get(context, RecentUsageStore.KEY_RECENT_SYMBOLS))
+    // 最近使用（LRU）：惰性排序——面板打开期间点按符号只持久化使用记录，不重排当前 UI
+    // （最近使用页位置稳定，避免符号跳动/手指点击位置偏离）；退出符号页后再进入时刷新。
+    val recentSymbols = remember {
+        RecentUsageStore.get(context, RecentUsageStore.KEY_RECENT_SYMBOLS)
     }
     val displayCategories = remember(recentSymbols) {
         listOf(SymbolCategory(name = tr(R.string.s_zuijinshiyong), id = "recentSymbols", symbols = recentSymbols)) +
@@ -181,8 +182,8 @@ fun SymbolKeyboardLayout(
                                 SymbolButton(
                                     symbol = symbol,
                                     onClick = {
-                                        // 立即刷新最近使用列表：停留在符号面板内切到“最近使用”即可看到。
-                                        recentSymbols = RecentUsageStore.record(
+                                        // 只持久化使用记录，不重排当前 UI；退出符号页后再进入时刷新（避免符号跳动）
+                                        RecentUsageStore.record(
                                             context, RecentUsageStore.KEY_RECENT_SYMBOLS, symbol
                                         )
                                         onSelect(symbol)

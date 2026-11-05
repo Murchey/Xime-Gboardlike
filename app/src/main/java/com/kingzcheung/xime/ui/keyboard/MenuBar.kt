@@ -12,9 +12,13 @@ import com.kingzcheung.xime.viewmodel.currentLabel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -279,9 +283,10 @@ private fun ToolbarStrip(
         ) {
             if (editing) onFinishEdit() else onDismiss()
         }
+        // 顶部工具按钮平均间隔排列（Gboard 式），不滚动，固定按钮均匀分布
         Row(
-            Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.Center,
+            Modifier.weight(1f).padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val ids = if (editing) draft else activeTools.map { it.id }
@@ -374,47 +379,58 @@ private fun ToolbarEditBody(
     toolbarStripBounds: Rect,
     onDone: () -> Unit,
 ) {
-    val density = LocalDensity.current
-    Column(Modifier.fillMaxSize()) {
-        Text(
-            tr(R.string.s_tuodonggexiangyitianjiahuochongxinpaiuxu),
-            color = textColor.copy(alpha = .55f),
-            fontSize = 12.sp,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-        )
-        // 编辑态：候选栏目 grid 两列多行（纵向滚动），卡片可像纸牌一样拖动摆放。
-        // 与普通态展示同一功能列表（含方案设置），保持功能一致。
-        Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            candidateTools.chunked(2).forEach { rowTools ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    rowTools.forEach { tool ->
-                        DraggableToolCard(
-                            tool = tool,
-                            textColor = textColor,
-                            cardColor = cardColor,
-                            toolbarStripBounds = toolbarStripBounds,
-                            modifier = Modifier.weight(1f).height(64.dp),
-                            onTap = {
-                                if (tool.id in toolbarableIds && tool.id !in draft) {
-                                    onDraftChange(addToToolbarFifo(draft, tool.id))
-                                }
-                            },
-                            onDragIntoToolbar = {
-                                if (tool.id in toolbarableIds && tool.id !in draft) {
-                                    onDraftChange(addToToolbarFifo(draft, tool.id))
-                                }
-                            },
-                        )
+    // 拖动卡片叠加层状态：拖动时卡片跨越布局（不被滚动区裁剪）悬浮到顶部工具栏
+    var dragTool by remember { mutableStateOf<MenuTool?>(null) }
+    var dragCenter by remember { mutableStateOf(Offset.Zero) }
+    var overlayOrigin by remember { mutableStateOf(Offset.Zero) }
+
+    Box(Modifier.fillMaxSize().onGloballyPositioned { c ->
+        val b = c.boundsInRoot()
+        overlayOrigin = Offset(b.left, b.top)
+    }) {
+        Column(Modifier.fillMaxSize()) {
+            Text(
+                tr(R.string.s_tuodonggexiangyitianjiahuochongxinpaiuxu),
+                color = textColor.copy(alpha = .55f),
+                fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+            )
+            // 编辑态：候选栏目 grid 两列多行（纵向滚动），卡片可像纸牌一样拖动摆放。
+            Column(
+                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                candidateTools.chunked(2).forEach { rowTools ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        rowTools.forEach { tool ->
+                            DraggableToolCard(
+                                tool = tool,
+                                textColor = textColor,
+                                cardColor = cardColor,
+                                toolbarStripBounds = toolbarStripBounds,
+                                modifier = Modifier.weight(1f).height(64.dp),
+                                onTap = {
+                                    if (tool.id in toolbarableIds && tool.id !in draft) {
+                                        onDraftChange(addToToolbarFifo(draft, tool.id))
+                                    }
+                                },
+                                onDragIntoToolbar = {
+                                    if (tool.id in toolbarableIds && tool.id !in draft) {
+                                        onDraftChange(addToToolbarFifo(draft, tool.id))
+                                    }
+                                },
+                                onDragMove = { center, isDragging ->
+                                    dragCenter = center
+                                    dragTool = if (isDragging) tool else null
+                                },
+                            )
+                        }
+                        if (rowTools.size == 1) Spacer(Modifier.weight(1f))
                     }
-                    if (rowTools.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-        }
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.Center) {
             Box(
                 Modifier.fillMaxWidth(.5f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(cardColor).clickable { onDone() },
@@ -424,6 +440,29 @@ private fun ToolbarEditBody(
             }
         }
         Spacer(Modifier.height(6.dp))
+        }
+
+        // 跨越布局的拖动卡片叠加层：卡片悬浮跟随手指，可越过滚动区放到顶部工具栏
+        dragTool?.let { tool ->
+            var cardSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+            Box(
+                Modifier
+                    .onSizeChanged { cardSize = it }
+                    .offset {
+                        androidx.compose.ui.unit.IntOffset(
+                            (dragCenter.x - overlayOrigin.x - cardSize.width / 2).toInt(),
+                            (dragCenter.y - overlayOrigin.y - cardSize.height / 2).toInt(),
+                        )
+                    }
+                    .graphicsLayer {
+                        shadowElevation = 24f
+                        shape = RoundedCornerShape(24.dp)
+                        clip = true
+                    },
+            ) {
+                ToolCard(tool, textColor, cardColor, Modifier.width(220.dp).height(64.dp))
+            }
+        }
     }
 }
 
@@ -438,33 +477,31 @@ private fun ToolbarNormalBody(
     cardColor: Color,
     onEdit: () -> Unit,
 ) {
-    // 每页 2 列 × 3 行 = 6 个；统一按钮尺寸，排版为两页（左右滑动翻页）
+    // 每页 2 列 × 3 行 = 6 个；HorizontalPager 横向翻页（Gboard 式翻页效果）
     val pageSize = 6
     val pages = candidateTools.chunked(pageSize)
+    val pagerState = rememberPagerState(pageCount = { pages.size.coerceAtLeast(1) })
     Column(Modifier.fillMaxSize()) {
-        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-            val pageWidth = maxWidth
-            Row(
-                Modifier.fillMaxSize().horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            pageSpacing = 0.dp,
+        ) { pageIndex ->
+            val pageTools = pages.getOrNull(pageIndex) ?: emptyList()
+            Column(
+                Modifier.fillMaxHeight().padding(horizontal = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                pages.forEachIndexed { index, pageTools ->
-                    Column(
-                        Modifier.width(pageWidth).fillMaxHeight().padding(horizontal = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                pageTools.chunked(2).forEach { rowTools ->
+                    // 每行等分高度（weight）→ 三行按钮大小平均，避免最后一行被裁小
+                    Row(
+                        Modifier.fillMaxWidth().weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        pageTools.chunked(2).forEach { rowTools ->
-                            // 每行等分高度（weight）→ 三行按钮大小平均，避免最后一行被裁小
-                            Row(
-                                Modifier.fillMaxWidth().weight(1f),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            ) {
-                                rowTools.forEach { tool ->
-                                    ToolCard(tool, textColor, cardColor, Modifier.weight(1f).fillMaxHeight())
-                                }
-                                if (rowTools.size == 1) Spacer(Modifier.weight(1f))
-                            }
+                        rowTools.forEach { tool ->
+                            ToolCard(tool, textColor, cardColor, Modifier.weight(1f).fillMaxHeight())
                         }
+                        if (rowTools.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
             }
@@ -560,6 +597,7 @@ private fun DraggableToolCard(
     modifier: Modifier = Modifier,
     onTap: () -> Unit,
     onDragIntoToolbar: () -> Unit,
+    onDragMove: (center: Offset, isDragging: Boolean) -> Unit = { _, _ -> },
 ) {
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var dragging by remember { mutableStateOf(false) }
@@ -593,12 +631,14 @@ private fun DraggableToolCard(
                         dragging = true
                         added = false
                         dragOffset = Offset.Zero
+                        onDragMove(cardRootCenter, true)
                     },
                     onDrag = { change, amount ->
                         change.consume()
                         dragOffset += amount
-                        // 拖入顶部工具栏区域 → 入栏（Gboard：拖到顶部栏目）
                         val center = cardRootCenter + dragOffset
+                        onDragMove(center, true)
+                        // 拖入顶部工具栏区域 → 入栏（Gboard：拖到顶部栏目）
                         if (!added &&
                             toolbarStripBounds != Rect.Zero &&
                             center.y <= toolbarStripBounds.bottom &&
@@ -612,10 +652,12 @@ private fun DraggableToolCard(
                     onDragEnd = {
                         dragging = false
                         dragOffset = Offset.Zero
+                        onDragMove(Offset.Zero, false)
                     },
                     onDragCancel = {
                         dragging = false
                         dragOffset = Offset.Zero
+                        onDragMove(Offset.Zero, false)
                     },
                 )
             }
