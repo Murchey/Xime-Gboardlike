@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.twotone.Brightness4
 import androidx.compose.material.icons.twotone.Palette
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -151,46 +152,67 @@ fun ThemeSettingsContent(
 
             item {
                 SettingsSection(title = tr(R.string.s_zhutiyanse)) {
-                    Column(
-                        modifier = Modifier.padding(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 12.dp,
-                            bottom = 12.dp
-                        )
-                    ) {
-                        Text(
-                            text = tr(R.string.s_zhutiyanse_fenbieshezhi),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilterChip(
-                                selected = !editingDark,
-                                onClick = { editingDark = false },
-                                modifier = Modifier.weight(1f),
-                                label = {
-                                    Text(
-                                        "${tr(R.string.s_qianse)} · ${lightTheme.name}",
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
+                    SettingsToggleItem(
+                        icon = Icons.TwoTone.Brightness4,
+                        title = tr(R.string.s_shenqiansezhutizidapei),
+                        subtitle = tr(R.string.s_shenqiansezhutizidapei_fu),
+                        checked = uiState.mixMatch,
+                        onCheckedChange = { viewModel.setMixMatch(it) },
+                    )
+                    if (uiState.mixMatch) {
+                        Column(
+                            modifier = Modifier.padding(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 12.dp,
+                                bottom = 12.dp
                             )
-                            FilterChip(
-                                selected = editingDark,
-                                onClick = { editingDark = true },
-                                modifier = Modifier.weight(1f),
-                                label = {
-                                    Text(
-                                        "${tr(R.string.s_shense)} · ${darkTheme.name}",
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
+                        ) {
+                            Text(
+                                text = tr(R.string.s_zhutiyanse_fenbieshezhi),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(
+                                    selected = !editingDark,
+                                    onClick = { editingDark = false },
+                                    modifier = Modifier.weight(1f),
+                                    label = {
+                                        Text(
+                                            "${tr(R.string.s_qianse)} · ${lightTheme.name}",
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                )
+                                FilterChip(
+                                    selected = editingDark,
+                                    onClick = { editingDark = true },
+                                    modifier = Modifier.weight(1f),
+                                    label = {
+                                        Text(
+                                            "${tr(R.string.s_shense)} · ${darkTheme.name}",
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                )
+                            }
                         }
+                    } else {
+                        Text(
+                            text = tr(R.string.s_jiangyingyongdao, tr(R.string.s_qianseyushense)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 12.dp,
+                                bottom = 12.dp
+                            )
+                        )
                     }
                 }
             }
@@ -219,10 +241,14 @@ fun ThemeSettingsContent(
 
             item {
                 Text(
-                    text = tr(
-                        R.string.s_zhengzaishezhi,
-                        tr(if (editingDark) R.string.s_shense else R.string.s_qianse)
-                    ),
+                    text = if (uiState.mixMatch) {
+                        tr(
+                            R.string.s_zhengzaishezhi,
+                            tr(if (editingDark) R.string.s_shense else R.string.s_qianse)
+                        )
+                    } else {
+                        tr(R.string.s_jiangyingyongdao, tr(R.string.s_qianseyushense))
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 6.dp)
@@ -245,7 +271,12 @@ fun ThemeSettingsContent(
                         rowThemes.forEach { theme ->
                             KeyboardThemeCard(
                                 theme = theme,
-                                isSelected = activeThemeId == theme.id,
+                                // 整套应用时当前浅/深两半都算已选；自搭配只选正在编辑的色槽
+                                isSelected = if (uiState.mixMatch) {
+                                    activeThemeId == theme.id
+                                } else {
+                                    theme.id == lightThemeId || theme.id == darkThemeId
+                                },
                                 onClick = {
                                     previewTheme = theme
                                     previewIsDark = editingDark
@@ -279,8 +310,13 @@ fun ThemeSettingsContent(
             ThemePreviewSheet(
                 theme = theme,
                 targetIsDark = previewIsDark,
+                applyToBoth = !uiState.mixMatch,
                 onApply = {
-                    viewModel.setColorTheme(theme.id, isDark = previewIsDark)
+                    if (uiState.mixMatch) {
+                        viewModel.setColorTheme(theme.id, isDark = previewIsDark)
+                    } else {
+                        viewModel.setColorThemeBoth(theme.id)
+                    }
                     previewTheme = null
                     onThemeChanged()
                 },

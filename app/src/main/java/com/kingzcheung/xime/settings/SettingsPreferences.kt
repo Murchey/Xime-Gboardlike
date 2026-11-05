@@ -33,6 +33,7 @@ object SettingsPreferences {
     private const val KEY_KEYBOARD_THEME_DARK = "keyboard_theme_dark"
     /** 旧版单主题键，仅用于迁移。 */
     private const val KEY_KEYBOARD_THEME_LEGACY = "keyboard_theme"
+    private const val KEY_THEME_MIX_MATCH = "theme_mix_match"
     
     const val KEY_SMART_PREDICTION_ENABLED = "smart_prediction_enabled"
     private const val KEY_PREDICTION_MODEL_REPO = "prediction_model_repo"
@@ -548,6 +549,17 @@ object SettingsPreferences {
             .putString(KEY_KEYBOARD_THEME_LIGHT, themeId)
             .putString(KEY_KEYBOARD_THEME_DARK, themeId)
             .apply()
+    }
+
+    /**
+     * 深浅色主题自搭配：开启后浅色/深色模式可分别选不同主题（含不同文件来源）；
+     * 关闭（默认）时应用主题会整套切换其浅色与深色模式。
+     */
+    fun getThemeMixMatch(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_THEME_MIX_MATCH, false)
+
+    fun setThemeMixMatch(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_THEME_MIX_MATCH, enabled).apply()
     }
 
     

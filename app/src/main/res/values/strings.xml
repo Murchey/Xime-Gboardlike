@@ -1131,6 +1131,9 @@
     <string name="s_gboard_jingdian">Gboard 经典</string>
     <string name="s_zhutiyanse">主题色</string>
     <string name="s_zhutiyanse_fenbieshezhi">浅色与深色模式可以分别选择主题</string>
+    <string name="s_shenqiansezhutizidapei">深浅色主题自搭配</string>
+    <string name="s_shenqiansezhutizidapei_fu">开启后浅色与深色模式可分别选择不同主题；混搭时设置界面主题色回归默认值</string>
+    <string name="s_qianseyushense">浅色与深色</string>
     <string name="s_zhengzaishezhi">正在设置：%1$s</string>
     <string name="s_jiangyingyongdao">将应用到：%1$s</string>
     <string name="s_yingyongdaoxianse">应用到浅色</string>

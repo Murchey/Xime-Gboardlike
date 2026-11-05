@@ -1,5 +1,6 @@
 package com.kingzcheung.xime.ui.theme
 
+import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
@@ -139,16 +140,16 @@ fun XimeTheme(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    // 深/浅模式可以各自选择主题；themeId 非空时仍用于临时预览。
+    // 深/浅模式可以各自选择主题；themeId 非空时仍用于键盘/预览。
     var selectedThemeId by remember(darkTheme, themeId) {
-        mutableStateOf(themeId ?: SettingsPreferences.getKeyboardThemeForMode(context, darkTheme))
+        mutableStateOf(resolveUiThemeIdFor(context, darkTheme, themeId))
     }
 
     DisposableEffect(context, darkTheme, themeId) {
         val prefs = SettingsPreferences.getPrefsPublic(context)
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (themeId == null && (key == "keyboard_theme_light" || key == "keyboard_theme_dark")) {
-                selectedThemeId = SettingsPreferences.getKeyboardThemeForMode(context, darkTheme)
+                selectedThemeId = resolveUiThemeIdFor(context, darkTheme, themeId)
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -186,6 +187,35 @@ fun XimeTheme(
         )
     }
 }
+
+/**
+ * 设置界面取色用的主题 ID；[themeId] 显式指定（键盘、预览）时直接使用。
+ *
+ * 深浅色自搭配把不同主题文件的两半混用时，两套主题无法统一出一套「主题色」，
+ * 设置界面（应用 UI）的主题色回归默认值（默认主题配色）；键盘仍按各模式已选主题渲染。
+ */
+internal fun resolveUiThemeId(
+    darkTheme: Boolean,
+    themeId: String?,
+    lightThemeId: String,
+    darkThemeId: String,
+    defaultLightId: String,
+    defaultDarkId: String,
+): String {
+    if (themeId != null) return themeId
+    if (lightThemeId != darkThemeId) return if (darkTheme) defaultDarkId else defaultLightId
+    return if (darkTheme) darkThemeId else lightThemeId
+}
+
+private fun resolveUiThemeIdFor(context: Context, darkTheme: Boolean, themeId: String?): String =
+    resolveUiThemeId(
+        darkTheme = darkTheme,
+        themeId = themeId,
+        lightThemeId = SettingsPreferences.getKeyboardThemeForMode(context, isDark = false),
+        darkThemeId = SettingsPreferences.getKeyboardThemeForMode(context, isDark = true),
+        defaultLightId = SettingsPreferences.defaultKeyboardTheme,
+        defaultDarkId = SettingsPreferences.defaultDarkKeyboardTheme,
+    )
 
 /** 把同一个字体应用到 Material3 的全部文字样式（界面字体全局替换用）。 */
 private fun Typography.withFontFamily(family: FontFamily): Typography = Typography(

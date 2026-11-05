@@ -70,6 +70,8 @@ private val QWERTY_ROW2 = listOf("Z", "X", "C", "V", "B", "N", "M")
 fun ThemePreviewSheet(
     theme: KeyboardColorScheme,
     targetIsDark: Boolean = false,
+    /** 整套应用：同时切换浅色与深色模式（关闭深浅色自搭配时的默认行为）。 */
+    applyToBoth: Boolean = false,
     onApply: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -95,7 +97,8 @@ fun ThemePreviewSheet(
             Text(
                 text = tr(
                     R.string.s_jiangyingyongdao,
-                    tr(if (targetIsDark) R.string.s_shense else R.string.s_qianse)
+                    if (applyToBoth) tr(R.string.s_qianseyushense)
+                    else tr(if (targetIsDark) R.string.s_shense else R.string.s_qianse)
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
