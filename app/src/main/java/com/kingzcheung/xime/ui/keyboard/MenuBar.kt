@@ -171,25 +171,21 @@ fun MenuBar(
     val activeIds = (if (editing) draft else state.toolbarButtons).filter { byId.containsKey(it) }
     val activeTools = activeIds.mapNotNull { byId[it] }
     val availableTools = allTools.filter { it.id !in activeIds }
+    // 可拖入工具栏的真实按钮 id（内置 + 方案开关 + 插件），系统专属动作不可入栏
+    val toolbarableIds = remember(allTools) { allTools.map { it.id }.toSet() }
 
     val darkLabel = when (state.darkMode) {
         0 -> tr(R.string.s_shensemoshi)
         1 -> tr(R.string.s_qiansemoshi)
         else -> tr(R.string.s_gensuixitong)
     }
-    val systemTools = buildList {
-        add(MenuTool("sys_settings", tr(R.string.s_shezhi), rememberVectorPainter(ToolbarButton.SETTINGS.icon), action = callbacks.onSettings))
-        add(MenuTool("sys_clipboard", tr(R.string.s_jiantieban), rememberVectorPainter(ToolbarButton.CLIPBOARD.icon), action = callbacks.onClipboard))
-        add(MenuTool("sys_quick", tr(R.string.s_kuaijiefasong), rememberVectorPainter(ToolbarButton.QUICK_PHRASE.icon), action = callbacks.onQuickSend))
-        add(MenuTool("sys_schema", tr(R.string.s_shurufangan), rememberVectorPainter(ToolbarButton.SCHEMA.icon), action = callbacks.onSchemaList))
-        add(MenuTool("sys_emoji", tr(R.string.s_biaoqing), rememberVectorPainter(ToolbarButton.EMOJI.icon), action = callbacks.onEmoji))
+    // 候选栏目统一功能列表：编辑态与普通态展示一致，含方案设置（简/繁等开关）。
+    // = 内置工具栏功能（含设置/剪贴板等）+ 方案开关 + 插件 + 系统专属动作（调节/深色/部署）。
+    val candidateTools = allTools + buildList {
         if (!state.isFloatingMode && state.canResizeKeyboard) {
             add(MenuTool("sys_resize", tr(R.string.s_jianpandiaojie), rememberVectorPainter(ToolbarButton.EDIT.icon), action = callbacks.onKeyboardResize))
         }
         add(MenuTool("sys_dark", darkLabel, rememberVectorPainter(ToolbarButton.SYMBOL.icon), action = callbacks.onToggleDarkMode))
-        if (state.canFloatKeyboard) {
-            add(MenuTool("sys_float", if (state.isFloatingMode) tr(R.string.s_tuichuxuanfu) else tr(R.string.s_xuanfumoshi), rememberVectorPainter(ToolbarButton.FLOAT.icon), action = callbacks.onFloatingModeToggle ?: {}))
-        }
         add(MenuTool("sys_deploy", tr(R.string.s_bushufangan), rememberVectorPainter(ToolbarButton.SCHEMA.icon), action = callbacks.onReloadConfig))
     }
 
@@ -216,7 +212,8 @@ fun MenuBar(
 
             if (editing) {
                 ToolbarEditBody(
-                    availableTools = availableTools,
+                    candidateTools = candidateTools,
+                    toolbarableIds = toolbarableIds,
                     textColor = textColor,
                     cardColor = cardColor,
                     draft = draft,
@@ -229,7 +226,7 @@ fun MenuBar(
                 )
             } else {
                 ToolbarNormalBody(
-                    systemTools = systemTools,
+                    candidateTools = candidateTools,
                     textColor = textColor,
                     cardColor = cardColor,
                     onEdit = { draft = state.toolbarButtons; editing = true },
@@ -364,10 +361,11 @@ private fun ToolbarStrip(
     }
 }
 
-/** 编辑态主体：Gboard 提示文案 + 可添加工具池（点按或拖动到顶部工具栏入栏）。 */
+/** 编辑态主体：Gboard 提示文案 + 候选功能 grid 两列多行（点按或拖动到顶部工具栏入栏）。 */
 @Composable
 private fun ToolbarEditBody(
-    availableTools: List<MenuTool>,
+    candidateTools: List<MenuTool>,
+    toolbarableIds: Set<String>,
     textColor: Color,
     cardColor: Color,
     draft: List<String>,
@@ -385,12 +383,13 @@ private fun ToolbarEditBody(
             textAlign = TextAlign.Center,
             maxLines = 1,
         )
-        // 编辑态：候选栏目 grid 两列多行（纵向滚动），卡片可像纸牌一样拖动摆放
+        // 编辑态：候选栏目 grid 两列多行（纵向滚动），卡片可像纸牌一样拖动摆放。
+        // 与普通态展示同一功能列表（含方案设置），保持功能一致。
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            availableTools.chunked(2).forEach { rowTools ->
+            candidateTools.chunked(2).forEach { rowTools ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     rowTools.forEach { tool ->
                         DraggableToolCard(
@@ -400,10 +399,14 @@ private fun ToolbarEditBody(
                             toolbarStripBounds = toolbarStripBounds,
                             modifier = Modifier.weight(1f).height(64.dp),
                             onTap = {
-                                if (tool.id !in draft) onDraftChange(addToToolbarFifo(draft, tool.id))
+                                if (tool.id in toolbarableIds && tool.id !in draft) {
+                                    onDraftChange(addToToolbarFifo(draft, tool.id))
+                                }
                             },
                             onDragIntoToolbar = {
-                                if (tool.id !in draft) onDraftChange(addToToolbarFifo(draft, tool.id))
+                                if (tool.id in toolbarableIds && tool.id !in draft) {
+                                    onDraftChange(addToToolbarFifo(draft, tool.id))
+                                }
                             },
                         )
                     }
@@ -425,18 +428,18 @@ private fun ToolbarEditBody(
 
 /**
  * 普通态主体：两页排版（左右滑动翻页），每页 2 列 × 3 行，按钮大小统一一致 + 右下角铅笔进入定制。
- * 编辑态则为两列多行 grid（见 ToolbarEditBody）。
+ * 展示与编辑态一致的功能列表（含方案设置）。编辑态则为两列多行 grid（见 ToolbarEditBody）。
  */
 @Composable
 private fun ToolbarNormalBody(
-    systemTools: List<MenuTool>,
+    candidateTools: List<MenuTool>,
     textColor: Color,
     cardColor: Color,
     onEdit: () -> Unit,
 ) {
     // 每页 2 列 × 3 行 = 6 个；统一按钮尺寸，排版为两页（左右滑动翻页）
     val pageSize = 6
-    val pages = systemTools.chunked(pageSize)
+    val pages = candidateTools.chunked(pageSize)
     Column(Modifier.fillMaxSize()) {
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val pageWidth = maxWidth
@@ -502,10 +505,22 @@ private fun CircleAction(
     }
 }
 
+/**
+ * 工具图标统一渲染：文字图标与矢量图标视觉大小保持一致（字号随图标尺寸缩放），
+ * 使不同按钮看起来大小一致。
+ */
 @Composable
 private fun ToolIcon(tool: MenuTool, textColor: Color, size: Dp) {
     if (tool.textIcon != null) {
-        Text(tool.textIcon, color = textColor.copy(alpha = .82f), fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, textAlign = TextAlign.Center)
+        // 文字图标字号随图标框尺寸缩放，与矢量图标视觉等大
+        Text(
+            tool.textIcon,
+            color = textColor.copy(alpha = .82f),
+            fontSize = (size.value * 0.82f).sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+        )
     } else if (tool.icon != null) {
         Icon(tool.icon, tool.label, tint = textColor.copy(alpha = .82f), modifier = Modifier.size(size))
     }
