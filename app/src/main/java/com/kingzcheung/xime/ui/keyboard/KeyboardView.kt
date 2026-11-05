@@ -1444,6 +1444,9 @@ fun KeyboardView(
                             schemaSwitches = state.schemaSwitches,
                             canResizeKeyboard = !state.isHostConstrained,
                             canFloatKeyboard = !state.isHostConstrained,
+                            toolbarButtons = state.toolbarButtons,
+                            toolbarPluginButtons = state.toolbarPluginButtons,
+                            isSttEnabled = state.isSttEnabled,
                         ),
                         callbacks = MenuBarCallbacks(
                             onDismiss = { onHapticFeedback?.invoke(); viewModel.closeOverlay() },
@@ -1459,6 +1462,42 @@ fun KeyboardView(
                             onFloatingModeToggle = { onHapticFeedback?.invoke(); callbacks.onFloatingModeChange?.invoke(!state.isFloatingMode); viewModel.closeOverlay() },
                             // 调整半角/全角、简/繁等开关后保持菜单栏展开，方便连续调整。
                             onToggleSchemaSwitch = { sw -> onHapticFeedback?.invoke(); callbacks.onToggleSchemaSwitch?.invoke(sw) },
+                            onUpdateToolbarButtons = { buttons -> callbacks.onUpdateToolbarButtons?.invoke(buttons) },
+                            // 工具面板点按分发：与候选栏工具栏按钮同一套语义
+                            onToolbarButtonClick = { id ->
+                                val item = resolveToolbarButtonItem(
+                                    id,
+                                    state.toolbarPluginButtons,
+                                    state.schemaSwitches.map { it.asToolbarItem() },
+                                )
+                                onHapticFeedback?.invoke()
+                                when (item) {
+                                    is ToolbarButtonItem.Builtin -> when (item.button) {
+                                        ToolbarButton.EMOJI -> viewModel.showOverlay(OverlayRoute.Emoji)
+                                        ToolbarButton.CLIPBOARD -> viewModel.showOverlay(OverlayRoute.Clipboard(0))
+                                        ToolbarButton.SCHEMA -> viewModel.showOverlay(OverlayRoute.SchemaList, listOf(OverlayRoute.Menu))
+                                        ToolbarButton.QUICK_PHRASE -> viewModel.showOverlay(OverlayRoute.Clipboard(1))
+                                        ToolbarButton.SYMBOL -> viewModel.showOverlay(OverlayRoute.Symbol)
+                                        ToolbarButton.SELECT_ALL -> callbacks.onToolbarEditingAction?.invoke("select_all")
+                                        ToolbarButton.COPY -> callbacks.onToolbarEditingAction?.invoke("copy")
+                                        ToolbarButton.PASTE -> callbacks.onToolbarEditingAction?.invoke("paste")
+                                        ToolbarButton.HOME -> callbacks.onToolbarEditingAction?.invoke("home")
+                                        ToolbarButton.END -> callbacks.onToolbarEditingAction?.invoke("end")
+                                        ToolbarButton.FLOAT -> callbacks.onFloatingModeChange?.invoke(!state.isFloatingMode)
+                                        ToolbarButton.HANDWRITING_LOOKUP -> callbacks.onToolbarEditingAction?.invoke("handwriting_lookup")
+                                        ToolbarButton.EDIT -> viewModel.showOverlay(OverlayRoute.Edit)
+                                        ToolbarButton.VOICE -> callbacks.onVoiceStickyToggle?.invoke()
+                                    }
+                                    is ToolbarButtonItem.Plugin -> if (item.action == "open_panel") {
+                                        callbacks.onOpenToolPanel?.invoke(item.pluginId)
+                                    }
+                                    is ToolbarButtonItem.SchemaSwitch -> {
+                                        state.schemaSwitches.firstOrNull { it.asToolbarItem().id == id }
+                                            ?.let { sw -> callbacks.onToggleSchemaSwitch?.invoke(sw) }
+                                    }
+                                    null -> Unit
+                                }
+                            },
                         ),
                         modifier = Modifier.fillMaxWidth().fillMaxHeight()
                     )

@@ -132,8 +132,9 @@ fun KeyboardResizeOverlay(
                 },
             contentAlignment = Alignment.TopCenter,
         ) {
+            // 03.jpg：把手悬浮在键盘卡片顶部内侧（距顶约 17dp），而非贴边
             HandlePill(
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = 17.dp),
                 width = 44.dp,
             )
         }
@@ -159,20 +160,23 @@ fun KeyboardResizeOverlay(
                 },
             contentAlignment = Alignment.BottomCenter,
         ) {
+            // 03.jpg：下把手悬浮在键盘卡片底部内侧（距底约 20dp）
             HandlePill(
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier.padding(bottom = 20.dp),
                 width = 44.dp,
             )
         }
 
-        // 中央的整体键盘拖动把手（宽胶囊，位于按键区下方的留白带）：
+        // 中央的整体键盘拖动把手（03.jpg：宽胶囊位于键盘卡片外的底部留白带中央）：
         // 水平拖 = 两侧边距同步增减（键盘整体平移，宽度不变）；
         // 垂直拖 = 底部留白（键盘整体上移/下移，高度不变）。
+        // 锚定按键区底边之下（留白带内），不与下把手的触控带重叠。
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .height(HANDLE_TOUCH_DP)
+                .offset(y = (-bottomPaddingDp / 2f + HANDLE_TOUCH_DP.value / 2f).dp)
                 .dragging { dx, dy ->
                     val newPadding = (latestBottomPadding - dy).roundToInt()
                         .coerceIn(0, KeyboardResizeBounds.MAX_BOTTOM_PADDING_DP)
@@ -183,10 +187,9 @@ fun KeyboardResizeOverlay(
                         latestOnMarginEndChange((latestMarginEnd - shift).coerceIn(0, maxMargin))
                     }
                 },
-            contentAlignment = Alignment.BottomCenter,
+            contentAlignment = Alignment.Center,
         ) {
             HandlePill(
-                modifier = Modifier.padding(bottom = 2.dp),
                 width = 170.dp,
             )
         }
