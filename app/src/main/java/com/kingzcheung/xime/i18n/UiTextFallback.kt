@@ -953,6 +953,7 @@ internal object UiTextFallback {
         R.string.s_shenqiansezhutizidapei to "深浅色主题自搭配",
         R.string.s_shenqiansezhutizidapei_fu to "开启后浅色与深色模式可分别选择不同主题；混搭时设置界面主题色回归默认值",
         R.string.s_qianseyushense to "浅色与深色",
+        R.string.s_zhinenglianxiangkeyong to "智能联想可用",
         R.string.s_zhong_en to "中/En",
         R.string.s_xianshimoshi to "显示模式",
         R.string.s_peisefangan to "配色方案",

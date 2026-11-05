@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kingzcheung.xime.model.ModelCategory
 import com.kingzcheung.xime.model.ModelExporter
 import com.kingzcheung.xime.viewmodel.ModelItemState
 import com.kingzcheung.xime.viewmodel.ModelManagementViewModel
@@ -263,6 +264,11 @@ private fun ModelLocalCard(
                 )
                 Spacer(Modifier.width(8.dp))
                 TagText(modelCategoryLabel(item.model.category), MaterialTheme.colorScheme.primary)
+                if (item.model.category == ModelCategory.PREDICTION) {
+                    Spacer(Modifier.width(6.dp))
+                    // 预测模型可在「智能联想」直接选用，导入自训练模型后同样生效
+                    TagText(tr(R.string.s_zhinenglianxiangkeyong), MaterialTheme.colorScheme.tertiary)
+                }
             }
             Spacer(Modifier.height(4.dp))
             Text(

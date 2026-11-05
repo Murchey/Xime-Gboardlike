@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Check
@@ -69,6 +68,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kingzcheung.xime.association.UserDataExporter
 import com.kingzcheung.xime.settings.CustomPredictionModelStore
 import com.kingzcheung.xime.model.ModelCategory
+import com.kingzcheung.xime.model.ModelImportCatalog
 import com.kingzcheung.xime.model.ModelManager
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.viewmodel.SmartPredictionSettingsViewModel
@@ -81,19 +81,25 @@ fun SmartPredictionSettingsContent(
     onNavigateToModelDetail: (String) -> Unit = {},
     onNavigateToLearningData: () -> Unit = {},
     onNavigateToUserDict: () -> Unit = {},
-    onNavigateToAddCustomModel: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val viewModel: SmartPredictionSettingsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // 模型清单来自远程 index，响应式收集以在加载完成后刷新（仅 PREDICTION 类别）；
-    // 再并入用户自建的自定义预测模型，两者在同一列表里可选。
+    // 模型清单来自远程 index（仅 PREDICTION 类别）；远程不可用时用离线导入目录兜底，
+    // 保证「模型管理」导入的自训练模型始终可选；再并入历史自定义预测模型。
     val allModels by ModelManager.modelsFlow.collectAsStateWithLifecycle()
     var customVersion by remember { mutableStateOf(0) }
     val customModels = remember(customVersion) { CustomPredictionModelStore.asModelInfos(context) }
-    val predictionModels = (allModels.filter { it.category == ModelCategory.PREDICTION } + customModels)
-        .distinctBy { it.id }
+    val predictionModels =
+        (ModelImportCatalog.merge(allModels).filter { it.category == ModelCategory.PREDICTION } + customModels)
+            .distinctBy { it.id }
+    // 本地可用集合：文件就绪或属于自定义导入；ON_RESUME 的 customVersion 变化后重查
+    val availableIds = remember(customVersion, allModels) {
+        predictionModels.filter {
+            customModels.any { c -> c.id == it.id } || ModelManager.isModelDownloaded(context, it)
+        }.map { it.id }.toSet()
+    }
 
     // 从其它页面（导入/添加模型）返回时刷新模型文件状态，避免残留「请先下载模型」
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -289,6 +295,7 @@ fun SmartPredictionSettingsContent(
                             PredictionModelCard(
                                 modelInfo = model,
                                 isSelected = model.id == selectedModelId,
+                                isAvailable = model.id in availableIds,
                                 onSelect = {
                                     selectedModelId = model.id
                                     viewModel.selectModel(model.id)
@@ -303,18 +310,6 @@ fun SmartPredictionSettingsContent(
                                 )
                             }
                         }
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 56.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                        SettingsItem(
-                            icon = Icons.Default.Add,
-                            title = "添加自定义模型",
-                            subtitle = "导入自己的预测模型并打上标签",
-                            onClick = onNavigateToAddCustomModel,
-                            showArrow = true
-                        )
                     })
                 }
             }
@@ -487,11 +482,11 @@ private fun AssociationModeRow(
 private fun PredictionModelCard(
     modelInfo: com.kingzcheung.xime.model.ModelInfo,
     isSelected: Boolean,
+    /** 本地是否可用：可用时直接「使用」，不显示「去商店」。 */
+    isAvailable: Boolean,
     onSelect: () -> Unit,
     onOpenInStore: () -> Unit
 ) {
-    val context = LocalContext.current
-    val isDownloaded = remember { ModelManager.isModelDownloaded(context, modelInfo.id) }
 
     Row(
         modifier = Modifier
@@ -504,7 +499,7 @@ private fun PredictionModelCard(
                 .size(40.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(
-                    if (isDownloaded) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    if (isAvailable) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                     else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
                 ),
             contentAlignment = Alignment.Center
@@ -512,7 +507,7 @@ private fun PredictionModelCard(
             Icon(
                 imageVector = Icons.Default.AutoAwesome,
                 contentDescription = null,
-                tint = if (isDownloaded) MaterialTheme.colorScheme.primary
+                tint = if (isAvailable) MaterialTheme.colorScheme.primary
                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(22.dp)
             )
@@ -541,15 +536,16 @@ private fun PredictionModelCard(
                 }
                 Surface(
                     shape = RoundedCornerShape(4.dp),
-                    color = if (isDownloaded)
+                    color = if (isAvailable)
                         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                     else
                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 ) {
                     Text(
-                        text = if (isDownloaded) tr(R.string.s_yixiazai) else tr(R.string.s_weixiazai),
+                        // 本地可用的模型直接标注「智能联想可用」，不再显示去商店入口
+                        text = if (isAvailable) tr(R.string.s_zhinenglianxiangkeyong) else tr(R.string.s_weixiazai),
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (isDownloaded) MaterialTheme.colorScheme.primary
+                        color = if (isAvailable) MaterialTheme.colorScheme.primary
                                else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
@@ -557,7 +553,7 @@ private fun PredictionModelCard(
             }
         }
 
-        if (isDownloaded) {
+        if (isAvailable) {
             Spacer(modifier = Modifier.width(8.dp))
             OutlinedButton(
                 onClick = onSelect,
