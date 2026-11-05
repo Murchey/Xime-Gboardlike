@@ -179,9 +179,10 @@ fun MenuBar(
         1 -> tr(R.string.s_qiansemoshi)
         else -> tr(R.string.s_gensuixitong)
     }
-    // 候选栏目统一功能列表：编辑态与普通态展示一致，含方案设置（简/繁等开关）。
-    // = 内置工具栏功能（含设置/剪贴板等）+ 方案开关 + 插件 + 系统专属动作（调节/深色/部署）。
-    val candidateTools = allTools + buildList {
+    // 候选栏目功能列表：编辑/普通态一致，含方案设置（简/繁等开关）。
+    // 基于 availableTools（未入栏）：拖上工具栏少一个、拖下多一个（动态池）。
+    // 再附加系统专属动作（调节/深色/部署，不可入栏，常驻）。
+    val candidateTools = availableTools + buildList {
         if (!state.isFloatingMode && state.canResizeKeyboard) {
             add(MenuTool("sys_resize", tr(R.string.s_jianpandiaojie), rememberVectorPainter(ToolbarButton.EDIT.icon), action = callbacks.onKeyboardResize))
         }
@@ -449,16 +450,16 @@ private fun ToolbarNormalBody(
             ) {
                 pages.forEachIndexed { index, pageTools ->
                     Column(
-                        Modifier.width(pageWidth).padding(horizontal = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        Modifier.width(pageWidth).fillMaxHeight().padding(horizontal = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         pageTools.chunked(2).forEach { rowTools ->
+                            // 每行等分高度（weight）→ 三行按钮大小平均，避免最后一行被裁小
                             Row(
-                                Modifier.fillMaxWidth().height(64.dp),
+                                Modifier.fillMaxWidth().weight(1f),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
                                 rowTools.forEach { tool ->
-                                    // 统一按钮尺寸：宽度均分、高度固定，保持大小一致
                                     ToolCard(tool, textColor, cardColor, Modifier.weight(1f).fillMaxHeight())
                                 }
                                 if (rowTools.size == 1) Spacer(Modifier.weight(1f))
@@ -506,23 +507,25 @@ private fun CircleAction(
 }
 
 /**
- * 工具图标统一渲染：文字图标与矢量图标视觉大小保持一致（字号随图标尺寸缩放），
- * 使不同按钮看起来大小一致。
+ * 工具图标统一渲染：文字图标与矢量图标统一居中在同一 size 方框内（视觉等大、对齐一致），
+ * 修复不同按钮图标大小不一、错位问题。
  */
 @Composable
 private fun ToolIcon(tool: MenuTool, textColor: Color, size: Dp) {
-    if (tool.textIcon != null) {
-        // 文字图标字号随图标框尺寸缩放，与矢量图标视觉等大
-        Text(
-            tool.textIcon,
-            color = textColor.copy(alpha = .82f),
-            fontSize = (size.value * 0.82f).sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            textAlign = TextAlign.Center,
-        )
-    } else if (tool.icon != null) {
-        Icon(tool.icon, tool.label, tint = textColor.copy(alpha = .82f), modifier = Modifier.size(size))
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        if (tool.textIcon != null) {
+            // 文字图标字号随图标框尺寸缩放，与矢量图标视觉等大、居中对齐
+            Text(
+                tool.textIcon,
+                color = textColor.copy(alpha = .82f),
+                fontSize = (size.value * 0.82f).sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                textAlign = TextAlign.Center,
+            )
+        } else if (tool.icon != null) {
+            Icon(tool.icon, tool.label, tint = textColor.copy(alpha = .82f), modifier = Modifier.fillMaxSize())
+        }
     }
 }
 
