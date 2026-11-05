@@ -385,25 +385,30 @@ private fun ToolbarEditBody(
             textAlign = TextAlign.Center,
             maxLines = 1,
         )
-        // 编辑态：候选栏目纵向流式（单列卡片，纵向滚动，便于逐个拖入顶部工具栏）
+        // 编辑态：候选栏目 grid 两列多行（纵向滚动），卡片可像纸牌一样拖动摆放
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            availableTools.forEach { tool ->
-                DraggableToolCard(
-                    tool = tool,
-                    textColor = textColor,
-                    cardColor = cardColor,
-                    toolbarStripBounds = toolbarStripBounds,
-                    modifier = Modifier.fillMaxWidth().height(64.dp),
-                    onTap = {
-                        if (tool.id !in draft) onDraftChange(addToToolbarFifo(draft, tool.id))
-                    },
-                    onDragIntoToolbar = {
-                        if (tool.id !in draft) onDraftChange(addToToolbarFifo(draft, tool.id))
-                    },
-                )
+            availableTools.chunked(2).forEach { rowTools ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    rowTools.forEach { tool ->
+                        DraggableToolCard(
+                            tool = tool,
+                            textColor = textColor,
+                            cardColor = cardColor,
+                            toolbarStripBounds = toolbarStripBounds,
+                            modifier = Modifier.weight(1f).height(64.dp),
+                            onTap = {
+                                if (tool.id !in draft) onDraftChange(addToToolbarFifo(draft, tool.id))
+                            },
+                            onDragIntoToolbar = {
+                                if (tool.id !in draft) onDraftChange(addToToolbarFifo(draft, tool.id))
+                            },
+                        )
+                    }
+                    if (rowTools.size == 1) Spacer(Modifier.weight(1f))
+                }
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.Center) {
@@ -419,8 +424,8 @@ private fun ToolbarEditBody(
 }
 
 /**
- * 普通态主体：2 列 × 3 行网格（Gboard 式），超过 6 个左右滑动翻页 + 右下角铅笔进入定制。
- * 编辑态则为纵向流式（见 ToolbarEditBody）。
+ * 普通态主体：两页排版（左右滑动翻页），每页 2 列 × 3 行，按钮大小统一一致 + 右下角铅笔进入定制。
+ * 编辑态则为两列多行 grid（见 ToolbarEditBody）。
  */
 @Composable
 private fun ToolbarNormalBody(
@@ -429,28 +434,32 @@ private fun ToolbarNormalBody(
     cardColor: Color,
     onEdit: () -> Unit,
 ) {
+    // 每页 2 列 × 3 行 = 6 个；统一按钮尺寸，排版为两页（左右滑动翻页）
+    val pageSize = 6
+    val pages = systemTools.chunked(pageSize)
     Column(Modifier.fillMaxSize()) {
-        // 退出编辑态：2 列 × 3 行网格，左右滑动翻页浏览系统工具
-        Row(
-            Modifier.weight(1f).fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // 每页 2 列 × 3 行 = 6 个工具卡
-            systemTools.chunked(6).forEach { pageTools ->
-                Column(
-                    Modifier.width(360.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    pageTools.chunked(2).forEach { rowTools ->
-                        Row(
-                            Modifier.fillMaxWidth().height(64.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            rowTools.forEach { tool ->
-                                ToolCard(tool, textColor, cardColor, Modifier.weight(1f).fillMaxHeight())
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val pageWidth = maxWidth
+            Row(
+                Modifier.fillMaxSize().horizontalScroll(rememberScrollState()),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                pages.forEachIndexed { index, pageTools ->
+                    Column(
+                        Modifier.width(pageWidth).padding(horizontal = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        pageTools.chunked(2).forEach { rowTools ->
+                            Row(
+                                Modifier.fillMaxWidth().height(64.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                rowTools.forEach { tool ->
+                                    // 统一按钮尺寸：宽度均分、高度固定，保持大小一致
+                                    ToolCard(tool, textColor, cardColor, Modifier.weight(1f).fillMaxHeight())
+                                }
+                                if (rowTools.size == 1) Spacer(Modifier.weight(1f))
                             }
-                            if (rowTools.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
                 }
@@ -548,10 +557,17 @@ private fun DraggableToolCard(
             .graphicsLayer {
                 translationX = dragOffset.x
                 translationY = dragOffset.y
-                val lift = if (dragging) 1.06f else 1f
+                // 纸牌式拖动：抬起放大 + 阴影浮现 + 轻微倾斜（像拿一张牌）
+                val lift = if (dragging) 1.08f else 1f
                 scaleX = lift
                 scaleY = lift
-                alpha = if (dragging) 0.95f else 1f
+                // 按横向位移轻微倾斜，模拟手持纸牌的自然角度
+                rotationZ = if (dragging) (dragOffset.x / 40f).coerceIn(-8f, 8f) else 0f
+                alpha = if (dragging) 0.97f else 1f
+                // 抬起时投影，营造纸牌悬浮在页面上的立体感
+                shadowElevation = if (dragging) 18f else 0f
+                shape = RoundedCornerShape(24.dp)
+                clip = dragging
             }
             .pointerInput(tool.id) {
                 detectDragGesturesAfterLongPress(
