@@ -872,7 +872,7 @@
     <string name="s_jiyu_ai_moxingdezhinenglianxia_5cce9">基于 AI 模型的智能联想词预测</string>
     <string name="s_zhinengjiucuo_shiyanxing">智能纠错（实验性）</string>
     <string name="s_ancuoxianglinjianshigeichujiuz_834ec">按错相邻键时给出纠正候选</string>
-    <string name="s_zaixian_asr_fuwu_xuanzhuangyuy_74a1a">在线 ASR 服务（需安装语音识别插件）</string>
+    <string name="s_zaixian_asr_fuwu_xuanzhuangyuy_74a1a">内置在线识别，填 Key 即可用</string>
     <string name="s_shujuyutongbu">数据与同步</string>
     <string name="s_tupianjilu_tijixianzhi_zhanyon_fa4c6">图片记录、体积限制、占用清理与剪贴板同步</string>
     <string name="s_duoshebeicidianhutongyupeizhib_1efa8">多设备词典互通与配置备份</string>

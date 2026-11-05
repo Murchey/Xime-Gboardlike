@@ -843,7 +843,7 @@
     <string name="s_jiyu_ai_moxingdezhinenglianxia_5cce9">基於 AI 模型的智能聯想詞預測</string>
     <string name="s_zhinengjiucuo_shiyanxing">智能糾錯（實驗性）</string>
     <string name="s_ancuoxianglinjianshigeichujiuz_834ec">按錯相鄰鍵時給出糾正候選</string>
-    <string name="s_zaixian_asr_fuwu_xuanzhuangyuy_74a1a">在線 ASR 服務（需安裝語音辨識插件）</string>
+    <string name="s_zaixian_asr_fuwu_xuanzhuangyuy_74a1a">內建線上識別，填 Key 即可用</string>
     <string name="s_shujuyutongbu">數據與同步</string>
     <string name="s_tupianjilu_tijixianzhi_zhanyon_fa4c6">圖片記錄、體積限制、佔用清理與剪貼簿同步</string>
     <string name="s_duoshebeicidianhutongyupeizhib_1efa8">多裝置詞典互通與配置備份</string>

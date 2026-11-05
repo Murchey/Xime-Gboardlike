@@ -1156,6 +1156,41 @@ object SettingsPreferences {
         getPrefs(context).edit().putString(KEY_UPDATE_PROXY, proxy.trim()).apply()
     }
 
+    // ── 内置在线语音识别：服务商与各自 Key ──────────────────────
+
+    private const val KEY_ASR_PROVIDER = "asr_provider"
+
+    /** 当前选中的内置在线识别服务商 id。 */
+    fun getAsrProvider(context: Context): String =
+        getPrefs(context).getString(KEY_ASR_PROVIDER, "") ?: ""
+
+    fun setAsrProvider(context: Context, id: String) {
+        getPrefs(context).edit().putString(KEY_ASR_PROVIDER, id.trim()).apply()
+    }
+
+    /** 按服务商分别保存 API Key（换服务商不必重填）。 */
+    fun getAsrApiKey(context: Context, providerId: String): String =
+        getPrefs(context).getString("asr_key_$providerId", "") ?: ""
+
+    fun setAsrApiKey(context: Context, providerId: String, key: String) {
+        getPrefs(context).edit().putString("asr_key_$providerId", key.trim()).apply()
+    }
+
+    fun getAsrModel(context: Context, providerId: String): String =
+        getPrefs(context).getString("asr_model_$providerId", "") ?: ""
+
+    fun setAsrModel(context: Context, providerId: String, model: String) {
+        getPrefs(context).edit().putString("asr_model_$providerId", model.trim()).apply()
+    }
+
+    /** 自定义 Base URL（自建反代 / 区域端点）。 */
+    fun getAsrBaseUrl(context: Context, providerId: String): String =
+        getPrefs(context).getString("asr_base_$providerId", "") ?: ""
+
+    fun setAsrBaseUrl(context: Context, providerId: String, url: String) {
+        getPrefs(context).edit().putString("asr_base_$providerId", url.trim()).apply()
+    }
+
     /** 是否默认启用代理下载。 */
     fun isUpdateUseProxy(context: Context): Boolean =
         getPrefs(context).getBoolean(KEY_UPDATE_USE_PROXY, false)

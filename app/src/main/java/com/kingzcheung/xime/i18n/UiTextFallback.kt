@@ -850,7 +850,7 @@ internal object UiTextFallback {
         R.string.s_jiyu_ai_moxingdezhinenglianxia_5cce9 to "基于 AI 模型的智能联想词预测",
         R.string.s_zhinengjiucuo_shiyanxing to "智能纠错（实验性）",
         R.string.s_ancuoxianglinjianshigeichujiuz_834ec to "按错相邻键时给出纠正候选",
-        R.string.s_zaixian_asr_fuwu_xuanzhuangyuy_74a1a to "在线 ASR 服务（需安装语音识别插件）",
+        R.string.s_zaixian_asr_fuwu_xuanzhuangyuy_74a1a to "内置在线识别，填 Key 即可用",
         R.string.s_shujuyutongbu to "数据与同步",
         R.string.s_tupianjilu_tijixianzhi_zhanyon_fa4c6 to "图片记录、体积限制、占用清理与剪贴板同步",
         R.string.s_duoshebeicidianhutongyupeizhib_1efa8 to "多设备词典互通与配置备份",
