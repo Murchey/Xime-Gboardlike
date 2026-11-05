@@ -48,7 +48,7 @@ object SettingsPreferences {
     
     /** 默认浅色主题 ID，可从 xime.yaml 的 style.color_scheme 初始化。 */
     @JvmStatic
-    var defaultKeyboardTheme: String = "gboard_gray"
+    var defaultKeyboardTheme: String = "gboard_black"
 
     /** 默认深色主题 ID，可从 xime.yaml 的 style.color_scheme 初始化。 */
     @JvmStatic
@@ -381,7 +381,7 @@ object SettingsPreferences {
     const val KEY_KEYBOARD_TEXT_SCALE = "keyboard_text_scale"
     const val KEYBOARD_TEXT_SCALE_MIN = 80
     const val KEYBOARD_TEXT_SCALE_MAX = 130
-    const val DEFAULT_KEYBOARD_TEXT_SCALE = 100
+    const val DEFAULT_KEYBOARD_TEXT_SCALE = 110
 
     fun coerceKeyboardTextScale(percent: Int): Int =
         percent.coerceIn(KEYBOARD_TEXT_SCALE_MIN, KEYBOARD_TEXT_SCALE_MAX)
@@ -918,7 +918,7 @@ object SettingsPreferences {
         getPrefs(context).edit().putInt(KEY_PAGE_SIZE, pageSize).apply()
     }
 
-    const val DEFAULT_CANDIDATE_TEXT_SIZE = 19
+    const val DEFAULT_CANDIDATE_TEXT_SIZE = 22
 
     fun getCandidateTextSize(context: Context): Int {
         return getPrefs(context).getInt(KEY_CANDIDATE_TEXT_SIZE, DEFAULT_CANDIDATE_TEXT_SIZE)
