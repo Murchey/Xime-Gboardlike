@@ -3,6 +3,7 @@ package com.kingzcheung.xime.ui.keyboard
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -141,6 +142,12 @@ internal fun shouldSuppressCursorMove(
  * 深色主题下叠加提亮、浅色主题下叠加压暗，两种主题都能形成清晰对比；
  * 直接统一压暗在深色键面上几乎不可见（这是此前反馈「按键反馈很弱」的主因）。
  */
+internal fun pressBorderColor(base: Color): Color {
+    val lum = 0.299f * base.red + 0.587f * base.green + 0.114f * base.blue
+    // 与 pressOverlay 相反方向：浅键压暗描边、深键提亮描边，确保始终有对比
+    return if (lum < 0.5f) Color.White.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.35f)
+}
+
 internal fun pressOverlay(base: Color): Color {
     val lum = 0.299f * base.red + 0.587f * base.green + 0.114f * base.blue
     return if (lum < 0.5f) {
@@ -422,7 +429,7 @@ fun KeyButton(
 
     // 按下时的键帽缩放：0.94 ≈ Gboard 的按压回弹幅度（太大显得抖动，太小看不出来）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.94f else 1f,
+        targetValue = if (isPressed) 0.90f else 1f,
         animationSpec = tween(durationMillis = if (isPressed) 45 else 90),
         label = "keyPressScale",
     )
@@ -575,6 +582,17 @@ fun KeyButton(
                     isHighlighted -> backgroundColor.copy(alpha = 0.8f)
                     else -> backgroundColor
                 }
+            )
+            // 按下时描边：功能键本身色差明显，普通字母键（尤其浅色主题白键）
+            // 仅靠变暗不够，补一圈高对比描边让「确实按到了」一眼可辨。
+            .then(
+                if (isPressed) {
+                    Modifier.border(
+                        width = 1.5.dp,
+                        color = pressBorderColor(backgroundColor),
+                        shape = keyClipShape,
+                    )
+                } else Modifier
             )
             .keySemantics(a11yDescription, a11yState) { currentOnClick() },
         contentAlignment = Alignment.Center
@@ -1412,7 +1430,7 @@ fun IconKeyButton(
     var isPressed by remember { mutableStateOf(false) }
     // 按下时键帽缩放（与 KeyButton 保持一致的 Gboard 式回弹）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.94f else 1f,
+        targetValue = if (isPressed) 0.90f else 1f,
         animationSpec = tween(durationMillis = if (isPressed) 45 else 90),
         label = "swipeKeyPressScale",
     )
@@ -1533,7 +1551,7 @@ fun SwipeableIconKeyButton(
     var isPressed by remember { mutableStateOf(false) }
     // 按下时键帽缩放（图标键，与文字键保持一致）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.94f else 1f,
+        targetValue = if (isPressed) 0.90f else 1f,
         animationSpec = tween(durationMillis = if (isPressed) 45 else 90),
         label = "iconKeyPressScale",
     )
@@ -1974,6 +1992,17 @@ fun SwipeableIconKeyButton(
                     else -> backgroundColor
                 }
             )
+            // 按下时描边：功能键本身色差明显，普通字母键（尤其浅色主题白键）
+            // 仅靠变暗不够，补一圈高对比描边让「确实按到了」一眼可辨。
+            .then(
+                if (isPressed) {
+                    Modifier.border(
+                        width = 1.5.dp,
+                        color = pressBorderColor(backgroundColor),
+                        shape = keyClipShape,
+                    )
+                } else Modifier
+            )
             .keySemantics(a11yDescription, a11yState) { currentOnClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -2060,7 +2089,7 @@ fun SwipeableKeyButtonLandscape(
     var isPressed by remember { mutableStateOf(false) }
     // 按下时键帽缩放（横屏紧凑键盘，与竖屏一致）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.94f else 1f,
+        targetValue = if (isPressed) 0.90f else 1f,
         animationSpec = tween(durationMillis = if (isPressed) 45 else 90),
         label = "landscapeKeyPressScale",
     )

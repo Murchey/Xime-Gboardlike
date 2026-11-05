@@ -449,7 +449,9 @@
     <string name="s_qiyongzhinengjiucuo">啟用智能糾錯</string>
     <string name="s_ancuoxianglinjianshi_zaihouxua_df488">按錯相鄰鍵時，在候選欄給出糾正候選（不改動原有候選，需手動選擇）</string>
     <string name="s_shuoming">説明</string>
-    <string name="s_morenzhichi_wubi86_wubipinyin_048a6">• 預設支援「五筆86」「五筆拼音」「全拼」：對整條編碼做鄰鍵誤觸解碼，任一位按偏都可能被糾正；糾正用詞始終來自目前方案自己的詞典。其他方案可在 rime/xime.custom.yaml 的 correction.schemas 中追加（雙拼/九鍵不適用）。</string>
+    <string name="s_morenzhichi_wubi86_wubipinyin_048a6">• 適用所有字母輸入型方案（五筆、全拼、雙拼、霧凇、自然碼等），自動識別，無需手工配置；九鍵等數字方案不參與。對整條編碼做鄰鍵誤觸解碼，糾正用詞始終來自目前方案自己的詞典。</string>
+    <string name="s_jiucuoyinqing_xime_yuanban_shuo">• Xime 原版：上游實現，按單個按鍵的偏移量估算誤觸，配合神經網絡信道模型打分；偏保守，誤糾風險最低。</string>
+    <string name="s_jiucuoyinqing_gboard_fangban_shuo">• Gboard 仿版：借鑑 Gboard 的毫米級高斯熱區，同時評估按下鍵與附近鄰鍵的概率，交給解碼器在多個候選間聯合判斷；對「整個手指偏了半格」這類系統偏移更敏感。</string>
     <string name="s_jinggao1_cigongnengshiyanxingz_daa71">• ⚠️⚠️⚠️警告1：此功能實驗性質，只對預設佈局、開發者自己使用習慣做了訓練，不保證所有用戶可用。</string>
     <string name="s_jinggao2_buzhichirenhezidingyi_aaabd">• ⚠️⚠️⚠️警告2：不支援任何自訂按鍵佈局的鍵位糾錯。</string>
     <string name="s_jiuzhenghouxuanbiaozhu_jiucuo_23e5d">• 糾正候選標註「糾錯」，排在原有候選之後（不搶佔正常候選），點選即上屏糾正後的詞。</string>

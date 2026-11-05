@@ -1156,6 +1156,23 @@ object SettingsPreferences {
         getPrefs(context).edit().putString(KEY_UPDATE_PROXY, proxy.trim()).apply()
     }
 
+    // ── 智能纠错引擎：原版（Xime）或 Gboard 仿版 ────────────────
+
+    private const val KEY_CORRECTION_ENGINE = "correction_engine"
+
+    /**
+     * 纠错引擎版本。
+     * 0 = Xime 原版（单键偏移 + channel.onnx）
+     * 1 = Gboard 仿版（高斯热区 + 邻键竞争）
+     * 默认保持原版，行为与升级前一致。
+     */
+    fun getCorrectionEngine(context: Context): Int =
+        getPrefs(context).getInt(KEY_CORRECTION_ENGINE, 0)
+
+    fun setCorrectionEngine(context: Context, engine: Int) {
+        getPrefs(context).edit().putInt(KEY_CORRECTION_ENGINE, engine).apply()
+    }
+
     // ── 内置在线语音识别：服务商与各自 Key ──────────────────────
 
     private const val KEY_ASR_PROVIDER = "asr_provider"

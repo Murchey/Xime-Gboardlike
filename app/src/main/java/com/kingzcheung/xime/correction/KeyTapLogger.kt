@@ -62,9 +62,14 @@ object KeyTapLogger {
         Thread(r, "KeyTapLog").apply { isDaemon = true }
     }
 
+    /** 屏幕密度（dpi），Gboard 仿版把 px 换算成 mm 时使用。 */
+    @Volatile
+    private var densityDpi: Float = 0f
+
     fun init(context: Context) {
         if (logFile != null) return
         logFile = File(context.filesDir, FILE_NAME)
+        densityDpi = context.resources.displayMetrics.densityDpi.toFloat()
     }
 
     /** 键盘布局完成后上报单键几何；只收 a..z 字母键。 */
@@ -94,12 +99,30 @@ object KeyTapLogger {
         if (CorrectionPriors.enabled) pushKeyGeometry()
     }
 
-    /** 把已收集的 26 键几何送给 native（纠错开启时调用）。 */
+    /** 把已收集的 26 键几何送给 native 与 Gboard 仿版（纠错开启时调用）。 */
     fun pushKeyGeometry() {
         // 缺键时不要用半张真实表混静态表，等 26 键齐全再切
         if (!geometryReady || geometryCount < 26) return
         Log.i(TAG, "pushKeyGeometry: 26 keys")
         runCatching { CorrectionNative.setKeyGeometry(keyCenters, keySizes) }
+        // Gboard 仿版需要 px 量纲的绝对几何来算高斯热区：
+        // 归一化值乘以键盘矩形即可还原，屏幕密度用于 px -> mm 换算。
+        runCatching {
+            val kb = keyboardBounds
+            if (kb.width <= 0f || kb.height <= 0f) return@runCatching
+            val geos = HashMap<Char, SpatialTapModel.KeyGeometry>(26)
+            for (i in 0 until 26) {
+                val w = keySizes[i * 2] * kb.width
+                val h = keySizes[i * 2 + 1] * kb.height
+                if (w <= 0f || h <= 0f) continue
+                val cx = kb.left + keyCenters[i * 2] * kb.width
+                val cy = kb.top + keyCenters[i * 2 + 1] * kb.height
+                geos[(97 + i).toChar()] = SpatialTapModel.KeyGeometry(cx, cy, w, h)
+            }
+            if (geos.size == 26) {
+                CorrectionPriors.setKeyGeometry(geos, densityDpi)
+            }
+        }
     }
 
     /** 记录一次按键（几何）。仅在 [enabled] 时写盘，异常全部吞掉（采集不得影响输入）。 */

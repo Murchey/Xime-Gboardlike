@@ -75,6 +75,24 @@ object CorrectionPriors {
     private var globalY = Float.NaN
     private var stateActive = false
 
+    // ── Gboard 仿版：真实键几何（px，键盘局部坐标）──
+    // 由键盘布局在几何就绪时写入；为空时 Gboard 模式自动回退到原版行为。
+    @Volatile
+    private var keyGeometries: Map<Char, SpatialTapModel.KeyGeometry> = emptyMap()
+
+    @Volatile
+    private var densityDpi: Float = 0f
+
+    /** 当前纠错引擎：0=原版（Xime），1=Gboard 仿版。 */
+    @Volatile
+    var engine: Int = 0
+
+    /** 记录/更新 26 键真实几何（Gboard 仿版用）。 */
+    fun setKeyGeometry(geometries: Map<Char, SpatialTapModel.KeyGeometry>, dpi: Float) {
+        keyGeometries = geometries
+        densityDpi = dpi
+    }
+
     /** native 侧是否曾被成功启用。关闭态下所有 JNI 调用必须短路：
      *  CorrectionNative 的 loaded 是 lazy 的，任何访问都会触发 rime_jni 的
      *  dlopen——开关关闭的用户不该在冷启动/每次退格时代价这笔加载。 */
@@ -352,6 +370,14 @@ object CorrectionPriors {
                 oy -= actY[pressedIdx]
             }
         }
+        // Gboard 仿版：用真实键几何把触点转成「按下键 + 邻键」的概率候选，
+        // 作为额外证据随 taps 送出；原版仍只送单键残差，互不影响。
+        val spatial = if (engine == 1 && !ox.isNaN() && !oy.isNaN()) {
+            spatialCandidates(pressedIdx, ox, oy)
+        } else {
+            null
+        }
+
         letters.addLast('a' + pressedIdx)
         offX.addLast(ox)
         offY.addLast(oy)
@@ -361,11 +387,37 @@ object CorrectionPriors {
         // 必须在 Rime 处理本键**之前**送达：插件的 Query 发生在 ProcessKey 内，
         // 若等 syncWithComposition（查询之后）才推送，插件永远比编码慢一拍，
         // 尾部对齐必然失败 → 纠错永不触发。此处先推全量，sync 再做对齐校验兜底。
+        // Gboard 仿版：记录本次空间候选，便于诊断与后续 native 侧融合
+        if (spatial != null && spatial.size > 1) {
+            lastSpatialHint = spatial.joinToString(",") { "${it.letter}:${round2(it.logProbability)}" }
+        }
+
         CorrectionNative.setTaps(
             letters.toCharArray().map { it.code.toByte() }.toByteArray(),
             offX.toFloatArray(),
             offY.toFloatArray()
         )
+    }
+
+    /** 最近一次空间候选（Gboard 仿版诊断用）。 */
+    @Volatile
+    var lastSpatialHint: String = ""
+
+    /**
+     * 用按下键的中心 + 相对偏移反推触点，算出邻键高斯候选。
+     * 偏移量 off 的量纲是「键宽/键高的比例」，与 Gboard 的 dx/dy 一致。
+     */
+    private fun spatialCandidates(
+        pressedIdx: Int,
+        offXValue: Float,
+        offYValue: Float,
+    ): List<SpatialTapModel.SpatialCandidate> {
+        val geos = keyGeometries
+        if (geos.isEmpty() || densityDpi <= 0f) return emptyList()
+        val geo = geos['a' + pressedIdx] ?: return emptyList()
+        val touchX = geo.centerXPx + offXValue * geo.widthPx
+        val touchY = geo.centerYPx + offYValue * geo.heightPx
+        return SpatialTapModel.candidates(touchX, touchY, geos, densityDpi)
     }
 
     /** 清空（退格/上屏/清空组合）。 */
