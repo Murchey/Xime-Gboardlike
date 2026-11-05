@@ -181,6 +181,9 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
             "select_arrow_down" -> {
                 extendVerticalSelection(ic, 1)
             }
+            // 选择态段首/段尾：锚点不动，活动端点跳到文本两端（仿 fcitx5 的 Shift+Home/End）
+            "select_move_home" -> extendSelectionToBoundary(ic, toEnd = false)
+            "select_move_end" -> extendSelectionToBoundary(ic, toEnd = true)
         }
     }
 
@@ -206,6 +209,18 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         ic.setSelection(collapseTo, collapseTo)
         if (!vertical) return
         move()
+    }
+
+    /**
+     * 选择模式下把活动端点跳到整段文本首/尾：锚点不动，扩展选区。
+     * 与「home / end」（整段文本首尾）同口径，不做行首语义。
+     */
+    private fun extendSelectionToBoundary(ic: InputConnection, toEnd: Boolean) {
+        val extracted = readEditorText(ic) ?: return
+        val anchor = resolveEditAnchor(ic, extracted.selectionStart)
+        val target = if (toEnd) extracted.text.length else 0
+        applySelectionQuietly(ic, minOf(anchor, target), maxOf(anchor, target))
+        editSelCaret = target
     }
 
     /**

@@ -174,7 +174,7 @@ fun CandidateBar(
     val rightSidePx = with(density) {
         val moreBtn = if (callbacks.onShowMoreCandidates != null) 38.dp.toPx() else 0f
         val clearBtn = if (callbacks.onClearAssociation != null) 38.dp.toPx() else 0f
-        val hideBtn = if (callbacks.onHideKeyboard != null) 28.dp.toPx() else 0f
+        val hideBtn = if (callbacks.onHideKeyboard != null) 38.dp.toPx() else 0f
         rowPaddingPx + maxOf(moreBtn, clearBtn) + hideBtn + 8.dp.toPx()
     }
 
@@ -583,10 +583,17 @@ fun CandidateBar(
                                 toolbarActions.forEach { action ->
                                     val interactionSource = remember { MutableInteractionSource() }
                                     val isPressed by interactionSource.collectIsPressedAsState()
+                                    // Gboard 式宽松工具栏：38dp 触区 + 24dp 图标 + 间距，
+                                    // 按压时圆形状态层反馈，替代旧 32dp 紧凑排布
                                     Box(
                                         modifier = Modifier
-                                            .padding(horizontal = 5.dp)
-                                            .size(32.dp)
+                                            .padding(horizontal = 3.dp)
+                                            .size(38.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (isPressed) iconButtonContainer.copy(alpha = 0.55f)
+                                                else Color.Transparent
+                                            )
                                             // 工具栏在 horizontalScroll 内：用 tolerantClick 容忍轻点的小位移，
                                             // 避免 ROM 手势判定吃掉点击（与候选条目同因）
                                             .tolerantClick(
@@ -599,7 +606,7 @@ fun CandidateBar(
                                         ToolbarButtonIcon(
                                             item = action.item,
                                             tint = if (isPressed) iconButtonTint.copy(alpha = 0.6f) else iconButtonTint,
-                                            modifier = Modifier.size(22.dp),
+                                            modifier = Modifier.size(24.dp),
                                         )
                                     }
                                 }
@@ -611,11 +618,17 @@ fun CandidateBar(
                         val hideKeyboardInteractionSource = remember { MutableInteractionSource() }
                         val isHideKeyboardPressed by hideKeyboardInteractionSource.collectIsPressedAsState()
 
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(2.dp))
 
+                        // 我们特有的收起键盘按钮：保持在工具栏最右，触区同步放大
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isHideKeyboardPressed) iconButtonContainer.copy(alpha = 0.55f)
+                                    else Color.Transparent
+                                )
                                 .clickable(
                                     interactionSource = hideKeyboardInteractionSource,
                                     indication = null,
@@ -627,7 +640,7 @@ fun CandidateBar(
                                 imageVector = Icons.Default.KeyboardArrowDown,
                                 contentDescription = tr(R.string.s_shouqijianpan),
                                 tint = if (isHideKeyboardPressed) iconButtonTint.copy(alpha = 0.6f) else iconButtonTint,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
