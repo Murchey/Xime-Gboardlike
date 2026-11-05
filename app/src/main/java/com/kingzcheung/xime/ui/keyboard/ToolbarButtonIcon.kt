@@ -8,6 +8,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
@@ -59,6 +60,18 @@ fun ToolbarButtonIcon(
                     )
                 }
             }
+        }
+        // 方案开关：与菜单栏方案开关同款——状态缩写/首字符作图标
+        is ToolbarButtonItem.SchemaSwitch -> Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            Text(
+                text = item.textIcon ?: item.label,
+                color = tint,
+                fontSize = fontSize,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

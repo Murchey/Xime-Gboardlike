@@ -70,6 +70,21 @@ internal fun SchemaSwitchUiState.currentIcon(): String {
         ?: currentLabel().firstDisplayChar()
 }
 
+/**
+ * 方案开关 → 工具栏按钮项（导入方案自带的开关同样可排布到工具栏）。
+ * id 稳定：优先取 option 名，其次状态串；换方案后匹配不到即自动不显示。
+ */
+internal fun SchemaSwitchUiState.asToolbarItem(): com.kingzcheung.xime.keyboard.ToolbarButtonItem.SchemaSwitch {
+    val key = name.ifEmpty {
+        options.joinToString("+").ifEmpty { states.joinToString("+") }
+    }
+    return com.kingzcheung.xime.keyboard.ToolbarButtonItem.SchemaSwitch(
+        switchKey = key,
+        label = currentLabel().ifEmpty { currentIcon() },
+        textIcon = currentIcon(),
+    )
+}
+
 data class KeyboardUiState(
     val isAsciiMode: Boolean = false,
     val schemaName: String = "",
@@ -106,6 +121,8 @@ data class KeyboardUiState(
      *  退出面板时 fallback 到引擎的面板态，主键盘被误留英文）。 */
     val isInputSessionRestarting: Boolean = false,
     val isFloatingMode: Boolean = false,
+    /** 编辑器存在选区：编辑面板在「全选 / 剪切」间切换（仿 fcitx5 updateSelection）。 */
+    val hasSelection: Boolean = false,
     val isHandwritingMode: Boolean = false,
     /** 承载区受限（独立 IME 面板）：按屏高算出的键盘装不进实际显示区域。 */
     val isHostConstrained: Boolean = false,

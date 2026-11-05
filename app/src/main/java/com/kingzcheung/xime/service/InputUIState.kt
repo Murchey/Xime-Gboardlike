@@ -57,6 +57,8 @@ data class InputUIState(
     /** 已启用插件声明的工具栏按钮（候选池）。渲染时与内置按钮合并，插件禁用/卸载后自动不显示。 */
     val toolbarPluginButtons: List<ToolbarButtonItem.Plugin> = emptyList(),
     val isCompact: Boolean = false,
+    /** 编辑器存在选区：编辑面板据此在「全选 / 剪切」间切换（仿 fcitx5 updateSelection）。 */
+    val hasSelection: Boolean = false,
     val isFloatingMode: Boolean = false,
     val floatingOffsetX: Int = 0,
     val floatingOffsetY: Int = 0,

@@ -1807,6 +1807,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             ) {
                                 KeyboardUiState(
                                     isAsciiMode = state.isAsciiMode,
+                                    hasSelection = state.hasSelection,
                                     schemaName = state.schemaName,
                                     currentSchemaId = state.currentSchemaId,
                                     schemas = state.schemas,
@@ -2551,6 +2552,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         candidatesEnd: Int,
     ) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
+        // 选区状态供编辑面板切换「全选 / 剪切」；变化时才写，避免高频重组
+        val hasSelectionNow = newSelStart != newSelEnd
+        if (uiState.value.hasSelection != hasSelectionNow) {
+            uiState.value = uiState.value.copy(hasSelection = hasSelectionNow)
+        }
         // 自身写入 InputConnection 会同步触发本回调，处理中直接忽略，避免递归
         if (!selectionUpdateGate.tryEnter()) return
         try {

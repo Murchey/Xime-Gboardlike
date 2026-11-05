@@ -68,6 +68,8 @@ import com.kingzcheung.xime.ui.keyboard.WIDE_CONTAINER_WIDTH
 fun ToolbarCustomizeView(
     toolbarButtons: List<String>,
     pluginButtons: List<ToolbarButtonItem.Plugin> = emptyList(),
+    /** 方案开关按钮（含导入方案自带开关），同样参与拖动排布。 */
+    switchItems: List<ToolbarButtonItem.SchemaSwitch> = emptyList(),
     isSttEnabled: Boolean = true,
     keyTextColor: Color,
     backgroundColor: Color,
@@ -89,7 +91,7 @@ fun ToolbarCustomizeView(
             )
         }
         .map { ToolbarButtonItem.Builtin(it) }
-    val allButtons = builtinButtons + pluginButtons
+    val allButtons = builtinButtons + switchItems + pluginButtons
     val itemById = remember(allButtons) { allButtons.associateBy { it.id } }
 
     // 本地顺序即时生效，同步写回偏好；外部变更（理论上无）再对齐

@@ -119,7 +119,7 @@ fun KeyboardResizeOverlay(
                 onClick = {}
             )
     ) {
-        // 顶部手柄：调高度（上拖变高、下拖变矮，顶边跟手）。
+        // 顶部扩展把手（03 式灰色胶囊）：调高度（上拖变高、下拖变矮，顶边跟手）。
         // 触控区整体在遮罩内侧：上边缘之外是宿主应用，IME 摸不到
         Box(
             modifier = Modifier
@@ -132,9 +132,9 @@ fun KeyboardResizeOverlay(
                 },
             contentAlignment = Alignment.TopCenter,
         ) {
-            GripPill(
-                modifier = Modifier.padding(top = 6.dp),
-                verticalBars = false,
+            HandlePill(
+                modifier = Modifier.padding(top = 8.dp),
+                width = 44.dp,
             )
         }
 
@@ -159,9 +159,35 @@ fun KeyboardResizeOverlay(
                 },
             contentAlignment = Alignment.BottomCenter,
         ) {
-            GripPill(
-                modifier = Modifier.padding(bottom = 6.dp),
-                verticalBars = false,
+            HandlePill(
+                modifier = Modifier.padding(bottom = 8.dp),
+                width = 44.dp,
+            )
+        }
+
+        // 中央的整体键盘拖动把手（宽胶囊，位于按键区下方的留白带）：
+        // 水平拖 = 两侧边距同步增减（键盘整体平移，宽度不变）；
+        // 垂直拖 = 底部留白（键盘整体上移/下移，高度不变）。
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(HANDLE_TOUCH_DP)
+                .dragging { dx, dy ->
+                    val newPadding = (latestBottomPadding - dy).roundToInt()
+                        .coerceIn(0, KeyboardResizeBounds.MAX_BOTTOM_PADDING_DP)
+                    latestOnBottomPaddingChange(newPadding)
+                    val shift = dx.roundToInt()
+                    if (shift != 0) {
+                        latestOnMarginStartChange((latestMarginStart + shift).coerceIn(0, maxMargin))
+                        latestOnMarginEndChange((latestMarginEnd - shift).coerceIn(0, maxMargin))
+                    }
+                },
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            HandlePill(
+                modifier = Modifier.padding(bottom = 2.dp),
+                width = 170.dp,
             )
         }
 
@@ -258,6 +284,20 @@ private fun Modifier.dragging(onDrag: (dx: Float, dy: Float) -> Unit): Modifier 
             },
         )
     }
+}
+
+/**
+ * 03 式扩展/拖动把手：灰色实心胶囊（上/下扩展把手 44dp，整体拖动把手 170dp）。
+ * 在 55% 遮罩上以中灰实心保证可见性与可抓取性。
+ */
+@Composable
+private fun HandlePill(width: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(width, 6.dp)
+            .clip(RoundedCornerShape(3.dp))
+            .background(Color(0xFFB3B3B3))
+    )
 }
 
 /**

@@ -36,6 +36,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.twotone.Edit
 import androidx.compose.material.icons.twotone.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -111,6 +112,8 @@ data class CandidateBarVisuals(
 data class CandidateBarCallbacks(
     val onCandidateSelect: (Int) -> Unit,
     val onLogoClick: (() -> Unit)? = null,
+    /** Gboard 式工具栏编辑入口（铅笔按钮）：打开定制工具栏拖动排布。 */
+    val onEditToolbar: (() -> Unit)? = null,
     val onBack: (() -> Unit)? = null,
     val onHideKeyboard: (() -> Unit)? = null,
     val onShowMoreCandidates: (() -> Unit)? = null,
@@ -611,6 +614,35 @@ fun CandidateBar(
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    // Gboard 式编辑入口：工具栏末端的铅笔按钮（收起键盘按钮之前）
+                    if (inlineSuggestions.isEmpty() && callbacks.onEditToolbar != null) {
+                        val editToolbarInteractionSource = remember { MutableInteractionSource() }
+                        val isEditToolbarPressed by editToolbarInteractionSource.collectIsPressedAsState()
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 3.dp)
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isEditToolbarPressed) iconButtonContainer.copy(alpha = 0.55f)
+                                    else Color.Transparent
+                                )
+                                .tolerantClick(
+                                    showRipple = false,
+                                    interactionSource = editToolbarInteractionSource,
+                                    onClick = { callbacks.onEditToolbar() }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.TwoTone.Edit,
+                                contentDescription = tr(R.string.s_dingzhigongjulan),
+                                tint = if (isEditToolbarPressed) iconButtonTint.copy(alpha = 0.6f) else iconButtonTint,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
                     }
 

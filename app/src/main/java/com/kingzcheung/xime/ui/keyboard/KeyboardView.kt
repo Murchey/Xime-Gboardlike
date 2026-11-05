@@ -85,6 +85,7 @@ import com.kingzcheung.xime.util.FileLogger
 import com.kingzcheung.xime.util.PermissionHelper
 import com.kingzcheung.xime.viewmodel.KeyboardUiState
 import com.kingzcheung.xime.viewmodel.KeyboardViewModel
+import com.kingzcheung.xime.viewmodel.asToolbarItem
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -437,7 +438,11 @@ fun KeyboardView(
                 voiceRecognitionState = state.voiceRecognitionState,
                 voicePluginName = state.voicePluginName,
                 toolbarActions = state.toolbarButtons.mapNotNull { id ->
-                    val item = resolveToolbarButtonItem(id, state.toolbarPluginButtons) ?: return@mapNotNull null
+                    val item = resolveToolbarButtonItem(
+                        id,
+                        state.toolbarPluginButtons,
+                        state.schemaSwitches.map { it.asToolbarItem() },
+                    ) ?: return@mapNotNull null
                     // 承载区受限（独立 IME 面板）：浮动键盘没有意义也放不下，隐藏入口
                     if (state.isHostConstrained &&
                         item is ToolbarButtonItem.Builtin &&
@@ -485,6 +490,11 @@ fun KeyboardView(
                             if (item.action == "open_panel") {
                                 callbacks.onOpenToolPanel?.invoke(item.pluginId)
                             }
+                        })
+                        // 方案开关（含导入方案自带开关）：点击即切换
+                        is ToolbarButtonItem.SchemaSwitch -> ({
+                            state.schemaSwitches.firstOrNull { it.asToolbarItem().id == item.id }
+                                ?.let { sw -> callbacks.onToggleSchemaSwitch?.invoke(sw) }
                         })
                     }
                     ToolbarAction(item) {
@@ -575,6 +585,7 @@ fun KeyboardView(
                         }
                     },
                     onLogoClick = { viewModel.showOverlay(OverlayRoute.Menu) },
+                    onEditToolbar = { onHapticFeedback?.invoke(); viewModel.showOverlay(OverlayRoute.ToolbarCustomize) },
                     onBack = {
                         onHapticFeedback?.invoke()
                         if (showHandwritingCandidates) {
@@ -1504,6 +1515,7 @@ fun KeyboardView(
                     is OverlayRoute.ToolbarCustomize -> ToolbarCustomizeView(
                         toolbarButtons = state.toolbarButtons,
                         pluginButtons = state.toolbarPluginButtons,
+                        switchItems = state.schemaSwitches.map { it.asToolbarItem() },
                         isSttEnabled = state.isSttEnabled,
                         keyTextColor = keyTextColor,
                         backgroundColor = keyboardBgColor,
@@ -1534,6 +1546,7 @@ fun KeyboardView(
                             shadowEnabled = kbShadow.enabled,
                             shadowElevation = kbShadow.elevation.dp,
                             shadowShapeRadius = kbShadow.shapeRadius.dp,
+                            hasSelection = state.hasSelection,
                             modifier = Modifier.fillMaxWidth().fillMaxHeight()
                         )
                     }

@@ -25,6 +25,18 @@ sealed class ToolbarButtonItem {
         val pluginId: String,
         val action: String,
     ) : ToolbarButtonItem()
+
+    /**
+     * 方案开关按钮（Rime 方案自带的 简/繁、半/全 等开关）：
+     * 导入方案的自定义开关同样可以排布到工具栏。
+     */
+    data class SchemaSwitch(
+        val switchKey: String,
+        override val label: String,
+        val textIcon: String?,
+    ) : ToolbarButtonItem() {
+        override val id: String get() = "switch:$switchKey"
+    }
 }
 
 /**
@@ -34,6 +46,8 @@ sealed class ToolbarButtonItem {
 fun resolveToolbarButtonItem(
     id: String,
     pluginItems: List<ToolbarButtonItem.Plugin>,
+    switchItems: List<ToolbarButtonItem.SchemaSwitch> = emptyList(),
 ): ToolbarButtonItem? =
     ToolbarButton.fromId(id)?.let { ToolbarButtonItem.Builtin(it) }
         ?: pluginItems.find { it.id == id }
+        ?: switchItems.find { it.id == id }

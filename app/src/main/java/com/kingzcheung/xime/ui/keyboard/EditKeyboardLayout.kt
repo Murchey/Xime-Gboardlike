@@ -75,7 +75,9 @@ fun EditKeyboardLayout(
     shadowEnabled: Boolean = true,
     shadowElevation: Dp = 1.dp,
     shadowShapeRadius: Dp = 8.dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** 编辑器存在选区：右列首行在「全选 / 剪切」间切换（仿 fcitx5 updateSelection）。 */
+    hasSelection: Boolean = false,
 ) {
     val keyBg = keyBgColor
     // fcitx5 右列按键用 alt 底色与方向键区分：向键盘底色靠一档，深浅主题通用
@@ -189,7 +191,8 @@ fun EditKeyboardLayout(
                             modifier = Modifier.weight(1f).fillMaxWidth()
                         )
                         KeyButton(
-                            text = if (isSelecting) tr(R.string.s_quxiao) else tr(R.string.s_xuanze),
+                            // fcitx5 选择键：文案恒为「选择」，选择态用激活高亮表达
+                            text = tr(R.string.s_xuanze),
                             onClick = {
                                 val newSelecting = !isSelecting
                                 isSelecting = newSelecting
@@ -197,7 +200,7 @@ fun EditKeyboardLayout(
                             },
                             backgroundColor = if (isSelecting) accentColor else keyBg,
                             textColor = if (isSelecting) readableOn(accentColor) else textColor,
-                            isHighlighted = isSelecting,
+                            isHighlighted = isSelecting || hasSelection,
                             fontSize = 14.sp,
                             shadowEnabled = shadowEnabled,
                             shadowElevation = shadowElevation,
@@ -273,35 +276,39 @@ fun EditKeyboardLayout(
                 }
             }
 
-            // 右区：小企鹅式操作列（alt 底色），底行 退格/回车
+            // 右区：小企鹅式操作列（alt 底色）——4 行与左区行高对齐；
+            // 首行随选区在「全选 / 剪切」间切换（fcitx5 updateSelection 语义）
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                KeyButton(
-                    text = tr(R.string.s_quanxuan),
-                    onClick = { onAction("select_all") },
-                    backgroundColor = altKeyBg,
-                    textColor = textColor,
-                    fontSize = 14.sp,
-                    shadowEnabled = shadowEnabled,
-                    shadowElevation = shadowElevation,
-                    shadowShapeRadius = shadowShapeRadius,
-                    modifier = Modifier.weight(1f).fillMaxWidth()
-                )
-                KeyButton(
-                    text = tr(R.string.s_jianqie),
-                    onClick = { onAction("cut") },
-                    backgroundColor = altKeyBg,
-                    textColor = textColor,
-                    fontSize = 14.sp,
-                    shadowEnabled = shadowEnabled,
-                    shadowElevation = shadowElevation,
-                    shadowShapeRadius = shadowShapeRadius,
-                    modifier = Modifier.weight(1f).fillMaxWidth()
-                )
+                if (hasSelection) {
+                    KeyButton(
+                        text = tr(R.string.s_jianqie),
+                        onClick = { onAction("cut") },
+                        backgroundColor = altKeyBg,
+                        textColor = textColor,
+                        fontSize = 14.sp,
+                        shadowEnabled = shadowEnabled,
+                        shadowElevation = shadowElevation,
+                        shadowShapeRadius = shadowShapeRadius,
+                        modifier = Modifier.weight(1f).fillMaxWidth()
+                    )
+                } else {
+                    KeyButton(
+                        text = tr(R.string.s_quanxuan),
+                        onClick = { onAction("select_all") },
+                        backgroundColor = altKeyBg,
+                        textColor = textColor,
+                        fontSize = 14.sp,
+                        shadowEnabled = shadowEnabled,
+                        shadowElevation = shadowElevation,
+                        shadowShapeRadius = shadowShapeRadius,
+                        modifier = Modifier.weight(1f).fillMaxWidth()
+                    )
+                }
                 KeyButton(
                     text = tr(R.string.s_fuzhi),
                     onClick = { onAction("copy") },
@@ -324,39 +331,21 @@ fun EditKeyboardLayout(
                     shadowShapeRadius = shadowShapeRadius,
                     modifier = Modifier.weight(1f).fillMaxWidth()
                 )
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    val (delPress, delRelease) = rememberRepeatAction { onAction("delete") }
-                    IconKeyButton(
-                        icon = rememberVectorPainter(Icons.AutoMirrored.Filled.Backspace),
-                        onClick = {},
-                        backgroundColor = altKeyBg,
-                        iconColor = textColor,
-                        onPress = delPress,
-                        onRelease = delRelease,
-                        shadowEnabled = shadowEnabled,
-                        shadowElevation = shadowElevation,
-                        shadowShapeRadius = shadowShapeRadius,
-                        iconSize = 22.dp,
-                        a11yDescription = tr(R.string.keyboard_delete),
-                        modifier = Modifier.weight(1f).fillMaxHeight()
-                    )
-                    KeyButton(
-                        text = tr(R.string.s_huiche),
-                        onClick = { onAction("enter") },
-                        backgroundColor = altKeyBg,
-                        textColor = textColor,
-                        fontSize = 14.sp,
-                        shadowEnabled = shadowEnabled,
-                        shadowElevation = shadowElevation,
-                        shadowShapeRadius = shadowShapeRadius,
-                        modifier = Modifier.weight(1f).fillMaxHeight()
-                    )
-                }
+                val (delPress, delRelease) = rememberRepeatAction { onAction("delete") }
+                IconKeyButton(
+                    icon = rememberVectorPainter(Icons.AutoMirrored.Filled.Backspace),
+                    onClick = {},
+                    backgroundColor = altKeyBg,
+                    iconColor = textColor,
+                    onPress = delPress,
+                    onRelease = delRelease,
+                    shadowEnabled = shadowEnabled,
+                    shadowElevation = shadowElevation,
+                    shadowShapeRadius = shadowShapeRadius,
+                    iconSize = 22.dp,
+                    a11yDescription = tr(R.string.keyboard_delete),
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                )
             }
         }
 
