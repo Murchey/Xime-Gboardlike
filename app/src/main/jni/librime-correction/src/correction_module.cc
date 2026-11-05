@@ -33,6 +33,9 @@ std::vector<std::string> GetCorrectionSchemaPatches() {
       "correction_translator|correction/margin|2.0",
       "correction_translator|correction/max_candidates|3",
       "correction_translator|correction/min_code_length|2",
+      // P2 混合打分权重：spatial_weight>0 时启用 Gboard 式空间候选融合
+      "correction_translator|correction/spatial_weight|0.5",
+      "correction_translator|correction/channel_weight|1.0",
   };
 }
 

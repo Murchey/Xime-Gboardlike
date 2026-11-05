@@ -99,6 +99,43 @@ Java_com_kingzcheung_xime_correction_CorrectionNative_nativeSetLogFile(JNIEnv* e
 }
 
 // ---- 1) 几何先验侧信道 ----
+// P2: 携带空间候选的增强版（cand_letters/cand_scores 为 n*max_cand 扁平数组）
+JNIEXPORT void JNICALL
+Java_com_kingzcheung_xime_correction_CorrectionNative_nativeSetTapsEx(
+    JNIEnv* env, jclass, jbyteArray letters, jfloatArray off_x, jfloatArray off_y,
+    jbyteArray cand_letters, jfloatArray cand_scores, jintArray cand_counts,
+    jint max_cand) {
+  if (!letters || !off_x || !off_y || !cand_letters || !cand_scores ||
+      !cand_counts || max_cand <= 0) {
+    // 回退旧路径
+    correction_set_taps(nullptr, nullptr, nullptr, 0);
+    return;
+  }
+  const jsize n = env->GetArrayLength(letters);
+  if (n <= 0 || env->GetArrayLength(off_x) != n || env->GetArrayLength(off_y) != n) {
+    correction_clear_taps();
+    return;
+  }
+  jbyte* l = env->GetByteArrayElements(letters, nullptr);
+  jfloat* ox = env->GetFloatArrayElements(off_x, nullptr);
+  jfloat* oy = env->GetFloatArrayElements(off_y, nullptr);
+  jbyte* cl = env->GetByteArrayElements(cand_letters, nullptr);
+  jfloat* cs = env->GetFloatArrayElements(cand_scores, nullptr);
+  jint* cc = env->GetIntArrayElements(cand_counts, nullptr);
+
+  correction_set_taps_ex(
+      reinterpret_cast<const char*>(l), ox, oy,
+      reinterpret_cast<const char*>(cl), cs, cc,
+      n, max_cand);
+
+  env->ReleaseByteArrayElements(letters, l, JNI_ABORT);
+  env->ReleaseFloatArrayElements(off_x, ox, JNI_ABORT);
+  env->ReleaseFloatArrayElements(off_y, oy, JNI_ABORT);
+  env->ReleaseByteArrayElements(cand_letters, cl, JNI_ABORT);
+  env->ReleaseFloatArrayElements(cand_scores, cs, JNI_ABORT);
+  env->ReleaseIntArrayElements(cand_counts, cc, JNI_ABORT);
+}
+
 JNIEXPORT void JNICALL
 Java_com_kingzcheung_xime_correction_CorrectionNative_nativeSetTaps(
     JNIEnv* env, jclass, jbyteArray letters, jfloatArray off_x, jfloatArray off_y) {

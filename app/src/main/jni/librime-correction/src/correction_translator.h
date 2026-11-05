@@ -29,12 +29,19 @@
 
 namespace rime {
 
-// 一次字母按键的几何信息（Kotlin 侧 KeyButton 采集）
+// 一次字母按键的几何信息（Kotlin 侧 KeyButton 采集）。
+// P2：每键可携带空间候选（按下键 + 邻键），native 侧据此混合打分，
+//     兼容旧路径——candidates 为空时回退静态邻键表。
 struct TapInfo {
   char letter;      // 按下的字母（小写）
   float off_x;      // (触点x - 按下键心x) / 键宽
   float off_y;      // (触点y - 按下键心y) / 键高
   bool has_offset;  // 是否有真实触点坐标
+  struct Candidate {
+    char letter;    // 候选字母（小写）
+    float score;    // 空间概率（0~1，softmax 归一）
+  };
+  std::vector<Candidate> candidates;  // 可空 = 无空间信息
 };
 
 // 插件配置（schema 的 correction/ 命名空间）
@@ -59,6 +66,11 @@ struct CorrectionConfig {
   // 词频压过它——真机实测 54% 的候选是这种「打对了还推生僻词」的噪音；
   // 按对时信道强烈支持原字母（geo 增益深负），按偏时有真实偏移信号（正）。
   bool prefix_geo_gate = true;
+  // P2：混合打分权重。spatial_weight > 0 且 tap 携带候选时，
+  // score = channel_weight * log(p_channel) + spatial_weight * log(p_spatial) + lambda * lang。
+  // 默认 0 = 不叠加空间分（与旧版行为完全一致）。
+  float spatial_weight = 0.0f;
+  float channel_weight = 1.0f;
 };
 
 // ---- 侧信道：Kotlin → 插件（线程安全，单例） ----
@@ -71,6 +83,8 @@ class CorrectionPriors {
 
   // 与 Rime 当前组合编码对齐的按键序列（右对齐截断到最近 max_taps 个）
   void SetTaps(const std::vector<TapInfo>& taps);
+  // P2：携带空间候选的版本（TapInfo::candidates 非空时生效）
+  void SetTapsEx(const std::vector<TapInfo>& taps);
   void Clear();
 
   // 信道模型路径（语言分与出词均来自 schema 自己的词典，见 dict_）
@@ -119,6 +133,12 @@ extern "C" {
 // 设置几何先验：letters/off_x/off_y 等长；off 可为 NaN（无真实坐标）
 void correction_set_taps(const char* letters, const float* off_x,
                          const float* off_y, int n);
+// P2：携带空间候选的先验（cand_* 为 n*kMaxSpatialCand 的扁平数组，
+//  每键最多 kMaxSpatialCand 个候选，cand_counts[i] 为该键实际数量）
+void correction_set_taps_ex(const char* letters, const float* off_x,
+                            const float* off_y, const char* cand_letters,
+                            const float* cand_scores, const int* cand_counts,
+                            int n, int max_cand);
 // 设置 26 键真实几何（各 52 个 float：x/y 或 w/h）
 void correction_set_key_geometry(const float* centers_xy,
                                  const float* sizes_wh, int n);

@@ -62,6 +62,21 @@ object CorrectionNative {
         }
     }
 
+    /** P2: 携带空间候选的增强版（Gboard 仿版）。候选数组为 n*maxCand 的扁平结构。 */
+    fun setTapsEx(
+        letters: ByteArray, offX: FloatArray, offY: FloatArray,
+        candLetters: ByteArray, candScores: FloatArray, candCounts: IntArray,
+        maxCand: Int,
+    ) {
+        if (!loaded) return
+        try {
+            nativeSetTapsEx(letters, offX, offY, candLetters, candScores, candCounts, maxCand)
+        } catch (e: Throwable) {
+            Log.e(TAG, "nativeSetTapsEx failed, falling back to setTaps", e)
+            setTaps(letters, offX, offY)
+        }
+    }
+
     /** 设置（或清空）几何先验：三个数组等长，off 为 NaN 表示该键没有真实坐标。 */
     fun setTaps(letters: ByteArray, offX: FloatArray, offY: FloatArray) {
         if (!loaded) return
@@ -114,6 +129,11 @@ object CorrectionNative {
     }
 
     private external fun nativeSetLogFile(path: String)
+    private external fun nativeSetTapsEx(
+        letters: ByteArray, offX: FloatArray, offY: FloatArray,
+        candLetters: ByteArray, candScores: FloatArray, candCounts: IntArray,
+        maxCand: Int,
+    )
     private external fun nativeSetTaps(letters: ByteArray, offX: FloatArray, offY: FloatArray)
     private external fun nativeSetKeyGeometry(centers: FloatArray, sizes: FloatArray)
     private external fun nativeClearTaps()

@@ -149,6 +149,12 @@ void CorrectionPriors::SetTaps(const std::vector<TapInfo>& taps) {
     taps_.erase(taps_.begin(), taps_.end() - kMaxTaps);
 }
 
+// P2：携带空间候选的版本。与 SetTaps 语义一致，只是 TapInfo::candidates 非空，
+// Query 里据此启用空间分。为保持向后兼容，老路径（candidates 空）行为完全不变。
+void CorrectionPriors::SetTapsEx(const std::vector<TapInfo>& taps) {
+  SetTaps(taps);
+}
+
 void CorrectionPriors::Clear() {
   std::lock_guard<std::mutex> lock(mutex_);
   taps_.clear();
@@ -232,6 +238,12 @@ CorrectionTranslator::CorrectionTranslator(const Ticket& ticket)
     config->GetBool(cfg_ns + "/prefix_geo_gate", &config_.prefix_geo_gate);
     config->GetInt(cfg_ns + "/max_candidates", &config_.max_candidates);
     config->GetInt(cfg_ns + "/min_code_length", &config_.min_code_length);
+    // P2: 混合打分权重（spatial_weight=0 时退回纯 channel，与旧版一致）
+    double sw = config_.spatial_weight, cw = config_.channel_weight;
+    config->GetDouble(cfg_ns + "/spatial_weight", &sw);
+    config->GetDouble(cfg_ns + "/channel_weight", &cw);
+    config_.spatial_weight = static_cast<float>(sw);
+    config_.channel_weight = static_cast<float>(cw);
   }
   LOGI("translator created: enable=%d lambda=%.2f margin=%.2f max=%d",
        static_cast<int>(config_.enable), config_.lambda, config_.margin,
@@ -295,17 +307,29 @@ an<Translation> CorrectionTranslator::Query(const string& input,
   }
 
   // 1) 枚举候选：原码 + 每个位置的几何邻键单字母替换
+  // P2：优先使用 TapInfo::candidates（Gboard 仿版高斯热区产出），
+  //     无候选的键回退静态邻键表（保持旧路径兼容）。
   std::vector<std::string> cands;
-  cands.reserve(1 + L * 4);
+  cands.reserve(1 + L * 6);
   cands.push_back(code);
   for (int i = 0; i < L; ++i) {
     const int li = LetterIndex(code[i]);
     if (li < 0)
       return nullptr;
-    for (int nb : neighbors.Neighbors(li)) {
-      std::string v = code;
-      v[i] = static_cast<char>('a' + nb);
-      cands.push_back(std::move(v));
+    if (!taps[i].candidates.empty()) {
+      // 空间候选：按下键 + 邻键（按概率降序）
+      for (const auto& sc : taps[i].candidates) {
+        if (sc.letter == code[i]) continue;  // 已在原码中
+        std::string v = code;
+        v[i] = sc.letter;
+        cands.push_back(std::move(v));
+      }
+    } else {
+      for (int nb : neighbors.Neighbors(li)) {
+        std::string v = code;
+        v[i] = static_cast<char>('a' + nb);
+        cands.push_back(std::move(v));
+      }
     }
   }
   if (cands.size() <= 1)
@@ -352,10 +376,23 @@ an<Translation> CorrectionTranslator::Query(const string& input,
     return it->second;  // 值返回：unordered_map rehash 会使引用失效
   };
 
+  // P2 空间分：从 tap 候选查概率（softmax 归一后），查不到给低分
+  auto spatial_logp = [&](int pos, char ch) -> float {
+    const auto& cands = taps[pos].candidates;
+    if (cands.empty()) return 0.0f;
+    for (const auto& sc : cands) {
+      if (sc.letter == ch) return std::log(std::max(sc.score, 1e-9f));
+    }
+    return -30.0f;
+  };
+
   auto score = [&](const std::string& c) -> float {
     float s = 0.0f;
-    for (int i = 0; i < L; ++i)
-      s += geo_logp(i, c[i]);
+    for (int i = 0; i < L; ++i) {
+      s += config_.channel_weight * geo_logp(i, c[i]);
+      if (config_.spatial_weight > 0.0f)
+        s += config_.spatial_weight * spatial_logp(i, c[i]);
+    }
     s += config_.lambda * lookup(c).lang_weight;
     return s;
   };
@@ -503,6 +540,37 @@ CorrectionTranslator* CorrectionTranslatorComponent::Create(
 // ---------------------------------------------------------------- JNI 侧信道
 
 extern "C" {
+
+void correction_set_taps_ex(const char* letters, const float* off_x,
+                            const float* off_y, const char* cand_letters,
+                            const float* cand_scores, const int* cand_counts,
+                            int n, int max_cand) {
+  if (!letters || !off_x || !off_y || n <= 0 || max_cand <= 0 ||
+      !cand_letters || !cand_scores || !cand_counts) {
+    // 回退旧路径
+    correction_set_taps(letters, off_x, off_y, n);
+    return;
+  }
+  std::vector<rime::TapInfo> taps;
+  taps.reserve(n);
+  for (int i = 0; i < n; ++i) {
+    rime::TapInfo t;
+    t.letter = letters[i];
+    t.has_offset = !std::isnan(off_x[i]) && !std::isnan(off_y[i]);
+    t.off_x = t.has_offset ? off_x[i] : 0.0f;
+    t.off_y = t.has_offset ? off_y[i] : 0.0f;
+    int cnt = cand_counts[i];
+    if (cnt > max_cand) cnt = max_cand;
+    for (int k = 0; k < cnt; ++k) {
+      rime::TapInfo::Candidate c;
+      c.letter = cand_letters[i * max_cand + k];
+      c.score = cand_scores[i * max_cand + k];
+      t.candidates.push_back(c);
+    }
+    taps.push_back(std::move(t));
+  }
+  rime::CorrectionPriors::Instance().SetTapsEx(taps);
+}
 
 void correction_set_taps(const char* letters, const float* off_x,
                          const float* off_y, int n) {

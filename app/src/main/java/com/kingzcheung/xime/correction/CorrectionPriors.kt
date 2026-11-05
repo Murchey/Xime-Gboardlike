@@ -392,11 +392,28 @@ object CorrectionPriors {
             lastSpatialHint = spatial.joinToString(",") { "${it.letter}:${round2(it.logProbability)}" }
         }
 
-        CorrectionNative.setTaps(
-            letters.toCharArray().map { it.code.toByte() }.toByteArray(),
-            offX.toFloatArray(),
-            offY.toFloatArray()
-        )
+        val letterBytes = letters.toCharArray().map { it.code.toByte() }.toByteArray()
+        val oxArr = offX.toFloatArray()
+        val oyArr = offY.toFloatArray()
+
+        // P2: 有空间候选时走增强版；否则走旧路径（完全兼容）
+        if (spatial != null && spatial.isNotEmpty()) {
+            val maxCand = 6
+            val n = letters.size
+            val cl = ByteArray(n * maxCand)
+            val cs = FloatArray(n * maxCand)
+            val cc = IntArray(n)
+            val tapIdx = n - 1
+            val cnt = minOf(spatial.size, maxCand)
+            for (k in 0 until cnt) {
+                cl[tapIdx * maxCand + k] = spatial[k].letter.code.toByte()
+                cs[tapIdx * maxCand + k] = spatial[k].logProbability
+            }
+            cc[tapIdx] = cnt
+            CorrectionNative.setTapsEx(letterBytes, oxArr, oyArr, cl, cs, cc, maxCand)
+        } else {
+            CorrectionNative.setTaps(letterBytes, oxArr, oyArr)
+        }
     }
 
     /** 最近一次空间候选（Gboard 仿版诊断用）。 */
