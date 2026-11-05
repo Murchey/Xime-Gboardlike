@@ -585,7 +585,6 @@ fun KeyboardView(
                         }
                     },
                     onLogoClick = { viewModel.showOverlay(OverlayRoute.Menu) },
-                    onEditToolbar = { onHapticFeedback?.invoke(); viewModel.showOverlay(OverlayRoute.ToolbarCustomize) },
                     onBack = {
                         onHapticFeedback?.invoke()
                         if (showHandwritingCandidates) {
