@@ -1,5 +1,6 @@
 package com.kingzcheung.xime.ui.keyboard
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -429,8 +430,11 @@ fun KeyButton(
 
     // 按下时的键帽缩放：0.94 ≈ Gboard 的按压回弹幅度（太大显得抖动，太小看不出来）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.90f else 1f,
-        animationSpec = tween(durationMillis = if (isPressed) 45 else 90),
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = tween(
+            durationMillis = if (isPressed) 55 else 120,
+            easing = FastOutSlowInEasing,
+        ),
         label = "keyPressScale",
     )
     

@@ -315,7 +315,8 @@ fun KeyboardLayout(
         keyTextColor = keyTextColor,
         accentColor = KeyboardThemes.getAccentColor(uiState.themeId, isDarkTheme),
         keyWidth = if (swipeBubble.state.isSwiping || swipeBubble.state.isPressed) swipeBubble.keyBounds.width else 0f,
-        keyboardWidth = keyboardBounds.width
+        keyboardWidth = keyboardBounds.width,
+        appearProgress = swipeBubble.appearProgress,
     )
 
     val isLandscape = !uiState.isFloatingMode && LocalConfiguration.current.screenWidthDp > LocalConfiguration.current.screenHeightDp

@@ -140,6 +140,7 @@ fun PanelKeyboardLayout(
         accentColor = specialKeyTextColor,
         keyWidth = if (swipeBubble.state.isSwiping || swipeBubble.state.isPressed) swipeBubble.keyBounds.width else 0f,
         keyboardWidth = keyboardBounds.width,
+        appearProgress = swipeBubble.appearProgress,
     )
 
     val rawLayout = KeysConfigHelper.getPanelLayout(section)

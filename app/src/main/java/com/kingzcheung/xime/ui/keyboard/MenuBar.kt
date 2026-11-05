@@ -46,11 +46,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
@@ -121,6 +123,8 @@ fun MenuBar(
     val cardColor = state.keyBgColor
     var editing by remember { mutableStateOf(false) }
     var draft by remember(state.toolbarButtons) { mutableStateOf(state.toolbarButtons) }
+    // 顶部工具栏条的屏幕区域：编辑态卡片拖入该区域即加入工具栏（Gboard 拖动到顶部栏目）
+    var toolbarStripBounds by remember { mutableStateOf(Rect.Zero) }
 
     val builtin = ToolbarButton.entries.filter {
         isBuiltinToolbarButtonAvailable(
@@ -189,6 +193,7 @@ fun MenuBar(
                     editing = false
                 },
                 onSchemaList = { callbacks.onSchemaList() },
+                onStripBounds = { toolbarStripBounds = it },
             )
 
             if (editing) {
@@ -198,6 +203,7 @@ fun MenuBar(
                     cardColor = cardColor,
                     draft = draft,
                     onDraftChange = { draft = it },
+                    toolbarStripBounds = toolbarStripBounds,
                     onDone = {
                         callbacks.onUpdateToolbarButtons(draft)
                         editing = false
@@ -231,6 +237,7 @@ private fun ToolbarStrip(
     onDismiss: () -> Unit,
     onFinishEdit: () -> Unit,
     onSchemaList: () -> Unit,
+    onStripBounds: (Rect) -> Unit = {},
 ) {
     val positions = remember { mutableStateMapOf<Int, Offset>() }
     var dragSlot by remember { mutableStateOf(-1) }
@@ -239,7 +246,9 @@ private fun ToolbarStrip(
     val removeDropPx = with(LocalDensity.current) { 90.dp.toPx() }
 
     Row(
-        Modifier.fillMaxWidth().height(52.dp),
+        Modifier.fillMaxWidth().height(52.dp).onGloballyPositioned { c ->
+            onStripBounds(c.boundsInRoot())
+        },
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -333,7 +342,7 @@ private fun ToolbarStrip(
     }
 }
 
-/** 编辑态主体：Gboard 提示文案 + 可添加工具池（点按入栏）。 */
+/** 编辑态主体：Gboard 提示文案 + 可添加工具池（点按或拖动到顶部工具栏入栏）。 */
 @Composable
 private fun ToolbarEditBody(
     availableTools: List<MenuTool>,
@@ -341,8 +350,10 @@ private fun ToolbarEditBody(
     cardColor: Color,
     draft: List<String>,
     onDraftChange: (List<String>) -> Unit,
+    toolbarStripBounds: Rect,
     onDone: () -> Unit,
 ) {
+    val density = LocalDensity.current
     Column(Modifier.fillMaxSize()) {
         Text(
             tr(R.string.s_tuodonggexiangyitianjiahuochongxinpaiuxu),
@@ -359,9 +370,19 @@ private fun ToolbarEditBody(
             availableTools.chunked(2).forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     row.forEach { tool ->
-                        ToolCard(tool, textColor, cardColor, Modifier.weight(1f).height(64.dp)) {
-                            if (tool.id !in draft) onDraftChange(draft + tool.id)
-                        }
+                        DraggableToolCard(
+                            tool = tool,
+                            textColor = textColor,
+                            cardColor = cardColor,
+                            toolbarStripBounds = toolbarStripBounds,
+                            modifier = Modifier.weight(1f).height(64.dp),
+                            onTap = {
+                                if (tool.id !in draft) onDraftChange(draft + tool.id)
+                            },
+                            onDragIntoToolbar = {
+                                if (tool.id !in draft) onDraftChange(draft + tool.id)
+                            },
+                        )
                     }
                     if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
@@ -462,5 +483,75 @@ private fun ToolCard(tool: MenuTool, textColor: Color, cardColor: Color, modifie
         Text(tool.label, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.weight(1f))
         Icon(Icons.Default.ChevronRight, tr(R.string.s_xiayibu), tint = textColor.copy(alpha = .72f), modifier = Modifier.size(24.dp))
+    }
+}
+
+/**
+ * 可拖动工具卡：点按入栏；长按拖动跟随手指，拖入顶部工具栏区域即加入工具栏（Gboard 拖动到顶部栏目）。
+ * 拖动时卡片轻微放大、阴影浮现，松手或拖出即复位。
+ */
+@Composable
+private fun DraggableToolCard(
+    tool: MenuTool,
+    textColor: Color,
+    cardColor: Color,
+    toolbarStripBounds: Rect,
+    modifier: Modifier = Modifier,
+    onTap: () -> Unit,
+    onDragIntoToolbar: () -> Unit,
+) {
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    var dragging by remember { mutableStateOf(false) }
+    var cardRootCenter by remember { mutableStateOf(Offset.Zero) }
+    var added by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier
+            .onGloballyPositioned { c ->
+                val b = c.boundsInRoot()
+                cardRootCenter = Offset((b.left + b.right) / 2f, (b.top + b.bottom) / 2f)
+            }
+            .graphicsLayer {
+                translationX = dragOffset.x
+                translationY = dragOffset.y
+                val lift = if (dragging) 1.06f else 1f
+                scaleX = lift
+                scaleY = lift
+                alpha = if (dragging) 0.95f else 1f
+            }
+            .pointerInput(tool.id) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = {
+                        dragging = true
+                        added = false
+                        dragOffset = Offset.Zero
+                    },
+                    onDrag = { change, amount ->
+                        change.consume()
+                        dragOffset += amount
+                        // 拖入顶部工具栏区域 → 入栏（Gboard：拖到顶部栏目）
+                        val center = cardRootCenter + dragOffset
+                        if (!added &&
+                            toolbarStripBounds != Rect.Zero &&
+                            center.y <= toolbarStripBounds.bottom &&
+                            center.x >= toolbarStripBounds.left &&
+                            center.x <= toolbarStripBounds.right
+                        ) {
+                            added = true
+                            onDragIntoToolbar()
+                        }
+                    },
+                    onDragEnd = {
+                        dragging = false
+                        dragOffset = Offset.Zero
+                    },
+                    onDragCancel = {
+                        dragging = false
+                        dragOffset = Offset.Zero
+                    },
+                )
+            }
+    ) {
+        ToolCard(tool, textColor, cardColor, Modifier.fillMaxSize(), onClick = onTap)
     }
 }

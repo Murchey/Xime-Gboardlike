@@ -175,7 +175,8 @@ onKeyPressDown: ((String) -> Unit)?,
         keyTextColor = keyTextColor,
         accentColor = specialKeyTextColor,
         keyWidth = if (swipeBubble.state.isSwiping || swipeBubble.state.isPressed) swipeBubble.keyBounds.width else 0f,
-        keyboardWidth = keyboardBounds.width
+        keyboardWidth = keyboardBounds.width,
+        appearProgress = swipeBubble.appearProgress,
     )
 
     fun processSwipeState(state: SwipeState, bounds: Rect) {

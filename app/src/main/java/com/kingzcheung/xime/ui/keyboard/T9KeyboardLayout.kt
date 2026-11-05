@@ -257,7 +257,8 @@ private fun T9KeyboardSwipeOverlay(
         keyTextColor = keyTextColor,
         accentColor = specialKeyTextColor,
         keyWidth = if (swipeBubble.state.isSwiping || swipeBubble.state.isPressed) swipeBubble.keyBounds.width else 0f,
-        keyboardWidth = keyboardBounds.width
+        keyboardWidth = keyboardBounds.width,
+        appearProgress = swipeBubble.appearProgress,
     )
 
     // 外围留白与设备档（面板/26 键同源）：手机竖屏 4/4/8、手机横屏 50/2、平板 16/16/8

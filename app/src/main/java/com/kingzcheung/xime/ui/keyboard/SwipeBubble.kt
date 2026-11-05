@@ -5,17 +5,23 @@ import android.graphics.Bitmap
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -76,6 +82,8 @@ data class BubbleDrawData(
     val longPressColumns: Int = 0,
     /** 字母键按压气泡：圆形、无尖角。 */
     val isCircularPress: Boolean = false,
+    /** 出现动画进度 0→1：气泡从键面平滑放大浮现（Gboard 扩展性视觉），锚定键侧。 */
+    val appearProgress: Float = 1f,
 )
 
 /** 圆形/圆角气泡的半径增量（px）；高度按半径的两倍加高。 */
@@ -83,6 +91,9 @@ private const val BUBBLE_RADIUS_DELTA_PX = 4f
 
 /** 按压气泡抬起后的滞留时长：随抬起瞬间消失看不清键位提示（主流输入法约 50~80ms），取中值。 */
 private const val PRESS_BUBBLE_RELEASE_DELAY_MS = 60L
+
+/** 气泡出现的平滑放大时长（Gboard 式扩展感，快速弹出不拖沓）。 */
+private const val APPEAR_DURATION_MS = 110
 
 /**
  * 各布局共享的气泡状态持有器。
@@ -98,6 +109,12 @@ class SwipeBubbleController(private val scope: CoroutineScope) {
     var keyBounds by mutableStateOf(Rect(0f, 0f, 0f, 0f))
         private set
     private var releaseJob: Job? = null
+
+    /** 出现动画进度：每次新手势从 0 平滑放大到 1（Gboard 气泡扩展感）。 */
+    private val appearAnim = Animatable(0f)
+    val appearProgress: Float get() = appearAnim.value
+    private var gestureSession by mutableIntStateOf(0)
+    private var animJob: Job? = null
 
     fun update(newState: SwipeState, bounds: Rect) {
         releaseJob?.cancel()
@@ -115,6 +132,16 @@ class SwipeBubbleController(private val scope: CoroutineScope) {
                 state = SwipeState()
             }
             return
+        }
+        // 新手势开始（上次无手势）→ 触发一次扩展动画
+        val wasActive = prev.isSwiping || prev.isPressed || prev.isLongPress
+        if (gestureActive && !wasActive) {
+            gestureSession++
+            animJob?.cancel()
+            animJob = scope.launch {
+                appearAnim.snapTo(0f)
+                appearAnim.animateTo(1f, tween(APPEAR_DURATION_MS, easing = FastOutSlowInEasing))
+            }
         }
         state = newState
         keyBounds = bounds
@@ -136,6 +163,7 @@ fun rememberSwipeBubbleDrawData(
     accentColor: Color = Color(0xFF8F73E2),
     keyWidth: Float,
     keyboardWidth: Float,
+    appearProgress: Float = 1f,
 ): BubbleDrawData? {
     val context = LocalContext.current
     // 点按气泡恒开：非滑动、非点按、非长按时不绘制
@@ -167,13 +195,12 @@ fun rememberSwipeBubbleDrawData(
     // 单项长按、字母键按压气泡都画成圆形，不再向下伸出尖角。
     val singleLongPress = isLongPressMode && swipeState.longPressItems.size == 1
     val circularPress = swipeState.isPressed && !swipeState.isLongPress && swipeState.isLetterPress
-    // 圆形气泡（字母键点击、单项长按）的半径等于高度的一半：
-    // 直径加高两个增量，半径才正好 +2px，键面反馈更跟手；其余气泡尺寸不变。
+    // 圆形气泡（字母键点击、单项长按）统一尺寸：点按与长按气泡大小一致，避免忽大忽小。
     val isRoundBubble = singleLongPress || circularPress
-    val bodyHeightPx = if (circularPress) {
+    val bodyHeightPx = if (isRoundBubble) {
         with(density) { 56.dp.toPx() } * bubbleScale
     } else {
-        rowHeightPx * longPressRows + if (isRoundBubble) BUBBLE_RADIUS_DELTA_PX * 2f else 0f
+        rowHeightPx * longPressRows
     }
     // 尖端完整覆盖按下的按键（与按键同高），宽体锚定按键顶部悬在上方（见 boxTop）。
     // 全部基于真实按键 bounds 计算，不再用 KeyHeight 估算值——
@@ -208,7 +235,8 @@ fun rememberSwipeBubbleDrawData(
 
     val keyLabelTypeface = AppFonts.keyLabelTypeface
 
-    val targetTextSizeSp = if (circularPress) 27.sp else if (isLongPressMode) 16.sp else 20.sp
+    // 气泡字号统一：圆形气泡（点按/单项长按）同为 27sp；多项长按 18sp；滑动气泡 20sp。
+    val targetTextSizeSp = if (isRoundBubble) 27.sp else if (isLongPressMode) 18.sp else 20.sp
     val textPaint = remember(bubbleScale, targetTextSizeSp) {
         Paint().apply {
             textSize = with(density) { targetTextSizeSp.toPx() } * bubbleScale
@@ -238,11 +266,11 @@ fun rememberSwipeBubbleDrawData(
         maxOf(textPaint.measureText(displayText!!) + with(density) { 20.dp.toPx() } * bubbleScale, minBodyWidthPx)
     }
 
-    // 两行气泡每格更窄，选中项不再额外放大，避免多字符符号（^_^ / ……）溢出。
+    // 选中项字号统一放大、与气泡整体字号保持一致（避免忽大忽小）。
     val selectedFontSizePx = with(density) {
-        (if (longPressRows > 1) 17.sp else 20.sp).toPx()
+        (if (longPressRows > 1) 19.sp else 22.sp).toPx()
     } * bubbleScale
-    val normalFontSizePx = with(density) { 16.sp.toPx() } * bubbleScale
+    val normalFontSizePx = with(density) { 18.sp.toPx() } * bubbleScale
     val selectedBgRadiusPx = with(density) { 6.dp.toPx() } * bubbleScale
 
     val pointerCenterX = keyBounds.left + keyBounds.width / 2f
@@ -346,6 +374,7 @@ fun rememberSwipeBubbleDrawData(
         isSingleLongPress = singleLongPress,
         longPressColumns = longPressColumns,
         isCircularPress = circularPress,
+        appearProgress = appearProgress,
     )
 }
 
@@ -429,12 +458,21 @@ fun DrawScope.drawLongPressScrim(visible: Boolean) {
 fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
     val path = buildBubblePath(data)
 
+    // Gboard 式扩展性视觉：气泡从键侧（底部）平滑放大浮现，快速但有弹性伸展感。
+    val p = data.appearProgress.coerceIn(0f, 1f)
+    val s = 0.72f + 0.28f * p
+    // 锚点＝气泡底边中点（贴近按键），气泡向上"长"出来
+    val pivot = Offset(data.boxLeft + data.bodyWidth / 2f, data.boxTop + data.bodyHeightPx + data.pointerHeightPx)
+    val fillAlpha = (255 * p.coerceAtLeast(0.15f)).toInt()
+
+    scale(scaleX = s, scaleY = s, pivot = pivot) {
     drawIntoCanvas { composeCanvas ->
         val canvas = composeCanvas.nativeCanvas
         canvas.save()
         canvas.translate(data.boxLeft, data.boxTop)
 
         bubbleFillPaint.color = data.bgColor
+        bubbleFillPaint.alpha = fillAlpha
         bubbleFillPaint.setShadowLayer(data.shadowRadiusPx, 0f, 0f, SHADOW_COLOR)
         canvas.drawPath(path, bubbleFillPaint)
 
@@ -502,6 +540,7 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
             canvas.save()
             canvas.clipRect(0f, 0f, data.bodyWidth, data.bodyHeightPx)
             bubbleTextPaint.color = data.textColor
+            bubbleTextPaint.alpha = fillAlpha
             bubbleTextPaint.textSize = data.textSizePx
             bubbleTextPaint.textAlign = Paint.Align.LEFT
             bubbleTextPaint.typeface = data.keyLabelTypeface
@@ -516,5 +555,6 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
         }
 
         canvas.restore()
+    }
     }
 }
