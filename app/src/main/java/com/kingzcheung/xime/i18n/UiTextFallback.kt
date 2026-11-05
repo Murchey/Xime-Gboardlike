@@ -1061,6 +1061,8 @@ internal object UiTextFallback {
         R.string.s_liechu_wenjian_shiyong to "· %1\$s（已被 %2\$s 使用）",
         R.string.s_xu_fangan to "需 %1\$s 方案",
         R.string.s_xiezai_chongtufangan to "需要先卸载冲突方案：%1\$s，是否继续？",
+        R.string.s_fugaianzhuang to "覆盖安装",
+        R.string.s_yekeyifugaianzhuang to "也可以直接覆盖安装：同名文件以本包为准，原方案将改用新文件。",
         R.string.s_yilaifangan_yianzhuang to "依赖方案：%1\$s（已安装）",
         R.string.s_xuxian_anzhuangfangan to "需先安装方案：%1\$s",
         R.string.s_bushiwenben_wenjian to "不是文本文件（含有空字节），请选择导出的 .txt 码表",

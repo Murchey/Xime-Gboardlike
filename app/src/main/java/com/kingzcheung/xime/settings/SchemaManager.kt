@@ -244,6 +244,8 @@ object SchemaManager {
         resolveDepUrl: (String) -> String? = { null },
         switchEnabled: Boolean = true,
         withRollback: Boolean = false,
+        /** 覆盖安装：同名不同内容的冲突文件直接以本包为准（所有权从旧属主转移过来）。 */
+        overwriteConflicts: Boolean = false,
     ): InstallFromDirResult = withContext(Dispatchers.IO) {
         var transaction: UpgradeTransaction? = null
         try {
@@ -269,7 +271,11 @@ object SchemaManager {
             val conflicts = SchemaManifestManager.detectConflicts(context, packageId, targetFiles, sha256Map)
             if (conflicts.isNotEmpty()) {
                 FileLogger.w(TAG, "installPackageFromMarketDir: conflicts detected: ${conflicts.map { "${it.fileName} (${it.claimedBy})" }}")
-                return@withContext InstallFromDirResult(success = false, conflicts = conflicts)
+                if (!overwriteConflicts) {
+                    return@withContext InstallFromDirResult(success = false, conflicts = conflicts)
+                }
+                // 覆盖安装：释放旧属主认领，所有权转移给本包
+                SchemaManifestManager.releaseClaimedFiles(context, conflicts.map { it.fileName })
             }
 
             val before = discoverSchemas(context).map { it.schemaId }.toSet()

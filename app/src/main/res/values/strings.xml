@@ -1088,6 +1088,8 @@
     <string name="s_liechu_wenjian_shiyong">· %1$s（已被 %2$s 使用）</string>
     <string name="s_xu_fangan">需 %1$s 方案</string>
     <string name="s_xiezai_chongtufangan">需要先卸载冲突方案：%1$s，是否继续？</string>
+    <string name="s_fugaianzhuang">覆盖安装</string>
+    <string name="s_yekeyifugaianzhuang">也可以直接覆盖安装：同名文件以本包为准，原方案将改用新文件。</string>
     <string name="s_yilaifangan_yianzhuang">依赖方案：%1$s（已安装）</string>
     <string name="s_xuxian_anzhuangfangan">需先安装方案：%1$s</string>
     <string name="s_bushiwenben_wenjian">不是文本文件（含有空字节），请选择导出的 .txt 码表</string>

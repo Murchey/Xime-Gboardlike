@@ -206,8 +206,12 @@ object SchemaManifestManager {
         for (fileName in targetFiles) {
             val entry = files.optJSONObject(fileName) ?: continue
             val claimants = entry.optJSONArray("claimedBy") ?: continue
+            val claimantList = jsonArrayToList(claimants)
             // 同一方案重新安装/升级：不视为冲突
-            if (jsonArrayToList(claimants).any { it == schemeId }) continue
+            if (claimantList.any { it == schemeId }) continue
+            // 共享预设（symbols/punctuation 等）由 SHARED 认领：本就允许各包覆盖，
+            // 与 createManifest 的共享文件语义对齐，不作为冲突阻断安装
+            if (claimantList.isNotEmpty() && claimantList.all { it == BuiltinPackages.SHARED }) continue
 
             val existingSha256 = entry.optString("sha256", "")
             val newSha256 = newFileSha256[fileName] ?: continue
@@ -221,6 +225,31 @@ object SchemaManifestManager {
             }
         }
         conflicts
+    }
+
+    /**
+     * 覆盖安装前置：释放旧属主对 [fileNames] 的认领（所有权转移给新包）。
+     * 各属主清单同步删去对应条目，注册表条目整条移除（createManifest 认领时会重建）。
+     */
+    suspend fun releaseClaimedFiles(context: Context, fileNames: List<String>): Unit = withContext(Dispatchers.IO) {
+        if (fileNames.isEmpty()) return@withContext
+        val registry = loadRegistry(context)
+        val files = registry.optJSONObject("files") ?: return@withContext
+        for (fileName in fileNames) {
+            val entry = files.optJSONObject(fileName) ?: continue
+            val claimants = jsonArrayToList(entry.optJSONArray("claimedBy"))
+            for (sid in claimants) {
+                val manifest = loadManifest(context, sid) ?: continue
+                val mf = manifest.optJSONObject("files") ?: continue
+                if (mf.has(fileName)) {
+                    mf.remove(fileName)
+                    saveManifest(context, sid, manifest)
+                }
+            }
+            files.remove(fileName)
+            Log.i(TAG, "releaseClaimedFiles: $fileName released from $claimants")
+        }
+        saveRegistry(context, registry)
     }
 
     // ── Create Manifest After Installation ──

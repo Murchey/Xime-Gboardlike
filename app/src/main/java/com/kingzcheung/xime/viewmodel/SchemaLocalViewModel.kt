@@ -129,7 +129,7 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun installPackage(item: LocalPackageItem) {
+    fun installPackage(item: LocalPackageItem, overwriteConflicts: Boolean = false) {
         if (_uiState.value.installingId != null) return
         viewModelScope.launch {
             _uiState.update { it.copy(installingId = item.packageId, phase = LocalPackagePhase.INSTALLING) }
@@ -150,6 +150,7 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
                         fromMarket = !item.isImport,
                         switchEnabled = !isUpgrade,
                         withRollback = isUpgrade,
+                        overwriteConflicts = overwriteConflicts,
                     )
                 }
             } catch (e: Exception) {
@@ -330,6 +331,14 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
 
     fun cancelConflictInstall() {
         _uiState.update { it.copy(conflictPackageId = null, conflictingSchemeIds = emptyList()) }
+    }
+
+    /** 覆盖安装：不卸载冲突方案，同名文件以本包为准（所有权从旧属主转移）。 */
+    fun confirmInstallWithOverwrite() {
+        val pkgId = _uiState.value.conflictPackageId ?: return
+        val item = _uiState.value.packages.firstOrNull { it.packageId == pkgId } ?: return
+        _uiState.update { it.copy(conflictPackageId = null, conflictingSchemeIds = emptyList()) }
+        installPackage(item, overwriteConflicts = true)
     }
 
     fun deleteDownloaded(item: LocalPackageItem) {

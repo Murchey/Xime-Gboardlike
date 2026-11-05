@@ -303,11 +303,27 @@ fun SchemaLocalContent(
             onDismissRequest = { viewModel.cancelConflictInstall() },
             title = { Text(tr(R.string.s_wenjianchongtu)) },
             text = {
-                Text(tr(R.string.s_xiezai_chongtufangan, uiState.conflictingSchemeIds.joinToString("、")))
+                Column {
+                    Text(tr(R.string.s_xiezai_chongtufangan, uiState.conflictingSchemeIds.joinToString("、")))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        tr(R.string.s_yekeyifugaianzhuang),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { viewModel.confirmInstallWithUninstall() }) {
+                            Text(tr(R.string.s_querenxiezaibinganzhuang))
+                        }
+                    }
+                }
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.confirmInstallWithUninstall() }) {
-                    Text(tr(R.string.s_querenxiezaibinganzhuang))
+                TextButton(onClick = { viewModel.confirmInstallWithOverwrite() }) {
+                    Text(tr(R.string.s_fugaianzhuang))
                 }
             },
             dismissButton = {
