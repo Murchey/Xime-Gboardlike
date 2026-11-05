@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.PictureInPicture
 import androidx.compose.material.icons.outlined.Gesture
 import androidx.compose.material.icons.twotone.Edit
 import androidx.compose.material.icons.twotone.Mic
+import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class ToolbarButton(
@@ -30,6 +31,7 @@ enum class ToolbarButton(
     val label: String,
     val icon: ImageVector
 ) {
+    SETTINGS("settings", tr(R.string.s_shezhi), Icons.TwoTone.Settings),
     EMOJI("emoji", tr(R.string.s_biaoqing), Icons.TwoTone.EmojiEmotions),
     CLIPBOARD("clipboard", tr(R.string.s_jiantieban), Icons.AutoMirrored.TwoTone.Assignment),
     SCHEMA("schema", tr(R.string.s_fanganxuanze), Icons.TwoTone.KeyboardAlt),
@@ -46,8 +48,8 @@ enum class ToolbarButton(
     VOICE("voice", tr(R.string.s_yuyin), Icons.TwoTone.Mic);
 
     companion object {
-        /** Gboard 风格的首次启用工具：表情、剪贴板、方案切换和快捷短语。 */
-        val DEFAULT_VISIBLE = listOf(EMOJI, CLIPBOARD, SCHEMA, QUICK_PHRASE)
+        /** Gboard 风格的首次启用工具：设置、表情、剪贴板、方案切换和快捷短语。 */
+        val DEFAULT_VISIBLE = listOf(SETTINGS, EMOJI, CLIPBOARD, SCHEMA, QUICK_PHRASE)
 
         fun fromId(id: String): ToolbarButton? =
             entries.find { it.id == id }

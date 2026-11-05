@@ -175,7 +175,23 @@ class FeedbackManager(private val context: Context) {
                 @Suppress("DEPRECATION")
                 flags = flags or HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
             }
-            view.performHapticFeedback(hfc, flags)
+            val performed = view.performHapticFeedback(hfc, flags)
+            // 当系统/视图反馈未生效或处于强制启用时，走清晰的马达脉冲（对齐 Gboard 触觉质感）
+            if (!performed || hapticMode == HapticMode.Enabled) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val effectId = if (longPress) VibrationEffect.EFFECT_HEAVY_CLICK else VibrationEffect.EFFECT_CLICK
+                    try {
+                        vibrator.vibrate(VibrationEffect.createPredefined(effectId))
+                    } catch (_: Exception) {
+                        vibrator.vibrate(VibrationEffect.createOneShot(if (longPress) 45L else 18L, VibrationEffect.DEFAULT_AMPLITUDE))
+                    }
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(if (longPress) 45L else 18L, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(if (longPress) 45L else 18L)
+                }
+            }
         }
     }
 

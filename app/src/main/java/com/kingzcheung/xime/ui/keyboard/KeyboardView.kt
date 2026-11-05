@@ -464,6 +464,7 @@ fun KeyboardView(
                     }
                     val onClick: () -> Unit = when (item) {
                         is ToolbarButtonItem.Builtin -> when (item.button) {
+                            ToolbarButton.SETTINGS -> ({ callbacks.onSettings?.invoke() })
                             ToolbarButton.EMOJI -> ({ viewModel.showOverlay(OverlayRoute.Emoji) })
                             ToolbarButton.CLIPBOARD -> ({ viewModel.showOverlay(OverlayRoute.Clipboard(0)) })
                             ToolbarButton.SCHEMA -> ({ viewModel.showOverlay(OverlayRoute.SchemaList, listOf(OverlayRoute.Menu)) })
@@ -1472,6 +1473,7 @@ fun KeyboardView(
                                 onHapticFeedback?.invoke()
                                 when (item) {
                                     is ToolbarButtonItem.Builtin -> when (item.button) {
+                                        ToolbarButton.SETTINGS -> callbacks.onSettings?.invoke()
                                         ToolbarButton.EMOJI -> viewModel.showOverlay(OverlayRoute.Emoji)
                                         ToolbarButton.CLIPBOARD -> viewModel.showOverlay(OverlayRoute.Clipboard(0))
                                         ToolbarButton.SCHEMA -> viewModel.showOverlay(OverlayRoute.SchemaList, listOf(OverlayRoute.Menu))

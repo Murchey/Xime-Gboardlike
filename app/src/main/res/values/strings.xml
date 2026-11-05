@@ -221,6 +221,7 @@
     <string name="s_xiangshang">向上</string>
     <string name="s_xiangxia">向下</string>
     <string name="s_changantuodongpaixu">长按拖动排序</string>
+    <string name="s_tuodonggexiangyitianjiahuochongxinpaiuxu">拖动各项以添加或重新排序</string>
     <string name="s_dianjiantianjiahuoyichu">点按添加或移除</string>
     <string name="s_gengduoanniu">更多按钮</string>
     <string name="s_zuijinshiyong">最近使用</string>

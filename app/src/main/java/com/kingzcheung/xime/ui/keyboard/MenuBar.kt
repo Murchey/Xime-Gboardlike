@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,18 +23,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.twotone.Edit
 import androidx.compose.material.icons.twotone.KeyboardAlt
-import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -108,7 +106,8 @@ data class MenuBarCallbacks(
 
 /**
  * 单一工具栏状态机：普通态展示，编辑态排布，完成时一次性保存。
- * 方案开关和插件按钮都经过同一工具池，因此不会再出现多个入口各自维护顺序。
+ * 编辑态保留顶部真实工具栏（Gboard 式）：直接在工具栏上长按拖动排序，
+ * 点按移除；下方为可添加工具池，点按卡片即入栏。
  */
 @Composable
 fun MenuBar(
@@ -157,6 +156,7 @@ fun MenuBar(
         else -> tr(R.string.s_gensuixitong)
     }
     val systemTools = buildList {
+        add(MenuTool("sys_settings", tr(R.string.s_shezhi), rememberVectorPainter(ToolbarButton.SETTINGS.icon), action = callbacks.onSettings))
         add(MenuTool("sys_clipboard", tr(R.string.s_jiantieban), rememberVectorPainter(ToolbarButton.CLIPBOARD.icon), action = callbacks.onClipboard))
         add(MenuTool("sys_quick", tr(R.string.s_kuaijiefasong), rememberVectorPainter(ToolbarButton.QUICK_PHRASE.icon), action = callbacks.onQuickSend))
         add(MenuTool("sys_schema", tr(R.string.s_shurufangan), rememberVectorPainter(ToolbarButton.SCHEMA.icon), action = callbacks.onSchemaList))
@@ -174,69 +174,25 @@ fun MenuBar(
     BoxWithConstraints(modifier = modifier.fillMaxWidth().background(state.backgroundColor)) {
         val side = if (maxWidth >= WIDE_CONTAINER_WIDTH) 50.dp else 16.dp
         Column(Modifier.fillMaxSize().padding(horizontal = side, vertical = 8.dp)) {
-            if (editing) {
-                Row(
-                    Modifier.fillMaxWidth().height(52.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CircleAction(
-                        icon = Icons.Default.Close,
-                        tint = textColor,
-                        bg = cardColor,
-                        label = tr(R.string.s_wancheng),
-                        size = 24.dp,
-                    ) {
-                        callbacks.onUpdateToolbarButtons(draft)
-                        editing = false
-                    }
-                    Text(
-                        tr(R.string.s_dingzhigongjulan),
-                        color = textColor,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    CircleAction(
-                        icon = Icons.TwoTone.KeyboardAlt,
-                        tint = textColor,
-                        bg = cardColor,
-                        label = tr(R.string.s_shurufangan),
-                        size = 22.dp,
-                    ) { callbacks.onSchemaList() }
-                }
-            } else {
-                Row(
-                    Modifier.fillMaxWidth().height(52.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    CircleAction(
-                        icon = Icons.Default.Close,
-                        tint = textColor,
-                        bg = cardColor,
-                        label = tr(R.string.s_quxiao),
-                        size = 24.dp,
-                    ) { callbacks.onDismiss() }
-                    Row(
-                        Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        activeTools.forEach { tool -> CircleTool(tool, textColor, cardColor) }
-                    }
-                    CircleAction(
-                        icon = Icons.TwoTone.KeyboardAlt,
-                        tint = textColor,
-                        bg = cardColor,
-                        label = tr(R.string.s_shurufangan),
-                        size = 22.dp,
-                    ) { callbacks.onSchemaList() }
-                }
-            }
+            // ===== 顶部工具栏（普通态与编辑态同一条，Gboard 式直接在栏上编辑）=====
+            ToolbarStrip(
+                editing = editing,
+                activeTools = activeTools,
+                allTools = allTools,
+                draft = draft,
+                onDraftChange = { draft = it },
+                textColor = textColor,
+                cardColor = cardColor,
+                onDismiss = { callbacks.onDismiss() },
+                onFinishEdit = {
+                    callbacks.onUpdateToolbarButtons(draft)
+                    editing = false
+                },
+                onSchemaList = { callbacks.onSchemaList() },
+            )
 
             if (editing) {
-                ToolbarEditMode(
-                    activeTools = activeTools,
+                ToolbarEditBody(
                     availableTools = availableTools,
                     textColor = textColor,
                     cardColor = cardColor,
@@ -248,7 +204,7 @@ fun MenuBar(
                     },
                 )
             } else {
-                ToolbarNormalMode(
+                ToolbarNormalBody(
                     systemTools = systemTools,
                     textColor = textColor,
                     cardColor = cardColor,
@@ -259,8 +215,173 @@ fun MenuBar(
     }
 }
 
+/**
+ * 顶部工具栏条：左侧返回/收起，中间已启用工具（编辑态可长按拖动排序、点按移除），
+ * 右侧方案切换。编辑态保留同一工具栏本体，与 Gboard 的定制交互一致。
+ */
 @Composable
-private fun ToolbarNormalMode(
+private fun ToolbarStrip(
+    editing: Boolean,
+    activeTools: List<MenuTool>,
+    allTools: List<MenuTool>,
+    draft: List<String>,
+    onDraftChange: (List<String>) -> Unit,
+    textColor: Color,
+    cardColor: Color,
+    onDismiss: () -> Unit,
+    onFinishEdit: () -> Unit,
+    onSchemaList: () -> Unit,
+) {
+    val positions = remember { mutableStateMapOf<Int, Offset>() }
+    var dragSlot by remember { mutableStateOf(-1) }
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    val threshold = with(LocalDensity.current) { 40.dp.toPx() }
+    val removeDropPx = with(LocalDensity.current) { 90.dp.toPx() }
+
+    Row(
+        Modifier.fillMaxWidth().height(52.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CircleAction(
+            icon = if (editing) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Check,
+            tint = textColor,
+            bg = cardColor,
+            label = if (editing) tr(R.string.s_wancheng) else tr(R.string.s_quxiao),
+            size = 24.dp,
+        ) {
+            if (editing) onFinishEdit() else onDismiss()
+        }
+        Row(
+            Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val ids = if (editing) draft else activeTools.map { it.id }
+            ids.forEachIndexed { slot, id ->
+                val tool = allTools.firstOrNull { it.id == id } ?: return@forEachIndexed
+                if (editing) {
+                    Box(
+                        Modifier
+                            .padding(horizontal = 2.dp)
+                            .size(40.dp)
+                            .onGloballyPositioned { c -> positions[slot] = c.positionInRoot() + Offset(c.size.width / 2f, c.size.height / 2f) }
+                            .graphicsLayer {
+                                if (slot == dragSlot) {
+                                    translationX = dragOffset.x
+                                    translationY = dragOffset.y
+                                    scaleX = 1.15f
+                                    scaleY = 1.15f
+                                    val alpha = if (dragOffset.y > removeDropPx * 0.6f) 0.4f else 1f
+                                    this.alpha = alpha
+                                }
+                            }
+                            .pointerInput(draft.size) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = { dragSlot = slot; dragOffset = Offset.Zero },
+                                    onDrag = { change, amount ->
+                                        change.consume()
+                                        dragOffset += amount
+                                        val center = positions[dragSlot]?.plus(dragOffset) ?: return@detectDragGesturesAfterLongPress
+                                        // 下拉出栏一定距离即移除
+                                        if (dragOffset.y > removeDropPx) {
+                                            onDraftChange(draft - id)
+                                            dragSlot = -1
+                                            dragOffset = Offset.Zero
+                                            return@detectDragGesturesAfterLongPress
+                                        }
+                                        var target = -1
+                                        var best = Float.MAX_VALUE
+                                        positions.forEach { (i, p) ->
+                                            if (i == dragSlot) return@forEach
+                                            val d = (p - center).getDistance()
+                                            if (d < best) { best = d; target = i }
+                                        }
+                                        if (target >= 0 && best < threshold) {
+                                            val mutable = draft.toMutableList()
+                                            val moved = mutable.removeAt(dragSlot)
+                                            mutable.add(target, moved)
+                                            onDraftChange(mutable)
+                                            dragSlot = target
+                                        }
+                                    },
+                                    onDragEnd = { dragSlot = -1; dragOffset = Offset.Zero },
+                                    onDragCancel = { dragSlot = -1; dragOffset = Offset.Zero },
+                                )
+                            }
+                            .clip(CircleShape)
+                            .background(cardColor)
+                            .clickable { onDraftChange(draft - id) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        ToolIcon(tool, textColor, 22.dp)
+                    }
+                } else {
+                    Box(Modifier.padding(horizontal = 2.dp)) {
+                        CircleTool(tool, textColor, cardColor)
+                    }
+                }
+            }
+        }
+        CircleAction(
+            icon = Icons.TwoTone.KeyboardAlt,
+            tint = textColor,
+            bg = cardColor,
+            label = tr(R.string.s_shurufangan),
+            size = 22.dp,
+        ) { onSchemaList() }
+    }
+}
+
+/** 编辑态主体：Gboard 提示文案 + 可添加工具池（点按入栏）。 */
+@Composable
+private fun ToolbarEditBody(
+    availableTools: List<MenuTool>,
+    textColor: Color,
+    cardColor: Color,
+    draft: List<String>,
+    onDraftChange: (List<String>) -> Unit,
+    onDone: () -> Unit,
+) {
+    Column(Modifier.fillMaxSize()) {
+        Text(
+            tr(R.string.s_tuodonggexiangyitianjiahuochongxinpaiuxu),
+            color = textColor.copy(alpha = .55f),
+            fontSize = 12.sp,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+        )
+        Column(
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            availableTools.chunked(2).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    row.forEach { tool ->
+                        ToolCard(tool, textColor, cardColor, Modifier.weight(1f).height(64.dp)) {
+                            if (tool.id !in draft) onDraftChange(draft + tool.id)
+                        }
+                    }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.Center) {
+            Box(
+                Modifier.fillMaxWidth(.5f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(cardColor).clickable { onDone() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(tr(R.string.s_wancheng), color = textColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+    }
+}
+
+/** 普通态主体：两列大卡片 + 右下角铅笔进入定制。 */
+@Composable
+private fun ToolbarNormalBody(
     systemTools: List<MenuTool>,
     textColor: Color,
     cardColor: Color,
@@ -290,117 +411,6 @@ private fun ToolbarNormalMode(
                 buttonSize = 44.dp,
                 onClick = onEdit,
             )
-        }
-        Spacer(Modifier.height(6.dp))
-    }
-}
-
-@Composable
-private fun ToolbarEditMode(
-    activeTools: List<MenuTool>,
-    availableTools: List<MenuTool>,
-    textColor: Color,
-    cardColor: Color,
-    draft: List<String>,
-    onDraftChange: (List<String>) -> Unit,
-    onDone: () -> Unit,
-) {
-    val pool = activeTools + availableTools
-    val positions = remember { mutableStateMapOf<Int, Offset>() }
-    var dragSlot by remember { mutableStateOf(-1) }
-    var dragOffset by remember { mutableStateOf(Offset.Zero) }
-    val threshold = with(LocalDensity.current) { 44.dp.toPx() }
-
-    Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .height(72.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(cardColor.copy(alpha = 0.38f))
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            draft.forEachIndexed { slot, id ->
-                val tool = pool.firstOrNull { it.id == id } ?: return@forEachIndexed
-                Box(
-                    Modifier
-                        .size(60.dp)
-                        .onGloballyPositioned { c -> positions[slot] = c.positionInRoot() + Offset(c.size.width / 2f, c.size.height / 2f) }
-                        .graphicsLayer {
-                            if (slot == dragSlot) {
-                                translationX = dragOffset.x
-                                translationY = dragOffset.y
-                                scaleX = 1.08f
-                                scaleY = 1.08f
-                            }
-                        }
-                        .pointerInput(draft.size) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = { dragSlot = slot; dragOffset = Offset.Zero },
-                                onDrag = { change, amount ->
-                                    change.consume()
-                                    dragOffset += amount
-                                    val center = positions[dragSlot]?.plus(dragOffset) ?: return@detectDragGesturesAfterLongPress
-                                    if (dragOffset.y > 110.dp.toPx()) {
-                                        onDraftChange(draft - id)
-                                        dragSlot = -1
-                                        dragOffset = Offset.Zero
-                                        return@detectDragGesturesAfterLongPress
-                                    }
-                                    var target = -1
-                                    var best = Float.MAX_VALUE
-                                    positions.forEach { (i, p) ->
-                                        if (i == dragSlot) return@forEach
-                                        val d = (p - center).getDistance()
-                                        if (d < best) { best = d; target = i }
-                                    }
-                                    if (target >= 0 && best < threshold) {
-                                        val mutable = draft.toMutableList()
-                                        val moved = mutable.removeAt(dragSlot)
-                                        mutable.add(target, moved)
-                                        onDraftChange(mutable)
-                                        dragSlot = target
-                                    }
-                                },
-                                onDragEnd = { dragSlot = -1; dragOffset = Offset.Zero },
-                                onDragCancel = { dragSlot = -1; dragOffset = Offset.Zero },
-                            )
-                        }
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(cardColor),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    ToolIcon(tool, textColor, 26.dp)
-                    Box(
-                        Modifier.align(Alignment.TopEnd).padding(3.dp).size(16.dp).clip(CircleShape)
-                            .background(textColor.copy(alpha = .75f)).clickable { onDraftChange(draft - id) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Default.Close, tr(R.string.s_shanchu), tint = cardColor, modifier = Modifier.size(10.dp))
-                    }
-                }
-            }
-        }
-        Text(tr(R.string.s_changantuodongpaixu), color = textColor.copy(alpha = .55f), fontSize = 11.sp, modifier = Modifier.padding(vertical = 8.dp))
-        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            availableTools.chunked(2).forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    row.forEach { tool ->
-                        ToolCard(tool, textColor, cardColor, Modifier.weight(1f).height(64.dp)) {
-                            if (tool.id !in draft) onDraftChange(draft + tool.id)
-                        }
-                    }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
-                }
-            }
-        }
-        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.Center) {
-            Box(Modifier.fillMaxWidth(.5f).height(40.dp).clip(RoundedCornerShape(20.dp)).background(cardColor).clickable { onDone() }, contentAlignment = Alignment.Center) {
-                Text(tr(R.string.s_wancheng), color = textColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            }
         }
         Spacer(Modifier.height(6.dp))
     }

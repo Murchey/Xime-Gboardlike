@@ -170,8 +170,11 @@ fun rememberSwipeBubbleDrawData(
     // 圆形气泡（字母键点击、单项长按）的半径等于高度的一半：
     // 直径加高两个增量，半径才正好 +2px，键面反馈更跟手；其余气泡尺寸不变。
     val isRoundBubble = singleLongPress || circularPress
-    val bodyHeightPx = rowHeightPx * longPressRows +
-        if (isRoundBubble) BUBBLE_RADIUS_DELTA_PX * 2f else 0f
+    val bodyHeightPx = if (circularPress) {
+        with(density) { 56.dp.toPx() } * bubbleScale
+    } else {
+        rowHeightPx * longPressRows + if (isRoundBubble) BUBBLE_RADIUS_DELTA_PX * 2f else 0f
+    }
     // 尖端完整覆盖按下的按键（与按键同高），宽体锚定按键顶部悬在上方（见 boxTop）。
     // 全部基于真实按键 bounds 计算，不再用 KeyHeight 估算值——
     // 键盘高度被调大时估算失准，宽体会下沉进按键被手指挡住。
@@ -205,14 +208,15 @@ fun rememberSwipeBubbleDrawData(
 
     val keyLabelTypeface = AppFonts.keyLabelTypeface
 
-    val textPaint = remember(bubbleScale) {
+    val targetTextSizeSp = if (circularPress) 27.sp else if (isLongPressMode) 16.sp else 20.sp
+    val textPaint = remember(bubbleScale, targetTextSizeSp) {
         Paint().apply {
-            textSize = with(density) { 16.sp.toPx() } * bubbleScale
+            textSize = with(density) { targetTextSizeSp.toPx() } * bubbleScale
             isAntiAlias = true
         }
     }
 
-    val textSizePx = with(density) { 16.sp.toPx() } * bubbleScale
+    val textSizePx = with(density) { targetTextSizeSp.toPx() } * bubbleScale
     val cellWidthPx = if (isLongPressMode) {
         longPressCellWidthPx(
             items = swipeState.longPressItems,
@@ -270,7 +274,9 @@ fun rememberSwipeBubbleDrawData(
     // 宽体（显示文字的主体）底部对齐按键顶部，悬在按键正上方不被手指遮挡；
     // 尖端从宽体底部向下延伸 pointerHeightPx（≈按键上半部）指示归属键。
     // 单项圆形气泡没有尖角，额外留 4dp 间隙。
-    val boxTop = if (isLongPressMode || circularPress) {
+    val boxTop = if (circularPress) {
+        keyBounds.top - bodyHeightPx - with(density) { 10.dp.toPx() }
+    } else if (isLongPressMode) {
         keyBounds.top - bodyHeightPx - with(density) { 4.dp.toPx() }
     } else {
         keyBounds.top - bodyHeightPx
