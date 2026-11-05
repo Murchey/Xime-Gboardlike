@@ -134,6 +134,9 @@ fun KeyboardLayoutScreen(
                         uiState = uiState,
                         isAsciiMode = false,
                         modifier = modifier,
+                        // 组合态：Shift 键变分词（全部中文方案）
+                        isComposing = candidateState.value.isComposing ||
+                            candidateState.value.inputText.isNotEmpty(),
                     )
                 }
             }

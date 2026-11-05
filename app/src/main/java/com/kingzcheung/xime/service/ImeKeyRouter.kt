@@ -522,11 +522,26 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                 }
                 "word_separator" -> {
                     if (candState.isComposing || candState.inputText.isNotEmpty()) {
-                        val result = service.rimeEngine.processKeyAndGetResult(0x27, 0)
-                        if (result.processed) {
-                            sendTransformedResult(result)
+                        val raw = service.rimeEngine.getInput()
+                        val caretAt = service.editingCaretPos
+                        if (caretAt in 0 until raw.length) {
+                            // 编码编辑光标在中间：分隔符插到光标处（与字母插入同路径），
+                            // 不做自动音节切分，由用户手动切分（xi' + an）
+                            val newInput = raw.substring(0, caretAt) + "'" + raw.substring(caretAt)
+                            service.editingCaretPos = caretAt + 1
+                            service.editingCaretInput = newInput
+                            service.rimeEngine.setInput(newInput)
+                            sendTransformedResult(service.rimeEngine.getProcessResult(true)) {
+                                if (service.calculatorEngine.isActive()) updateCalculatorCandidates()
+                            }
                         } else {
-                            needsUIUpdate = true
+                            // 输入末尾插入分隔符（0x27 = '）
+                            val result = service.rimeEngine.processKeyAndGetResult(0x27, 0)
+                            if (result.processed) {
+                                sendTransformedResult(result)
+                            } else {
+                                needsUIUpdate = true
+                            }
                         }
                     } else {
                         needsUIUpdate = true

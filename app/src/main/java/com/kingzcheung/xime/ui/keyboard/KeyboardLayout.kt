@@ -193,6 +193,7 @@ fun KeyboardLayout(
     uiState: KeyboardUiState,
     isAsciiMode: Boolean,
     modifier: Modifier = Modifier,
+    isComposing: Boolean = false,
 ) {
     val isShifted by viewModel.isShifted.collectAsStateWithLifecycle()
     val shiftMode by viewModel.shiftMode.collectAsStateWithLifecycle()
@@ -369,6 +370,7 @@ fun KeyboardLayout(
                 callbacks = callbacks,
                 uiState = uiState,
                 isAsciiMode = isAsciiMode,
+                isComposing = isComposing,
                 keyRows = rowsLayout.rows,
                 configVersion = cfgVer,
                 onSwipeStateChange = { state, bounds -> processSwipeState(state, bounds) },
@@ -390,6 +392,7 @@ fun KeyboardLayout(
                 ) {
                     val env = QwertyRowEnv(
                         isAsciiMode = isAsciiMode,
+                        isComposing = isComposing,
                         isShifted = visualIsShifted,
                         shiftMode = visualShiftMode,
                         keyBackgroundColor = keyBackgroundColor,
@@ -658,6 +661,8 @@ internal fun functionKeyGestures(
 /** 一行内的共享渲染参数（颜色/回调等），供行循环与功能键组件复用；主键盘与面板渲染共用。 */
 internal class QwertyRowEnv(
     val isAsciiMode: Boolean,
+    /** 组合态（中文方案）：Shift 键变为分词键，插入音节分隔符（xian → xi'an）。 */
+    val isComposing: Boolean = false,
     val isShifted: Boolean,
     val shiftMode: ShiftMode,
     val keyBackgroundColor: Color,
@@ -1164,6 +1169,25 @@ private fun panelKeyIcon(name: String): Painter? = when (name) {
 
 @Composable
 private fun ShiftCell(env: QwertyRowEnv, modifier: Modifier, id: String = "shift") {
+    // 中文组合态：Shift 键变为拼音分隔符键 '（全部字母方案通用），
+    // 用户手动切分音节（xi' + an → xi'an），不做自动识别
+    if (env.isComposing && !env.isAsciiMode) {
+        KeyButton(
+            text = tr(R.string.keyboard_split_word),
+            onClick = { env.onKeyPress("word_separator") },
+            backgroundColor = env.specialKeyBackgroundColor,
+            textColor = env.specialKeyTextColor,
+            modifier = modifier,
+            fontSize = 14.sp,
+            onPress = { env.onKeyPressDown?.invoke("word_separator") },
+            onRelease = { env.onKeyRelease?.invoke("word_separator") },
+            shadowEnabled = env.shadowEnabled,
+            shadowElevation = env.shadowElevation,
+            shadowShapeRadius = env.shadowShapeRadius,
+            a11yDescription = tr(R.string.keyboard_split_word),
+        )
+        return
+    }
     // 按 env.section 取：主键盘为 "qwerty"（与旧入口等价），面板段则读本段配置——
     // 否则面板里的 caps/space 会读到 26 键的覆盖（平板 26 键的 caps 只有 width 无动作，会变成哑键）
     val shiftBinding = KeysConfigHelper.getGestureFor(env.section, id, env.isAsciiMode)
@@ -2265,6 +2289,7 @@ private fun LandscapeKeyboardContent(
     callbacks: KeyboardCallbacks,
     uiState: KeyboardUiState,
     isAsciiMode: Boolean,
+    isComposing: Boolean = false,
     keyRows: List<KeyboardRow>,
     configVersion: Int = 0,
     onSwipeStateChange: ((SwipeState, Rect) -> Unit)? = null,
@@ -2305,6 +2330,7 @@ private fun LandscapeKeyboardContent(
     val onGestureAction = buildUiGestureHandler(viewModel, callbacks, uiState, requestVoice, onKeyPress)
     val env = QwertyRowEnv(
         isAsciiMode = isAsciiMode,
+        isComposing = isComposing,
         isShifted = visualIsShifted,
         shiftMode = visualShiftMode,
         keyBackgroundColor = keyBackgroundColor,
