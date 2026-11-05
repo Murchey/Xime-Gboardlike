@@ -18,9 +18,11 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.horizontalScroll
@@ -41,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,6 +91,21 @@ data class MenuBarState(
     val toolbarPluginButtons: List<ToolbarButtonItem.Plugin> = emptyList(),
     val isSttEnabled: Boolean = true,
 )
+
+/** 工具栏顶部最多容纳的功能数（Gboard 式：顶部分散放 5 个）。 */
+private const val TOOLBAR_MAX_ITEMS = 5
+
+/**
+ * 向工具栏加入一项（Gboard FIFO）：已满 5 个时挤掉最早的一个，保持顶部数量恒定。
+ */
+private fun addToToolbarFifo(draft: List<String>, id: String): List<String> {
+    val list = draft.filter { it != id }.toMutableList()
+    list.add(id)
+    while (list.size > TOOLBAR_MAX_ITEMS) {
+        list.removeAt(0)
+    }
+    return list
+}
 
 data class MenuBarCallbacks(
     val onDismiss: () -> Unit,
@@ -244,6 +262,8 @@ private fun ToolbarStrip(
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     val threshold = with(LocalDensity.current) { 40.dp.toPx() }
     val removeDropPx = with(LocalDensity.current) { 90.dp.toPx() }
+    // 手势进行中保持读取最新 draft，避免闭包捕获旧列表导致越界/闪退
+    val currentDraft by rememberUpdatedState(draft)
 
     Row(
         Modifier.fillMaxWidth().height(52.dp).onGloballyPositioned { c ->
@@ -285,16 +305,16 @@ private fun ToolbarStrip(
                                     this.alpha = alpha
                                 }
                             }
-                            .pointerInput(draft.size) {
+                            .pointerInput(tool.id) {
                                 detectDragGesturesAfterLongPress(
                                     onDragStart = { dragSlot = slot; dragOffset = Offset.Zero },
                                     onDrag = { change, amount ->
                                         change.consume()
                                         dragOffset += amount
                                         val center = positions[dragSlot]?.plus(dragOffset) ?: return@detectDragGesturesAfterLongPress
-                                        // 下拉出栏一定距离即移除
+                                        // 下拉出栏一定距离即移除（越界保护：草稿在手势中可能已变化）
                                         if (dragOffset.y > removeDropPx) {
-                                            onDraftChange(draft - id)
+                                            onDraftChange(currentDraft.filter { it != id })
                                             dragSlot = -1
                                             dragOffset = Offset.Zero
                                             return@detectDragGesturesAfterLongPress
@@ -306,8 +326,10 @@ private fun ToolbarStrip(
                                             val d = (p - center).getDistance()
                                             if (d < best) { best = d; target = i }
                                         }
-                                        if (target >= 0 && best < threshold) {
-                                            val mutable = draft.toMutableList()
+                                        if (target >= 0 && best < threshold &&
+                                            dragSlot in currentDraft.indices && target in currentDraft.indices
+                                        ) {
+                                            val mutable = currentDraft.toMutableList()
                                             val moved = mutable.removeAt(dragSlot)
                                             mutable.add(target, moved)
                                             onDraftChange(mutable)
@@ -363,29 +385,25 @@ private fun ToolbarEditBody(
             textAlign = TextAlign.Center,
             maxLines = 1,
         )
+        // 编辑态：候选栏目纵向流式（单列卡片，纵向滚动，便于逐个拖入顶部工具栏）
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            availableTools.chunked(2).forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    row.forEach { tool ->
-                        DraggableToolCard(
-                            tool = tool,
-                            textColor = textColor,
-                            cardColor = cardColor,
-                            toolbarStripBounds = toolbarStripBounds,
-                            modifier = Modifier.weight(1f).height(64.dp),
-                            onTap = {
-                                if (tool.id !in draft) onDraftChange(draft + tool.id)
-                            },
-                            onDragIntoToolbar = {
-                                if (tool.id !in draft) onDraftChange(draft + tool.id)
-                            },
-                        )
-                    }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
-                }
+            availableTools.forEach { tool ->
+                DraggableToolCard(
+                    tool = tool,
+                    textColor = textColor,
+                    cardColor = cardColor,
+                    toolbarStripBounds = toolbarStripBounds,
+                    modifier = Modifier.fillMaxWidth().height(64.dp),
+                    onTap = {
+                        if (tool.id !in draft) onDraftChange(addToToolbarFifo(draft, tool.id))
+                    },
+                    onDragIntoToolbar = {
+                        if (tool.id !in draft) onDraftChange(addToToolbarFifo(draft, tool.id))
+                    },
+                )
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.Center) {
@@ -400,7 +418,10 @@ private fun ToolbarEditBody(
     }
 }
 
-/** 普通态主体：两列大卡片 + 右下角铅笔进入定制。 */
+/**
+ * 普通态主体：2 列 × 3 行网格（Gboard 式），超过 6 个左右滑动翻页 + 右下角铅笔进入定制。
+ * 编辑态则为纵向流式（见 ToolbarEditBody）。
+ */
 @Composable
 private fun ToolbarNormalBody(
     systemTools: List<MenuTool>,
@@ -409,16 +430,29 @@ private fun ToolbarNormalBody(
     onEdit: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
-        Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        // 退出编辑态：2 列 × 3 行网格，左右滑动翻页浏览系统工具
+        Row(
+            Modifier.weight(1f).fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            systemTools.chunked(2).forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    row.forEach { tool ->
-                        ToolCard(tool, textColor, cardColor, Modifier.weight(1f).height(64.dp))
+            // 每页 2 列 × 3 行 = 6 个工具卡
+            systemTools.chunked(6).forEach { pageTools ->
+                Column(
+                    Modifier.width(360.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    pageTools.chunked(2).forEach { rowTools ->
+                        Row(
+                            Modifier.fillMaxWidth().height(64.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            rowTools.forEach { tool ->
+                                ToolCard(tool, textColor, cardColor, Modifier.weight(1f).fillMaxHeight())
+                            }
+                            if (rowTools.size == 1) Spacer(Modifier.weight(1f))
+                        }
                     }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
         }

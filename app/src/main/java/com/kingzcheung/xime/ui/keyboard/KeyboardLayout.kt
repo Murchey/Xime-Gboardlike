@@ -1,10 +1,15 @@
 package com.kingzcheung.xime.ui.keyboard
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+
 import com.kingzcheung.xime.i18n.tr
 
 import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -2447,6 +2452,13 @@ private fun SpaceKey(
     val currentLongPressDrawableIds by rememberUpdatedState(longPressDrawableIds)
     val view = LocalView.current
     var buttonBounds by remember { mutableStateOf(Rect(0f, 0f, 0f, 0f)) }
+    // 空格键点击反馈：按下高亮 + 缩放回弹，与字母键一致（Gboard 同步手感）
+    var isPressed by remember { mutableStateOf(false) }
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = tween(durationMillis = if (isPressed) 55 else 120, easing = FastOutSlowInEasing),
+        label = "spacePressScale",
+    )
     val currentOnVoiceModeChange by rememberUpdatedState(onVoiceModeChange)
     val currentOnTap by rememberUpdatedState(onTap)
     val currentOnLongPress by rememberUpdatedState(onLongPress)
@@ -2471,10 +2483,12 @@ private fun SpaceKey(
             .pointerInput(isSttEnabled, voiceSticky, currentLongPressItems == null) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
+                    isPressed = true
 
                     if (voiceSticky) {
                         // 常驻语音模式：轻触空格即结束语音
                         waitForUpOrCancellation()
+                        isPressed = false
                         currentOnVoiceModeChange?.invoke(false)
                         return@awaitEachGesture
                     }
@@ -2553,6 +2567,7 @@ private fun SpaceKey(
                             }
                         } finally {
                             longPressJob.cancel()
+                            isPressed = false
                             onSwipeStateChange?.invoke(SwipeState(), buttonBounds)
                             // 没等到抬手就结束（触摸流取消/协程被重挂）时兜底上屏空格
                             if (!completed && !triggered) {
@@ -2590,6 +2605,7 @@ private fun SpaceKey(
                         dir = null
                     }
                     longPressJob.cancel()
+                    isPressed = false
                     currentOnKeyRelease?.invoke("space")
 
                     if (dir != null && currentOnSwipe != null) {
@@ -2602,9 +2618,13 @@ private fun SpaceKey(
             .padding(LocalKeyVisualPadding.current)
             .fillMaxWidth()
             .fillMaxHeight()
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
             .then(shadowModifier)
             .clip(RoundedCornerShape(LocalKeyCornerRadius.current))
-            .background(keyBackgroundColor)
+            .background(if (isPressed) keyBackgroundColor.copy(alpha = 0.7f) else keyBackgroundColor)
             .keySemantics(
                 when {
                     voiceSticky -> tr(R.string.s_qingchujieshuyuyin)

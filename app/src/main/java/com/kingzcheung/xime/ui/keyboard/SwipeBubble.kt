@@ -86,8 +86,8 @@ data class BubbleDrawData(
     val appearProgress: Float = 1f,
 )
 
-/** 圆形/圆角气泡的半径增量（px）；高度按半径的两倍加高。 */
-private const val BUBBLE_RADIUS_DELTA_PX = 4f
+/** 圆角气泡的半径修正（px）：较基础圆角减 2px，气泡更紧凑精致。 */
+private const val BUBBLE_RADIUS_DELTA_PX = 2f
 
 /** 按压气泡抬起后的滞留时长：随抬起瞬间消失看不清键位提示（主流输入法约 50~80ms），取中值。 */
 private const val PRESS_BUBBLE_RELEASE_DELAY_MS = 60L
@@ -198,7 +198,8 @@ fun rememberSwipeBubbleDrawData(
     // 圆形气泡（字母键点击、单项长按）统一尺寸：点按与长按气泡大小一致，避免忽大忽小。
     val isRoundBubble = singleLongPress || circularPress
     val bodyHeightPx = if (isRoundBubble) {
-        with(density) { 56.dp.toPx() } * bubbleScale
+        // 圆形气泡直径 56dp，半径较统一基准减 2px，与其余气泡圆角收紧一致
+        with(density) { 56.dp.toPx() } * bubbleScale - 4f
     } else {
         rowHeightPx * longPressRows
     }
@@ -220,7 +221,7 @@ fun rememberSwipeBubbleDrawData(
     val screenMarginPx = with(density) { BubbleScreenMargin.toPx() }
     val keyWidthPx = keyWidth
     val minBodyWidthPx = keyWidthPx * 1.8f
-    val shadowRadiusPx = with(density) { 4.dp.toPx() } * bubbleScale
+    val shadowRadiusPx = with(density) { 3.dp.toPx() } * bubbleScale
 
     val accentArgb = accentColor.toArgb()
     val selectedTextColorArgb = if (Color(accentArgb).luminance() > 0.5f) {
