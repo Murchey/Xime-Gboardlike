@@ -1,6 +1,9 @@
 package com.kingzcheung.xime.ui.keyboard
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -131,6 +134,33 @@ internal fun shouldSuppressCursorMove(
 ): Boolean = hasHorizontalSwipe &&
     abs(dragOffsetX) > abs(dragOffsetY) &&
     abs(dragOffsetX) > horizontalThreshold
+
+/**
+ * 按下态键帽底色。
+ *
+ * 深色主题下叠加提亮、浅色主题下叠加压暗，两种主题都能形成清晰对比；
+ * 直接统一压暗在深色键面上几乎不可见（这是此前反馈「按键反馈很弱」的主因）。
+ */
+internal fun pressOverlay(base: Color): Color {
+    val lum = 0.299f * base.red + 0.587f * base.green + 0.114f * base.blue
+    return if (lum < 0.5f) {
+        // 深色键面：向白色混合，提亮约 18%
+        Color(
+            red = (base.red + (1f - base.red) * 0.18f).coerceIn(0f, 1f),
+            green = (base.green + (1f - base.green) * 0.18f).coerceIn(0f, 1f),
+            blue = (base.blue + (1f - base.blue) * 0.18f).coerceIn(0f, 1f),
+            alpha = base.alpha,
+        )
+    } else {
+        // 浅色键面：压暗约 22%，比原先的 10%~20% 更明显
+        Color(
+            red = (base.red * 0.78f).coerceIn(0f, 1f),
+            green = (base.green * 0.78f).coerceIn(0f, 1f),
+            blue = (base.blue * 0.78f).coerceIn(0f, 1f),
+            alpha = base.alpha,
+        )
+    }
+}
 
 data class SwipeState(
     val isSwiping: Boolean = false,
@@ -389,6 +419,13 @@ fun KeyButton(
             alpha = color.alpha
         )
     }
+
+    // 按下时的键帽缩放：0.94 ≈ Gboard 的按压回弹幅度（太大显得抖动，太小看不出来）
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.94f else 1f,
+        animationSpec = tween(durationMillis = if (isPressed) 45 else 90),
+        label = "keyPressScale",
+    )
     
         Box(
             modifier = modifier
@@ -524,11 +561,20 @@ fun KeyButton(
                 }
             .padding(LocalKeyVisualPadding.current)
             .then(shadowModifier)
+            // Gboard 风格按下反馈：键帽轻微缩小 + 加深，形成「按下去」的物理感。
+            // 只靠 10%~20% 变暗在浅色主题下几乎看不出来，容易误触而不自知。
+            .graphicsLayer {
+                val s = pressScale
+                scaleX = s
+                scaleY = s
+            }
             .clip(keyClipShape)
             .background(
-                if (isPressed) darkenColor(backgroundColor, 0.2f)
-                else if (isHighlighted) backgroundColor.copy(alpha = 0.8f)
-                else backgroundColor
+                when {
+                    isPressed -> pressOverlay(backgroundColor)
+                    isHighlighted -> backgroundColor.copy(alpha = 0.8f)
+                    else -> backgroundColor
+                }
             )
             .keySemantics(a11yDescription, a11yState) { currentOnClick() },
         contentAlignment = Alignment.Center
@@ -1364,6 +1410,12 @@ fun IconKeyButton(
     a11yState: String? = null,
 ) {
     var isPressed by remember { mutableStateOf(false) }
+    // 按下时键帽缩放（与 KeyButton 保持一致的 Gboard 式回弹）
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.94f else 1f,
+        animationSpec = tween(durationMillis = if (isPressed) 45 else 90),
+        label = "swipeKeyPressScale",
+    )
     val density = LocalDensity.current
     val currentOnClick by rememberUpdatedState(onClick)
 
@@ -1479,6 +1531,12 @@ fun SwipeableIconKeyButton(
     a11yState: String? = null,
 ) {
     var isPressed by remember { mutableStateOf(false) }
+    // 按下时键帽缩放（图标键，与文字键保持一致）
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.94f else 1f,
+        animationSpec = tween(durationMillis = if (isPressed) 45 else 90),
+        label = "iconKeyPressScale",
+    )
     var dragOffsetY by remember { mutableStateOf(0f) }
     var dragOffsetX by remember { mutableStateOf(0f) }
     var hasTriggeredSwipe by remember { mutableStateOf(false) }
@@ -1901,11 +1959,20 @@ fun SwipeableIconKeyButton(
             }
             .padding(LocalKeyVisualPadding.current)
             .then(shadowModifier)
+            // Gboard 风格按下反馈：键帽轻微缩小 + 加深，形成「按下去」的物理感。
+            // 只靠 10%~20% 变暗在浅色主题下几乎看不出来，容易误触而不自知。
+            .graphicsLayer {
+                val s = pressScale
+                scaleX = s
+                scaleY = s
+            }
             .clip(keyClipShape)
             .background(
-                if (isPressed) darkenColor(backgroundColor, 0.2f)
-                else if (isHighlighted) backgroundColor.copy(alpha = 0.8f)
-                else backgroundColor
+                when {
+                    isPressed -> pressOverlay(backgroundColor)
+                    isHighlighted -> backgroundColor.copy(alpha = 0.8f)
+                    else -> backgroundColor
+                }
             )
             .keySemantics(a11yDescription, a11yState) { currentOnClick() },
         contentAlignment = Alignment.Center
@@ -1991,6 +2058,12 @@ fun SwipeableKeyButtonLandscape(
     shadowShapeRadius: Dp = 8.dp,
 ) {
     var isPressed by remember { mutableStateOf(false) }
+    // 按下时键帽缩放（横屏紧凑键盘，与竖屏一致）
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.94f else 1f,
+        animationSpec = tween(durationMillis = if (isPressed) 45 else 90),
+        label = "landscapeKeyPressScale",
+    )
     var dragOffsetY by remember { mutableStateOf(0f) }
     var dragOffsetX by remember { mutableStateOf(0f) }
     var hasTriggeredSwipeUp by remember { mutableStateOf(false) }

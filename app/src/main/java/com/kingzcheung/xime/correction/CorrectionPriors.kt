@@ -117,8 +117,45 @@ object CorrectionPriors {
      */
     fun isCorrectionSchema(schemaId: String): Boolean {
         val ctx = appContext ?: return false
+        val id = schemaId.trim()
         val schemas = KeysConfigHelper.correctionSchemas(ctx)
-        return schemaId.trim() in schemas.ifEmpty { SCHEMAS_FALLBACK }
+
+        // 显式白名单优先（形码等需要补 weight 列的方案在此声明）
+        if (id in schemas.ifEmpty { SCHEMAS_FALLBACK }) return true
+
+        // 通解：凡是「按键字母 = 输入串」的方案都启用纠错。
+        // native 侧 TapsFor 只要求最近 N 次按键字母与 Rime 输入串尾部一致，
+        // 与方案的拼写运算无关——双拼/雾凇/自然码敲的都是字母键，同样能对齐。
+        // 因此按 schema 的 speller/alphabet 自动识别，用户无需手改 xime.yaml。
+        return isLetterInputSchema(ctx, id)
+    }
+
+    /** schema 字母表缓存：id -> 是否纯字母输入方案。 */
+    private val letterSchemaCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+    private var letterCacheStamp: Long = -1L
+
+    private fun isLetterInputSchema(ctx: Context, schemaId: String): Boolean {
+        // 部署产物变更后让缓存失效，新装方案无需重启即可生效
+        val stamp = runCatching {
+            java.io.File(ctx.filesDir, "rime/build").lastModified()
+        }.getOrDefault(0L)
+        if (stamp != letterCacheStamp) {
+            letterCacheStamp = stamp
+            letterSchemaCache.clear()
+        }
+        letterSchemaCache[schemaId]?.let { return it }
+
+        val letterOnly = runCatching {
+            val alphabet = RimeEngine.getInstance()
+                .getSchemaString(schemaId, "speller/alphabet")
+                .orEmpty()
+            // 纯字母：含 a-z，且不含 0-9（排除九键型方案）
+            alphabet.any { it in 'a'..'z' } && alphabet.none { it in '0'..'9' }
+        }.getOrDefault(false)
+
+        letterSchemaCache[schemaId] = letterOnly
+        return letterOnly
     }
 
     @Synchronized
