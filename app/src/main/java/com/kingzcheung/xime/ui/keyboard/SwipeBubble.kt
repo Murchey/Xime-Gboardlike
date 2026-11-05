@@ -79,7 +79,7 @@ data class BubbleDrawData(
 )
 
 /** 圆形/圆角气泡的半径增量（px）；高度按半径的两倍加高。 */
-private const val BUBBLE_RADIUS_DELTA_PX = 2f
+private const val BUBBLE_RADIUS_DELTA_PX = 4f
 
 /** 按压气泡抬起后的滞留时长：随抬起瞬间消失看不清键位提示（主流输入法约 50~80ms），取中值。 */
 private const val PRESS_BUBBLE_RELEASE_DELAY_MS = 60L
@@ -183,7 +183,9 @@ fun rememberSwipeBubbleDrawData(
         // 多项长按气泡：圆角同样 +2px，与点击气泡的放大幅度保持一致
         isLongPressMode -> with(density) { BubbleCornerRadius.toPx() } * bubbleScale +
             BUBBLE_RADIUS_DELTA_PX
-        else -> with(density) { BubbleCornerRadius.toPx() } * bubbleScale
+        // 点按气泡：圆角与长按气泡同步放大，保持视觉一致
+        else -> with(density) { BubbleCornerRadius.toPx() } * bubbleScale +
+            BUBBLE_RADIUS_DELTA_PX
     }
     val screenMarginPx = with(density) { BubbleScreenMargin.toPx() }
     val keyWidthPx = keyWidth

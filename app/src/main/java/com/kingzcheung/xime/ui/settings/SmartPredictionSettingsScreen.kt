@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Check
@@ -66,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kingzcheung.xime.association.UserDataExporter
+import com.kingzcheung.xime.settings.CustomPredictionModelStore
 import com.kingzcheung.xime.model.ModelCategory
 import com.kingzcheung.xime.model.ModelManager
 import com.kingzcheung.xime.settings.SettingsPreferences
@@ -79,14 +81,32 @@ fun SmartPredictionSettingsContent(
     onNavigateToModelDetail: (String) -> Unit = {},
     onNavigateToLearningData: () -> Unit = {},
     onNavigateToUserDict: () -> Unit = {},
+    onNavigateToAddCustomModel: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val viewModel: SmartPredictionSettingsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // 模型清单来自远程 index，响应式收集以在加载完成后刷新（仅 PREDICTION 类别）
+    // 模型清单来自远程 index，响应式收集以在加载完成后刷新（仅 PREDICTION 类别）；
+    // 再并入用户自建的自定义预测模型，两者在同一列表里可选。
     val allModels by ModelManager.modelsFlow.collectAsStateWithLifecycle()
-    val predictionModels = allModels.filter { it.category == ModelCategory.PREDICTION }
+    var customVersion by remember { mutableStateOf(0) }
+    val customModels = remember(customVersion) { CustomPredictionModelStore.asModelInfos(context) }
+    val predictionModels = (allModels.filter { it.category == ModelCategory.PREDICTION } + customModels)
+        .distinctBy { it.id }
+
+    // 从其它页面（导入/添加模型）返回时刷新模型文件状态，避免残留「请先下载模型」
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshState()
+                customVersion++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val userDataExportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -271,7 +291,7 @@ fun SmartPredictionSettingsContent(
                                 isSelected = model.id == selectedModelId,
                                 onSelect = {
                                     selectedModelId = model.id
-                                    SettingsPreferences.setPredictionSelectedModel(context, model.id)
+                                    viewModel.selectModel(model.id)
                                 },
                                 onOpenInStore = { onNavigateToModelDetail(model.id) }
                             )
@@ -283,6 +303,18 @@ fun SmartPredictionSettingsContent(
                                 )
                             }
                         }
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 56.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                        SettingsItem(
+                            icon = Icons.Default.Add,
+                            title = "添加自定义模型",
+                            subtitle = "导入自己的预测模型并打上标签",
+                            onClick = onNavigateToAddCustomModel,
+                            showArrow = true
+                        )
                     })
                 }
             }

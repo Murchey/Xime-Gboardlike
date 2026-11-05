@@ -212,8 +212,12 @@ fun SettingsScreen(
                     navController.navigate("model_market_detail/$modelId")
                 },
                 onNavigateToLearningData = { navController.navigate(SettingsRoutes.UserLearningData) },
-                onNavigateToUserDict = { navController.navigate(SettingsRoutes.DictionaryUserDict) }
+                onNavigateToUserDict = { navController.navigate(SettingsRoutes.DictionaryUserDict) },
+                onNavigateToAddCustomModel = { navController.navigate(SettingsRoutes.AddCustomModel) }
             )
+        }
+        composable(SettingsRoutes.AddCustomModel) {
+            AddCustomModelContent(onBack = { navController.popBackStack() })
         }
         composable(SettingsRoutes.UserLearningData) {
             UserLearningDataContent(onBack = { navController.popBackStack() })

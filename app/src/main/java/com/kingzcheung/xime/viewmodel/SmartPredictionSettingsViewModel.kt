@@ -153,6 +153,28 @@ class SmartPredictionSettingsViewModel(application: Application) : AndroidViewMo
         }
     }
     
+    /**
+     * 选择要使用的预测模型。
+     *
+     * 切换后必须重新检测模型文件并尝试加载，否则 hasModel / isInitialized 仍是
+     * 上一个模型的状态，界面会残留「请先下载模型」。
+     */
+    fun selectModel(modelId: String) {
+        SettingsPreferences.setPredictionSelectedModel(context, modelId)
+        checkModelState()
+        loadCacheSize()
+        // 新模型已就绪且开关打开时直接加载，省去用户再点一次
+        if (_uiState.value.isEnabled && _uiState.value.hasModel) {
+            loadModel()
+        }
+    }
+
+    /** 外部（如导入模型 / 从其它页面返回）触发的状态刷新。 */
+    fun refreshState() {
+        checkModelState()
+        loadCacheSize()
+    }
+
     /** 首次进入时按需刷新一次缓存条数，避免与导出并发写盘。 */
     fun exportUserData(uri: android.net.Uri) {
         viewModelScope.launch {

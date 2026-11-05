@@ -62,6 +62,7 @@ import com.kingzcheung.xime.plugin.core.api.AsrPlugin
 import com.kingzcheung.xime.plugin.core.runtime.PluginManager
 import com.kingzcheung.xime.speech.AsrBackendFactory
 import com.kingzcheung.xime.settings.SettingsPreferences
+import com.kingzcheung.xime.speech.BuiltinOnlineAsrBackend
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -144,7 +145,17 @@ fun SpeechToTextSettingsContent(
                     }
             }
         }.getOrElse { emptyList() }
-        onlineProviders = built
+        // 内置在线识别排在最前：不需要安装插件，填 API Key 即可用
+        val builtin = AsrProvider(
+            id = BuiltinOnlineAsrBackend.ID,
+            name = BuiltinOnlineAsrBackend.NAME,
+            description = "内置，免装插件；提供 API Key 即可使用",
+            isOnline = true,
+            isConfigured = BuiltinOnlineAsrBackend.isConfigured(context),
+            isActive = activeAsrPluginId == BuiltinOnlineAsrBackend.ID,
+            features = listOf("实时流式", "内置")
+        )
+        onlineProviders = listOf(builtin) + built
         providersLoaded = true
     }
 

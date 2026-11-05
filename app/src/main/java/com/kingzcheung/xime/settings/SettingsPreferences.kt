@@ -1169,4 +1169,32 @@ object SettingsPreferences {
         val custom = getUpdateProxy(context)
         return custom.ifBlank { "https://gh-proxy.org/" }
     }
+
+    // ── 内置在线语音识别（阿里百炼） ─────────────────────────────
+
+    private const val KEY_BUILTIN_ASR_API_KEY = "builtin_asr_api_key"
+    private const val KEY_BUILTIN_ASR_MODEL = "builtin_asr_model"
+    private const val KEY_BUILTIN_ASR_ENABLED = "builtin_asr_enabled"
+
+    fun getBuiltinAsrApiKey(context: Context): String =
+        getPrefs(context).getString(KEY_BUILTIN_ASR_API_KEY, "") ?: ""
+
+    fun setBuiltinAsrApiKey(context: Context, key: String) {
+        getPrefs(context).edit().putString(KEY_BUILTIN_ASR_API_KEY, key.trim()).apply()
+    }
+
+    fun getBuiltinAsrModel(context: Context): String =
+        getPrefs(context).getString(KEY_BUILTIN_ASR_MODEL, "qwen-audio-3.1-asr-flash-streaming")
+            ?: "qwen-audio-3.1-asr-flash-streaming"
+
+    fun setBuiltinAsrModel(context: Context, model: String) {
+        getPrefs(context).edit().putString(KEY_BUILTIN_ASR_MODEL, model.trim()).apply()
+    }
+
+    fun isBuiltinAsrEnabled(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_BUILTIN_ASR_ENABLED, false)
+
+    fun setBuiltinAsrEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_BUILTIN_ASR_ENABLED, enabled).apply()
+    }
 }
