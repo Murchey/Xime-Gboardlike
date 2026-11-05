@@ -107,11 +107,24 @@ object SettingsPreferences {
     const val DEFAULT_KEYBOARD_HEIGHT_PERCENT_LANDSCAPE = 25
 
     private const val KEY_TOOLBAR_BUTTONS = "toolbar_buttons"
+    private const val KEY_TOOLBAR_DEFAULT_MIGRATED = "toolbar_default_migrated"
     private val DEFAULT_TOOLBAR_BUTTONS = com.kingzcheung.xime.keyboard.ToolbarButton.DEFAULT_VISIBLE.joinToString(",") { it.id }
 
     fun getToolbarButtons(context: Context): List<String> {
-        val raw = getPrefs(context).getString(KEY_TOOLBAR_BUTTONS, DEFAULT_TOOLBAR_BUTTONS) ?: DEFAULT_TOOLBAR_BUTTONS
-        return raw.split(",").filter { it.isNotEmpty() }
+        val prefs = getPrefs(context)
+        val raw = prefs.getString(KEY_TOOLBAR_BUTTONS, null)
+        // 早期版本把默认值写成空字符串，导致首次打开菜单没有任何顶部工具。
+        // 只迁移一次；用户在新版本中主动清空工具栏后仍可保持空列表。
+        if (raw != null && raw.isEmpty() && !prefs.getBoolean(KEY_TOOLBAR_DEFAULT_MIGRATED, false)) {
+            val migrated = DEFAULT_TOOLBAR_BUTTONS.split(",").filter { it.isNotEmpty() }
+            prefs.edit()
+                .putString(KEY_TOOLBAR_BUTTONS, DEFAULT_TOOLBAR_BUTTONS)
+                .putBoolean(KEY_TOOLBAR_DEFAULT_MIGRATED, true)
+                .apply()
+            return migrated
+        }
+        val value = raw ?: DEFAULT_TOOLBAR_BUTTONS
+        return value.split(",").filter { it.isNotEmpty() }
     }
 
     fun setToolbarButtons(context: Context, buttons: List<String>) {

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.OpenWith
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -167,95 +168,34 @@ fun KeyboardResizeOverlay(
             )
         }
 
-        // 中央的整体键盘拖动把手（03.jpg：宽胶囊位于键盘卡片外的底部留白带中央）：
-        // 水平拖 = 两侧边距同步增减（键盘整体平移，宽度不变）；
-        // 垂直拖 = 底部留白（键盘整体上移/下移，高度不变）。
-        // 锚定按键区底边之下（留白带内），不与下把手的触控带重叠。
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(HANDLE_TOUCH_DP)
-                .offset(y = (-bottomPaddingDp / 2f + HANDLE_TOUCH_DP.value / 2f).dp)
-                .dragging { dx, dy ->
-                    val newPadding = (latestBottomPadding - dy).roundToInt()
-                        .coerceIn(0, KeyboardResizeBounds.MAX_BOTTOM_PADDING_DP)
-                    latestOnBottomPaddingChange(newPadding)
-                    val shift = dx.roundToInt()
-                    if (shift != 0) {
-                        latestOnMarginStartChange((latestMarginStart + shift).coerceIn(0, maxMargin))
-                        latestOnMarginEndChange((latestMarginEnd - shift).coerceIn(0, maxMargin))
-                    }
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            HandlePill(
-                width = 170.dp,
-            )
-        }
-
-        // 左侧手柄：只调左边距（边跟手：往内/右拖变窄，往外/左拖变宽）。
-        // 触控带全高便于抓取；握条点在遮罩垂直居中
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .fillMaxHeight()
-                .width(HANDLE_TOUCH_DP)
-                .dragging { dx, _ ->
-                    val newStart = (latestMarginStart + dx).roundToInt()
-                        .coerceIn(0, maxMargin)
-                    latestOnMarginStartChange(newStart)
-                },
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            GripPill(
-                modifier = Modifier.padding(start = 6.dp),
-                verticalBars = true,
-            )
-        }
-
-        // 右侧手柄：只调右边距（边跟手：往内/左拖变窄，往外/右拖变宽）
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .fillMaxHeight()
-                .width(HANDLE_TOUCH_DP)
-                .dragging { dx, _ ->
-                    val newEnd = (latestMarginEnd - dx).roundToInt()
-                        .coerceIn(0, maxMargin)
-                    latestOnMarginEndChange(newEnd)
-                },
-            contentAlignment = Alignment.CenterEnd,
-        ) {
-            GripPill(
-                modifier = Modifier.padding(end = 6.dp),
-                verticalBars = true,
-            )
-        }
-
-        // 操作按钮：在遮罩内均分（SpaceEvenly），遮罩变窄时间距自动压缩，
-        // 始终完整落在遮罩内部；垂直锚定**按键区**中心（遮罩顶部往下 heightDp/2，
-        // 而非含底部留白的整个遮罩中心）——拖底部手柄、按键区缩小时按钮跟着自适应
+        // 03.jpg：中央整体拖动把手与「重置 / 完成」位于同一操作行。
+        // 水平拖动同步调整两侧边距，垂直拖动调整底部留白；键盘整体移动而不改变高度。
         Row(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .offset(y = (heightDp / 2 - ACTION_BLOCK_HALF_HEIGHT).dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.Top,
         ) {
             ResizeActionButton(
                 icon = Icons.Default.RestartAlt,
                 label = tr(R.string.s_zhongzhi),
                 onClick = onReset,
             )
-            ResizeActionButton(
-                icon = Icons.Default.Close,
-                label = tr(R.string.s_quxiao),
-                onClick = onCancel,
-            )
+            OverallDragButton { dx, dy ->
+                val newPadding = (latestBottomPadding - dy).roundToInt()
+                    .coerceIn(0, KeyboardResizeBounds.MAX_BOTTOM_PADDING_DP)
+                latestOnBottomPaddingChange(newPadding)
+                val shift = dx.roundToInt()
+                if (shift != 0) {
+                    latestOnMarginStartChange((latestMarginStart + shift).coerceIn(0, maxMargin))
+                    latestOnMarginEndChange((latestMarginEnd - shift).coerceIn(0, maxMargin))
+                }
+            }
             ResizeActionButton(
                 icon = Icons.Default.Check,
-                label = tr(R.string.s_queding),
+                label = tr(R.string.s_wancheng),
                 onClick = onConfirm,
             )
         }
@@ -303,32 +243,22 @@ private fun HandlePill(width: androidx.compose.ui.unit.Dp, modifier: Modifier = 
     )
 }
 
-/**
- * 三道握条（≡ / |||），背后垫深色胶囊。在 55% 遮罩上以白色握条保证可见性。
- * [verticalBars] = true 为左右边缘的竖向握条。
- */
+/** 中央整体拖动把手：四向箭头与 03.jpg 的操作行保持一致。 */
 @Composable
-private fun GripPill(verticalBars: Boolean, modifier: Modifier = Modifier) {
-    val barColor = Color.White.copy(alpha = 0.95f)
-    val barShape = RoundedCornerShape(1.dp)
+private fun OverallDragButton(onDrag: (dx: Float, dy: Float) -> Unit) {
     Box(
-        modifier = modifier
-            .background(Color.Black.copy(alpha = 0.32f), RoundedCornerShape(9.dp))
-            .padding(horizontal = 6.dp, vertical = 6.dp),
+        modifier = Modifier
+            .size(56.dp)
+            .background(Color.Black.copy(alpha = 0.55f), CircleShape)
+            .dragging(onDrag),
+        contentAlignment = Alignment.Center,
     ) {
-        if (verticalBars) {
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                repeat(3) {
-                    Box(Modifier.size(2.dp, 16.dp).clip(barShape).background(barColor))
-                }
-            }
-        } else {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                repeat(3) {
-                    Box(Modifier.size(16.dp, 2.dp).clip(barShape).background(barColor))
-                }
-            }
-        }
+        Icon(
+            imageVector = Icons.Default.OpenWith,
+            contentDescription = tr(R.string.s_jianpandiaojie),
+            tint = Color.White,
+            modifier = Modifier.size(30.dp),
+        )
     }
 }
 

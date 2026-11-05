@@ -46,7 +46,8 @@ enum class ToolbarButton(
     VOICE("voice", tr(R.string.s_yuyin), Icons.TwoTone.Mic);
 
     companion object {
-        val DEFAULT_VISIBLE = emptySet<ToolbarButton>()
+        /** Gboard 风格的首次启用工具：表情、剪贴板、方案切换和快捷短语。 */
+        val DEFAULT_VISIBLE = listOf(EMOJI, CLIPBOARD, SCHEMA, QUICK_PHRASE)
 
         fun fromId(id: String): ToolbarButton? =
             entries.find { it.id == id }

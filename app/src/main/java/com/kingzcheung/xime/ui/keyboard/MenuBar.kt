@@ -25,14 +25,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.twotone.Edit
+import androidx.compose.material.icons.twotone.KeyboardAlt
 import androidx.compose.material.icons.twotone.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -155,44 +157,81 @@ fun MenuBar(
         else -> tr(R.string.s_gensuixitong)
     }
     val systemTools = buildList {
-        add(MenuTool("sys_clipboard", tr(R.string.s_jiantieban), action = callbacks.onClipboard))
-        add(MenuTool("sys_quick", tr(R.string.s_kuaijiefasong), action = callbacks.onQuickSend))
-        add(MenuTool("sys_schema", tr(R.string.s_shurufangan), action = callbacks.onSchemaList))
-        add(MenuTool("sys_emoji", tr(R.string.s_biaoqing), action = callbacks.onEmoji))
+        add(MenuTool("sys_clipboard", tr(R.string.s_jiantieban), rememberVectorPainter(ToolbarButton.CLIPBOARD.icon), action = callbacks.onClipboard))
+        add(MenuTool("sys_quick", tr(R.string.s_kuaijiefasong), rememberVectorPainter(ToolbarButton.QUICK_PHRASE.icon), action = callbacks.onQuickSend))
+        add(MenuTool("sys_schema", tr(R.string.s_shurufangan), rememberVectorPainter(ToolbarButton.SCHEMA.icon), action = callbacks.onSchemaList))
+        add(MenuTool("sys_emoji", tr(R.string.s_biaoqing), rememberVectorPainter(ToolbarButton.EMOJI.icon), action = callbacks.onEmoji))
         if (!state.isFloatingMode && state.canResizeKeyboard) {
-            add(MenuTool("sys_resize", tr(R.string.s_jianpandiaojie), action = callbacks.onKeyboardResize))
+            add(MenuTool("sys_resize", tr(R.string.s_jianpandiaojie), rememberVectorPainter(ToolbarButton.EDIT.icon), action = callbacks.onKeyboardResize))
         }
-        add(MenuTool("sys_dark", darkLabel, action = callbacks.onToggleDarkMode))
+        add(MenuTool("sys_dark", darkLabel, rememberVectorPainter(ToolbarButton.SYMBOL.icon), action = callbacks.onToggleDarkMode))
         if (state.canFloatKeyboard) {
-            add(MenuTool("sys_float", if (state.isFloatingMode) tr(R.string.s_tuichuxuanfu) else tr(R.string.s_xuanfumoshi), action = callbacks.onFloatingModeToggle ?: {}))
+            add(MenuTool("sys_float", if (state.isFloatingMode) tr(R.string.s_tuichuxuanfu) else tr(R.string.s_xuanfumoshi), rememberVectorPainter(ToolbarButton.FLOAT.icon), action = callbacks.onFloatingModeToggle ?: {}))
         }
-        add(MenuTool("sys_deploy", tr(R.string.s_bushufangan), action = callbacks.onReloadConfig))
+        add(MenuTool("sys_deploy", tr(R.string.s_bushufangan), rememberVectorPainter(ToolbarButton.SCHEMA.icon), action = callbacks.onReloadConfig))
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth().background(state.backgroundColor)) {
         val side = if (maxWidth >= WIDE_CONTAINER_WIDTH) 50.dp else 16.dp
         Column(Modifier.fillMaxSize().padding(horizontal = side, vertical = 8.dp)) {
-            Row(
-                Modifier.fillMaxWidth().height(44.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CircleAction(
-                    icon = Icons.Default.KeyboardArrowUp,
-                    tint = textColor,
-                    bg = cardColor,
-                    label = tr(R.string.s_fanhui),
-                ) { if (editing) { editing = false; draft = state.toolbarButtons } else callbacks.onDismiss() }
-                if (editing) {
-                    Text(tr(R.string.s_dingzhigongjulan), color = textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                } else Spacer(Modifier.width(1.dp))
-                CircleAction(
-                    icon = Icons.TwoTone.Settings,
-                    tint = textColor,
-                    bg = cardColor,
-                    label = tr(R.string.s_shezhi),
-                    size = 20.dp,
-                ) { callbacks.onSettings() }
+            if (editing) {
+                Row(
+                    Modifier.fillMaxWidth().height(52.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircleAction(
+                        icon = Icons.Default.Close,
+                        tint = textColor,
+                        bg = cardColor,
+                        label = tr(R.string.s_wancheng),
+                        size = 24.dp,
+                    ) {
+                        callbacks.onUpdateToolbarButtons(draft)
+                        editing = false
+                    }
+                    Text(
+                        tr(R.string.s_dingzhigongjulan),
+                        color = textColor,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    CircleAction(
+                        icon = Icons.TwoTone.KeyboardAlt,
+                        tint = textColor,
+                        bg = cardColor,
+                        label = tr(R.string.s_shurufangan),
+                        size = 22.dp,
+                    ) { callbacks.onSchemaList() }
+                }
+            } else {
+                Row(
+                    Modifier.fillMaxWidth().height(52.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircleAction(
+                        icon = Icons.Default.Close,
+                        tint = textColor,
+                        bg = cardColor,
+                        label = tr(R.string.s_quxiao),
+                        size = 24.dp,
+                    ) { callbacks.onDismiss() }
+                    Row(
+                        Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        activeTools.forEach { tool -> CircleTool(tool, textColor, cardColor) }
+                    }
+                    CircleAction(
+                        icon = Icons.TwoTone.KeyboardAlt,
+                        tint = textColor,
+                        bg = cardColor,
+                        label = tr(R.string.s_shurufangan),
+                        size = 22.dp,
+                    ) { callbacks.onSchemaList() }
+                }
             }
 
             if (editing) {
@@ -210,7 +249,6 @@ fun MenuBar(
                 )
             } else {
                 ToolbarNormalMode(
-                    activeTools = activeTools,
                     systemTools = systemTools,
                     textColor = textColor,
                     cardColor = cardColor,
@@ -223,23 +261,12 @@ fun MenuBar(
 
 @Composable
 private fun ToolbarNormalMode(
-    activeTools: List<MenuTool>,
     systemTools: List<MenuTool>,
     textColor: Color,
     cardColor: Color,
     onEdit: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier.fillMaxWidth().height(48.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            activeTools.forEach { tool ->
-                CircleTool(tool, textColor, cardColor)
-            }
-            Spacer(Modifier.weight(1f))
-        }
         Column(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -286,7 +313,13 @@ private fun ToolbarEditMode(
 
     Column(Modifier.fillMaxSize()) {
         Row(
-            Modifier.fillMaxWidth().height(72.dp),
+            Modifier
+                .fillMaxWidth()
+                .height(72.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(cardColor.copy(alpha = 0.38f))
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -407,11 +440,17 @@ private fun ToolIcon(tool: MenuTool, textColor: Color, size: Dp) {
 @Composable
 private fun ToolCard(tool: MenuTool, textColor: Color, cardColor: Color, modifier: Modifier = Modifier, onClick: () -> Unit = tool.action) {
     Row(
-        modifier = modifier.clip(RoundedCornerShape(16.dp)).background(cardColor).clickable { onClick() }.padding(horizontal = 16.dp),
+        modifier = modifier
+            .clip(RoundedCornerShape(34.dp))
+            .background(cardColor.copy(alpha = 0.88f))
+            .clickable { onClick() }
+            .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        ToolIcon(tool, textColor, 22.dp)
-        Text(tool.label, color = textColor, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        ToolIcon(tool, textColor, 30.dp)
+        Text(tool.label, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.weight(1f))
+        Icon(Icons.Default.ChevronRight, tr(R.string.s_xiayibu), tint = textColor.copy(alpha = .72f), modifier = Modifier.size(24.dp))
     }
 }
