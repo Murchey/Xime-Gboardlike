@@ -234,9 +234,13 @@ fun rememberSwipeBubbleDrawData(
     val singleLongPress = isLongPressMode && swipeState.longPressItems.size == 1
     val circularPress = swipeState.isPressed && !swipeState.isLongPress && swipeState.isLetterPress
     val isRoundBubble = singleLongPress || circularPress
+    // 圆形气泡直径：Gboard 的气泡直径与按键尺寸相当（BasicPopupView 的 15dp/10dp 外边距
+    // 只是内衬，实际观感是"和键一样大的圆"）。此前写死 56dp 再乘缩放，手机上会缩到
+    // ~34dp，明显比 Gboard 小。这里改为跟随按键高度，并保底 48dp。
+    val bubbleMinDiameterPx = with(density) { 48.dp.toPx() }
+    val roundDiameterPx = maxOf(keyBounds.height, bubbleMinDiameterPx)
     val bodyHeightPx = if (isRoundBubble) {
-        // 圆形气泡直径 56dp，半径较统一基准减 2px，与其余气泡圆角收紧一致
-        with(density) { 56.dp.toPx() } * bubbleScale - 4f
+        roundDiameterPx
     } else {
         rowHeightPx * longPressRows
     }
