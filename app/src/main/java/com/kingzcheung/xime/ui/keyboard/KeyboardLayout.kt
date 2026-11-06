@@ -334,16 +334,13 @@ fun KeyboardLayout(
 
     // 圆角：yaml 按键盘覆盖优先，未覆盖时按设备档（平板大键面档）；与面板共用同一条规则。
     // Gboard 按键风格下取更大的圆角（见 keyCornerRadiusFor）。
-    val gboardKeyStyle = LocalGboardKeyStyle.current
-    val qwertyCornerRadius = keyCornerRadiusFor(kbKey, "qwerty", tabletParams, gboardKeyStyle)
+    val qwertyCornerRadius = keyCornerRadiusFor(kbKey, "qwerty", tabletParams)
 
     CompositionLocalProvider(
         LocalShowLetterHintSymbols provides showLetterHintSymbols,
         LocalDoublePinyinFinals provides doublePinyinFinals,
         LocalLetterCaseSetting provides letterCaseSetting,
         LocalKeyCornerRadius provides qwertyCornerRadius,
-        // 向下传递给面板/符号页等子布局，让按键风格在全键盘一致
-        LocalGboardKeyStyle provides gboardKeyStyle,
         // 键面提示档与主键盘同一规则（退格的「清空」等提示的放大倍率与画法）
         LocalSwipeHintCorner provides swipeHintCornerFor(isLandscape, tabletParams),
         // 平板键面提示统一放大（字母上标/退格"清空"等所有键组件一致），手机为 1f
@@ -757,29 +754,31 @@ internal fun hintExtraScaleFor(isTablet: Boolean): Float = if (isTablet) TABLET_
 internal fun overlayKeyCornerRadius(
     kbKey: KeyboardKeyConfig,
     isTablet: Boolean,
-    gboardStyle: Boolean = false,
 ): Dp {
     val configured = if (isTablet) maxOf(kbKey.cornerRadius.dp, TABLET_KEY_CORNER_RADIUS) else kbKey.cornerRadius.dp
-    if (!gboardStyle) return configured
-    return maxOf(configured, if (isTablet) 12.dp else 10.dp)
+    return maxOf(configured, if (isTablet) GBOARD_KEY_CORNER_TABLET else GBOARD_KEY_CORNER_PHONE)
 }
 
 internal fun keyCornerRadiusFor(
     kbKey: KeyboardKeyConfig,
     keyboard: String,
     isTablet: Boolean,
-    gboardStyle: Boolean = false,
 ): Dp {
-    // 说明：gboardStyle 由各布局从 LocalGboardKeyStyle 读取后传入；
-    // 默认 false 保持既有调用兼容（显式传参优先）。
-    val configured = kbKey.spacingOverrides[keyboard]?.cornerRadius?.dp
-        ?: if (isTablet) maxOf(kbKey.cornerRadius.dp, TABLET_KEY_CORNER_RADIUS) else kbKey.cornerRadius.dp
-    // Gboard 风格：键面圆角更饱满（手机 10dp / 平板 12dp），且不小于用户配置值，
-    // 保证切到 Gboard 样式立刻有辨识度；经典样式完全沿用原有配置。
-    if (!gboardStyle) return configured
-    val gboardRadius = if (isTablet) 12.dp else 10.dp
-    return maxOf(configured, gboardRadius)
+    // 用户显式写了该键盘的 corner_radius 时以配置为准，不被 Gboard 档抬高
+    kbKey.spacingOverrides[keyboard]?.cornerRadius?.dp?.let { return it }
+    val configured = if (isTablet) maxOf(kbKey.cornerRadius.dp, TABLET_KEY_CORNER_RADIUS) else kbKey.cornerRadius.dp
+    // 未显式覆盖时取 Gboard 档与全局配置的较大值
+    return maxOf(configured, if (isTablet) GBOARD_KEY_CORNER_TABLET else GBOARD_KEY_CORNER_PHONE)
 }
+
+/**
+ * Gboard 键面圆角档：手机 10dp，平板沿用既有大键面档 [TABLET_KEY_CORNER_RADIUS]（14dp）。
+ *
+ * 平板与既有档位取同一值，保证"同一设备上 26 键 / 面板 / 九键 / 笔画 / 手写圆角一致"
+ * 这条不变量仍成立（KeyboardDeviceStyleTest 有此断言）。
+ */
+private val GBOARD_KEY_CORNER_PHONE = 10.dp
+private val GBOARD_KEY_CORNER_TABLET = TABLET_KEY_CORNER_RADIUS
 
 /** 主题调色板：主键盘正常路径、分体路径与面板渲染共用同一解析，防止多处取值漂移。 */
 internal data class KeyboardPalette(

@@ -75,7 +75,7 @@ fun SymbolKeyboardLayout(
     val isTablet = isTablet()
     val kbKey = KeysConfigHelper.getKeyboardKeyConfig()
     // 键圆角与键盘同档：xime.yaml 的 key.symbol.corner_radius 也能管到这块全量符号面板
-    val keyCornerRadius = keyCornerRadiusFor(kbKey, "symbol", isTablet, LocalGboardKeyStyle.current)
+    val keyCornerRadius = keyCornerRadiusFor(kbKey, "symbol", isTablet)
     // 键距与面板一致：面板是「每键内衬 spacing/2」，这里用等距 gap 表达 ⇒ gap = spacing
     val (keySpacingX, keySpacingY) = kbKey.spacingFor("symbol")
     val columnGap = ((keySpacingX ?: 2f) * 2).dp

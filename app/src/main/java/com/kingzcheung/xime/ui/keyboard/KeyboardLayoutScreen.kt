@@ -73,10 +73,9 @@ fun KeyboardLayoutScreen(
     // 代码布局（九键 / 笔画 / 手写）的键面圆角与阴影圆角同样走「yaml 按键盘覆盖 → 设备档」，
     // 与 26 键 / 面板共用同一条解析：平板统一 14dp（此前这三处漏了设备档，仍是全局 8dp/硬编码 6dp）。
     val tablet = isTablet()
-    val gboardKeyStyle = LocalGboardKeyStyle.current
-    val t9CornerRadius = keyCornerRadiusFor(kbKey, "t9", tablet, gboardKeyStyle)
-    val strokeCornerRadius = keyCornerRadiusFor(kbKey, "stroke", tablet, gboardKeyStyle)
-    val handwritingCornerRadius = keyCornerRadiusFor(kbKey, "handwriting", tablet, gboardKeyStyle)
+    val t9CornerRadius = keyCornerRadiusFor(kbKey, "t9", tablet)
+    val strokeCornerRadius = keyCornerRadiusFor(kbKey, "stroke", tablet)
+    val handwritingCornerRadius = keyCornerRadiusFor(kbKey, "handwriting", tablet)
 
 
     val onGestureAction: (GestureAction, String) -> Unit = { action, value ->
@@ -191,8 +190,8 @@ fun KeyboardLayoutScreen(
                     keyboardBackgroundColor = keyboardBgColor,
                     shadowEnabled = kbShadow.enabled,
                     shadowElevation = kbShadow.elevation.dp,
-                    shadowShapeRadius = maxOf(kbShadow.shapeRadius.dp, keyCornerRadiusFor(kbKey, "number", isTablet(), LocalGboardKeyStyle.current)),
-                    keyCornerRadius = keyCornerRadiusFor(kbKey, "number", isTablet(), LocalGboardKeyStyle.current),
+                    shadowShapeRadius = maxOf(kbShadow.shapeRadius.dp, keyCornerRadiusFor(kbKey, "number", isTablet())),
+                    keyCornerRadius = keyCornerRadiusFor(kbKey, "number", isTablet()),
                     keySpacingX = kbKey.spacingFor("number").first?.dp,
                     keySpacingY = kbKey.spacingFor("number").second?.dp,
                     modifier = modifier,
@@ -219,8 +218,8 @@ fun KeyboardLayoutScreen(
                     keyboardBackgroundColor = keyboardBgColor,
                     shadowEnabled = kbShadow.enabled,
                     shadowElevation = kbShadow.elevation.dp,
-                    shadowShapeRadius = maxOf(kbShadow.shapeRadius.dp, keyCornerRadiusFor(kbKey, "symbol", isTablet(), LocalGboardKeyStyle.current)),
-                    keyCornerRadius = keyCornerRadiusFor(kbKey, "symbol", isTablet(), LocalGboardKeyStyle.current),
+                    shadowShapeRadius = maxOf(kbShadow.shapeRadius.dp, keyCornerRadiusFor(kbKey, "symbol", isTablet())),
+                    keyCornerRadius = keyCornerRadiusFor(kbKey, "symbol", isTablet()),
                     keySpacingX = kbKey.spacingFor("symbol").first?.dp,
                     keySpacingY = kbKey.spacingFor("symbol").second?.dp,
                     modifier = modifier,

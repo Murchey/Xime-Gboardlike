@@ -92,8 +92,16 @@ private const val BUBBLE_RADIUS_DELTA_PX = 2f
 /** 按压气泡抬起后的滞留时长：随抬起瞬间消失看不清键位提示（主流输入法约 50~80ms），取中值。 */
 private const val PRESS_BUBBLE_RELEASE_DELAY_MS = 60L
 
-/** 气泡出现的平滑放大时长（Gboard 式扩展感，快速弹出不拖沓）。 */
-private const val APPEAR_DURATION_MS = 110
+/**
+ * 气泡出现动画参数：逐值对照 Gboard 反编译资源 res/anim/0x7f010002.xml
+ *   <scale pivotX=50% pivotY=100% fromXScale=0.9 toXScale=1 fromYScale=0.9 toYScale=1
+ *          interpolator=decelerate>
+ *   <alpha fromAlpha=0 toAlpha=1 interpolator=decelerate>
+ * 即：从 0.9 放大到 1.0、透明度 0→1，减速插值。原来的 0.72 起始缩放明显过小，
+ * 观感上"弹得比 Gboard 夸张"，这里改成与反编译一致。
+ */
+private const val APPEAR_DURATION_MS = 100
+private const val BUBBLE_SCALE_FROM = 0.9f
 
 /**
  * 各布局共享的气泡状态持有器。
@@ -435,7 +443,8 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
 
     // Gboard 式扩展性视觉：气泡从键侧（底部）平滑放大浮现，快速但有弹性伸展感。
     val p = data.appearProgress.coerceIn(0f, 1f)
-    val s = 0.72f + 0.28f * p
+    // Gboard: fromXScale/fromYScale = 0.9。早期实现取 0.72 过大，观感比 Gboard 夸张。
+    val s = BUBBLE_SCALE_FROM + (1f - BUBBLE_SCALE_FROM) * p
     // 锚点＝气泡底边中点（贴近按键），气泡向上"长"出来
     // Gboard ahaa.m(): setPivotX(w*0.5), setPivotY(h) —— 支点恒在气泡底边中点。
     // 圆形气泡没有下伸方块，其底边悬在按键上方 10dp，若按体高算支点会让缩放
@@ -443,7 +452,8 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
     val pivotY = data.boxTop + data.bodyHeightPx + data.pointerHeightPx +
         if (data.isCircularPress) with(density) { 10.dp.toPx() } else 0f
     val pivot = Offset(data.boxLeft + data.bodyWidth / 2f, pivotY)
-    val fillAlpha = (255 * p.coerceAtLeast(0.15f)).toInt()
+    // Gboard: fromAlpha = 0 -> toAlpha = 1（线性取自 decelerate 进度 p）
+    val fillAlpha = (255 * p).toInt()
 
     scale(scaleX = s, scaleY = s, pivot = pivot) {
     drawIntoCanvas { composeCanvas ->

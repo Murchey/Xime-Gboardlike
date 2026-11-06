@@ -140,7 +140,7 @@ fun HandwritingKeyboardLayout(
     // 按 [handwritingChromeFor] 取手机/平板两档，圆角/间距/外围留白与其它键盘一致。
     val tablet = isTablet()
     val keyCornerRadius = keyCornerRadiusFor(
-        KeysConfigHelper.getKeyboardKeyConfig(), "handwriting", tablet, LocalGboardKeyStyle.current) 
+        KeysConfigHelper.getKeyboardKeyConfig(), "handwriting", tablet) 
     val chrome = handwritingChromeFor(tablet, keyCornerRadius)
     val sheetWidth = chrome.sheetWidthDp.dp
     val barHeight = chrome.barHeightDp.dp

@@ -236,8 +236,13 @@ fun PanelKeyboardLayout(
     }
 }
 
-/** 键盘区两侧外围留白（dp）：手机 4、平板 16（键面距屏幕边 20dp，与平板 26 键同档）。 */
-internal const val PHONE_KEYBOARD_SIDE_PADDING_DP = 4
+/**
+ * 键盘区两侧外围留白（dp）：手机 0、平板 16（键面距屏幕边 20dp，与平板 26 键同档）。
+ *
+ * 手机改为 0：Gboard 手机键盘是满宽铺到屏幕边缘的，原来的 4dp 会在两侧留出
+ * 可见缝隙，与 Gboard 观感不一致（26 键路径也已同步去掉了 4dp）。
+ */
+internal const val PHONE_KEYBOARD_SIDE_PADDING_DP = 0
 internal const val TABLET_KEYBOARD_SIDE_PADDING_DP = 16
 
 /** 键盘区两侧外围留白（dp，竖屏口径）：面板 / 九键 / 笔画 / 手写共用档位。 */

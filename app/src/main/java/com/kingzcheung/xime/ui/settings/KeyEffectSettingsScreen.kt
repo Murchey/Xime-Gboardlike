@@ -77,31 +77,6 @@ fun KeyEffectSettingsContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                SettingsSection(title = "按键样式", content = {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "默认使用 Gboard 风格；切换到经典可保留 xime 原有键面。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilterChip(
-                                selected = uiState.keyStyle == SettingsPreferences.KEY_STYLE_GBOARD,
-                                onClick = { viewModel.setKeyStyle(SettingsPreferences.KEY_STYLE_GBOARD) },
-                                label = { Text("Gboard 风格") }
-                            )
-                            FilterChip(
-                                selected = uiState.keyStyle == SettingsPreferences.KEY_STYLE_XIME,
-                                onClick = { viewModel.setKeyStyle(SettingsPreferences.KEY_STYLE_XIME) },
-                                label = { Text("xime 经典") }
-                            )
-                        }
-                    }
-                })
-            }
-
-            item {
                 SettingsSection(title = tr(R.string.s_changganqipao), content = {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(

@@ -30,7 +30,7 @@ class KeyboardDeviceStyleTest {
 
     @Test
     fun `圆角未覆盖时按设备档：手机全局值、平板大键面档`() {
-        assertEquals(8.dp, keyCornerRadiusFor(config, "qwerty", isTablet = false))
+        assertEquals(10.dp, keyCornerRadiusFor(config, "qwerty", isTablet = false))
         assertEquals(14.dp, keyCornerRadiusFor(config, "qwerty", isTablet = true))
         // 平板值是「下限」：全局配得更大时取更大者
         assertEquals(16.dp, keyCornerRadiusFor(config.copy(cornerRadius = 16), "qwerty", isTablet = true))
@@ -60,7 +60,7 @@ class KeyboardDeviceStyleTest {
     fun `overlay 面板（全量符号与表情）圆角同样按设备档`() {
         // 这两块没有 xime.yaml 段，按全局值 + 平板大键面档，与 26 键/面板同观感
         val plain = KeyboardKeyConfig()
-        assertEquals(8.dp, overlayKeyCornerRadius(plain, isTablet = false))
+        assertEquals(10.dp, overlayKeyCornerRadius(plain, isTablet = false))
         assertEquals(14.dp, overlayKeyCornerRadius(plain, isTablet = true))
         assertEquals(
             "同一设备上 overlay 与 26 键圆角一致",
@@ -116,10 +116,10 @@ class KeyboardDeviceStyleTest {
     // ── 键盘区外围留白 / 两侧留白档（面板 · 九键 · 笔画 · 手写共用） ──────
 
     @Test
-    fun `外围留白档：手机竖屏 4-4-8、手机横屏 50-2、平板 16-16-8`() {
+    fun `外围留白档：手机竖屏 0-0-8、手机横屏 50-2、平板 16-16-8`() {
         val portrait = panelOuterPadding(isLandscape = false, isTablet = false)
-        assertEquals(4.dp, portrait.calculateLeftPadding(LayoutDirection.Ltr))
-        assertEquals(4.dp, portrait.calculateRightPadding(LayoutDirection.Ltr))
+        assertEquals(0.dp, portrait.calculateLeftPadding(LayoutDirection.Ltr))
+        assertEquals(0.dp, portrait.calculateRightPadding(LayoutDirection.Ltr))
         assertEquals(8.dp, portrait.calculateBottomPadding())
 
         val phoneLandscape = panelOuterPadding(isLandscape = true, isTablet = false)
@@ -136,8 +136,8 @@ class KeyboardDeviceStyleTest {
     }
 
     @Test
-    fun `两侧留白档：手机 4dp、平板 16dp`() {
-        assertEquals(4f, keyboardSidePaddingDp(isTablet = false))
+    fun `两侧留白档：手机 0dp（满宽）、平板 16dp`() {
+        assertEquals(0f, keyboardSidePaddingDp(isTablet = false))
         assertEquals(16f, keyboardSidePaddingDp(isTablet = true))
     }
 
@@ -151,9 +151,9 @@ class KeyboardDeviceStyleTest {
 
     @Test
     fun `九键左栏列宽按设备档：与键盘态同公式（页宽−两侧留白−列间隙）`() {
-        // 页宽 1000dp：手机基数 1000−8−4 = 988 → 988×0.8/5 = 158.08
+        // 页宽 1000dp：手机基数 1000−0−4 = 996 → 996×0.8/5 = 159.36（手机两侧留白已改为 0）
         //              平板基数 1000−32−4 = 964 → 964×0.8/5 = 154.24
-        assertEquals(158.08f, t9LeftRailWidthDp(1000f, isTablet = false), 0.001f)
+        assertEquals(159.36f, t9LeftRailWidthDp(1000f, isTablet = false), 0.001f)
         assertEquals(154.24f, t9LeftRailWidthDp(1000f, isTablet = true), 0.001f)
     }
 
@@ -170,8 +170,8 @@ class KeyboardDeviceStyleTest {
         assertEquals(1f, phone.keyPaddingDp, 0.001f)
         assertEquals(4f, phone.gapDp, 0.001f)
         assertEquals(16f, phone.fontSizeSp, 0.001f)
-        assertEquals(4f, phone.sidePaddingDp, 0.001f)
-        assertEquals(8.dp, phone.keyCornerRadius)
+        assertEquals(0f, phone.sidePaddingDp, 0.001f)
+        assertEquals(10.dp, phone.keyCornerRadius)
 
         val tablet = handwritingChromeFor(
             isTablet = true,

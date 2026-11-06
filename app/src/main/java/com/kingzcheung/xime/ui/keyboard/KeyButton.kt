@@ -101,13 +101,6 @@ internal val LocalKeyFontScale = staticCompositionLocalOf { 1f }
  *  独立于 shadow.shape_radius，为统一配置化而设。 */
 val LocalKeyCornerRadius = staticCompositionLocalOf { 8.dp }
 
-/**
- * 当前是否使用 Gboard 按键外观（默认 true）。
- *
- * 由 [KeyboardView] 根层按用户设置提供；圆角/键面/间距等需要区分样式的取值
- * 统一读这里，避免每个布局各自传参导致风格漂移。
- */
-val LocalGboardKeyStyle = staticCompositionLocalOf { true }
 
 /** 按键内容随按键实际高度放大；手机尺寸下保持原字号。 */
 internal fun adaptiveKeyContentScale(
@@ -230,7 +223,8 @@ internal fun Modifier.keyPressFeedback(
         .then(
             // Gboard 按下只提亮键面、不描边（SoftKeyView 靠背景 state_pressed 表达）；
             // 经典样式保留高对比描边，便于浅色主题下辨认。
-            if (isPressed && !LocalGboardKeyStyle.current) {
+            // Gboard 按下只提亮键面、不描边（SoftKeyView 靠背景 state_pressed 表达）
+            if (false) {
                 Modifier.border(1.5.dp, pressBorderColor(baseColor), shape)
             } else Modifier
         )
@@ -475,10 +469,9 @@ fun KeyButton(
     val cursorGestureActive = LocalCursorGestureActive.current
 
     // Gboard 键面是扁平的（不描边、无底部阴影层）；经典样式沿用用户的 shadow 设置。
-    val gboardFlatStyle = LocalGboardKeyStyle.current
-    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor, gboardFlatStyle) {
+    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor) {
         Modifier.keyOutline(
-            enabled = shadowEnabled && !gboardFlatStyle,
+            enabled = false, // Gboard 键面扁平：不描边
             cornerRadius = shadowShapeRadius,
             color = keyOutlineColor(backgroundColor),
         )
@@ -658,7 +651,7 @@ fun KeyButton(
             // 按下描边：Gboard 只有键面提亮、不描边；经典样式保留高对比描边，
             // 让浅色主题白键也能一眼看出「确实按到了」。
             .then(
-                if (isPressed && !gboardFlatStyle) {
+                if (false) { // Gboard 按下不描边
                     Modifier.border(
                         width = 1.5.dp,
                         color = pressBorderColor(backgroundColor),
@@ -839,10 +832,9 @@ fun SwipeableKeyButton(
     }
 
     // Gboard 键面是扁平的（不描边、无底部阴影层）；经典样式沿用用户的 shadow 设置。
-    val gboardFlatStyle = LocalGboardKeyStyle.current
-    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor, gboardFlatStyle) {
+    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor) {
         Modifier.keyOutline(
-            enabled = shadowEnabled && !gboardFlatStyle,
+            enabled = false, // Gboard 键面扁平：不描边
             cornerRadius = shadowShapeRadius,
             color = keyOutlineColor(backgroundColor),
         )
@@ -1515,10 +1507,9 @@ fun IconKeyButton(
     val currentOnClick by rememberUpdatedState(onClick)
 
     // Gboard 键面是扁平的（不描边、无底部阴影层）；经典样式沿用用户的 shadow 设置。
-    val gboardFlatStyle = LocalGboardKeyStyle.current
-    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor, gboardFlatStyle) {
+    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor) {
         Modifier.keyOutline(
-            enabled = shadowEnabled && !gboardFlatStyle,
+            enabled = false, // Gboard 键面扁平：不描边
             cornerRadius = shadowShapeRadius,
             color = keyOutlineColor(backgroundColor),
         )
@@ -1706,10 +1697,9 @@ fun SwipeableIconKeyButton(
     }
 
     // Gboard 键面是扁平的（不描边、无底部阴影层）；经典样式沿用用户的 shadow 设置。
-    val gboardFlatStyle = LocalGboardKeyStyle.current
-    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor, gboardFlatStyle) {
+    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor) {
         Modifier.keyOutline(
-            enabled = shadowEnabled && !gboardFlatStyle,
+            enabled = false, // Gboard 键面扁平：不描边
             cornerRadius = shadowShapeRadius,
             color = keyOutlineColor(backgroundColor),
         )
@@ -2079,7 +2069,7 @@ fun SwipeableIconKeyButton(
             // 按下描边：Gboard 只有键面提亮、不描边；经典样式保留高对比描边，
             // 让浅色主题白键也能一眼看出「确实按到了」。
             .then(
-                if (isPressed && !gboardFlatStyle) {
+                if (false) { // Gboard 按下不描边
                     Modifier.border(
                         width = 1.5.dp,
                         color = pressBorderColor(backgroundColor),
@@ -2242,10 +2232,9 @@ fun SwipeableKeyButtonLandscape(
     }
 
     // Gboard 键面是扁平的（不描边、无底部阴影层）；经典样式沿用用户的 shadow 设置。
-    val gboardFlatStyle = LocalGboardKeyStyle.current
-    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor, gboardFlatStyle) {
+    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor) {
         Modifier.keyOutline(
-            enabled = shadowEnabled && !gboardFlatStyle,
+            enabled = false, // Gboard 键面扁平：不描边
             cornerRadius = shadowShapeRadius,
             color = keyOutlineColor(backgroundColor),
         )

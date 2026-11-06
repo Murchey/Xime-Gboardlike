@@ -231,8 +231,7 @@ fun KeyboardView(
     val kbColors = KeysConfigHelper.getKeyboardColors()
     val kbShadow = KeysConfigHelper.getKeyboardShadow()
     val kbKey = KeysConfigHelper.getKeyboardKeyConfig()
-    // 按键外观：Gboard 风格（默认）/ xime 经典，由设置页切换
-    val gboardKeyStyle = SettingsPreferences.getKeyStyle(LocalContext.current) == SettingsPreferences.KEY_STYLE_GBOARD
+    // 按键外观固定为 Gboard 风格（样式切换开关已移除，见 PROGRESS 记录）
     val longToColor: (Long) -> androidx.compose.ui.graphics.Color = { if (it > 0xFFFFFF) androidx.compose.ui.graphics.Color(it) else androidx.compose.ui.graphics.Color(0xFF000000 or it) }
     val keyboardBgColor = KeyboardThemes.getKeyboardBackgroundColor(state.themeId, state.isDarkTheme)
     val keyBgColor = KeyboardThemes.getKeyBgColorOverride(state.themeId, state.isDarkTheme)
@@ -288,7 +287,6 @@ fun KeyboardView(
         onDragEnd = { callbacks.onFloatingKeyboardDragEnd?.invoke() },
         onCardPositioned = onCardPositioned,
     ) {
-    CompositionLocalProvider(LocalGboardKeyStyle provides gboardKeyStyle) {
     Box(
         modifier = contentModifier.onSizeChanged { size ->
             measuredWidthDp = with(densityForMeasure) { size.width.toDp().value.roundToInt() }
@@ -1235,8 +1233,8 @@ fun KeyboardView(
                 val panelType = (page as KeyboardPage.Panel).type
                 // 面板圆角与平板 26 键共用同一条规则（yaml 按键盘覆盖优先 → 设备档默认，
                 // 平板用大键面档）：xime.yaml 写 keyboard.key.number/symbol.corner_radius 可单独调
-                val numberPanelRadius = keyCornerRadiusFor(kbKey, "number", isTablet(), gboardKeyStyle)
-                val symbolPanelRadius = keyCornerRadiusFor(kbKey, "symbol", isTablet(), gboardKeyStyle)
+                val numberPanelRadius = keyCornerRadiusFor(kbKey, "number", isTablet())
+                val symbolPanelRadius = keyCornerRadiusFor(kbKey, "symbol", isTablet())
                 when (panelType) {
                     PanelType.NUMBER -> PanelKeyboardLayout(
                         section = "number",
@@ -1585,7 +1583,7 @@ fun KeyboardView(
                             accentColor = accentColor,
                             keyBgColor = keyBgColor,
                             bottomPaddingDp = state.keyboardBottomPaddingDp,
-                            keyCornerRadius = overlayKeyCornerRadius(kbKey, isTablet(), gboardKeyStyle),
+                            keyCornerRadius = overlayKeyCornerRadius(kbKey, isTablet()),
                             shadowEnabled = kbShadow.enabled,
                             shadowElevation = kbShadow.elevation.dp,
                             shadowShapeRadius = kbShadow.shapeRadius.dp,
@@ -1664,7 +1662,6 @@ fun KeyboardView(
         }
     }
     }
-}
 }
 }
 
