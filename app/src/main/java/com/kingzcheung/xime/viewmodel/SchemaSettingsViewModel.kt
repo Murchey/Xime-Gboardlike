@@ -97,20 +97,17 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
         } else {
             enabled.add(schema.schemaId)
         }
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                SchemaManager.setEnabledSchemas(context, enabled)
-                // 启用后必须保证该方案已编译：librime 只编译 schema_list 内的方案，
-                // 而 setEnabledSchemas 只写文件不触发部署，之前会出现"启用了却切不过去"。
-                if (schema.schemaId in enabled && !hasBuildArtifacts(schema.schemaId)) {
-                    SettingsPreferences.setDeploymentHash(context, "")
-                    if (RimeEngine.isInitialized()) {
-                        FileLogger.i("SchemaSettingsVM", "Schema ${schema.schemaId} 无编译产物，触发部署")
-                        RimeConfigHelper.ensureDeployment(context)
-                    }
-                }
+        // 先落 UI 状态：开关必须立即有反馈
+        _uiState.update { it.copy(enabledSchemas = enabled) }
+        val newlyEnabled = schema.schemaId in enabled
+        viewModelScope.launch(Dispatchers.IO) {
+            SchemaManager.setEnabledSchemas(context, enabled)
+            // 新启用的方案可能还没有编译产物（librime 只编译 schema_list 内的方案）。
+            // 这里只把部署标记置失效，交给既有的 ensureDeployment（应用/服务启动时）
+            // 去补编译——不在点击回调里直接跑部署，避免卡住开关、也避免与主流程抢锁。
+            if (newlyEnabled && !hasBuildArtifacts(schema.schemaId)) {
+                SettingsPreferences.setDeploymentHash(context, "")
             }
-            _uiState.update { it.copy(enabledSchemas = enabled) }
         }
     }
 

@@ -76,10 +76,6 @@ object RimeConfigHelper {
      */
     fun ensureDeployment(context: Context): Boolean {
         synchronized(deploymentLock) {
-            // librime 只编译 default.yaml 里 schema_list 列出的方案；而内置 default.yaml
-            // 自带 wubi86/wubi86_pinyin 等条目，任何"资产覆盖后未及时写回"的路径都会让
-            // 未启用方案被一并编译。部署前强制归一，确保只编译用户启用的方案。
-            SchemaManager.applyEnabledSchemasToDefaultYaml(context)
             // 刚补回基础文件：旧 hash 与产物已不可信，强制重编
             if (ensureBuiltinBaseFiles(context) > 0) SettingsPreferences.setDeploymentHash(context, "")
             val currentHash = computeDeploymentHash(context)
