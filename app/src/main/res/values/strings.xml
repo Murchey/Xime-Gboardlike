@@ -442,6 +442,10 @@
     <string name="s_yiguanbi_zhishoujiwenzi_fuzhit_8bf4d">已关闭：只收集文字，复制图片不会再进入剪贴板历史。</string>
     <string name="s_minganneirong">敏感内容</string>
     <string name="s_jilumimadengminganneirong">记录密码等敏感内容</string>
+    <string name="s_mingmingdaorufangan">命名导入方案</string>
+    <string name="s_fanganbaomingcheng">方案包名称</string>
+    <string name="s_liukong_shiyongshijianchuo">给这个方案包起个名字，方便以后识别；留空则按时间戳命名。</string>
+    <string name="s_mingming_shili">例如：雾凇拼音</string>
     <string name="s_morenbubaocunmimaguanliqibiaoj_9d5df">默认不保存密码管理器标记为敏感的剪贴板（密码、卡号等）</string>
     <string name="s_yikaiqi_minganneironghuibaocun_3f987">已开启：敏感内容会保存进历史，启用剪贴板同步时也会上传。</string>
     <string name="s_tupianshangxian">图片上限</string>

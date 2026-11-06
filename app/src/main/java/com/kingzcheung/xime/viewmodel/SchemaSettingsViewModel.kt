@@ -171,9 +171,9 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
         _uiState.update { it.copy(currentSchema = previous) }
     }
 
-    fun importSchemaFile(uri: Uri) {
+    fun importSchemaFile(uri: Uri, packageName: String? = null) {
         viewModelScope.launch {
-            when (val result = ImportManager.import(context, uri)) {
+            when (val result = ImportManager.import(context, uri, packageName)) {
                 is ImportManager.ImportResult.Content -> {
                     refresh()
                     _importCompleted.tryEmit(Unit)

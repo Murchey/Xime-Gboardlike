@@ -45,6 +45,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -68,7 +69,10 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.net.Uri
 import com.kingzcheung.xime.settings.BuiltinPackages
+import com.kingzcheung.xime.settings.ImportManager
+import com.kingzcheung.xime.settings.SchemaManager
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.viewmodel.LocalPackageItem
 import com.kingzcheung.xime.viewmodel.LocalPackagePhase
@@ -96,12 +100,26 @@ fun SchemaLocalContent(
     var showImportWarning by remember { mutableStateOf(false) }
     var dontShowImportWarning by remember { mutableStateOf(false) }
     var pendingImportAction by remember { mutableStateOf<() -> Unit>({}) }
+    // 压缩包会落成 market/ 下的一个「方案包」，导入前先让用户命名（留空用时间戳 ID）
+    var pendingArchiveUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var showNameDialog by remember { mutableStateOf(false) }
+    var packageNameInput by remember { mutableStateOf("") }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
-        for (uri in uris) {
-            importViewModel.importSchemaFile(uri)
+        val archives = uris.filter { uri ->
+            val raw = ImportManager.queryDisplayName(context, uri) ?: return@filter false
+            SchemaManager.isArchive(SchemaManager.sanitizeDisplayName(raw))
+        }
+        uris.filterNot { it in archives }.forEach { importViewModel.importSchemaFile(it) }
+        if (archives.isNotEmpty()) {
+            pendingArchiveUris = archives
+            packageNameInput = ImportManager.queryDisplayName(context, archives.first())
+                ?.substringBeforeLast('.')
+                ?.let { SchemaManager.sanitizePackageName(it) }
+                .orEmpty()
+            showNameDialog = true
         }
     }
 
@@ -194,6 +212,51 @@ fun SchemaLocalContent(
                 viewModel.loadLocalPackages()
             },
             onRefresh = { viewModel.loadLocalPackages() }
+        )
+    }
+
+    if (showNameDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                // 取消 = 放弃本次导入（压缩包不进 market/）
+                showNameDialog = false
+                pendingArchiveUris = emptyList()
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text(tr(R.string.s_mingmingdaorufangan), fontWeight = FontWeight.SemiBold) },
+            text = {
+                Column {
+                    Text(
+                        tr(R.string.s_liukong_shiyongshijianchuo),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = packageNameInput,
+                        onValueChange = { packageNameInput = it.take(48) },
+                        singleLine = true,
+                        label = { Text(tr(R.string.s_fanganbaomingcheng)) },
+                        placeholder = { Text(tr(R.string.s_mingming_shili)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val name = packageNameInput
+                    val uris = pendingArchiveUris
+                    showNameDialog = false
+                    pendingArchiveUris = emptyList()
+                    uris.forEach { importViewModel.importSchemaFile(it, name) }
+                }) { Text(tr(R.string.s_queding)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showNameDialog = false
+                    pendingArchiveUris = emptyList()
+                }) { Text(tr(R.string.s_quxiao)) }
+            },
         )
     }
 

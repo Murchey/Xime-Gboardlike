@@ -559,6 +559,32 @@ object SchemaManager {
     fun generateImportId(): String =
         "import_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
 
+    /**
+     * 生成导入包目录名：用户给了名字就用它，否则退回时间戳 ID。
+     *
+     * 用户命名会做安全清洗（只留字母/数字/汉字/连字符/下划线，去掉路径分隔符与空白），
+     * 空名退回时间戳；重名自动加 `_2`、`_3` 后缀，避免覆盖已有导入包。
+     */
+    fun generateImportId(context: Context, preferredName: String?): String {
+        val base = sanitizePackageName(preferredName)
+        if (base.isEmpty()) return generateImportId()
+        var candidate = base
+        var seq = 2
+        while (getMarketDir(context, candidate).exists() && seq < 1000) {
+            candidate = "${base}_$seq"
+            seq++
+        }
+        return candidate
+    }
+
+    /** 清洗用户输入的包名：保留字母数字汉字，其余（空白/标点/路径符）转下划线。 */
+    internal fun sanitizePackageName(raw: String?): String =
+        raw.orEmpty()
+            .trim()
+            .replace(Regex("[\\\\/:*?\"<>|\\s]+"), "_")
+            .trim('_', '.')
+            .take(48)
+
     /** 导入归档时禁止覆盖系统文件（保护应用核心配置与系统元数据）。 */
     fun isProtectedImportName(name: String): Boolean {
         val base = name.substringAfterLast('/')
@@ -1032,6 +1058,8 @@ object SchemaManager {
         displayName: String,
         inputStream: java.io.InputStream,
         autoEnable: Boolean = true,
+        /** 压缩包导入时用户自定义的包名（为空则用时间戳 ID）。 */
+        packageName: String? = null,
     ): ImportResult = withContext(Dispatchers.IO) {
         val name = sanitizeDisplayName(displayName)
         if (isFont(name)) {
@@ -1066,7 +1094,7 @@ object SchemaManager {
             }
         } else if (isArchive(name)) {
             // 压缩包：保存到 market/ 等待用户手动安装
-            val importId = generateImportId()
+            val importId = generateImportId(context, packageName)
             val pkgDir = getMarketDir(context, importId)
             try {
                 pkgDir.mkdirs()

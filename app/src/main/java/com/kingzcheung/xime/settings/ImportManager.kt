@@ -47,8 +47,13 @@ object ImportManager {
     fun isPluginFile(name: String): Boolean =
         name.endsWith(".xipk", ignoreCase = true)
 
-    /** 从 URI 导入（文件选择器、分享等）。按文件名自动路由。 */
-    suspend fun import(context: Context, uri: Uri): ImportResult = withContext(Dispatchers.IO) {
+    /** 从 URI 导入（文件选择器、分享等）。按文件名自动路由。
+     *  @param packageName 压缩包导入时的用户自定义包名；为空则用时间戳 ID。 */
+    suspend fun import(
+        context: Context,
+        uri: Uri,
+        packageName: String? = null,
+    ): ImportResult = withContext(Dispatchers.IO) {
         val displayName = queryDisplayName(context, uri)
             ?: return@withContext ImportResult.Failed(tr(R.string.s_wufashibiewenjianming))
         val name = SchemaManager.sanitizeDisplayName(displayName)
@@ -66,7 +71,7 @@ object ImportManager {
             if (stream == null) {
                 ImportResult.Failed(tr(R.string.s_wufaduquwenjian))
             } else {
-                val r = SchemaManager.saveImportedFile(context, name, stream)
+                val r = SchemaManager.saveImportedFile(context, name, stream, packageName = packageName)
                 ImportResult.Content(r.success, r.installedDirect, r.conflicts)
             }
         }
@@ -97,7 +102,8 @@ object ImportManager {
         }
     }
 
-    private fun queryDisplayName(context: Context, uri: Uri): String? {
+    /** 取 URI 的展示文件名（UI 需要在导入前判断是否为压缩包）。 */
+    fun queryDisplayName(context: Context, uri: Uri): String? {
         return try {
             context.contentResolver.query(
                 uri,

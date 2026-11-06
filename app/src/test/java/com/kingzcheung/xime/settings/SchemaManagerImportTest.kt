@@ -24,6 +24,36 @@ class SchemaManagerImportTest {
         )
     }
 
+    // ── 用户自定义方案包名 ──────────────────────────────────
+
+    @Test
+    fun `package name keeps letters digits and CJK`() {
+        assertEquals("雾凇拼音", SchemaManager.sanitizePackageName("雾凇拼音"))
+        assertEquals("my_schema2", SchemaManager.sanitizePackageName("my_schema2"))
+    }
+
+    @Test
+    fun `package name strips path separators and blanks`() {
+        // 路径分隔符与空白会转下划线，杜绝越出 market/ 子目录
+        assertEquals("a_b", SchemaManager.sanitizePackageName("a/b"))
+        assertEquals("a_b", SchemaManager.sanitizePackageName("a b"))
+        // 首尾的点/横线会被裁掉，所以 ../ 前缀不会残留
+        assertEquals("a_b", SchemaManager.sanitizePackageName("../../a b"))
+        assertEquals("etc_passwd", SchemaManager.sanitizePackageName("/etc/passwd"))
+    }
+
+    @Test
+    fun `blank package name falls back to empty`() {
+        assertEquals("", SchemaManager.sanitizePackageName(null))
+        assertEquals("", SchemaManager.sanitizePackageName("   "))
+        assertEquals("", SchemaManager.sanitizePackageName("..."))
+    }
+
+    @Test
+    fun `package name is length capped`() {
+        assertEquals(48, SchemaManager.sanitizePackageName("x".repeat(200)).length)
+    }
+
     @Test
     fun `protects default_yaml from import`() {
         assertTrue(SchemaManager.isProtectedImportName("default.yaml"))
