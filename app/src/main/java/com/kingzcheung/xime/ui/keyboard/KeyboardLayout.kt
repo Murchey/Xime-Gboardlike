@@ -773,12 +773,15 @@ internal fun keyCornerRadiusFor(
 }
 
 /**
- * Gboard 键面圆角档：手机 10dp，平板沿用既有大键面档 [TABLET_KEY_CORNER_RADIUS]（14dp）。
+ * Gboard 键面圆角档：手机 6dp，平板沿用既有大键面档 [TABLET_KEY_CORNER_RADIUS]（14dp）。
+ *
+ * 手机 6dp 对照 Gboard 实际观感收窄（原先 10dp 明显偏圆）。与全局默认
+ * `keyboard.key.corner_radius`（同为 6）取较大值，因此 yaml 里调大仍然生效。
  *
  * 平板与既有档位取同一值，保证"同一设备上 26 键 / 面板 / 九键 / 笔画 / 手写圆角一致"
  * 这条不变量仍成立（KeyboardDeviceStyleTest 有此断言）。
  */
-private val GBOARD_KEY_CORNER_PHONE = 10.dp
+private val GBOARD_KEY_CORNER_PHONE = 6.dp
 private val GBOARD_KEY_CORNER_TABLET = TABLET_KEY_CORNER_RADIUS
 
 /** 主题调色板：主键盘正常路径、分体路径与面板渲染共用同一解析，防止多处取值漂移。 */

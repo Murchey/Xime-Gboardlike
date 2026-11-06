@@ -30,7 +30,8 @@ class KeyboardDeviceStyleTest {
 
     @Test
     fun `圆角未覆盖时按设备档：手机全局值、平板大键面档`() {
-        assertEquals(10.dp, keyCornerRadiusFor(config, "qwerty", isTablet = false))
+        // 全局配 8 时手机取 max(8, Gboard 档 6) = 8
+        assertEquals(8.dp, keyCornerRadiusFor(config, "qwerty", isTablet = false))
         assertEquals(14.dp, keyCornerRadiusFor(config, "qwerty", isTablet = true))
         // 平板值是「下限」：全局配得更大时取更大者
         assertEquals(16.dp, keyCornerRadiusFor(config.copy(cornerRadius = 16), "qwerty", isTablet = true))
@@ -60,7 +61,7 @@ class KeyboardDeviceStyleTest {
     fun `overlay 面板（全量符号与表情）圆角同样按设备档`() {
         // 这两块没有 xime.yaml 段，按全局值 + 平板大键面档，与 26 键/面板同观感
         val plain = KeyboardKeyConfig()
-        assertEquals(10.dp, overlayKeyCornerRadius(plain, isTablet = false))
+        assertEquals(6.dp, overlayKeyCornerRadius(plain, isTablet = false))
         assertEquals(14.dp, overlayKeyCornerRadius(plain, isTablet = true))
         assertEquals(
             "同一设备上 overlay 与 26 键圆角一致",
@@ -171,7 +172,7 @@ class KeyboardDeviceStyleTest {
         assertEquals(4f, phone.gapDp, 0.001f)
         assertEquals(16f, phone.fontSizeSp, 0.001f)
         assertEquals(0f, phone.sidePaddingDp, 0.001f)
-        assertEquals(10.dp, phone.keyCornerRadius)
+        assertEquals(6.dp, phone.keyCornerRadius)
 
         val tablet = handwritingChromeFor(
             isTablet = true,

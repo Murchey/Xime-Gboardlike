@@ -150,7 +150,7 @@ keyboard:
     candidate_text_color_dark: 0x9AA0A6
   
   # ── 按键配置（可选，不设置则使用默认值）──
-  # corner_radius:      按键圆角半径（dp，默认 8），独立于 shadow.shape_radius
+  # corner_radius:      按键圆角半径（dp，默认 6，对齐 Gboard 观感），独立于 shadow.shape_radius
   # spacing_x:          按键横向间距（dp，默认 2），未设置时各键盘使用自身默认值
   # spacing_y:          按键竖向间距（dp，默认 4.25；横屏默认 2），未设置时各键盘使用自身默认值
   # 各键盘可单独覆盖圆角与间距（可选），键盘名：qwerty / t9 / number / stroke / symbol

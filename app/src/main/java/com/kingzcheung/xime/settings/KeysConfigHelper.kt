@@ -152,7 +152,7 @@ data class KeyboardSpacingConfig(
  * 键盘按键配置，从 xime.yaml keyboard.key 加载。
  */
 data class KeyboardKeyConfig(
-    val cornerRadius: Int = 8,
+    val cornerRadius: Int = 6,
     /** 按键横向间距（dp），未配置时各布局使用自身默认值 */
     val spacingX: Float? = null,
     /** 按键竖向间距（dp），未配置时各布局使用自身默认值 */

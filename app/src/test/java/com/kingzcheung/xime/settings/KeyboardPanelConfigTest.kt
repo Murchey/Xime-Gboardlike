@@ -309,7 +309,8 @@ class KeyboardPanelConfigTest {
         // 未写 *_tablet 的键盘保持原样；手机（不调用该函数）也不受影响
         assertEquals(2f to 2f, config.spacingFor("number"))
         assertEquals(2f to 4.25f, config.spacingFor("symbol"))
-        assertEquals(8, config.cornerRadiusFor("number"))
+        // 默认圆角已对齐 Gboard 观感，从 8 改为 6
+        assertEquals(6, config.cornerRadiusFor("number"))
     }
 
     @Test

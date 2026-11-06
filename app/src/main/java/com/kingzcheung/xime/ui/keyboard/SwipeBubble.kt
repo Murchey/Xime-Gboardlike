@@ -243,7 +243,7 @@ fun rememberSwipeBubbleDrawData(
     //
     // 结论：Gboard 的圆形气泡直径是**固定的 40dp 量级**，不跟随键高。
     // 之前用键高(61.8dp)当直径，比 Gboard 大 55%，这就是"大小明显不同"的主因。
-    val circularBaseDp = if (bubbleScale > 1.2f) 46.dp else 40.dp
+    val circularBaseDp = if (bubbleScale > 1.2f) 50.dp else 46.dp
     val roundTextPx = with(density) { 27.sp.toPx() }
     val roundDiameterPx = maxOf(
         with(density) { circularBaseDp.toPx() },
