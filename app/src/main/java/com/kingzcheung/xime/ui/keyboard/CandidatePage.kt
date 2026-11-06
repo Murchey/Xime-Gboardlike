@@ -596,7 +596,7 @@ private fun CandidatePageItem(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(if (isPressed) textColor.copy(alpha = 0.12f) else Color.Transparent)
+            .keyPressFeedback(isPressed, Color.Transparent, RoundedCornerShape(6.dp))
             .tolerantClick(
                 showRipple = false,
                 interactionSource = interactionSource,
@@ -795,8 +795,8 @@ private fun CandidateRailSymbolKey(
         modifier = modifier
             .fillMaxWidth()
             // 非按压透明：容器已画 keyBg，条目再画一遍会把半透明主题键色叠两次
-            // （合成后比键盘左栏面板更亮）；按压加深与九键 CandidateItem 同款
-            .background(if (isPressed) keyBg.copy(alpha = 0.7f) else Color.Transparent)
+            // （合成后比键盘左栏面板更亮）；按压走统一反馈，与其余键区一致
+            .keyPressFeedback(isPressed, Color.Transparent, RoundedCornerShape(8.dp))
             .tolerantClick(
                 showRipple = false,
                 interactionSource = interactionSource,
@@ -851,11 +851,11 @@ private fun RailKey(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(cornerRadius))
-            .background(
-                when {
-                    !enabled -> keyBg.copy(alpha = 0.4f)
-                    isPressed -> keyBg.copy(alpha = 0.7f)
-                    else -> keyBg
+            .then(
+                if (enabled) {
+                    Modifier.keyPressFeedback(isPressed, keyBg, RoundedCornerShape(cornerRadius))
+                } else {
+                    Modifier.background(keyBg.copy(alpha = 0.4f))
                 }
             )
             .tolerantClick(

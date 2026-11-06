@@ -258,14 +258,13 @@ private fun SymbolButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val symbolKeyShape = RoundedCornerShape(LocalKeyCornerRadius.current)
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(LocalKeyCornerRadius.current))
-            .background(
-                if (isPressed) androidx.compose.ui.graphics.lerp(backgroundColor, Color.Black, 0.2f)
-                else backgroundColor
-            )
+            .clip(symbolKeyShape)
+            // 与其他键区共用统一按下反馈（缩放 + 底色 + 描边），不再单独 lerp
+            .keyPressFeedback(isPressed, backgroundColor, symbolKeyShape)
             .tolerantClick(
                 showRipple = false,
                 interactionSource = interactionSource,

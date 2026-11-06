@@ -66,15 +66,13 @@ fun SpaceKeyButton(
         )
     }
     
+    val keyShape = RoundedCornerShape(LocalKeyCornerRadius.current)
     Box(
         modifier = modifier
             .height((44 * LocalStretchFactor.current).dp)
             .then(shadowModifier)
-            .clip(RoundedCornerShape(LocalKeyCornerRadius.current))
-            .background(
-                if (isPressed) keyPressedColor(backgroundColor)
-                else backgroundColor
-            )
+            .clip(keyShape)
+            .keyPressFeedback(isPressed, backgroundColor, keyShape)
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
