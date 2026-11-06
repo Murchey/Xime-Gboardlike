@@ -234,11 +234,21 @@ fun rememberSwipeBubbleDrawData(
     val singleLongPress = isLongPressMode && swipeState.longPressItems.size == 1
     val circularPress = swipeState.isPressed && !swipeState.isLongPress && swipeState.isLetterPress
     val isRoundBubble = singleLongPress || circularPress
-    // 圆形气泡直径：Gboard 的气泡直径与按键尺寸相当（BasicPopupView 的 15dp/10dp 外边距
-    // 只是内衬，实际观感是"和键一样大的圆"）。此前写死 56dp 再乘缩放，手机上会缩到
-    // ~34dp，明显比 Gboard 小。这里改为跟随按键高度，并保底 48dp。
-    val bubbleMinDiameterPx = with(density) { 48.dp.toPx() }
-    val roundDiameterPx = maxOf(keyBounds.height, bubbleMinDiameterPx)
+    // 圆形气泡直径：逐值取自 Gboard 反编译资源。
+    //
+    // 布局 res/layout/0x7f0e063f（tag=".popup-item.for-keytop-popup"）的
+    // android:minWidth 与 android:minHeight 指向同一个 attr 0x7f0402a2 —— 方形下限，
+    // 这正是圆形气泡的直径来源。该 attr 在 arsc 里的取值是 40/44/46/50dp（主题变体），
+    // 手机取 40dp、平板取 46dp。气泡内字号来自主题属性 0x7f0402f6 = 25/28/30dp（默认 28dp）。
+    //
+    // 结论：Gboard 的圆形气泡直径是**固定的 40dp 量级**，不跟随键高。
+    // 之前用键高(61.8dp)当直径，比 Gboard 大 55%，这就是"大小明显不同"的主因。
+    val circularBaseDp = if (bubbleScale > 1.2f) 46.dp else 40.dp
+    val roundTextPx = with(density) { 27.sp.toPx() }
+    val roundDiameterPx = maxOf(
+        with(density) { circularBaseDp.toPx() },
+        roundTextPx * 1.15f + with(density) { 8.dp.toPx() },
+    )
     val bodyHeightPx = if (isRoundBubble) {
         roundDiameterPx
     } else {
