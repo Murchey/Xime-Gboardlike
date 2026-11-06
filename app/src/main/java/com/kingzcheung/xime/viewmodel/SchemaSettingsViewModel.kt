@@ -80,6 +80,12 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
+    /** 该方案在 build/ 里是否已有编译产物（缺了说明还没部署过）。 */
+    private fun hasBuildArtifacts(schemaId: String): Boolean {
+        val buildDir = java.io.File(SchemaManager.getRimeDir(context), "build")
+        return buildDir.listFiles()?.any { it.name.startsWith("$schemaId.") } == true
+    }
+
     fun toggleSchema(schema: SchemaMeta) {
         val enabled = _uiState.value.enabledSchemas.toMutableList()
         if (schema.schemaId in enabled) {
@@ -94,6 +100,15 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 SchemaManager.setEnabledSchemas(context, enabled)
+                // 启用后必须保证该方案已编译：librime 只编译 schema_list 内的方案，
+                // 而 setEnabledSchemas 只写文件不触发部署，之前会出现"启用了却切不过去"。
+                if (schema.schemaId in enabled && !hasBuildArtifacts(schema.schemaId)) {
+                    SettingsPreferences.setDeploymentHash(context, "")
+                    if (RimeEngine.isInitialized()) {
+                        FileLogger.i("SchemaSettingsVM", "Schema ${schema.schemaId} 无编译产物，触发部署")
+                        RimeConfigHelper.ensureDeployment(context)
+                    }
+                }
             }
             _uiState.update { it.copy(enabledSchemas = enabled) }
         }
