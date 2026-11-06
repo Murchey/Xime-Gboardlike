@@ -472,9 +472,16 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
         canvas.save()
         canvas.translate(data.boxLeft, data.boxTop)
 
+        // 阴影：向下偏移的半透明暗色路径（硬件画布兼容）。setShadowLayer 在硬件加速的
+        // drawPath 上不渲染且会触发软件回退（GPU/CPU 开销），改为轻量绘制副本。
+        bubbleFillPaint.color = SHADOW_COLOR
+        bubbleFillPaint.alpha = (fillAlpha * 0.5f).toInt()
+        canvas.save()
+        canvas.translate(0f, data.shadowRadiusPx * 0.5f)
+        canvas.drawPath(path, bubbleFillPaint)
+        canvas.restore()
         bubbleFillPaint.color = data.bgColor
         bubbleFillPaint.alpha = fillAlpha
-        bubbleFillPaint.setShadowLayer(data.shadowRadiusPx, 0f, 0f, SHADOW_COLOR)
         canvas.drawPath(path, bubbleFillPaint)
 
         if (data.isLongPressMode) {

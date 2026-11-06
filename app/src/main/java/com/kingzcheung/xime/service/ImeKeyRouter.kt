@@ -31,6 +31,58 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
     private companion object {
         /** 纠错插件产出候选的标注（correction_translator 的 SimpleCandidate comment）。 */
         const val CORRECTION_COMMENT = "纠错"
+        /** 引擎未就绪时缓存按键的上限，防止异常堆积。 */
+        const val MAX_PENDING_KEYS = 64
+    }
+
+    // 引擎冷启动/切方案竞态期：按键先入队，引擎就绪后按序补发，避免"切换输入法后短时间无法打字"。
+    private val pendingKeys = ArrayDeque<Pair<String, Boolean>>()
+    private var flushScheduled = false
+
+    /** 引擎是否已能接收按键（已初始化且会话就绪）。 */
+    private fun engineReady(): Boolean {
+        if (!com.kingzcheung.xime.rime.RimeEngine.isInitialized()) return false
+        // getCurrentSchema 无会话返回空串，作为"会话就绪"的轻量代理
+        return service.rimeEngine.getCurrentSchema().isNotEmpty() ||
+            service.rimeEngine.isAsciiMode()
+    }
+
+    /** 把缓存的按键按原顺序补发到正常处理链路。 */
+    private fun flushPendingKeys() {
+        val batch = synchronized(pendingKeys) {
+            flushScheduled = false
+            if (pendingKeys.isEmpty()) return
+            if (!engineReady()) {
+                scheduleFlush()
+                return
+            }
+            val b = pendingKeys.toList()
+            pendingKeys.clear()
+            b
+        }
+        batch.forEach { (k, s) -> handleKeyPress(k, s) }
+    }
+
+    private fun scheduleFlush() {
+        synchronized(pendingKeys) {
+            if (flushScheduled) return
+            flushScheduled = true
+        }
+        service.serviceScope.launch(service.keyProcessingDispatcher) {
+            // 轮询等待引擎就绪（冷启动/切方案窗口通常 <1s），就绪后补发缓存按键
+            repeat(40) {
+                if (engineReady()) {
+                    flushPendingKeys()
+                    return@launch
+                }
+                kotlinx.coroutines.delay(25)
+            }
+            // 超时仍未就绪：丢弃过期按键，避免无限堆积
+            synchronized(pendingKeys) {
+                pendingKeys.clear()
+                flushScheduled = false
+            }
+        }
     }
 
 
@@ -94,6 +146,14 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         // 空键无任何按键语义，且下游 Rime 路由按 key[0] 取码（key.lowercase()[0]），
         // 空串会越界崩溃（2026-09-14 真机实证：滑动手势 commit 值为空时触发）。
         if (key.isEmpty()) return
+        // 引擎冷启动/切方案竞态：引擎未就绪时缓存按键，就绪后按序补发，避免"无法打字"
+        if (!engineReady()) {
+            synchronized(pendingKeys) {
+                if (pendingKeys.size < MAX_PENDING_KEYS) pendingKeys.addLast(key to isShifted)
+            }
+            scheduleFlush()
+            return
+        }
         // 只有空格参与“连按两次”窗口；任何其他按键都中断计数。
         if (key != "space") service.lastSpaceCommitAt = 0L
         if (service.uiState.value.toolPanelInputFocused) {
