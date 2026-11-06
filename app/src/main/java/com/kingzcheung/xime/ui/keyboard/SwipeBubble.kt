@@ -192,22 +192,22 @@ fun rememberSwipeBubbleDrawData(
     val longPressRows = if (isLongPressMode && longPressColumns > 0) {
         (swipeState.longPressItems.size + longPressColumns - 1) / longPressColumns
     } else 1
-    // 单项长按、字母键按压气泡都画成圆形，不再向下伸出尖角。
+    // Gboard 的按压气泡是"上方圆角矩形主体 + 下方与键同宽的提示块"（MaterialPopupView:
+    // 下方块高度 = ahaf.a(view) = tailSize + 键高 - 键底部内边距），不是窄尖角。
+    // 因此点按气泡统一走圆角矩形，只有单项长按画成圆形。
     val singleLongPress = isLongPressMode && swipeState.longPressItems.size == 1
-    val circularPress = swipeState.isPressed && !swipeState.isLongPress && swipeState.isLetterPress
-    // 圆形气泡（字母键点击、单项长按）统一尺寸：点按与长按气泡大小一致，避免忽大忽小。
-    val isRoundBubble = singleLongPress || circularPress
+    val circularPress = false
+    val isRoundBubble = singleLongPress
     val bodyHeightPx = if (isRoundBubble) {
         // 圆形气泡直径 56dp，半径较统一基准减 2px，与其余气泡圆角收紧一致
         with(density) { 56.dp.toPx() } * bubbleScale - 4f
     } else {
         rowHeightPx * longPressRows
     }
-    // 尖端完整覆盖按下的按键（与按键同高），宽体锚定按键顶部悬在上方（见 boxTop）。
-    // 全部基于真实按键 bounds 计算，不再用 KeyHeight 估算值——
-    // 键盘高度被调大时估算失准，宽体会下沉进按键被手指挡住。
-    // 长按气泡统一悬浮在按键上方，不带向下的方块/尖角；点按与滑动气泡保留指示尖角。
-    val pointerHeightPx = if (isLongPressMode || circularPress) 0f else keyBounds.height
+    // Gboard MaterialPopupView：下方提示块高度 = tailSize(≈键高的一半) + 键高 - 键底内边距，
+    // 宽度等于主体宽度（整块下方)，用来罩住手指按住的键位；不是细尖角。
+    // 长按气泡没有下方块，整体悬在键上方。
+    val pointerHeightPx = if (isLongPressMode || circularPress) 0f else keyBounds.height * 0.62f
     val cornerRadiusPx = when {
         // 圆形气泡：半径取自加高后的高度
         isRoundBubble -> bodyHeightPx / 2f
@@ -220,7 +220,9 @@ fun rememberSwipeBubbleDrawData(
     }
     val screenMarginPx = with(density) { BubbleScreenMargin.toPx() }
     val keyWidthPx = keyWidth
-    val minBodyWidthPx = keyWidthPx * 1.8f
+    // Gboard：气泡主体宽度取内容宽（文字 + 内边距）与键宽两者的较大值，不再强制 1.8 倍键宽；
+    // 过宽会让气泡明显大于按键、也不再贴合键位。
+    val minBodyWidthPx = keyWidthPx
     val shadowRadiusPx = with(density) { 3.dp.toPx() } * bubbleScale
 
     val accentArgb = accentColor.toArgb()
@@ -297,8 +299,10 @@ fun rememberSwipeBubbleDrawData(
         )
     }
     val bodyRight = bodyLeft + bodyWidth
-    val pointerLeft = pointerCenterX - keyWidthPx / 2f
-    val pointerRight = pointerLeft + keyWidthPx
+    // Gboard 的下方块与主体同宽（MaterialPopupView 用主体宽度测量下方块），
+    // 因此指示块左右缘直接取主体左右缘，整块罩住被按的键。
+    val pointerLeft = bodyLeft
+    val pointerRight = bodyRight
     val boxLeft = minOf(bodyLeft, pointerLeft)
     // 宽体（显示文字的主体）底部对齐按键顶部，悬在按键正上方不被手指遮挡；
     // 尖端从宽体底部向下延伸 pointerHeightPx（≈按键上半部）指示归属键。
@@ -312,20 +316,14 @@ fun rememberSwipeBubbleDrawData(
     }
     val boxRight = maxOf(bodyRight, pointerRight)
 
-    val rightRoom = bodyRight - pointerRight
-    val leftRoom = pointerLeft - bodyLeft
-    val flushTolerancePx = with(density) { 10.dp.toPx() }
-    val isLeftFlush = !isLongPressMode && !circularPress &&
-        (leftRoom < cornerRadiusPx + flushTolerancePx || kotlin.math.abs(bodyLeft - pointerLeft) < 1f)
-    val isRightFlush = !isLongPressMode && !circularPress &&
-        (rightRoom < cornerRadiusPx + flushTolerancePx || kotlin.math.abs(bodyRight - pointerRight) < 1f)
+    // 下方块与主体同宽后不再有"尖角贴边"的差异，左右缘恒等——flush 分支自然消失。
+    val isLeftFlush = false
+    val isRightFlush = false
     val bodyLeftInBox = bodyLeft - boxLeft
     val pointerLeftInBox = pointerLeft - boxLeft
-    val pointerRightInBox = pointerLeftInBox + keyWidthPx
-    val pathBodyLeft = if (isLongPressMode) bodyLeftInBox
-        else if (isLeftFlush && leftRoom <= cornerRadiusPx) pointerLeftInBox else bodyLeftInBox
-    val pathBodyWidth = if (isLongPressMode) bodyWidth else
-        (if (isRightFlush && rightRoom <= cornerRadiusPx) pointerRightInBox else (bodyLeftInBox + bodyWidth)) - pathBodyLeft
+    val pointerRightInBox = pointerLeftInBox + (pointerRight - pointerLeft)
+    val pathBodyLeft = bodyLeftInBox
+    val pathBodyWidth = bodyWidth
 
     val paddingPx = with(density) { 10.dp.toPx() } * bubbleScale
 
@@ -353,8 +351,8 @@ fun rememberSwipeBubbleDrawData(
         bodyHeightPx = bodyHeightPx,
         pointerHeightPx = pointerHeightPx,
         cornerRadiusPx = cornerRadiusPx,
-        isLeftFlush = isLeftFlush && leftRoom <= cornerRadiusPx,
-        isRightFlush = isRightFlush && rightRoom <= cornerRadiusPx,
+        isLeftFlush = isLeftFlush,
+        isRightFlush = isRightFlush,
         bgColor = bgColor,
         textColor = textColor,
         displayText = displayText,
@@ -403,48 +401,25 @@ private fun buildBubblePath(data: BubbleDrawData): Path {
         return bubblePath
     }
 
+    // Gboard MaterialPopupView 几何：上方圆角矩形主体 + 底部同宽方块（罩住按下的键）。
+    // 下方块比主体窄时不做喇叭口收窄，直接沿用主体左右缘、底部圆角收边。
     val bodyRight = bodyLeft + bodyWidth
     val bodyBottom = bodyHeight
-    val pointerRight = pointerLeft + pointerWidth
     val pointerBottom = bodyBottom + pointerHeight
 
     val r = cornerRadius.coerceAtMost(bodyWidth / 2f).coerceAtMost(bodyHeight / 2f)
-    val pr = cornerRadius.coerceAtMost(pointerWidth / 2f).coerceAtMost(pointerHeight / 2f)
+    val pr = cornerRadius.coerceAtMost(bodyWidth / 2f).coerceAtMost(pointerHeight / 2f)
 
     bubblePath.rewind()
     bubblePath.moveTo(bodyLeft + r, 0f)
     bubblePath.lineTo(bodyRight - r, 0f)
     bubblePath.quadTo(bodyRight, 0f, bodyRight, r)
-
-    if (isRightFlush) {
-        bubblePath.lineTo(bodyRight, bodyBottom)
-        bubblePath.quadTo(pointerRight, bodyBottom, pointerRight, bodyBottom + pr)
-    } else {
-        bubblePath.lineTo(bodyRight, bodyBottom - r)
-        bubblePath.quadTo(bodyRight, bodyBottom, bodyRight - r, bodyBottom)
-        bubblePath.lineTo(pointerRight + pr, bodyBottom)
-        bubblePath.quadTo(pointerRight, bodyBottom, pointerRight, bodyBottom + pr)
-    }
-
-    bubblePath.lineTo(pointerRight, pointerBottom - pr)
-    bubblePath.quadTo(pointerRight, pointerBottom, pointerRight - pr, pointerBottom)
-    bubblePath.lineTo(pointerLeft + pr, pointerBottom)
-    bubblePath.quadTo(pointerLeft, pointerBottom, pointerLeft, pointerBottom - pr)
-    bubblePath.lineTo(pointerLeft, bodyBottom + pr)
-
-    if (isLeftFlush) {
-        bubblePath.lineTo(pointerLeft, bodyBottom)
-        bubblePath.lineTo(bodyLeft, bodyBottom)
-        bubblePath.lineTo(bodyLeft, r)
-        bubblePath.quadTo(bodyLeft, 0f, bodyLeft + r, 0f)
-    } else {
-        bubblePath.quadTo(pointerLeft, bodyBottom, pointerLeft - pr, bodyBottom)
-        bubblePath.lineTo(bodyLeft + r, bodyBottom)
-        bubblePath.quadTo(bodyLeft, bodyBottom, bodyLeft, bodyBottom - r)
-        bubblePath.lineTo(bodyLeft, r)
-        bubblePath.quadTo(bodyLeft, 0f, bodyLeft + r, 0f)
-    }
-
+    bubblePath.lineTo(bodyRight, pointerBottom - pr)
+    bubblePath.quadTo(bodyRight, pointerBottom, bodyRight - pr, pointerBottom)
+    bubblePath.lineTo(bodyLeft + pr, pointerBottom)
+    bubblePath.quadTo(bodyLeft, pointerBottom, bodyLeft, pointerBottom - pr)
+    bubblePath.lineTo(bodyLeft, r)
+    bubblePath.quadTo(bodyLeft, 0f, bodyLeft + r, 0f)
     bubblePath.close()
     return bubblePath
 }

@@ -2624,7 +2624,7 @@ private fun SpaceKey(
             }
             .then(shadowModifier)
             .clip(RoundedCornerShape(LocalKeyCornerRadius.current))
-            .background(if (isPressed) keyBackgroundColor.copy(alpha = 0.7f) else keyBackgroundColor)
+            .background(if (isPressed) keyPressedColor(keyBackgroundColor) else keyBackgroundColor)
             .keySemantics(
                 when {
                     voiceSticky -> tr(R.string.s_qingchujieshuyuyin)

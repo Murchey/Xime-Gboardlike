@@ -974,7 +974,7 @@ private fun CandidateItem(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(if (isPressed) backgroundColor.copy(alpha = 0.7f) else Color.Transparent)
+            .background(if (isPressed) keyPressedColor(backgroundColor) else Color.Transparent)
             .pointerInput(Unit) {
                 detectTapGestures(onPress = {
                     isPressed = true
@@ -1098,7 +1098,7 @@ private fun ResetKey(
             .padding(horizontal = 2.dp, vertical = 4.dp)
             .then(shadowModifier)
             .clip(shape)
-            .background(if (isPressed) backgroundColor.copy(alpha = 0.7f) else backgroundColor)
+            .background(if (isPressed) keyPressedColor(backgroundColor) else backgroundColor)
             .pointerInput(Unit) {
                 detectTapGestures(onPress = {
                     isPressed = true

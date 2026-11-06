@@ -8,8 +8,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -575,42 +573,58 @@ fun CandidateBar(
                     // 显示内联建议时隐藏工具栏按钮区，把宽度让给建议；logo 与
                     // 收起按钮保留，退格回到 idle 时的状态感知不变
                     if (inlineSuggestions.isEmpty()) {
-                        Row(
-                            modifier = Modifier
-                                .weight(1f, fill = true)
-                                .horizontalScroll(rememberScrollState()),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.End,
+                        // Gboard AccessPointsBar 排列（对照反编译 onMeasure/onLayout）：
+                        // 每按钮占等宽槽 t = min(((icon+gap)/2 + 宽)/(n+1), 宽/n)，
+                        // 整组水平居中、按钮在槽内居中——等距铺开而非右对齐堆叠
+                        BoxWithConstraints(
+                            modifier = Modifier.weight(1f, fill = true),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            if (toolbarActions.isNotEmpty()) {
-                                toolbarActions.forEach { action ->
-                                    val interactionSource = remember { MutableInteractionSource() }
-                                    val isPressed by interactionSource.collectIsPressedAsState()
-                                    // Gboard 式宽松工具栏：38dp 触区 + 24dp 图标 + 间距，
-                                    // 按压时圆形状态层反馈，替代旧 32dp 紧凑排布
-                                    Box(
-                                        modifier = Modifier
-                                            .padding(horizontal = 3.dp)
-                                            .size(38.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                if (isPressed) iconButtonContainer.copy(alpha = 0.55f)
-                                                else Color.Transparent
-                                            )
-                                            // 工具栏在 horizontalScroll 内：用 tolerantClick 容忍轻点的小位移，
-                                            // 避免 ROM 手势判定吃掉点击（与候选条目同因）
-                                            .tolerantClick(
-                                                showRipple = false,
-                                                interactionSource = interactionSource,
-                                                onClick = action.onClick
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        ToolbarButtonIcon(
-                                            item = action.item,
-                                            tint = if (isPressed) iconButtonTint.copy(alpha = 0.6f) else iconButtonTint,
-                                            modifier = Modifier.size(24.dp),
-                                        )
+                            val count = toolbarActions.size
+                            if (count > 0) {
+                                val slotBias = 23.dp // (38dp 触区 + 8dp 间距) / 2
+                                val slot = minOf(
+                                    (maxWidth + slotBias) / (count + 1),
+                                    maxWidth / count,
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    toolbarActions.forEach { action ->
+                                        val interactionSource = remember { MutableInteractionSource() }
+                                        val isPressed by interactionSource.collectIsPressedAsState()
+                                        // 槽位即触区（Gboard 按槽宽测量子视图），
+                                        // 38dp 圆形层只作按压视觉
+                                        Box(
+                                            modifier = Modifier
+                                                .width(slot)
+                                                .fillMaxHeight()
+                                                .tolerantClick(
+                                                    showRipple = false,
+                                                    interactionSource = interactionSource,
+                                                    onClick = action.onClick
+                                                ),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(38.dp)
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        if (isPressed) iconButtonContainer.copy(alpha = 0.55f)
+                                                        else Color.Transparent
+                                                    ),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                ToolbarButtonIcon(
+                                                    item = action.item,
+                                                    tint = if (isPressed) iconButtonTint.copy(alpha = 0.6f) else iconButtonTint,
+                                                    modifier = Modifier.size(24.dp),
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }

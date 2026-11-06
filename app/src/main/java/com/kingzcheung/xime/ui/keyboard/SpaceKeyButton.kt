@@ -72,7 +72,7 @@ fun SpaceKeyButton(
             .then(shadowModifier)
             .clip(RoundedCornerShape(LocalKeyCornerRadius.current))
             .background(
-                if (isPressed) backgroundColor.copy(alpha = 0.7f)
+                if (isPressed) keyPressedColor(backgroundColor)
                 else backgroundColor
             )
             .pointerInput(Unit) {

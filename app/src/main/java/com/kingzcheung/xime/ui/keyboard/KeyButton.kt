@@ -170,6 +170,15 @@ internal fun pressOverlay(base: Color): Color {
     }
 }
 
+/**
+ * 统一的按键按下底色。
+ *
+ * Gboard 的 SoftKeyView 对所有键型（字母/功能/空格/符号）走同一条 setPressed 状态机，
+ * 反馈由键帽背景的 state_pressed 决定，不存在"某些键是缩透明、某些键是加深"的差异。
+ * 这里提供唯一入口，全部键区共用，避免空格/符号/T9 等分支各自叠加透明度导致手感不一。
+ */
+internal fun keyPressedColor(base: Color): Color = pressOverlay(base)
+
 data class SwipeState(
     val isSwiping: Boolean = false,
     val swipeText: String? = null,
@@ -1098,7 +1107,7 @@ fun SwipeableKeyButton(
             .then(shadowModifier)
             .clip(keyClipShape)
             .background(
-                if (isPressed) backgroundColor.copy(alpha = 0.7f)
+                if (isPressed) keyPressedColor(backgroundColor)
                 else if (isHighlighted) backgroundColor.copy(alpha = 0.8f)
                 else backgroundColor
             )

@@ -541,7 +541,7 @@ private fun OperatorPillarKey(
             .fillMaxWidth()
             .then(shadowModifier)
             .clip(shape)
-            .background(if (isPressed) backgroundColor.copy(alpha = 0.7f) else backgroundColor)
+            .background(if (isPressed) keyPressedColor(backgroundColor) else backgroundColor)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = {
