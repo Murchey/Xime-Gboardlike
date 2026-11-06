@@ -31,6 +31,16 @@ class RimeSharedFilesTest {
     }
 
     @Test
+    fun `被 __include 引用的预设方案也算共享文件`() {
+        // t9.schema.yaml 依赖 __include: rime_ice.schema.yaml；丢了它九键就编译不出来
+        assertTrue(RimeSharedFiles.isSharedEntry("rime_ice.schema.yaml", isDirectory = false))
+        assertTrue(RimeSharedFiles.isSharedEntry("rime_ice.dict.yaml", isDirectory = false))
+        // 其它方案文件仍不算共享，避免把用户方案当内置资源回滚
+        assertFalse(RimeSharedFiles.isSharedEntry("t9.schema.yaml", isDirectory = false))
+        assertFalse(RimeSharedFiles.isSharedEntry("rime_frost.schema.yaml", isDirectory = false))
+    }
+
+    @Test
     fun `预设与词表文件是共享文件`() {
         assertTrue(RimeSharedFiles.isSharedEntry("symbols.yaml", isDirectory = false))
         assertTrue(RimeSharedFiles.isSharedEntry("default.yaml", isDirectory = false))

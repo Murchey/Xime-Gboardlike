@@ -18,9 +18,23 @@ object RimeSharedFiles {
         }.toSet()
     }
 
+    /**
+     * 被其他方案用 `__include` / `import_tables` 引用的**预设**方案与词表。
+     *
+     * 它们自身不作为独立方案启用，但缺了会让依赖方编译失败：`t9.schema.yaml` 首行就是
+     * `__include: rime_ice.schema.yaml:/`，一旦 rime_ice 丢失，九键就再也部署不出来
+     * （实测现象：t9 在 schema_list 里，但 build/ 永远没有产物）。
+     * 因此这几个必须当作共享预设文件参与缺失修复。
+     */
+    private val INCLUDE_PRESET_FILES = setOf(
+        "rime_ice.schema.yaml",
+        "rime_ice.dict.yaml",
+    )
+
     /** 只看预设/词表类文件，排除目录、隐藏项与方案/词典/补丁/文档。 */
     internal fun isSharedEntry(name: String, isDirectory: Boolean): Boolean {
         if (isDirectory || name.startsWith(".")) return false
+        if (name in INCLUDE_PRESET_FILES) return true
         if (name.endsWith(".schema.yaml") || name.endsWith(".dict.yaml") || name.endsWith(".custom.yaml")) return false
         return name.endsWith(".yaml") || name.endsWith(".yml") || name.endsWith(".txt")
     }
