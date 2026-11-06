@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
@@ -82,8 +83,10 @@ data class BubbleDrawData(
     val longPressColumns: Int = 0,
     /** 字母键按压气泡：圆形、无尖角。 */
     val isCircularPress: Boolean = false,
-    /** 出现动画进度 0→1：气泡从键面平滑放大浮现（Gboard 扩展性视觉），锚定键侧。 */
+    /** 缩放动画进度 0→1（Gboard scale 段，220ms）。 */
     val appearProgress: Float = 1f,
+    /** 透明度动画进度 0→1（Gboard alpha 段，150ms，比缩放先到 1）。 */
+    val appearAlpha: Float = 1f,
 )
 
 /** 圆角气泡的半径修正（px）：较基础圆角减 2px，气泡更紧凑精致。 */
@@ -93,15 +96,29 @@ private const val BUBBLE_RADIUS_DELTA_PX = 2f
 private const val PRESS_BUBBLE_RELEASE_DELAY_MS = 60L
 
 /**
- * 气泡出现动画参数：逐值对照 Gboard 反编译资源 res/anim/0x7f010002.xml
- *   <scale pivotX=50% pivotY=100% fromXScale=0.9 toXScale=1 fromYScale=0.9 toYScale=1
- *          interpolator=decelerate>
- *   <alpha fromAlpha=0 toAlpha=1 interpolator=decelerate>
- * 即：从 0.9 放大到 1.0、透明度 0→1，减速插值。原来的 0.72 起始缩放明显过小，
- * 观感上"弹得比 Gboard 夸张"，这里改成与反编译一致。
+ * 气泡出现 / 消失动画：逐值对照 Gboard 反编译资源。
+ *
+ * 动画 XML res/anim/0x7f010002.xml（出现）：
+ *   ```
+ *   <scale interpolator=decelerate duration=@integer/0x7f0c0002
+ *          pivotX=50% pivotY=100%
+ *          fromXScale=0.9 toXScale=1  fromYScale=0.9 toYScale=1/>
+ *   <alpha interpolator=decelerate duration=@integer/0x7f0c0003
+ *          fromAlpha=0 toAlpha=1/>
+ *   ```
+ * 时长来自 resources.arsc 解析（res/values 未被桥接解码，直接解 arsc 取到）：
+ *   - 0x7f0c0002 = 220ms（出现：缩放段）
+ *   - 0x7f0c0003 = 150ms（出现：透明度段）
+ *
+ * 原来用 100ms、起始缩放 0.72，两项都比 Gboard 激进——尤其时长只有实际的 45%，
+ * 这就是"出现动画明显不同"的主因。
  */
-private const val APPEAR_DURATION_MS = 100
+private const val APPEAR_SCALE_DURATION_MS = 220
+private const val APPEAR_ALPHA_DURATION_MS = 150
 private const val BUBBLE_SCALE_FROM = 0.9f
+
+/** Android `@android:anim/decelerate_interpolator` = PathInterpolator(0, 0, 0.2, 1)。 */
+private val DecelerateEasing = CubicBezierEasing(0f, 0f, 0.2f, 1f)
 
 /**
  * 各布局共享的气泡状态持有器。
@@ -118,9 +135,16 @@ class SwipeBubbleController(private val scope: CoroutineScope) {
         private set
     private var releaseJob: Job? = null
 
-    /** 出现动画进度：每次新手势从 0 平滑放大到 1（Gboard 气泡扩展感）。 */
-    private val appearAnim = Animatable(0f)
-    val appearProgress: Float get() = appearAnim.value
+    /**
+     * 出现动画进度：Gboard 的 scale 与 alpha 是两个独立时长
+     * （0x7f0c0002=220ms / 0x7f0c0003=150ms），因此分别跟踪。
+     */
+    private val scaleAnim = Animatable(1f)
+    private val alphaAnim = Animatable(1f)
+    /** 缩放进度 0→1。 */
+    val appearProgress: Float get() = scaleAnim.value
+    /** 透明度进度 0→1（比缩放先完成）。 */
+    val appearAlpha: Float get() = alphaAnim.value
     private var gestureSession by mutableIntStateOf(0)
     private var animJob: Job? = null
 
@@ -147,8 +171,12 @@ class SwipeBubbleController(private val scope: CoroutineScope) {
             gestureSession++
             animJob?.cancel()
             animJob = scope.launch {
-                appearAnim.snapTo(0f)
-                appearAnim.animateTo(1f, tween(APPEAR_DURATION_MS, easing = FastOutSlowInEasing))
+                scaleAnim.snapTo(0f)
+                alphaAnim.snapTo(0f)
+                launch {
+                    alphaAnim.animateTo(1f, tween(APPEAR_ALPHA_DURATION_MS, easing = DecelerateEasing))
+                }
+                scaleAnim.animateTo(1f, tween(APPEAR_SCALE_DURATION_MS, easing = DecelerateEasing))
             }
         }
         state = newState
@@ -172,6 +200,7 @@ fun rememberSwipeBubbleDrawData(
     keyWidth: Float,
     keyboardWidth: Float,
     appearProgress: Float = 1f,
+    appearAlpha: Float = 1f,
 ): BubbleDrawData? {
     val context = LocalContext.current
     // 点按气泡恒开：非滑动、非点按、非长按时不绘制
@@ -381,6 +410,7 @@ fun rememberSwipeBubbleDrawData(
         longPressColumns = longPressColumns,
         isCircularPress = circularPress,
         appearProgress = appearProgress,
+        appearAlpha = appearAlpha,
     )
 }
 
@@ -452,8 +482,8 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
     val pivotY = data.boxTop + data.bodyHeightPx + data.pointerHeightPx +
         if (data.isCircularPress) with(density) { 10.dp.toPx() } else 0f
     val pivot = Offset(data.boxLeft + data.bodyWidth / 2f, pivotY)
-    // Gboard: fromAlpha = 0 -> toAlpha = 1（线性取自 decelerate 进度 p）
-    val fillAlpha = (255 * p).toInt()
+    // Gboard alpha 段单独 150ms：用独立进度，不跟随缩放
+    val fillAlpha = (255 * data.appearAlpha.coerceIn(0f, 1f)).toInt()
 
     scale(scaleX = s, scaleY = s, pivot = pivot) {
     drawIntoCanvas { composeCanvas ->

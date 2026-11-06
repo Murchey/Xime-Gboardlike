@@ -322,6 +322,7 @@ fun KeyboardLayout(
         keyWidth = if (swipeBubble.state.isSwiping || swipeBubble.state.isPressed) swipeBubble.keyBounds.width else 0f,
         keyboardWidth = keyboardBounds.width,
         appearProgress = swipeBubble.appearProgress,
+        appearAlpha = swipeBubble.appearAlpha,
     )
 
     val isLandscape = !uiState.isFloatingMode && LocalConfiguration.current.screenWidthDp > LocalConfiguration.current.screenHeightDp
