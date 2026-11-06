@@ -437,7 +437,12 @@ fun DrawScope.drawSwipeBubble(data: BubbleDrawData) {
     val p = data.appearProgress.coerceIn(0f, 1f)
     val s = 0.72f + 0.28f * p
     // 锚点＝气泡底边中点（贴近按键），气泡向上"长"出来
-    val pivot = Offset(data.boxLeft + data.bodyWidth / 2f, data.boxTop + data.bodyHeightPx + data.pointerHeightPx)
+    // Gboard ahaa.m(): setPivotX(w*0.5), setPivotY(h) —— 支点恒在气泡底边中点。
+    // 圆形气泡没有下伸方块，其底边悬在按键上方 10dp，若按体高算支点会让缩放
+    // 起点离键更远；这里统一按"贴键边"取支点，保证从键上长出来。
+    val pivotY = data.boxTop + data.bodyHeightPx + data.pointerHeightPx +
+        if (data.isCircularPress) with(density) { 10.dp.toPx() } else 0f
+    val pivot = Offset(data.boxLeft + data.bodyWidth / 2f, pivotY)
     val fillAlpha = (255 * p.coerceAtLeast(0.15f)).toInt()
 
     scale(scaleX = s, scaleY = s, pivot = pivot) {
