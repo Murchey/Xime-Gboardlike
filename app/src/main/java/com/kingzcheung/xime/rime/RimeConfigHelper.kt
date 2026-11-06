@@ -81,6 +81,8 @@ object RimeConfigHelper {
             val currentHash = computeDeploymentHash(context)
             if (currentHash.isNotEmpty() && currentHash == SettingsPreferences.getDeploymentHash(context)) {
                 SettingsPreferences.setDeploymentDone(context, true)
+                // 老版本升级上来的用户 build 里可能残留未启用方案的产物，这里补一次清理
+                pruneUnusedSchemaArtifacts(context)
                 return true
             }
             Log.i(TAG, "Deployment hash mismatch or missing")
@@ -106,6 +108,7 @@ object RimeConfigHelper {
                 deployed = engine.deploy()
             }
             if (deployed) {
+                pruneUnusedSchemaArtifacts(context)
                 storeDeploymentHash(context)
                 SettingsPreferences.setDeploymentDone(context, true)
                 return true
@@ -114,6 +117,55 @@ object RimeConfigHelper {
         }
     }
     
+    /**
+     * 清理**未启用**方案的编译产物。
+     *
+     * librime 部署会编译数据目录里所有 `*.schema.yaml`，与 `schema_list`（启用方案）无关，
+     * 因此未启用方案的 table/prism/reverse.bin 会一直占空间（实测可达 30MB 以上）。
+     *
+     * 判定规则刻意保守：只删「不在启用列表」**且**「没有被任何启用方案的 yaml 提到」的
+     * 方案产物——后者能覆盖 `dictionary:` / `prism:` / reverse_lookup 等隐式依赖
+     * （例如 pinyin_simp 依赖 stroke、rime_frost 依赖 melt_eng，这些都不会被删）。
+     * 产物只是缓存，日后启用该方案时增量部署会自动重建。
+     */
+    fun pruneUnusedSchemaArtifacts(context: Context) {
+        val rimeDir = SchemaManager.getRimeDir(context)
+        val buildDir = File(rimeDir, "build")
+        if (!buildDir.isDirectory) return
+        val enabled = SchemaManager.getEnabledSchemas(context).toSet()
+        if (enabled.isEmpty()) return
+        // 启用集合没变过就不再重复扫描（每次启动都读 4 份 schema.yaml 没必要）
+        val stamp = File(rimeDir, ".prune_stamp")
+        val want = enabled.sorted().joinToString(",")
+        if (stamp.isFile && runCatching { stamp.readText() }.getOrNull() == want) return
+
+        val enabledText = buildString {
+            for (id in enabled) {
+                val f = File(rimeDir, "$id.schema.yaml")
+                if (f.isFile) runCatching { append(f.readText()) }
+            }
+        }
+        val stale = rimeDir.listFiles { f -> f.isFile && f.name.endsWith(".schema.yaml") }
+            ?.map { it.name.removeSuffix(".schema.yaml") }
+            ?.filter { it !in enabled && !enabledText.contains(it) }
+            .orEmpty()
+        var freed = 0L
+        var removed = 0
+        for (name in stale) {
+            buildDir.listFiles { f -> f.isFile && f.name.startsWith("$name.") }?.forEach { f ->
+                val len = f.length()
+                if (f.delete()) {
+                    freed += len
+                    removed++
+                }
+            }
+        }
+        runCatching { stamp.writeText(want) }
+        if (removed > 0) {
+            Log.i(TAG, "Pruned $removed unused schema artifacts, freed ${freed / 1024}KB")
+        }
+    }
+
     fun initializeRimeData(context: Context): Pair<String, String> {
         val rimeDir = SchemaManager.getRimeDir(context)
         

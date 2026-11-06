@@ -62,9 +62,14 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // NDK 配置
+        // NDK 配置：与下面的 splits 共用 -PximeAbi，否则两者不一致会配置失败
+        val ximeAbiOnly = project.providers.gradleProperty("ximeAbi").orNull
         ndk {
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            abiFilters += if (ximeAbiOnly.isNullOrBlank()) {
+                listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            } else {
+                ximeAbiOnly.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            }
         }
 
         // 构建信息
@@ -165,10 +170,13 @@ android {
         checkDependencies = true
     }
 
-    // 分架构打包
+    // 分架构打包。
+    // 默认照旧打 4 个 ABI + universal（5 个 APK，约 790MB 产物）；
+    // 只装真机时用 -PximeAbi=arm64-v8a 只出一个架构的包，省下大量构建产物空间。
     splits {
         abi {
-            isEnable = true
+            // 指了 -PximeAbi 就只按 abiFilters 出单架构包（AGP 不允许两者同时生效）
+            isEnable = project.providers.gradleProperty("ximeAbi").orNull.isNullOrBlank()
             reset()
             include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
             isUniversalApk = true
