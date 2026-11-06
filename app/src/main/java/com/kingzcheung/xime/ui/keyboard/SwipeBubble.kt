@@ -192,12 +192,11 @@ fun rememberSwipeBubbleDrawData(
     val longPressRows = if (isLongPressMode && longPressColumns > 0) {
         (swipeState.longPressItems.size + longPressColumns - 1) / longPressColumns
     } else 1
-    // Gboard 的按压气泡是"上方圆角矩形主体 + 下方与键同宽的提示块"（MaterialPopupView:
-    // 下方块高度 = ahaf.a(view) = tailSize + 键高 - 键底部内边距），不是窄尖角。
-    // 因此点按气泡统一走圆角矩形，只有单项长按画成圆形。
+    // Gboard 实际观感：点按（含字母键）浮起的是**圆形**气泡。
+    // 因此点按气泡与单项长按同为圆形，只有多项长按（符号/变音候选）才用圆角矩形网格。
     val singleLongPress = isLongPressMode && swipeState.longPressItems.size == 1
-    val circularPress = false
-    val isRoundBubble = singleLongPress
+    val circularPress = swipeState.isPressed && !swipeState.isLongPress && swipeState.isLetterPress
+    val isRoundBubble = singleLongPress || circularPress
     val bodyHeightPx = if (isRoundBubble) {
         // 圆形气泡直径 56dp，半径较统一基准减 2px，与其余气泡圆角收紧一致
         with(density) { 56.dp.toPx() } * bubbleScale - 4f

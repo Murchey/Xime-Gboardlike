@@ -139,7 +139,8 @@ fun HandwritingKeyboardLayout(
     // 设备档（与 26 键 / 面板 / 九键 / 笔画同档）：底栏与右侧符号栏是定尺键面，
     // 按 [handwritingChromeFor] 取手机/平板两档，圆角/间距/外围留白与其它键盘一致。
     val tablet = isTablet()
-    val keyCornerRadius = keyCornerRadiusFor(KeysConfigHelper.getKeyboardKeyConfig(), "handwriting", tablet)
+    val keyCornerRadius = keyCornerRadiusFor(
+        KeysConfigHelper.getKeyboardKeyConfig(), "handwriting", tablet, LocalGboardKeyStyle.current) 
     val chrome = handwritingChromeFor(tablet, keyCornerRadius)
     val sheetWidth = chrome.sheetWidthDp.dp
     val barHeight = chrome.barHeightDp.dp

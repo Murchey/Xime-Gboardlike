@@ -101,6 +101,14 @@ internal val LocalKeyFontScale = staticCompositionLocalOf { 1f }
  *  独立于 shadow.shape_radius，为统一配置化而设。 */
 val LocalKeyCornerRadius = staticCompositionLocalOf { 8.dp }
 
+/**
+ * 当前是否使用 Gboard 按键外观（默认 true）。
+ *
+ * 由 [KeyboardView] 根层按用户设置提供；圆角/键面/间距等需要区分样式的取值
+ * 统一读这里，避免每个布局各自传参导致风格漂移。
+ */
+val LocalGboardKeyStyle = staticCompositionLocalOf { true }
+
 /** 按键内容随按键实际高度放大；手机尺寸下保持原字号。 */
 internal fun adaptiveKeyContentScale(
     keyHeightDp: Float,
@@ -178,7 +186,14 @@ internal fun pressOverlay(base: Color): Color {
  * 反馈由键帽背景的 state_pressed 决定，不存在"某些键是缩透明、某些键是加深"的差异。
  * 这里提供唯一入口，全部键区共用，避免空格/符号/T9 等分支各自叠加透明度导致手感不一。
  */
-internal fun keyPressedColor(base: Color): Color = pressOverlay(base)
+internal fun keyPressedColor(base: Color): Color {
+    // 透明底（列表面板里的条目格）没有可压暗的颜色，按下时给一层中性状态色，
+    // 否则 pressOverlay(Transparent) 仍是透明——按压反馈会彻底消失。
+    if (base.alpha < 0.01f) {
+        return Color.Black.copy(alpha = 0.12f)
+    }
+    return pressOverlay(base)
+}
 
 /** 按下缩放：Gboard 的按压回弹幅度（太大显得抖动，太小看不出来）。 */
 internal const val KEY_PRESS_SCALE = 0.95f

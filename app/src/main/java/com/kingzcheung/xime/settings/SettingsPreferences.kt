@@ -34,6 +34,10 @@ object SettingsPreferences {
     /** 旧版单主题键，仅用于迁移。 */
     private const val KEY_KEYBOARD_THEME_LEGACY = "keyboard_theme"
     private const val KEY_THEME_MIX_MATCH = "theme_mix_match"
+    /** 按键外观样式：Gboard 风格 / xime 经典。 */
+    private const val KEY_KEY_STYLE = "key_style"
+    const val KEY_STYLE_GBOARD = 0
+    const val KEY_STYLE_XIME = 1
     
     const val KEY_SMART_PREDICTION_ENABLED = "smart_prediction_enabled"
     private const val KEY_PREDICTION_MODEL_REPO = "prediction_model_repo"
@@ -331,6 +335,18 @@ object SettingsPreferences {
 
     fun setSetupCompleted(context: Context, completed: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_SETUP_COMPLETED, completed).apply()
+    }
+
+    /**
+     * 按键外观样式：0 = Gboard 风格（默认，圆角大、键面扁平无描边），
+     * 1 = xime 经典风格（沿用原主题色与圆角）。
+     */
+    fun getKeyStyle(context: Context): Int {
+        return getPrefs(context).getInt(KEY_KEY_STYLE, KEY_STYLE_GBOARD)
+    }
+
+    fun setKeyStyle(context: Context, style: Int) {
+        getPrefs(context).edit().putInt(KEY_KEY_STYLE, style).apply()
     }
 
     fun getDarkMode(context: Context): Int {

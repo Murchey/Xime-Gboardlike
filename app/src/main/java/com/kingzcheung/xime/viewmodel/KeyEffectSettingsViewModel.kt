@@ -18,7 +18,9 @@ data class KeyEffectUiState(
     val pressAmplitude: Int = 0,
     val longPressAmplitude: Int = 0,
     val longPressBubbleDelayMs: Int = 250,
-    val hasAmplitudeControl: Boolean = false
+    val hasAmplitudeControl: Boolean = false,
+    /** 按键外观：0 = Gboard 风格（默认），1 = xime 经典。 */
+    val keyStyle: Int = SettingsPreferences.KEY_STYLE_GBOARD
 )
 
 class KeyEffectSettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -33,7 +35,8 @@ class KeyEffectSettingsViewModel(application: Application) : AndroidViewModel(ap
         longPressDuration = SettingsPreferences.getVibrationLongPressDuration(context),
         pressAmplitude = SettingsPreferences.getVibrationPressAmplitude(context),
         longPressAmplitude = SettingsPreferences.getVibrationLongPressAmplitude(context),
-        longPressBubbleDelayMs = SettingsPreferences.getLongPressBubbleDelayMs(context)
+        longPressBubbleDelayMs = SettingsPreferences.getLongPressBubbleDelayMs(context),
+        keyStyle = SettingsPreferences.getKeyStyle(context)
     ))
     val uiState: StateFlow<KeyEffectUiState> = _uiState.asStateFlow()
 
@@ -51,6 +54,11 @@ class KeyEffectSettingsViewModel(application: Application) : AndroidViewModel(ap
         }
         val hasAmp = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O && vibrator.hasAmplitudeControl()
         _uiState.update { it.copy(hasAmplitudeControl = hasAmp) }
+    }
+
+    fun setKeyStyle(style: Int) {
+        SettingsPreferences.setKeyStyle(context, style)
+        _uiState.update { it.copy(keyStyle = style) }
     }
 
     fun setSoundEnabled(enabled: Boolean) {
