@@ -2452,13 +2452,8 @@ private fun SpaceKey(
     val currentLongPressDrawableIds by rememberUpdatedState(longPressDrawableIds)
     val view = LocalView.current
     var buttonBounds by remember { mutableStateOf(Rect(0f, 0f, 0f, 0f)) }
-    // 空格键点击反馈：按下高亮 + 缩放回弹，与字母键一致（Gboard 同步手感）
+    // 空格键点击反馈：与字母键共用 keyPressFeedback（缩放 + 底色 + 描边）
     var isPressed by remember { mutableStateOf(false) }
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = tween(durationMillis = if (isPressed) 55 else 120, easing = FastOutSlowInEasing),
-        label = "spacePressScale",
-    )
     val currentOnVoiceModeChange by rememberUpdatedState(onVoiceModeChange)
     val currentOnTap by rememberUpdatedState(onTap)
     val currentOnLongPress by rememberUpdatedState(onLongPress)
@@ -2618,13 +2613,9 @@ private fun SpaceKey(
             .padding(LocalKeyVisualPadding.current)
             .fillMaxWidth()
             .fillMaxHeight()
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
             .then(shadowModifier)
             .clip(RoundedCornerShape(LocalKeyCornerRadius.current))
-            .background(if (isPressed) keyPressedColor(keyBackgroundColor) else keyBackgroundColor)
+            .keyPressFeedback(isPressed, keyBackgroundColor, RoundedCornerShape(LocalKeyCornerRadius.current))
             .keySemantics(
                 when {
                     voiceSticky -> tr(R.string.s_qingchujieshuyuyin)

@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -178,6 +179,45 @@ internal fun pressOverlay(base: Color): Color {
  * 这里提供唯一入口，全部键区共用，避免空格/符号/T9 等分支各自叠加透明度导致手感不一。
  */
 internal fun keyPressedColor(base: Color): Color = pressOverlay(base)
+
+/** 按下缩放：Gboard 的按压回弹幅度（太大显得抖动，太小看不出来）。 */
+internal const val KEY_PRESS_SCALE = 0.95f
+internal const val KEY_PRESS_IN_MS = 55
+internal const val KEY_PRESS_OUT_MS = 120
+
+/**
+ * 统一的按键按下修饰符（缩放 + 底色 + 描边）。
+ *
+ * Gboard 的 SoftKeyView 对字母/功能/空格/符号/T9 全部走同一条 setPressed 状态机，
+ * 反馈完全一致。原先只有字母键有缩放和描边，空格/符号/T9/手写只有透明度变化，
+ * 造成"不同键区手感不一样"。所有键区统一调用本修饰符即可收敛。
+ */
+@Composable
+internal fun Modifier.keyPressFeedback(
+    isPressed: Boolean,
+    baseColor: Color,
+    shape: Shape,
+): Modifier {
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
+        animationSpec = tween(
+            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "keyPressFeedbackScale",
+    )
+    return this
+        .graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
+        .background(if (isPressed) keyPressedColor(baseColor) else baseColor)
+        .then(
+            if (isPressed) {
+                Modifier.border(1.5.dp, pressBorderColor(baseColor), shape)
+            } else Modifier
+        )
+}
 
 data class SwipeState(
     val isSwiping: Boolean = false,
@@ -437,11 +477,11 @@ fun KeyButton(
         )
     }
 
-    // 按下时的键帽缩放：0.94 ≈ Gboard 的按压回弹幅度（太大显得抖动，太小看不出来）
+    // 按下时的键帽缩放：统一常量（Gboard 的按压回弹幅度）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1f,
+        targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
         animationSpec = tween(
-            durationMillis = if (isPressed) 55 else 120,
+            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
             easing = FastOutSlowInEasing,
         ),
         label = "keyPressScale",
@@ -1441,10 +1481,13 @@ fun IconKeyButton(
     a11yState: String? = null,
 ) {
     var isPressed by remember { mutableStateOf(false) }
-    // 按下时键帽缩放（与 KeyButton 保持一致的 Gboard 式回弹）
+    // 按下时键帽缩放（与字母/功能键共用统一常量）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.90f else 1f,
-        animationSpec = tween(durationMillis = if (isPressed) 45 else 90),
+        targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
+        animationSpec = tween(
+            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
+            easing = FastOutSlowInEasing,
+        ),
         label = "swipeKeyPressScale",
     )
     val density = LocalDensity.current
@@ -1562,10 +1605,13 @@ fun SwipeableIconKeyButton(
     a11yState: String? = null,
 ) {
     var isPressed by remember { mutableStateOf(false) }
-    // 按下时键帽缩放（图标键，与文字键保持一致）
+    // 按下时键帽缩放（图标键，与文字键共用统一常量）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.90f else 1f,
-        animationSpec = tween(durationMillis = if (isPressed) 45 else 90),
+        targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
+        animationSpec = tween(
+            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
+            easing = FastOutSlowInEasing,
+        ),
         label = "iconKeyPressScale",
     )
     var dragOffsetY by remember { mutableStateOf(0f) }
@@ -2100,10 +2146,13 @@ fun SwipeableKeyButtonLandscape(
     shadowShapeRadius: Dp = 8.dp,
 ) {
     var isPressed by remember { mutableStateOf(false) }
-    // 按下时键帽缩放（横屏紧凑键盘，与竖屏一致）
+    // 按下时键帽缩放（横屏紧凑键盘，与竖屏共用统一常量）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.90f else 1f,
-        animationSpec = tween(durationMillis = if (isPressed) 45 else 90),
+        targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
+        animationSpec = tween(
+            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
+            easing = FastOutSlowInEasing,
+        ),
         label = "landscapeKeyPressScale",
     )
     var dragOffsetY by remember { mutableStateOf(0f) }
