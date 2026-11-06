@@ -219,7 +219,9 @@ internal fun Modifier.keyPressFeedback(
             scaleX = scale
             scaleY = scale
         }
-        .background(if (isPressed) keyPressedColor(baseColor) else baseColor)
+        // 必须带 shape：按下时 graphicsLayer 会把背景缩到 0.95，若背景是矩形，
+        // 缩小后的直角会落到外层圆角 clip 之内，宽键（空格）就会露出直棱、看起来变方。
+        .background(if (isPressed) keyPressedColor(baseColor) else baseColor, shape)
         .then(
             // Gboard 按下只提亮键面、不描边（SoftKeyView 靠背景 state_pressed 表达）；
             // 经典样式保留高对比描边，便于浅色主题下辨认。

@@ -288,16 +288,20 @@ fun rememberSwipeBubbleDrawData(
 
     val keyLabelTypeface = AppFonts.keyLabelTypeface
 
-    // 气泡字号统一：圆形气泡（点按/单项长按）同为 27sp；多项长按 18sp；滑动气泡 20sp。
-    val targetTextSizeSp = if (isRoundBubble) 27.sp else if (isLongPressMode) 18.sp else 20.sp
-    val textPaint = remember(bubbleScale, targetTextSizeSp) {
+    // 气泡字号：圆形气泡 20sp（直径已固定 40dp，字号若随键尺寸放大就会撑满圆），
+    // 多项长按 18sp，滑动气泡 20sp。
+    val targetTextSizeSp = if (isRoundBubble) 20.sp else if (isLongPressMode) 18.sp else 20.sp
+    // 圆形气泡不再乘以 bubbleScale：直径固定为 40dp，字号也应固定，
+    // 否则 20sp × 1.1558 ≈ 23sp 会把 40dp 的圆撑得过满。
+    val textScale = if (isRoundBubble) 1f else bubbleScale
+    val textPaint = remember(textScale, targetTextSizeSp) {
         Paint().apply {
-            textSize = with(density) { targetTextSizeSp.toPx() } * bubbleScale
+            textSize = with(density) { targetTextSizeSp.toPx() } * textScale
             isAntiAlias = true
         }
     }
 
-    val textSizePx = with(density) { targetTextSizeSp.toPx() } * bubbleScale
+    val textSizePx = with(density) { targetTextSizeSp.toPx() } * textScale
     val cellWidthPx = if (isLongPressMode) {
         longPressCellWidthPx(
             items = swipeState.longPressItems,
