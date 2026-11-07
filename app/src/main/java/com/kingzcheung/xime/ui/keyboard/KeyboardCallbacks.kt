@@ -128,6 +128,9 @@ data class KeyboardCallbacks(
     val onClipboardPullRemote: (() -> Unit)? = null,
     val onHideQuickSendForm: (() -> Unit)? = null,
     val onQuickSendEditItem: ((Long, String, String) -> Unit)? = null,
+
+    /** 编辑剪贴板文本条目（id, 原文本）；复用快捷发送表单的输入路由。 */
+    val onClipboardEditItem: ((Long, String) -> Unit)? = null,
     val onQuickSendFormFocusChange: ((Boolean) -> Unit)? = null,
     /** 快捷发送表单"触发编码"输入框焦点变化（决定按键输入路由到编码框）。 */
     val onQuickSendCodeFocusChange: ((Boolean) -> Unit)? = null,

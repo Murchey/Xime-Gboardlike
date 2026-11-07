@@ -305,15 +305,15 @@ object KeyboardThemes {
             id = "x", name = "X",
             light = ThemePalette(
                 background = Color(0xFFFFFFFF), key = Color(0xFFEFF3F4),
-                keyText = Color(0xFF0F1419), candidateText = Color(0xFF38393B),
-                accent = Color(0xFF1D9BF0), selectedText = Color(0xFF0B67A5), container = Color(0xFFD7EEFC),
-                specialKey = Color(0xFFD7EEFC),
+                keyText = Color(0xFF0F1419), candidateText = Color(0xFF536471),
+                accent = Color(0xFF0F1419), selectedText = Color(0xFF536471), container = Color(0xFFEFF3F4),
+                specialKey = Color(0xFFEFF3F4),
             ),
             dark = ThemePalette(
                 background = Color(0xFF000000), key = Color(0xFF38383D),
-                keyText = Color(0xFFE7E9EA), candidateText = Color(0xFFFFFFFF),
-                accent = Color(0xFF21A3FF), selectedText = Color(0xFF8ECDF8), container = Color(0xFF00587F),
-                specialKey = Color(0xFF00587F),
+                keyText = Color(0xFFE7E9EA), candidateText = Color(0xFFB0B8C0),
+                accent = Color(0xFFE7E9EA), selectedText = Color(0xFF8B98A5), container = Color(0xFF16181C),
+                specialKey = Color(0xFF16181C),
             ),
         ),
         buildTheme(
@@ -321,14 +321,14 @@ object KeyboardThemes {
             light = ThemePalette(
                 background = Color(0xFFDCE2E8), key = Color(0xFFFFFFFF),
                 keyText = Color(0xFF1F2328), candidateText = Color(0xFF525C66),
-                accent = Color(0xFF0969DA), selectedText = Color(0xFF0757AD), container = Color(0xFFDDF4FF),
-                specialKey = Color(0xFFDDF4FF),
+                accent = Color(0xFF1A7F37), selectedText = Color(0xFF116329), container = Color(0xFFDCFCE7),
+                specialKey = Color(0xFFDCFCE7),
             ),
             dark = ThemePalette(
                 background = Color(0xFF0A0E12), key = Color(0xFF242A31),
                 keyText = Color(0xFFE6EDF3), candidateText = Color(0xFF98A1AB),
-                accent = Color(0xFF58A6FF), selectedText = Color(0xFF8FC5FF), container = Color(0xFF1F3A5F),
-                specialKey = Color(0xFF1F3A5F),
+                accent = Color(0xFF3FB950), selectedText = Color(0xFF56D364), container = Color(0xFF1B3A26),
+                specialKey = Color(0xFF1B3A26),
             ),
         ),
         // 与 GitHub 浅色 Δ≈12.5，合并进蓝色系不再展示
@@ -348,9 +348,10 @@ object KeyboardThemes {
                 specialKey = Color(0xFF1C2E46),
             ),
         ),
-        // Pixel 中性：贴近 Gboard 近年配色的中性灰蓝，强调键用 Google 蓝
+        // Pixel 中性：与 Gboard 灰 浅色 Δ≈13、强调色一致，合并隐藏
         buildTheme(
             id = "pixel", name = "Pixel",
+            hidden = true,
             light = ThemePalette(
                 background = Color(0xFFF1F3F4), key = Color(0xFFFFFFFF),
                 keyText = Color(0xFF202124), candidateText = Color(0xFF5F6368),

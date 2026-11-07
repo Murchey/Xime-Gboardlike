@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ClipboardDao {
 
-    @Query("SELECT * FROM clipboard_entries WHERE isQuickSend = 0 ORDER BY timestamp DESC")
+    @Query("SELECT * FROM clipboard_entries WHERE isQuickSend = 0 ORDER BY isPinned DESC, timestamp DESC")
     fun observeAll(): Flow<List<ClipboardEntry>>
 
     @Query("SELECT * FROM clipboard_entries WHERE isQuickSend = 1 ORDER BY timestamp DESC")
@@ -96,6 +96,9 @@ interface ClipboardDao {
 
     @Query("UPDATE clipboard_entries SET text = :text, timestamp = :now WHERE id = :id")
     suspend fun updateText(id: Long, text: String, now: Long)
+
+    @Query("UPDATE clipboard_entries SET isPinned = :pinned WHERE id = :id")
+    suspend fun updatePinned(id: Long, pinned: Boolean)
 
     @Query("UPDATE clipboard_entries SET text = :text, code = :code, timestamp = :now WHERE id = :id")
     suspend fun updateQuickSendItem(id: Long, text: String, code: String, now: Long)

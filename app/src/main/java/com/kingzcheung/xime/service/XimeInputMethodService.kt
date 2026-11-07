@@ -1181,6 +1181,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 quickSendEditingItemId = null,
                 quickSendEditingItemText = "",
                 quickSendEditingItemCode = "",
+                quickSendEditClipboardItemId = null,
             )
             QuickSendFormEditTextHolder.editText = null
             QuickSendFormCodeEditTextHolder.editText = null
@@ -1866,6 +1867,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     quickSendEditingItemId = state.quickSendEditingItemId,
                                     quickSendEditingItemText = state.quickSendEditingItemText,
                                     quickSendEditingItemCode = state.quickSendEditingItemCode,
+                                    quickSendEditClipboardItemId = state.quickSendEditClipboardItemId,
                                     toolPanelVisible = state.toolPanelVisible,
                                     toolPanelInputFocused = state.toolPanelInputFocused,
                                     toolPanelPluginId = state.toolPanelPluginId,
@@ -2840,6 +2842,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 quickSendEditingItemId = null,
                 quickSendEditingItemText = "",
                 quickSendEditingItemCode = "",
+                quickSendEditClipboardItemId = null,
                 enterKeyText = tr(R.string.s_fasong),
             )
             QuickSendFormEditTextHolder.editText = null

@@ -852,6 +852,23 @@ class ClipboardManager private constructor(private val context: Context) {
         }
     }
 
+    /** 置顶/取消置顶剪贴板条目（置顶项排在最前，且不会被条数/容量清理淘汰）。 */
+    fun toggleClipboardPin(id: Long) {
+        val current = _clipboardItems.value.firstOrNull { it.id == id } ?: return
+        scope.launch {
+            dao.updatePinned(id, !current.isPinned)
+        }
+    }
+
+    /** 编辑剪贴板条目的文本内容；空白内容视为无效（避免产生空卡片）。 */
+    fun updateClipboardItemText(id: Long, newText: String): Boolean {
+        if (newText.isBlank()) return false
+        scope.launch {
+            dao.updateText(id, newText, System.currentTimeMillis())
+        }
+        return true
+    }
+
     fun updateQuickSendItem(id: Long, newText: String, newCode: String = ""): Boolean {
         if (newText.isBlank()) return false
         val index = _quickSendItems.value.indexOfFirst { it.id == id }

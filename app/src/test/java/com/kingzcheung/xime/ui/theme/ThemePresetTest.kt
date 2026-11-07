@@ -20,6 +20,7 @@ class ThemePresetTest {
         val hiddenIds = KeyboardThemes.themes.filter { it.hidden }.map { it.id }
         assertTrue("QQ 应被合并隐藏", "qq" in hiddenIds)
         assertTrue("ChatGPT 应被合并隐藏", "chatgpt" in hiddenIds)
+        assertTrue("Pixel 与 Gboard 灰高度重合，应被合并隐藏", "pixel" in hiddenIds)
         // 隐藏只影响选择器，不影响已选用户解析
         assertEquals("qq", KeyboardThemes.getThemeById("qq").id)
         assertEquals("chatgpt", KeyboardThemes.getThemeById("chatgpt").id)

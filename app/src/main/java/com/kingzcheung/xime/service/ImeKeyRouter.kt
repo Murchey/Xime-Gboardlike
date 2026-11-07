@@ -259,11 +259,14 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                     val code = codeEditText?.text?.toString()?.trim() ?: ""
                     val s = service.uiState.value
                     val editingId = s.quickSendEditingItemId
+                    val clipboardId = s.quickSendEditClipboardItemId
                     if (text.isNotBlank()) {
-                        if (editingId != null) {
-                            service.keyboardViewModel.updateQuickSendItem(editingId, text, code)
-                        } else {
-                            service.keyboardViewModel.addQuickSendText(text, code)
+                        when {
+                            clipboardId != null ->
+                                service.keyboardViewModel.updateClipboardItemText(clipboardId, text)
+                            editingId != null ->
+                                service.keyboardViewModel.updateQuickSendItem(editingId, text, code)
+                            else -> service.keyboardViewModel.addQuickSendText(text, code)
                         }
                     }
                     service.uiState.value = s.copy(
@@ -272,11 +275,12 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                         quickSendCodeFocused = false,
                         quickSendEditingItemId = null,
                         quickSendEditingItemText = "",
-                        quickSendEditingItemCode = ""
+                        quickSendEditingItemCode = "",
+                        quickSendEditClipboardItemId = null
                     )
                     QuickSendFormEditTextHolder.editText = null
                     QuickSendFormCodeEditTextHolder.editText = null
-                    service.keyboardViewModel.showOverlay(OverlayRoute.Clipboard(1))
+                    service.keyboardViewModel.showOverlay(OverlayRoute.Clipboard(if (clipboardId != null) 0 else 1))
                     return
                 }
                 "delete" -> {

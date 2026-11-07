@@ -430,6 +430,7 @@ internal fun rememberImeKeyboardCallbacks(
                     quickSendEditingItemId = null,
                     quickSendEditingItemText = "",
                     quickSendEditingItemCode = "",
+                    quickSendEditClipboardItemId = null,
                     enterKeyText = tr(R.string.s_queding),
                 )
                 // 撑高由 SideEffect 驱动：uiState 变化 → Compose 内容高度变化 →
@@ -445,6 +446,25 @@ internal fun rememberImeKeyboardCallbacks(
                     quickSendEditingItemId = id,
                     quickSendEditingItemText = text,
                     quickSendEditingItemCode = code,
+                    quickSendEditClipboardItemId = null,
+                    enterKeyText = tr(R.string.s_queding),
+                )
+                QuickSendFormEditTextHolder.editText?.let { et ->
+                    et.setText(text)
+                    et.setSelection(text.length)
+                }
+            },
+            onClipboardEditItem = { id, text ->
+                // 与快捷发送共用表单：仅替换标题与保存目标，按键输入路由完全一致
+                service.keyboardViewModel.closeOverlay()
+                service.uiState.value = service.uiState.value.copy(
+                    showQuickSendForm = true,
+                    quickSendFormFocused = true,
+                    quickSendCodeFocused = false,
+                    quickSendEditingItemId = null,
+                    quickSendEditingItemText = text,
+                    quickSendEditingItemCode = "",
+                    quickSendEditClipboardItemId = id,
                     enterKeyText = tr(R.string.s_queding),
                 )
                 QuickSendFormEditTextHolder.editText?.let { et ->
@@ -454,6 +474,8 @@ internal fun rememberImeKeyboardCallbacks(
             },
             onHideQuickSendForm = {
                 android.util.Log.d("QuickSendForm", "onHideQuickSendForm invoked")
+                // 编辑剪贴板内容时关闭表单应回到「剪贴板」tab，而不是「快捷发送」
+                val editingClipboard = service.uiState.value.quickSendEditClipboardItemId != null
                 service.uiState.value = service.uiState.value.copy(
                     showQuickSendForm = false,
                     quickSendFormFocused = false,
@@ -461,11 +483,12 @@ internal fun rememberImeKeyboardCallbacks(
                     quickSendEditingItemId = null,
                     quickSendEditingItemText = "",
                     quickSendEditingItemCode = "",
+                    quickSendEditClipboardItemId = null,
                     enterKeyText = tr(R.string.s_fasong),
                 )
                 QuickSendFormEditTextHolder.editText = null
                 QuickSendFormCodeEditTextHolder.editText = null
-                service.keyboardViewModel.showOverlay(OverlayRoute.Clipboard(1))
+                service.keyboardViewModel.showOverlay(OverlayRoute.Clipboard(if (editingClipboard) 0 else 1))
                 // insets 恢复由 SideEffect 驱动：表单收起 → 容器物理高度还原 →
                 // relayout → onComputeInsets 自动重算，无需强制触发。
             },

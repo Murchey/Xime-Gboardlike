@@ -294,6 +294,9 @@
     <string name="s_duoxuan">多选</string>
     <string name="s_kuaijie">快捷</string>
     <string name="s_zhiding">置顶</string>
+    <string name="s_quxiaozhiding">取消置顶</string>
+    <string name="s_bianjirongjian">编辑内容</string>
+    <string name="s_neirongbunengweikong">内容不能为空</string>
     <string name="s_jiangshanchuquanbu_tiaojiantie_12f1e">将删除全部 %1$s 条剪贴板记录</string>
     <string name="s_jiantiebanweikong">剪贴板为空</string>
     <string name="s_tupianyiqingli">图片已清理</string>

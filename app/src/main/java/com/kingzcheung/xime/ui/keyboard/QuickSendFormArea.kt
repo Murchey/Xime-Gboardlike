@@ -36,6 +36,10 @@ fun QuickSendFormArea(
     initialCode: String = "",
     cardBgColor: Color,
     editingItemId: Long? = null,
+    /** 覆盖面板标题（剪贴板内容编辑复用该表单）。 */
+    titleOverride: String? = null,
+    /** 是否显示「触发编码」输入框（剪贴板内容编辑不需要编码）。 */
+    showCodeField: Boolean = true,
     onClose: (text: String, code: String) -> Unit,
     onFocusChange: (Boolean) -> Unit,
     onCodeFocusChange: (Boolean) -> Unit,
@@ -46,7 +50,8 @@ fun QuickSendFormArea(
         MaterialTheme.colorScheme.primary,
         0.35f
     )
-    val title = if (editingItemId != null) tr(R.string.s_bianjikuaijiefasong) else tr(R.string.s_tianjiakuaijiefasong)
+    val title = titleOverride ?: if (editingItemId != null) tr(R.string.s_bianjikuaijiefasong)
+    else tr(R.string.s_tianjiakuaijiefasong)
 
     CandidateBarOverlayPanel(
         heightDp = QUICK_SEND_FORM_HEIGHT,
@@ -112,7 +117,7 @@ fun QuickSendFormArea(
                     .fillMaxSize()
                     .weight(1f),
             )
-            AndroidView(
+            if (showCodeField) AndroidView(
                 factory = { context ->
                     android.widget.EditText(context).apply {
                         setBackgroundColor(android.graphics.Color.TRANSPARENT)

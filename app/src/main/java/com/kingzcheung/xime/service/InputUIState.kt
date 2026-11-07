@@ -72,6 +72,8 @@ data class InputUIState(
     val quickSendEditingItemId: Long? = null,
     val quickSendEditingItemText: String = "",
     val quickSendEditingItemCode: String = "",
+    /** 非空表示当前表单在编辑这条剪贴板条目（复用快捷发送表单的输入路由）。 */
+    val quickSendEditClipboardItemId: Long? = null,
     /** 通用工具面板是否显示（候选栏上方，与快捷发送同位置）。 */
     val toolPanelVisible: Boolean = false,
     /** 面板输入框是否聚焦（聚焦时按键路由注入面板 EditText）。 */

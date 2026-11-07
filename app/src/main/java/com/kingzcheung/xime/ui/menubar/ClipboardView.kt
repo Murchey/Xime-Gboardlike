@@ -91,6 +91,8 @@ fun ClipboardView(
     onQuickSendEditItem: ((Long, String, String) -> Unit)? = null,
     onPullRemote: (() -> Unit)? = null,
     pullRemoteAvailable: Boolean = false,
+    /** 编辑剪贴板文本条目（复用快捷发送表单的输入路由）。 */
+    onClipboardEditItem: ((ClipboardItem) -> Unit)? = null,
     /** 图片条目点选（直插/回写由服务层处理）。 */
     onSelectImage: ((ClipboardItem) -> Unit)? = null,
     /** 图片条目 → 本地绝对文件（不存在返回 null，用于缩略图与拖拽）。 */
@@ -380,8 +382,14 @@ fun ClipboardView(
         menuAnchor?.let { anchor ->
             val menuItems = if (anchor.tab == 0) {
                 if (anchor.item.isImage) {
-                    // 图片条目：拆词/快捷发送无意义（文本操作），只剩多选 + 删除
+                    // 图片条目：拆词/编辑无意义（文本操作），保留置顶 + 多选 + 删除
                     listOf(
+                        LongPressMenuEntry(
+                            icon = Icons.Filled.PushPin,
+                            label = if (anchor.item.isPinned) tr(R.string.s_quxiaozhiding)
+                            else tr(R.string.s_zhiding),
+                            onClick = { viewModel.toggleClipboardPin(anchor.item.id) }
+                        ),
                         LongPressMenuEntry(
                             icon = Icons.Default.DoneAll,
                             label = tr(R.string.s_duoxuan),
@@ -400,7 +408,20 @@ fun ClipboardView(
                         )
                     )
                 } else {
-                    listOf(
+                    listOfNotNull(
+                        LongPressMenuEntry(
+                            icon = Icons.Filled.PushPin,
+                            label = if (anchor.item.isPinned) tr(R.string.s_quxiaozhiding)
+                            else tr(R.string.s_zhiding),
+                            onClick = { viewModel.toggleClipboardPin(anchor.item.id) }
+                        ),
+                        onClipboardEditItem?.let { edit ->
+                            LongPressMenuEntry(
+                                icon = Icons.Default.Create,
+                                label = tr(R.string.s_bianji),
+                                onClick = { edit(anchor.item) }
+                            )
+                        },
                         LongPressMenuEntry(
                             icon = Icons.Default.ContentCut,
                             label = tr(R.string.s_chaici),
@@ -651,6 +672,7 @@ fun ClipboardTabContent(
                     enabled = !isMultiSelect,
                     onDelete = { onRemove(item.id) },
                 ) {
+                    Box {
                     if (item.isImage) {
                         ClipboardImageCard(
                             item = item,
@@ -679,6 +701,19 @@ fun ClipboardTabContent(
                             dragKey = item.id,
                             onStartDrag = onStartDrag,
                         )
+                    }
+                    // 置顶角标：小图钉，避免占用卡片内容宽度
+                    if (item.isPinned) {
+                        Icon(
+                            imageVector = Icons.Filled.PushPin,
+                            contentDescription = tr(R.string.s_zhiding),
+                            tint = accentColor,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(4.dp)
+                                .size(14.dp),
+                        )
+                    }
                     }
                 }
             }

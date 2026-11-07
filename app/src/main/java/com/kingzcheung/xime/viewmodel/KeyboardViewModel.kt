@@ -137,6 +137,8 @@ data class KeyboardUiState(
     val quickSendEditingItemId: Long? = null,
     val quickSendEditingItemText: String = "",
     val quickSendEditingItemCode: String = "",
+    /** 非空表示快捷发送表单正在编辑这条剪贴板条目（标题与保存目标不同）。 */
+    val quickSendEditClipboardItemId: Long? = null,
     val toolPanelVisible: Boolean = false,
     val toolPanelInputFocused: Boolean = false,
     val toolPanelPluginId: String = "",
@@ -684,6 +686,11 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
     fun removeClipboardItem(id: Long) {
         clipboardManager.removeItem(id)
     }
+
+    fun toggleClipboardPin(id: Long) = clipboardManager.toggleClipboardPin(id)
+
+    fun updateClipboardItemText(id: Long, text: String): Boolean =
+        clipboardManager.updateClipboardItemText(id, text)
 
     fun removeClipboardItems(ids: List<Long>) {
         clipboardManager.removeItems(ids)
