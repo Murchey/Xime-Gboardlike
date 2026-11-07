@@ -17,6 +17,9 @@ fun CustomColorScheme.toKeyboardColorScheme(): KeyboardColorScheme {
         name = name,
         specialKeyLight = light.functionKeyBackground.toComposeColor(),
         specialKeyDark = dark.functionKeyBackground.toComposeColor(),
+        // 自定义主题的「功能键背景」直接驱动 shift/退格/字符键分组
+        functionKeyBackgroundLight = light.functionKeyBackground.toComposeColor(),
+        functionKeyBackgroundDark = dark.functionKeyBackground.toComposeColor(),
         accentLight = lightAccent,
         accentDark = darkAccent,
         primaryLight = lightAccent,
@@ -75,7 +78,7 @@ fun KeyboardColorScheme.toCustomColorScheme(name: String): CustomColorScheme = C
     light = ThemeColorSet(
         keyboardBackground = keyboardBgLight.toHexString(),
         keyBackground = keyBgLight.toHexString(),
-        functionKeyBackground = specialKeyLight.toHexString(),
+        functionKeyBackground = (functionKeyBackgroundLight ?: specialKeyLight).toHexString(),
         keyText = keyTextColorLight.toHexString(),
         candidateText = candidateTextColorLight.toHexString(),
         accent = accentLight.toHexString(),
@@ -83,7 +86,7 @@ fun KeyboardColorScheme.toCustomColorScheme(name: String): CustomColorScheme = C
     dark = ThemeColorSet(
         keyboardBackground = keyboardBgDark.toHexString(),
         keyBackground = keyBgDark.toHexString(),
-        functionKeyBackground = specialKeyDark.toHexString(),
+        functionKeyBackground = (functionKeyBackgroundDark ?: specialKeyDark).toHexString(),
         keyText = keyTextColorDark.toHexString(),
         candidateText = candidateTextColorDark.toHexString(),
         accent = accentDark.toHexString(),

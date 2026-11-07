@@ -98,6 +98,9 @@ data class KeyboardColorScheme(
     val keyPressHighlightColorLight: Color? = null,
     val keyPressHighlightColorDark: Color? = null,
     /** 强调键（回车/确定）底色与文字；null 时沿用功能键配色。 */
+    /** 功能键组（退格/字符/shift）底色；null 时由渲染层按普通键推导（暗色略亮、浅色略暗）。 */
+    val functionKeyBackgroundLight: Color? = null,
+    val functionKeyBackgroundDark: Color? = null,
     val accentKeyBackgroundLight: Color? = null,
     val accentKeyBackgroundDark: Color? = null,
     val accentKeyTextColorLight: Color? = null,
@@ -149,6 +152,7 @@ object KeyboardThemes {
         val selectedText: Color? = null,
         val container: Color? = null,
         // 可选 token：不填则沿用推导值
+        val functionKey: Color? = null,
         val pressHighlight: Color? = null,
         val accentKeyBg: Color? = null,
         val accentKeyText: Color? = null,
@@ -197,6 +201,8 @@ object KeyboardThemes {
             candidateSelectedTextColorDark = ensureContrast(
                 dark.selectedText ?: dark.accent, dark.background
             ),
+            functionKeyBackgroundLight = light.functionKey,
+            functionKeyBackgroundDark = dark.functionKey,
             keyPressHighlightColorLight = light.pressHighlight,
             keyPressHighlightColorDark = dark.pressHighlight,
             accentKeyBackgroundLight = light.accentKeyBg,
@@ -224,34 +230,48 @@ object KeyboardThemes {
      * - 键面文字 ≥9:1（浅色普遍 12+），候选/选中 ≥4.5:1，强调色 ≥3:1
      */
     private val defaultThemes = listOf(
+        // 参照 Gboard 实机配色（浅：白键 + 蓝灰功能键；深：深灰键 + 蓝灰功能键）
         buildTheme(
             id = "gboard_gray", name = "Gboard 灰",
             light = ThemePalette(
-                background = Color(0xFFD8DCE0), key = Color(0xFFFFFFFF),
-                keyText = Color(0xFF1E1E22), candidateText = Color(0xFF596069),
-                accent = Color(0xFF1A73E8), selectedText = Color(0xFF0B57D0), container = Color(0xFFD2E3FC),
-                specialKey = Color(0xFFD2E3FC),
+                background = Color(0xFFEDEEF2), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF1F1F23), candidateText = Color(0xFF5F6368),
+                accent = Color(0xFF1A73E8), selectedText = Color(0xFF0B57D0), container = Color(0xFFD7E2F4),
+                specialKey = Color(0xFFD7E2F4),
+                functionKey = Color(0xFFD7E2F4),
+                accentKeyBg = Color(0xFFD7E2F4), accentKeyText = Color(0xFF46506B),
+                popupBg = Color(0xFFFFFFFF), popupText = Color(0xFF1F1F23),
             ),
             dark = ThemePalette(
-                background = Color(0xFF0E0F10), key = Color(0xFF2E3033),
-                keyText = Color(0xFFE4E6E9), candidateText = Color(0xFFA0A3A7),
-                accent = Color(0xFFA8C7FA), selectedText = Color(0xFFC9DDFF), container = Color(0xFF213758),
-                specialKey = Color(0xFF213758),
+                background = Color(0xFF1E1F24), key = Color(0xFF38393E),
+                keyText = Color(0xFFE7E8EA), candidateText = Color(0xFF9AA0A6),
+                accent = Color(0xFFA8C7FA), selectedText = Color(0xFFC9DDFF), container = Color(0xFF3B4956),
+                specialKey = Color(0xFF3B4956),
+                functionKey = Color(0xFF3B4956),
+                accentKeyBg = Color(0xFF3B4956), accentKeyText = Color(0xFFDCE6F5),
+                popupBg = Color(0xFF2A2B30), popupText = Color(0xFFE7E8EA),
             ),
         ),
+        // 参照 Gboard 黑（浅：白键 + 灰功能键 + Google 蓝回车；深：纯黑底 + 浅灰键）
         buildTheme(
             id = "gboard_black", name = "Gboard 黑",
             light = ThemePalette(
-                background = Color(0xFFFFFFFF), key = Color(0xFFEFEFEF),
-                keyText = Color(0xFF1E1E22), candidateText = Color(0xFF202124),
-                accent = Color(0xFF1A73E8), selectedText = Color(0xFF0B57D0), container = Color(0xFFC3E2FF),
-                specialKey = Color(0xFFC3E2FF),
+                background = Color(0xFFF1F3F7), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF202124), candidateText = Color(0xFF5F6368),
+                accent = Color(0xFF1A73E8), selectedText = Color(0xFF0B57D0), container = Color(0xFFE1E3E2),
+                specialKey = Color(0xFFE1E3E2),
+                functionKey = Color(0xFFE1E3E2),
+                accentKeyBg = Color(0xFF1A73E8), accentKeyText = Color(0xFFFFFFFF),
+                popupBg = Color(0xFFFFFFFF), popupText = Color(0xFF202124),
             ),
             dark = ThemePalette(
-                background = Color(0xFF000000), key = Color(0xFF2A2A2A),
-                keyText = Color(0xFFEDEEF0), candidateText = Color(0xFFFFFFFF),
-                accent = Color(0xFF00A4FB), selectedText = Color(0xFF00A4FB), container = Color(0xFF313131),
-                specialKey = Color(0xFF313131),
+                background = Color(0xFF161616), key = Color(0xFF4E4E50),
+                keyText = Color(0xFFF2F2F2), candidateText = Color(0xFFA6A6A8),
+                accent = Color(0xFF8AB4F8), selectedText = Color(0xFFA8C7FA), container = Color(0xFF282828),
+                specialKey = Color(0xFF282828),
+                functionKey = Color(0xFF282828),
+                accentKeyBg = Color(0xFF282828), accentKeyText = Color(0xFFF2F2F2),
+                popupBg = Color(0xFF2A2A2A), popupText = Color(0xFFF2F2F2),
             ),
         ),
         buildTheme(
@@ -999,6 +1019,10 @@ object KeyboardThemes {
     /** 强调键（回车）底色；null 时沿用功能键底色。 */
     fun getAccentKeyBackground(themeId: String, isDark: Boolean): Color? =
         themeColor(themeId) { if (isDark) it.accentKeyBackgroundDark else it.accentKeyBackgroundLight }
+
+    /** 功能键组（退格/字符/shift）底色；null 时渲染层按普通键推导。 */
+    fun getFunctionKeyBackground(themeId: String, isDark: Boolean): Color? =
+        themeColor(themeId) { if (isDark) it.functionKeyBackgroundDark else it.functionKeyBackgroundLight }
 
     /** 强调键文字色；null 时沿用功能键文字色。 */
     fun getAccentKeyTextColor(themeId: String, isDark: Boolean): Color? =

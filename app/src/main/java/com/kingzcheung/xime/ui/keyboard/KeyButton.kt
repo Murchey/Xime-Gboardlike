@@ -183,6 +183,9 @@ internal fun pressOverlay(base: Color): Color {
 /** 主题按压高亮色；null = 按键帽亮度自动推导（旧主题行为）。 */
 val LocalKeyPressHighlightColor = androidx.compose.runtime.staticCompositionLocalOf<Color?> { null }
 
+/** 按下态底色覆盖：一般按键（字母/数字）按下时直接取键盘背景色；null = 走默认推导。 */
+val LocalKeyPressedBackgroundColor = androidx.compose.runtime.staticCompositionLocalOf<Color?> { null }
+
 /** 按压态键帽色：主题色作为半透明叠加层盖在键帽本色上，保留功能键/强调键自身的色相。 */
 internal fun pressedKeyColor(base: Color, highlight: Color?): Color =
     if (highlight == null) keyPressedColor(base) else highlight.compositeOver(base)
@@ -230,7 +233,8 @@ internal fun Modifier.keyPressFeedback(
         // 必须带 shape：按下时 graphicsLayer 会把背景缩到 0.95，若背景是矩形，
         // 缩小后的直角会落到外层圆角 clip 之内，宽键（空格）就会露出直棱、看起来变方。
         .background(
-            if (isPressed) pressedKeyColor(baseColor, LocalKeyPressHighlightColor.current)
+            if (isPressed) LocalKeyPressedBackgroundColor.current
+                ?: pressedKeyColor(baseColor, LocalKeyPressHighlightColor.current)
             else baseColor,
             shape,
         )
@@ -657,7 +661,7 @@ fun KeyButton(
             .clip(keyClipShape)
             .background(
                 when {
-                    isPressed -> pressOverlay(backgroundColor)
+                    isPressed -> LocalKeyPressedBackgroundColor.current ?: pressOverlay(backgroundColor)
                     isHighlighted -> backgroundColor.copy(alpha = 0.8f)
                     else -> backgroundColor
                 }
@@ -1174,7 +1178,8 @@ fun SwipeableKeyButton(
             .then(shadowModifier)
             .clip(keyClipShape)
             .background(
-                if (isPressed) pressedKeyColor(backgroundColor, LocalKeyPressHighlightColor.current)
+                if (isPressed) LocalKeyPressedBackgroundColor.current
+                    ?: pressedKeyColor(backgroundColor, LocalKeyPressHighlightColor.current)
                 else if (isHighlighted) backgroundColor.copy(alpha = 0.8f)
                 else backgroundColor
             )
@@ -2075,7 +2080,7 @@ fun SwipeableIconKeyButton(
             .clip(keyClipShape)
             .background(
                 when {
-                    isPressed -> pressOverlay(backgroundColor)
+                    isPressed -> LocalKeyPressedBackgroundColor.current ?: pressOverlay(backgroundColor)
                     isHighlighted -> backgroundColor.copy(alpha = 0.8f)
                     else -> backgroundColor
                 }

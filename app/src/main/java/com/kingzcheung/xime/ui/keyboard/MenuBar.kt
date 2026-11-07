@@ -10,6 +10,7 @@ import com.kingzcheung.xime.viewmodel.currentIcon
 import com.kingzcheung.xime.viewmodel.currentLabel
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.pager.HorizontalPager
@@ -37,6 +38,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.twotone.Edit
 import androidx.compose.material.icons.twotone.KeyboardAlt
@@ -275,7 +277,7 @@ private fun ToolbarStrip(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CircleAction(
-            icon = if (editing) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Check,
+            icon = if (editing) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Close,
             tint = textColor,
             bg = cardColor,
             label = if (editing) tr(R.string.s_wancheng) else tr(R.string.s_quxiao),
@@ -506,16 +508,39 @@ private fun ToolbarNormalBody(
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.End) {
-            CircleAction(
-                icon = Icons.TwoTone.Edit,
-                tint = textColor,
-                bg = cardColor,
-                label = tr(R.string.s_dingzhigongjulan),
-                size = 26.dp,
-                buttonSize = 44.dp,
-                onClick = onEdit,
-            )
+        // 底部：页码圆点居中，编辑入口为右下角描边胶囊（Gboard 工具栏样式）
+        Box(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+            Row(
+                modifier = Modifier.align(Alignment.Center),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                repeat(pages.size.coerceAtLeast(1)) { index ->
+                    val active = index == pagerState.currentPage
+                    Box(
+                        modifier = Modifier
+                            .size(if (active) 8.dp else 6.dp)
+                            .clip(CircleShape)
+                            .background(textColor.copy(alpha = if (active) 0.9f else 0.3f))
+                    )
+                }
+            }
+            val editShape = RoundedCornerShape(50)
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .clip(editShape)
+                    .border(1.dp, textColor.copy(alpha = 0.5f), editShape)
+                    .clickable { onEdit() }
+                    .padding(horizontal = 22.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.TwoTone.Edit,
+                    contentDescription = tr(R.string.s_dingzhigongjulan),
+                    tint = textColor,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
         Spacer(Modifier.height(6.dp))
     }

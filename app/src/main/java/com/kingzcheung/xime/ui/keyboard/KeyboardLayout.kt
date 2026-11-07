@@ -44,6 +44,8 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.twotone.EmojiEmotions
 import androidx.compose.material.icons.twotone.KeyboardAlt
 import androidx.compose.material.icons.twotone.KeyboardCapslock
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -83,6 +85,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import kotlin.math.abs
@@ -815,8 +818,11 @@ internal fun resolveKeyboardPalette(themeId: String, isDarkTheme: Boolean): Keyb
         ?: if (isDarkTheme) longToColor(kbColors.keyBgColorDark) else longToColor(kbColors.keyBgColor)
     val keyTextColor = KeyboardThemes.getKeyTextColorOverride(themeId, isDarkTheme)
         ?: if (isDarkTheme) longToColor(kbColors.keyTextColorDark) else longToColor(kbColors.keyTextColor)
-    // 功能键取主题色；xime.yaml 的全局 special_key 不再压过主题，否则自定义主题功能键不生效。
-    val specialKeyBackgroundColor = themeSpecialKeyColor
+    // 功能键组（退格/字符/shift）：主题显式 token 优先；否则按 Gboard 的层次推导——
+    // 暗色比普通键略亮一档，浅色比白键略暗一档，保证两种模式都能看出分组。
+    val specialKeyBackgroundColor = KeyboardThemes.getFunctionKeyBackground(themeId, isDarkTheme)
+        ?: if (isDarkTheme) lerp(keyBackgroundColor, Color.White, 0.10f)
+        else lerp(keyBackgroundColor, Color.Black, 0.06f)
     val specialKeyTextColor = KeyboardThemes.getSpecialKeyTextColorForBackground(
         specialKeyBackgroundColor, keyTextColor
     )
@@ -830,10 +836,15 @@ internal fun resolveKeyboardPalette(themeId: String, isDarkTheme: Boolean): Keyb
         specialKeyBackgroundColor = specialKeyBackgroundColor,
         specialKeyTextColor = specialKeyTextColor,
         bubbleBgColor = popupBg,
+        // 回车使用主题强调色（Gboard 行为），不再和功能键同色
         accentKeyBackgroundColor = KeyboardThemes.getAccentKeyBackground(themeId, isDarkTheme)
-            ?: specialKeyBackgroundColor,
+            ?: KeyboardThemes.getAccentColor(themeId, isDarkTheme),
         accentKeyTextColor = KeyboardThemes.getAccentKeyTextColor(themeId, isDarkTheme)
-            ?: specialKeyTextColor,
+            ?: KeyboardThemes.getSpecialKeyTextColorForBackground(
+                KeyboardThemes.getAccentKeyBackground(themeId, isDarkTheme)
+                    ?: KeyboardThemes.getAccentColor(themeId, isDarkTheme),
+                keyTextColor,
+            ),
         popupTextColor = popupText,
         pressHighlightColor = KeyboardThemes.getKeyPressHighlightColor(themeId, isDarkTheme),
     )
@@ -1959,6 +1970,11 @@ fun KeyboardRowWithConfig(
     /** 手机横屏紧凑档：改用 [SwipeableKeyButtonLandscape]（主字符与上滑提示垂直堆叠、手势阈值收紧）。 */
     compactButton: Boolean = false,
 ) {
+    // 一般按键（字母/数字）按下时取键盘背景色，和 Gboard 的按压反馈一致；
+    // 只包住本行的非功能键，功能键（shift/退格/回车/字符键）仍走各自的提亮逻辑。
+    CompositionLocalProvider(
+        LocalKeyPressedBackgroundColor provides config.keyboardBackgroundColor
+    ) {
     Row(
         modifier = modifier
             .fillMaxWidth(),
@@ -2198,6 +2214,7 @@ fun KeyboardRowWithConfig(
             }
         }
     }
+    }
 }
 
 @Composable
@@ -2278,9 +2295,11 @@ private fun ShiftCapsKeyButton(
             .then(shadowModifier)
             .clip(keyClipShape)
             .background(
-                if (isPressed) darkenColor(backgroundColor, 0.1f)
-                else if (shiftMode == ShiftMode.CAPS) darkenColor(backgroundColor, 0.2f)
-                else if (shiftMode == ShiftMode.SINGLE) darkenColor(backgroundColor, 0.1f)
+                // 功能键按下统一样式：深色键面提亮（与退格/回车一致）
+                if (isPressed) pressOverlay(backgroundColor)
+                // 激活态提亮（Gboard：shift 开启后键帽变亮），CAPS 靠右上角圆点区分
+                else if (shiftMode == ShiftMode.CAPS) pressOverlay(backgroundColor)
+                else if (shiftMode == ShiftMode.SINGLE) pressOverlay(backgroundColor)
                 else backgroundColor
             )
             .keySemantics(
@@ -2295,9 +2314,10 @@ private fun ShiftCapsKeyButton(
             },
         contentAlignment = Alignment.Center
     ) {
+        // Gboard 的 shift 图标：未激活为描边箭头，激活后填充；CAPS 由右上角小圆点提示
         val painter = when (shiftMode) {
-            ShiftMode.OFF -> rememberVectorPainter(Icons.TwoTone.KeyboardControlKey)
-            else -> rememberVectorPainter(Icons.TwoTone.KeyboardCapslock)
+            ShiftMode.OFF -> rememberVectorPainter(Icons.Outlined.ArrowUpward)
+            else -> rememberVectorPainter(Icons.Filled.ArrowUpward)
         }
         Icon(
             painter = painter,

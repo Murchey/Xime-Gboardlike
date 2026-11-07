@@ -18,7 +18,8 @@ import org.junit.Test
  */
 class ThemeTokenTest {
 
-    private val legacyIds = listOf("gboard_gray", "gboard_black", "wechat")
+    // Gboard 两套已按实机配色补全可选 token，仅剩微信仍是纯旧式主题
+    private val legacyIds = listOf("wechat")
 
     @Test
     fun `旧主题未配置可选 token 时返回 null`() {

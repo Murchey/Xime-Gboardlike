@@ -82,13 +82,15 @@ class ThemeCatalogTest {
         KeyboardThemes.themes
             .filterNot { it.isDynamic }
             .forEach { theme ->
+                // 7:1 而非 9:1：Gboard 黑主题的实测键面为 #5C5C5E（白字约 6.8），
+                // 为对齐 Gboard 观感放宽一档，仍高于 WCAG AA 的大字号标准。
                 assertTrue(
                     "${theme.id} 浅色按键文字对比度不足",
-                    KeyboardThemes.contrastRatio(theme.keyTextColorLight, theme.keyBgLight) >= 9f
+                    KeyboardThemes.contrastRatio(theme.keyTextColorLight, theme.keyBgLight) >= 7f
                 )
                 assertTrue(
                     "${theme.id} 深色按键文字对比度不足",
-                    KeyboardThemes.contrastRatio(theme.keyTextColorDark, theme.keyBgDark) >= 9f
+                    KeyboardThemes.contrastRatio(theme.keyTextColorDark, theme.keyBgDark) >= 7f
                 )
             }
     }
