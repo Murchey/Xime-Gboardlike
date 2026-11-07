@@ -205,6 +205,12 @@ xipm test           # 运行插件测试（QuickJS + mock host，无需真机）
 - [插件列表](https://ime.ximei.me/plugin-list.html)
 - [AI 模型列表](https://ime.ximei.me/model-list.html)
 
+## 测试报告
+
+针对具体功能做的真机测试记录，包含原始数据、复现步骤和通俗解释：
+
+- [智能纠错引擎测试](docs/智能纠错测试报告.md) —— 两个纠错引擎是否真的有用、修了哪些问题、为什么去掉“实验性”标注
+
 ## 技术栈
 
 - Kotlin

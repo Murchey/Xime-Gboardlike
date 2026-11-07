@@ -42,6 +42,24 @@ class GramPatchTest {
     }
 
     @Test
+    fun `带 BOM 的重复 patch 块合并为单一块且保留纠错补丁`() {
+        // 复刻真机文件：纠错补丁写在前面（带 BOM），语法补丁又追加了一个 patch:
+        val existing = "\uFEFFpatch:\n" +
+            "  \"correction/enable\": true\n" +
+            "  \"correction_translator/dictionary\": rime_frost\n" +
+            "patch:\n" +
+            "  'speller/algebra':\n" +
+            "    - 'derive/^x/y/'\n"
+        val out = GramPatch.apply(existing, "xime")!!
+        assertEquals(1, Regex("(?m)^patch:$").findAll(out).count())
+        assertTrue(out.contains("\"correction/enable\": true"))
+        assertTrue(out.contains("\"correction_translator/dictionary\": rime_frost"))
+        assertTrue(out.contains("'speller/algebra':"))
+        assertTrue(out.contains("'grammar/language': 'xime'"))
+        assertFalse(out.startsWith("\uFEFF"))
+    }
+
+    @Test
     fun `重复 apply 幂等覆盖不重复追加`() {
         val once = GramPatch.apply(null, "xime")!!
         val twice = GramPatch.apply(once, "xime")!!

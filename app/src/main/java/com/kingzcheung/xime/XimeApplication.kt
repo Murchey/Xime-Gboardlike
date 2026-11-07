@@ -78,6 +78,8 @@ class XimeApplication : Application(), ImageLoaderFactory {
         // 邻键误触纠错（librime 插件版）：初始化先验推送器
         CorrectionPriors.init(this)
         CorrectionPriors.enabled = SettingsPreferences.isCorrectorEnabled(this)
+        // 引擎选择也要在冷启动恢复：此前只有进入设置页才会写入运行时，重启后总是回落到原版
+        CorrectionPriors.engine = SettingsPreferences.getCorrectionEngine(this)
         // 启动自检：确认生效 schema 里挂上了 correction_translator（写文件日志）
         if (CorrectionPriors.enabled) {
             Thread {

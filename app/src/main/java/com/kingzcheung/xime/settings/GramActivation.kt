@@ -82,9 +82,13 @@ object GramPatch {
         language: String?,
         profile: GrammarProfile = GrammarProfile(),
     ): String? {
-        val base = (existing ?: "").replace("\r\n", "\n").trimEnd('\n')
+        val base = (existing ?: "")
+            .removePrefix("\uFEFF")
+            .replace("\r\n", "\n")
+            .trimEnd('\n')
         if (language.isNullOrBlank()) return removeKeys(base)
         val lines = if (base.isBlank()) mutableListOf() else base.lines().toMutableList()
+        mergePatchSections(lines)
         if (lines.indexOfFirst { isPatchHeader(it) } < 0) {
             lines.add("patch:")
         }
@@ -99,6 +103,7 @@ object GramPatch {
     private fun removeKeys(base: String): String? {
         if (base.isBlank()) return null
         val lines = base.lines().toMutableList()
+        mergePatchSections(lines)
         val patchIdx = lines.indexOfFirst { isPatchHeader(it) }
         if (patchIdx < 0) return normalize(lines)
         removeOurKeys(lines, patchIdx)
@@ -149,7 +154,43 @@ object GramPatch {
     }
 
     private fun isPatchHeader(line: String): Boolean =
-        line.trim() == "patch:" && line.isNotEmpty() && line[0] != ' ' && line[0] != '\t'
+        line.removePrefix("\uFEFF").trim() == "patch:" &&
+            line.isNotEmpty() && line[0] != ' ' && line[0] != '\t'
+
+    /**
+     * 合并重复的 `patch:` 块。
+     *
+     * 多个工具（语法补丁、纠错补丁、模糊音补丁）各自往 custom.yaml 尾部追加时，
+     * 若文件带 BOM 或格式差异没识别出已有 patch，就会产生第二个 `patch:` 块；
+     * YAML 解析同名键以后者为准，前一个块会被**静默丢弃**（纠错补丁就是这么失效的）。
+     * 合并后所有块内容按原顺序挂到第一个 header 下。
+     */
+    private fun mergePatchSections(lines: MutableList<String>) {
+        val headers = lines.indices.filter { isPatchHeader(lines[it]) }
+        if (headers.size <= 1) return
+        val first = headers.first()
+        val bodies = mutableListOf<String>()
+        val remove = mutableSetOf<Int>()
+        for ((n, h) in headers.withIndex()) {
+            var end = h + 1
+            while (end < lines.size) {
+                val line = lines[end]
+                if (line.isNotBlank() && line[0] != ' ' && line[0] != '\t') break
+                end++
+            }
+            for (i in h + 1 until end) bodies.add(lines[i])
+            val from = if (n == 0) h + 1 else h
+            for (i in from until end) remove.add(i)
+        }
+        val result = mutableListOf<String>()
+        for (i in lines.indices) {
+            if (i in remove) continue
+            result.add(lines[i])
+            if (i == first) result.addAll(bodies)
+        }
+        lines.clear()
+        lines.addAll(result)
+    }
 
     private fun patchEnd(lines: List<String>, patchIdx: Int): Int {
         var end = patchIdx + 1

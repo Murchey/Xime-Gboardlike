@@ -205,6 +205,13 @@ For detailed documentation, visit [https://ime.ximei.me](https://ime.ximei.me).
 - [Plugin List](https://ime.ximei.me/plugin-list.html)
 - [AI Models List](https://ime.ximei.me/model-list.html)
 
+## Test reports
+
+Hands-on test records for specific features, with raw measurements, reproduction steps,
+and plain-language explanations (written in Chinese):
+
+- [Smart correction engine test](docs/智能纠错测试报告.md) — whether the two correction engines actually work, what was broken, and why the "experimental" label was removed
+
 ## Tech Stack
 
 - Kotlin
