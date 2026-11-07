@@ -262,6 +262,7 @@
     <string name="s_jianpandiaojie">鍵盤調節</string>
     <string name="s_bushufangan">部署方案</string>
     <string name="s_chongxinbianyi">重新編譯</string>
+    <string name="s_chongxinbianyi_shuoming">將清除編譯快取並重新編譯所有已啟用方案，耗時較長；詞庫與自訂設定不受影響。確定繼續嗎？</string>
     <string name="s_qingchuyibianyineirong">清除已編譯內容</string>
     <string name="s_guanbicaidan">關閉選單</string>
     <string name="s_shezhi">設定</string>

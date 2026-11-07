@@ -264,6 +264,7 @@
     <string name="s_jianpandiaojie">键盘调节</string>
     <string name="s_bushufangan">部署方案</string>
     <string name="s_chongxinbianyi">重新编译</string>
+    <string name="s_chongxinbianyi_shuoming">将清除编译缓存并重新编译所有已启用方案，耗时较长；词库与自定义配置不受影响。确定继续吗？</string>
     <string name="s_qingchuyibianyineirong">清除已编译内容</string>
     <string name="s_guanbicaidan">关闭菜单</string>
     <string name="s_shezhi">设置</string>

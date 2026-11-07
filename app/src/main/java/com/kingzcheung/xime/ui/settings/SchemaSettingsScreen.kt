@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.twotone.Description
@@ -89,6 +91,7 @@ fun SchemaSettingsContent(
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     var showMenu by remember { mutableStateOf(false) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
+    var showRebuildDialog by remember { mutableStateOf(false) }
 
     if (showClearCacheDialog) {
         AlertDialog(
@@ -103,6 +106,23 @@ fun SchemaSettingsContent(
             },
             dismissButton = {
                 TextButton(onClick = { showClearCacheDialog = false }) { Text(tr(R.string.s_quxiao)) }
+            },
+        )
+    }
+
+    if (showRebuildDialog) {
+        AlertDialog(
+            onDismissRequest = { showRebuildDialog = false },
+            title = { Text(tr(R.string.s_chongxinbianyi)) },
+            text = { Text(tr(R.string.s_chongxinbianyi_shuoming)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRebuildDialog = false
+                    viewModel.rebuildSchema()
+                }) { Text(tr(R.string.s_chongxinbianyi)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRebuildDialog = false }) { Text(tr(R.string.s_quxiao)) }
             },
         )
     }
@@ -257,6 +277,22 @@ fun SchemaSettingsContent(
                                         modifier = Modifier.size(20.dp))
                                 }
                             )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 12.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
+                            DropdownMenuItem(
+                                text = { Text(tr(R.string.s_qingchuyibianyineirong)) },
+                                onClick = {
+                                    showMenu = false
+                                    showClearCacheDialog = true
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Delete, null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp))
+                                }
+                            )
                         }
                     }
                 },
@@ -385,7 +421,8 @@ fun SchemaSettingsContent(
                 }
             }
 
-            // 选中（已启用）方案里有已编译产物时，部署等于重编这些方案，按钮改叫「重新编译」
+            // 初始设置阶段「部署」是主操作；「重新编译」仅在已有编译产物时作为次要操作出现，
+            // 避免首启用户被大号「重新编译」误导（强制重编 = 清缓存 + 重新部署）。
             val anyCompiled = uiState.enabledSchemas.any {
                 SchemaManager.isSchemaCompiled(context, it)
             }
@@ -399,19 +436,23 @@ fun SchemaSettingsContent(
                 Button(
                     onClick = { viewModel.deploySchema() },
                     enabled = !uiState.isDeploying,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 48.dp),
                 ) {
                     if (uiState.isDeploying) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
                         Spacer(Modifier.width(8.dp))
                     }
-                    Text(tr(if (anyCompiled) R.string.s_chongxinbianyi else R.string.s_bushufangan))
+                    Text(tr(R.string.s_bushufangan))
                 }
-                TextButton(
-                    onClick = { showClearCacheDialog = true },
-                    enabled = !uiState.isDeploying,
-                ) {
-                    Text(tr(R.string.s_qingchuyibianyineirong))
+                if (anyCompiled) {
+                    TextButton(
+                        onClick = { showRebuildDialog = true },
+                        enabled = !uiState.isDeploying,
+                    ) {
+                        Text(tr(R.string.s_chongxinbianyi))
+                    }
                 }
             }
         }

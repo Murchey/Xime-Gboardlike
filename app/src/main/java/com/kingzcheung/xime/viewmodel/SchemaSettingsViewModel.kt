@@ -271,38 +271,54 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
 
     fun deploySchema() {
         if (_uiState.value.isDeploying) return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isDeploying = true) }
-            val (success, missingReverseDicts) = withContext(Dispatchers.IO) {
-                // 先补齐内置基础文件（symbols/default 等），避免方案 __include 失败导致编译报错
-                RimeConfigHelper.ensureBuiltinBaseFiles(context)
-                PersonalDictManager.ensureSchemaPacks(context)
-                KeysConfigHelper.loadConfig(context)
-                KeyboardThemes.reload(context)
-                val engine = RimeEngine.getInstance()
-                val deployed = engine.deploy()
-                if (deployed) {
-                    RimeConfigHelper.storeDeploymentHash(context)
-                }
-                deployed to RimeConfigHelper.missingReverseLookupTables(context)
+        viewModelScope.launch { runDeploy(clearCacheFirst = false) }
+    }
+
+    /**
+     * 强制重新编译：清空编译缓存后立即重新部署。
+     * 与「部署方案」共用同一条部署链路，只是先丢弃旧产物。
+     */
+    fun rebuildSchema() {
+        if (_uiState.value.isDeploying) return
+        viewModelScope.launch { runDeploy(clearCacheFirst = true) }
+    }
+
+    private suspend fun runDeploy(clearCacheFirst: Boolean) {
+        _uiState.update { it.copy(isDeploying = true) }
+        if (clearCacheFirst) {
+            withContext(Dispatchers.IO) {
+                runCatching { StorageStats.clearCategory(context, StorageStats.ID_SCHEMA_CACHE) }
             }
-            _uiState.update { it.copy(isDeploying = false) }
-            val missing = missingReverseDicts.map { it.second }.distinct()
-            if (missing.isNotEmpty()) {
-                FileLogger.w(
-                    "SchemaSettings", "部署后反查词典仍缺编译产物: $missing（对应方案: ${missingReverseDicts.map { it.first }.distinct()}）"
-                )
-            }
-            showToast(
-                when {
-                    !success -> tr(R.string.s_bushushibai)
-                    missing.isEmpty() -> tr(R.string.s_bushuwancheng)
-                    // 反查词典由它自己的方案编译：缺产物时运行期会报 table.bin 不存在
-                    else -> tr(R.string.s_bushuwancheng_fanchacidian, missing.joinToString("、"))
-                }
-            )
-            refresh()
         }
+        val (success, missingReverseDicts) = withContext(Dispatchers.IO) {
+            // 先补齐内置基础文件（symbols/default 等），避免方案 __include 失败导致编译报错
+            RimeConfigHelper.ensureBuiltinBaseFiles(context)
+            PersonalDictManager.ensureSchemaPacks(context)
+            KeysConfigHelper.loadConfig(context)
+            KeyboardThemes.reload(context)
+            val engine = RimeEngine.getInstance()
+            val deployed = engine.deploy()
+            if (deployed) {
+                RimeConfigHelper.storeDeploymentHash(context)
+            }
+            deployed to RimeConfigHelper.missingReverseLookupTables(context)
+        }
+        _uiState.update { it.copy(isDeploying = false) }
+        val missing = missingReverseDicts.map { it.second }.distinct()
+        if (missing.isNotEmpty()) {
+            FileLogger.w(
+                "SchemaSettings", "部署后反查词典仍缺编译产物: $missing（对应方案: ${missingReverseDicts.map { it.first }.distinct()}）"
+            )
+        }
+        showToast(
+            when {
+                !success -> tr(R.string.s_bushushibai)
+                missing.isEmpty() -> tr(R.string.s_bushuwancheng)
+                // 反查词典由它自己的方案编译：缺产物时运行期会报 table.bin 不存在
+                else -> tr(R.string.s_bushuwancheng_fanchacidian, missing.joinToString("、"))
+            }
+        )
+        refresh()
     }
 
     /**
