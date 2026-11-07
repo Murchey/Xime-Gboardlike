@@ -590,6 +590,10 @@
     <string name="s_xianshizaishurukuang">显示在输入框</string>
     <string name="s_xianshizaihouxuanlan">显示在候选栏</string>
     <string name="s_meiyehouxuancishu">每页候选词数</string>
+    <string name="s_zhanakaiye_buju">展开页布局</string>
+    <string name="s_zhanakaiye_buju_fu">网格更整齐；流式按词长自适应，长词不截断</string>
+    <string name="s_wangge">网格</string>
+    <string name="s_liushi">流式</string>
     <string name="s_ge">%1$s 个</string>
     <string name="s_xiugaihouxudaofanganshezhizhon_603c8">修改后立即生效；引擎未启动时下次弹出键盘生效</string>
     <string name="s_shurukuangshipei">输入框适配</string>

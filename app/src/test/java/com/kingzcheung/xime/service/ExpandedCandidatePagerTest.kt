@@ -91,6 +91,35 @@ class ExpandedCandidatePagerTest {
         assertEquals(listOf(listOf(0), listOf(1)), rows)
     }
 
+    // ── gridRows / gridColumns（网格布局：固定列数、行尾补空）──
+
+    @Test
+    fun `网格按固定列数切分且末行保留剩余项`() {
+        assertEquals(
+            listOf(listOf(0, 1, 2), listOf(3, 4)),
+            ExpandedCandidatePager.gridRows(listOf(0, 1, 2, 3, 4), columns = 3)
+        )
+    }
+
+    @Test
+    fun `网格空列表返回空行组且列数非法时退化为单列`() {
+        assertEquals(emptyList<List<Int>>(), ExpandedCandidatePager.gridRows(emptyList(), 4))
+        assertEquals(
+            listOf(listOf(0), listOf(1)),
+            ExpandedCandidatePager.gridRows(listOf(0, 1), columns = 0)
+        )
+    }
+
+    @Test
+    fun `网格列数按可用宽度估算并夹在3到8之间`() {
+        // 窄屏（手机竖屏候选区约 260dp）→ 3 列；常见手机宽容器 → 4 列
+        assertEquals(3, ExpandedCandidatePager.gridColumns(200f))
+        assertEquals(4, ExpandedCandidatePager.gridColumns(320f))
+        // 平板/横屏：随宽度增加，封顶 8 列
+        assertEquals(6, ExpandedCandidatePager.gridColumns(480f))
+        assertEquals(8, ExpandedCandidatePager.gridColumns(2000f))
+    }
+
     @Test
     fun `行组中的全局索引指向原始列表`() {
         val all = listOf(candidate("你"), candidate("你好"), candidate("世"), candidate("们好"))

@@ -62,6 +62,21 @@ object ExpandedCandidatePager {
     }
 
     /**
+     * 网格分行：固定列数，行尾不足一列由渲染层补空位（保证所有格宽一致）。
+     */
+    fun gridRows(filtered: List<Int>, columns: Int): List<List<Int>> {
+        if (filtered.isEmpty()) return emptyList()
+        return filtered.chunked(columns.coerceAtLeast(1))
+    }
+
+    /**
+     * 网格列数：按展开页可用宽度与目标格宽估算，夹在 3~8 列。
+     * 窄屏 4 列，宽容器（平板/横屏）6~8 列。
+     */
+    fun gridColumns(availableWidthDp: Float): Int =
+        (availableWidthDp / 72f).toInt().coerceIn(3, 8)
+
+    /**
      * 过滤后的全局索引列表。
      * @param singleCharOnly true 时只保留单字候选（筛选单字功能）
      * @param fromIndex 起始偏移：跳过候选栏已显示的前若干个候选，避免展开页重复

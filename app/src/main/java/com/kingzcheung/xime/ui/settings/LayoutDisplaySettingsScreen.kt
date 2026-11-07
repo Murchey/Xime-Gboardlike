@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.twotone.Straighten
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -735,6 +736,46 @@ fun LayoutDisplaySettingsContent(
                             text = tr(R.string.s_xiugaihouxudaofanganshezhizhon_603c8),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                })
+            }
+
+            item {
+                SettingsSection(title = tr(R.string.s_zhanakaiye_buju), content = {
+                    var expandedStyle by remember {
+                        mutableStateOf(SettingsPreferences.expandedCandidateStyle(context))
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 分组标题已说明「展开页布局」，行内只放说明文字，避免重复
+                        Text(
+                            text = tr(R.string.s_zhanakaiye_buju_fu),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        FilterChip(
+                            selected = expandedStyle == SettingsPreferences.EXPANDED_STYLE_GRID,
+                            onClick = {
+                                expandedStyle = SettingsPreferences.EXPANDED_STYLE_GRID
+                                SettingsPreferences.setExpandedCandidateStyle(context, expandedStyle)
+                            },
+                            label = { Text(tr(R.string.s_wangge)) }
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        FilterChip(
+                            selected = expandedStyle == SettingsPreferences.EXPANDED_STYLE_FLOW,
+                            onClick = {
+                                expandedStyle = SettingsPreferences.EXPANDED_STYLE_FLOW
+                                SettingsPreferences.setExpandedCandidateStyle(context, expandedStyle)
+                            },
+                            label = { Text(tr(R.string.s_liushi)) }
                         )
                     }
                 })

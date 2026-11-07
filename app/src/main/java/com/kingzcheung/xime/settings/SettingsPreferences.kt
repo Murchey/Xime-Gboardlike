@@ -177,6 +177,22 @@ object SettingsPreferences {
         getPrefs(context).edit().putBoolean(KEY_SHOW_CANDIDATE_COMMENTS, show).apply()
     }
 
+    // ── 展开页布局 ──
+    /** 展开候选页的排布方式：流式（按词长自适应换行）/ 网格（固定列数更整齐）。 */
+    const val EXPANDED_STYLE_FLOW = "flow"
+    const val EXPANDED_STYLE_GRID = "grid"
+    const val DEFAULT_EXPANDED_CANDIDATE_STYLE = EXPANDED_STYLE_FLOW
+
+    /** 展开页布局方式；非法值回落流式（旧行为）。 */
+    fun expandedCandidateStyle(context: Context): String {
+        val raw = getPrefs(context).getString(KEY_EXPANDED_CANDIDATE_STYLE, DEFAULT_EXPANDED_CANDIDATE_STYLE)
+        return if (raw == EXPANDED_STYLE_GRID) EXPANDED_STYLE_GRID else EXPANDED_STYLE_FLOW
+    }
+
+    fun setExpandedCandidateStyle(context: Context, style: String) {
+        getPrefs(context).edit().putString(KEY_EXPANDED_CANDIDATE_STYLE, style).apply()
+    }
+
     /**
      * 候选展开页是否逐条显示编码注释。
      *
@@ -184,6 +200,7 @@ object SettingsPreferences {
      * 仅在 [showCandidateComments] 总开关开启时生效（总开关关闭 → 全局不显示）。
      */
     const val KEY_SHOW_EXPANDED_CANDIDATE_COMMENTS = "show_expanded_candidate_comments"
+    const val KEY_EXPANDED_CANDIDATE_STYLE = "expanded_candidate_style"
 
     fun showExpandedCandidateComments(context: Context): Boolean =
         getPrefs(context).getBoolean(KEY_SHOW_EXPANDED_CANDIDATE_COMMENTS, false)

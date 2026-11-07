@@ -676,6 +676,10 @@ fun KeyboardView(
                 fun readExpandedComments() = SettingsPreferences.showCandidateComments(commentContext) &&
                     SettingsPreferences.showExpandedCandidateComments(commentContext)
                 var showExpandedComments by remember { mutableStateOf(readExpandedComments()) }
+                // 展开页布局：流式（按词长换行）/ 网格（固定列数更整齐），设置改动即时生效
+                var expandedStyle by remember {
+                    mutableStateOf(SettingsPreferences.expandedCandidateStyle(commentContext))
+                }
                 DisposableEffect(commentContext) {
                     val prefs = SettingsPreferences.getPrefsPublic(commentContext)
                     val listener =
@@ -684,6 +688,10 @@ fun KeyboardView(
                                 key == SettingsPreferences.KEY_SHOW_EXPANDED_CANDIDATE_COMMENTS
                             ) {
                                 showExpandedComments = readExpandedComments()
+                            }
+                            if (key == SettingsPreferences.KEY_EXPANDED_CANDIDATE_STYLE) {
+                                expandedStyle =
+                                    SettingsPreferences.expandedCandidateStyle(commentContext)
                             }
                         }
                     prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -749,14 +757,24 @@ fun KeyboardView(
                         scaledDensity = density * fontScale
                     )
                 }
+                // 网格列数：仅在网格布局下 >0；按展开页真实宽度估算（悬浮/收窄/分屏自适应）
+                val gridColumns =
+                    if (expandedStyle == SettingsPreferences.EXPANDED_STYLE_GRID) {
+                        // 扣掉左右栏（约 86dp）与内边距，避免用整页宽估出过密的列
+                        ExpandedCandidatePager.gridColumns(
+                            (expandedPageWidthDp - 100f).coerceAtLeast(160f)
+                        )
+                    } else 0
                 val candidateRows = remember(
-                    allExpanded, singleCharFilter, rowWidthUnits, showExpandedComments
+                    allExpanded, singleCharFilter, rowWidthUnits, showExpandedComments, gridColumns
                 ) {
-                    ExpandedCandidatePager.flowRows(
-                        ExpandedCandidatePager.filterIndices(allExpanded, singleCharFilter),
-                        allExpanded,
-                        rowWidthUnits
-                    ).map { row ->
+                    val indices = ExpandedCandidatePager.filterIndices(allExpanded, singleCharFilter)
+                    val rows = if (gridColumns > 0) {
+                        ExpandedCandidatePager.gridRows(indices, gridColumns)
+                    } else {
+                        ExpandedCandidatePager.flowRows(indices, allExpanded, rowWidthUnits)
+                    }
+                    rows.map { row ->
                         row.map { gi ->
                             CandidateEntry(
                                 text = allExpanded[gi].text,
@@ -776,6 +794,7 @@ fun KeyboardView(
                         keyBackgroundColor = keyBgColor,
                         bottomPaddingDp = state.keyboardBottomPaddingDp,
                         singleCharFilter = singleCharFilter,
+                        gridColumns = gridColumns,
                         railSymbols = customRailSymbols.orEmpty(),
                         leftRailWidthDp = t9RailWidthDp,
                         leftRailInsetDp = t9RailInsetDp,

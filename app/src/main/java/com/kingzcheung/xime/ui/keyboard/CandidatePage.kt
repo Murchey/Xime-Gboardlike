@@ -130,6 +130,8 @@ data class CandidatePageState(
     val railSelectedPinyinIndex: Int = -1,
     /** 拼音选中胶囊强调色（对齐九键 CandidateItem）；Unspecified 时用 textColor 兜底 */
     val railAccentColor: Color = Color.Unspecified,
+    /** 网格列数：>0 时按固定列数渲染（格宽一致、行尾补空位）；0=按词长流式分行 */
+    val gridColumns: Int = 0,
     /** 右栏等分压缩（悬浮模式页高有限）：true 时 4 键均分列高（同横屏），
      *  false 保持竖屏固定 46dp 方块——固定尺寸在悬浮矮卡片下放不下会整体溢出，
      *  最底部的回车键被卡片圆角裁掉一半 */
@@ -417,6 +419,12 @@ fun CandidatePage(
                                 textColor = state.textColor,
                                 modifier = Modifier.weight(1f)
                             )
+                        }
+                        // 网格模式：末行补空位，保证所有格宽一致（流式模式自然铺满）
+                        if (state.gridColumns > row.size) {
+                            repeat(state.gridColumns - row.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
