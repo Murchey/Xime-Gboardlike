@@ -13,28 +13,44 @@ sealed interface SettingValue {
 data class ChoiceOption(val value: String, @StringRes val labelRes: Int)
 
 /**
- * 可见性：依赖另一个设置项的取值。
+ * 可见性：依赖其他设置项的取值，或设备能力。
  *
  * - [whenFlag]：依赖开关（如"音量"仅当"启用按键音"开启时显示）
  * - [whenText]：依赖枚举值（如"振动时长"仅当触感模式为 enabled 时显示）
+ * - [all]：多个条件同时满足（如振幅需模式 enabled 且设备支持振幅控制）
+ * - [whenTrue]：设备/运行时能力（不读偏好），如振动器是否支持振幅
  */
-data class SettingVisibility(
-    val key: String,
-    private val allowedTexts: Set<String> = emptySet(),
-    private val requiredFlag: Boolean? = null,
-) {
-    fun evaluate(store: SettingsStore): Boolean = when {
-        requiredFlag != null -> store.flag(key, false) == requiredFlag
-        allowedTexts.isNotEmpty() -> store.text(key, "") in allowedTexts
-        else -> true
+sealed interface SettingVisibility {
+    fun evaluate(store: SettingsStore): Boolean
+
+    data class Flag(val key: String, val expected: Boolean) : SettingVisibility {
+        override fun evaluate(store: SettingsStore): Boolean =
+            store.flag(key, false) == expected
+    }
+
+    data class Text(val key: String, val allowed: Set<String>) : SettingVisibility {
+        override fun evaluate(store: SettingsStore): Boolean = store.text(key, "") in allowed
+    }
+
+    data class All(val conditions: List<SettingVisibility>) : SettingVisibility {
+        override fun evaluate(store: SettingsStore): Boolean = conditions.all { it.evaluate(store) }
+    }
+
+    data class Static(val condition: () -> Boolean) : SettingVisibility {
+        override fun evaluate(store: SettingsStore): Boolean = condition()
     }
 
     companion object {
         fun whenFlag(key: String, expected: Boolean = true): SettingVisibility =
-            SettingVisibility(key, requiredFlag = expected)
+            Flag(key, expected)
 
         fun whenText(key: String, vararg values: String): SettingVisibility =
-            SettingVisibility(key, allowedTexts = values.toSet())
+            Text(key, values.toSet())
+
+        fun all(vararg conditions: SettingVisibility): SettingVisibility =
+            All(conditions.toList())
+
+        fun whenTrue(condition: () -> Boolean): SettingVisibility = Static(condition)
     }
 }
 

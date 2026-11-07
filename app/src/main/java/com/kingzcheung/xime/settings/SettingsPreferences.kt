@@ -415,12 +415,13 @@ object SettingsPreferences {
     }
 
 
-    private const val KEY_HAPTIC_MODE = "haptic_mode"
-    private const val KEY_HAPTIC_ON_KEYUP = "haptic_on_keyup"
-    private const val KEY_VIBRATION_PRESS_DURATION = "vibration_press_duration"
-    private const val KEY_VIBRATION_LONG_PRESS_DURATION = "vibration_long_press_duration"
-    private const val KEY_VIBRATION_PRESS_AMPLITUDE = "vibration_press_amplitude"
-    private const val KEY_VIBRATION_LONG_PRESS_AMPLITUDE = "vibration_long_press_amplitude"
+    /** 公开给声明式设置层：键名与读写共用同一份数据。 */
+    const val KEY_HAPTIC_MODE = "haptic_mode"
+    const val KEY_HAPTIC_ON_KEYUP = "haptic_on_keyup"
+    const val KEY_VIBRATION_PRESS_DURATION = "vibration_press_duration"
+    const val KEY_VIBRATION_LONG_PRESS_DURATION = "vibration_long_press_duration"
+    const val KEY_VIBRATION_PRESS_AMPLITUDE = "vibration_press_amplitude"
+    const val KEY_VIBRATION_LONG_PRESS_AMPLITUDE = "vibration_long_press_amplitude"
 
     /** 长按气泡触发时间（毫秒），默认 250ms。 */
     private const val KEY_LONG_PRESS_BUBBLE_DELAY_MS = "long_press_bubble_delay_ms"

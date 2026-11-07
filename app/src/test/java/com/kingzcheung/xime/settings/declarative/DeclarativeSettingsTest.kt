@@ -101,6 +101,22 @@ class DeclarativeSettingsTest {
     }
 
     @Test
+    fun `复合可见性要求所有条件同时满足`() {
+        val visibility = SettingVisibility.all(
+            SettingVisibility.whenText("haptic_mode", "enabled"),
+            SettingVisibility.whenTrue { true },
+        )
+        assertTrue(visibility.evaluate(MapSettingsStore(mapOf("haptic_mode" to "enabled"))))
+        assertFalse(visibility.evaluate(MapSettingsStore(mapOf("haptic_mode" to "following_system"))))
+    }
+
+    @Test
+    fun `设备能力可见性为假时隐藏且不读取偏好`() {
+        val hidden = SettingVisibility.whenTrue { false }
+        assertFalse(hidden.evaluate(MapSettingsStore(mapOf("haptic_mode" to "enabled"))))
+    }
+
+    @Test
     fun `可见性按枚举值求值`() {
         val visibility = SettingVisibility.whenText("haptic_mode", "enabled", "following_system")
         assertTrue(visibility.evaluate(MapSettingsStore(mapOf("haptic_mode" to "enabled"))))
