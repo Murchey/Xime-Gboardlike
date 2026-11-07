@@ -25,6 +25,7 @@ object GramBundledModel {
         if (!target.isFile && !copyAsset(context, dir, target)) return false
         GramPreferences.setActiveLanguage(context, LANGUAGE)
         GramActivation.applyGlobal(context)
+        GramPreferences.setProfileVersion(context, GramActivation.PROFILE_VERSION)
         Log.i(TAG, "bundled grammar model enabled by default")
         return true
     }

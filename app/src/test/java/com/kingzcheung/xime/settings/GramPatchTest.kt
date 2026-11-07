@@ -1,17 +1,32 @@
 package com.kingzcheung.xime.settings
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GramPatchTest {
 
+    private fun keys(text: String): List<String> =
+        text.lines()
+            .map { it.trim() }
+            .filter { it.startsWith("'") && it.contains("':") }
+            .map { it.substringAfter("'").substringBefore("'") }
+
     @Test
     fun `空文件写入生成 patch 块`() {
         val out = GramPatch.apply(null, "xime")
         assertEquals(
-            "patch:\n  'grammar/language': 'xime'\n  'translator/contextual_suggestions': true\n",
+            "patch:\n" +
+                "  'grammar/language': 'xime'\n" +
+                "  'grammar/collocation_max_length': 5\n" +
+                "  'grammar/collocation_min_length': 2\n" +
+                "  'grammar/collocation_penalty': -12\n" +
+                "  'grammar/non_collocation_penalty': -12\n" +
+                "  'grammar/weak_collocation_penalty': -24\n" +
+                "  'grammar/rear_penalty': -18\n" +
+                "  'translator/contextual_suggestions': true\n",
             out,
         )
     }
@@ -23,6 +38,7 @@ class GramPatchTest {
         assertTrue(out.contains("'speller/algebra':"))
         assertTrue(out.contains("'grammar/language': 'xime'"))
         assertTrue(out.contains("'translator/contextual_suggestions': true"))
+        assertEquals(GramPatch.KEYS.size + 1, keys(out).size)
     }
 
     @Test
@@ -37,8 +53,10 @@ class GramPatchTest {
         val first = GramPatch.apply(null, "xime")!!
         val second = GramPatch.apply(first, "baguawen")!!
         assertTrue(second.contains("'grammar/language': 'baguawen'"))
+        assertFalse(second.contains("'grammar/language': 'xime'"))
         assertEquals(1, Regex("grammar/language").findAll(second).count())
         assertEquals(1, Regex("contextual_suggestions").findAll(second).count())
+        assertEquals(GramPatch.KEYS.size, keys(second).size)
     }
 
     @Test
@@ -49,6 +67,7 @@ class GramPatchTest {
         assertTrue(out.contains("'speller/algebra':"))
         assertTrue(!out.contains("grammar/language"))
         assertTrue(!out.contains("contextual_suggestions"))
+        assertTrue(!out.contains("collocation"))
     }
 
     @Test
@@ -73,6 +92,7 @@ class GramPatchTest {
         val out = GramPatch.apply(existing, "xime")!!
         assertTrue(out.contains("customization:"))
         assertTrue(out.contains("patch:"))
+        assertTrue(out.contains("'grammar/language': 'xime'"))
     }
 
     @Test
@@ -85,5 +105,32 @@ class GramPatchTest {
         assertTrue(patchIdx in 0 until ourIdx && ourIdx < customizationIdx)
         // 之后重复 apply 依然幂等
         assertEquals(out, GramPatch.apply(out, "xime"))
+    }
+
+    @Test
+    fun `自定义调参生效且数值格式稳定`() {
+        val profile = GrammarProfile(
+            collocationMaxLength = 4,
+            collocationMinLength = 3,
+            collocationPenalty = -14.5,
+            nonCollocationPenalty = -8.0,
+            contextualSuggestions = false,
+        )
+        val out = GramPatch.apply(null, "custom", profile)!!
+        assertTrue(out.contains("'grammar/collocation_max_length': 4"))
+        assertTrue(out.contains("'grammar/collocation_min_length': 3"))
+        assertTrue(out.contains("'grammar/collocation_penalty': -14.5"))
+        assertTrue(out.contains("'grammar/non_collocation_penalty': -8"))
+        assertTrue(out.contains("'translator/contextual_suggestions': false"))
+    }
+
+    @Test
+    fun `停用只移除本模块的键`() {
+        val existing = "patch:\n  'menu/page_size': 20\n"
+        val enabled = GramPatch.apply(existing, "xime")!!
+        val disabled = GramPatch.apply(enabled, null)!!
+        assertTrue(disabled.contains("'menu/page_size': 20"))
+        assertFalse(disabled.contains("'grammar/language'"))
+        assertEquals(1, keys(disabled).size)
     }
 }
