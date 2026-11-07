@@ -424,7 +424,7 @@ object SettingsPreferences {
     const val KEY_VIBRATION_LONG_PRESS_AMPLITUDE = "vibration_long_press_amplitude"
 
     /** 长按气泡触发时间（毫秒），默认 250ms。 */
-    private const val KEY_LONG_PRESS_BUBBLE_DELAY_MS = "long_press_bubble_delay_ms"
+    const val KEY_LONG_PRESS_BUBBLE_DELAY_MS = "long_press_bubble_delay_ms"
     val LONG_PRESS_BUBBLE_DELAY_RANGE = 100..600
 
     /** 隐藏主键盘字符键的键面文字（功能键图标不受影响）。 */

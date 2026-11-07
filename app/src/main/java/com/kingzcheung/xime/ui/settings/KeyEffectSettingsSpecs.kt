@@ -18,6 +18,20 @@ object KeyEffectSettingsSpecs {
     const val HAPTIC_ENABLED = "enabled"
     const val HAPTIC_DISABLED = "disabled"
 
+    /** 长按气泡触发时间（毫秒），范围与 SettingsPreferences.LONG_PRESS_BUBBLE_DELAY_RANGE 对齐。 */
+    val longPressBubble: List<SettingSpec> = listOf(
+        SettingSpec.Slider(
+            key = SettingsPreferences.KEY_LONG_PRESS_BUBBLE_DELAY_MS,
+            titleRes = R.string.s_changganqipao_chufashijian,
+            descriptionRes = R.string.s_changganqipao_shuoming,
+            default = 250,
+            min = 100,
+            max = 600,
+            step = 25,
+            suffix = " ms",
+        ),
+    )
+
     val sound: List<SettingSpec> = listOf(
         SettingSpec.Switch(
             key = SettingsPreferences.KEY_SOUND_ENABLED,
