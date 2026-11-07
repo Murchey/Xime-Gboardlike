@@ -20,8 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -41,9 +39,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -279,28 +279,13 @@ fun ClipboardView(
             }
         }
 
-        val pagerState = rememberPagerState(
-            initialPage = selectedTab,
-            pageCount = { 2 }
-        )
-
-        LaunchedEffect(selectedTab) {
-            pagerState.animateScrollToPage(selectedTab)
-        }
-
-        LaunchedEffect(pagerState.currentPage) {
-            if (pagerState.currentPage != selectedTab) {
-                onClipboardTabChange?.invoke(pagerState.currentPage)
-            }
-        }
-
-        HorizontalPager(
-            state = pagerState,
+        // 顶部 Tab 直接切换内容：不做左右滑动翻页（滑动手势留给列表项删除）
+        Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-        ) { page ->
-            if (page == 0) {
+        ) {
+            if (selectedTab == 0) {
                 ClipboardTabContent(
                     items = clipboardItems,
                     itemBgColor = itemBgColor,
@@ -660,37 +645,95 @@ fun ClipboardTabContent(
                         ok
                     }
                 }
-                if (item.isImage) {
-                    ClipboardImageCard(
-                        item = item,
-                        highlighted = highlighted,
-                        bgColor = itemBgColor,
-                        textColor = textColor,
-                        subTextColor = subTextColor,
-                        accentColor = accentColor,
-                        file = imageFileOf?.invoke(item),
-                        modifier = Modifier.height(62.dp),
-                        onClick = onClick,
-                        onLongClick = onLongClick,
-                        dragKey = item.id,
-                        onStartDrag = onStartDrag,
-                    )
-                } else {
-                    GridItemCard(
-                        text = item.text,
-                        highlighted = highlighted,
-                        bgColor = itemBgColor,
-                        textColor = textColor,
-                        accentColor = accentColor,
-                        modifier = Modifier.height(62.dp),
-                        onClick = onClick,
-                        onLongClick = onLongClick,
-                        dragKey = item.id,
-                        onStartDrag = onStartDrag,
-                    )
+                // 左滑删除（与 fcitx5 剪贴板一致：露出红色删除底色，划过阈值即删）；
+                // 多选态下禁用手势，避免与勾选冲突。
+                SwipeToDeleteBox(
+                    enabled = !isMultiSelect,
+                    onDelete = { onRemove(item.id) },
+                ) {
+                    if (item.isImage) {
+                        ClipboardImageCard(
+                            item = item,
+                            highlighted = highlighted,
+                            bgColor = itemBgColor,
+                            textColor = textColor,
+                            subTextColor = subTextColor,
+                            accentColor = accentColor,
+                            file = imageFileOf?.invoke(item),
+                            modifier = Modifier.height(62.dp),
+                            onClick = onClick,
+                            onLongClick = onLongClick,
+                            dragKey = item.id,
+                            onStartDrag = onStartDrag,
+                        )
+                    } else {
+                        GridItemCard(
+                            text = item.text,
+                            highlighted = highlighted,
+                            bgColor = itemBgColor,
+                            textColor = textColor,
+                            accentColor = accentColor,
+                            modifier = Modifier.height(62.dp),
+                            onClick = onClick,
+                            onLongClick = onLongClick,
+                            dragKey = item.id,
+                            onStartDrag = onStartDrag,
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+/**
+ * 左滑删除容器：滑动时在卡片下方露出错误色底色与垃圾桶图标，
+ * 越过阈值松手即触发 [onDelete]；[enabled] = false 时完全透传手势。
+ */
+@Composable
+private fun SwipeToDeleteBox(
+    enabled: Boolean,
+    onDelete: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    if (!enabled) {
+        content()
+        return
+    }
+    val state = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                onDelete()
+                true
+            } else {
+                false
+            }
+        }
+    )
+    SwipeToDismissBox(
+        state = state,
+        enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = true,
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.errorContainer),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = tr(R.string.s_shanchu),
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier
+                        .padding(end = 18.dp)
+                        .size(20.dp),
+                )
+            }
+        },
+    ) {
+        content()
     }
 }
 
@@ -728,7 +771,7 @@ fun ClipboardImageCard(
             .clip(shape)
             .background(bg)
             // 长按/拖拽由 clipboardLongPressDrag 处理（长按未拖 → onLongClick 弹菜单）。
-            // 用 tolerantClick 而非 combinedClickable：卡片位于 LazyVerticalGrid + HorizontalPager 内，
+            // 用 tolerantClick 而非 combinedClickable：卡片位于 LazyVerticalGrid 内且支持左滑删除，
             // 轻点的小位移会被父级手势判定吃掉（部分 ROM/高采样屏幕表现为“点了没反应”）。
             // onLongClick 仍须传空回调：长按触发后抬起不再 dispatch onClick，避免误上屏
             .tolerantClick(onClick = onClick, onLongClick = {})
@@ -797,7 +840,7 @@ fun GridItemCard(
             .clip(shape)
             .background(bg)
             // 长按/拖拽由 clipboardLongPressDrag 处理（长按未拖 → onLongClick 弹菜单）。
-            // 用 tolerantClick 而非 combinedClickable：卡片位于 LazyVerticalGrid + HorizontalPager 内，
+            // 用 tolerantClick 而非 combinedClickable：卡片位于 LazyVerticalGrid 内且支持左滑删除，
             // 轻点的小位移会被父级手势判定吃掉（部分 ROM/高采样屏幕表现为“点了没反应”）。
             // onLongClick 仍须传空回调：长按触发后抬起不再 dispatch onClick，避免误上屏
             .tolerantClick(onClick = onClick, onLongClick = {})
