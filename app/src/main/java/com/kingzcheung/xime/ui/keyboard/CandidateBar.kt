@@ -186,101 +186,55 @@ fun CandidateBar(
     // 叠加 canScrollForward 判断（见分支内注释）
     val candidateListState = rememberLazyListState()
 
-    val displayCandidates: List<String>
-    val displayAssociation: List<String>
-    val displayComments: List<String>
-    /** 与 [displayCandidates] 等长：图片候选条目（非图片位为 null）。 */
-    val displayImages: List<ClipboardItem?>
-    val hasAnyMore: Boolean
-    val showInputTextRow: Boolean
-    val showLeftIcon: Boolean
+    val content = CandidateBarContent.from(
+        state = state,
+        pageSize = pageSize,
+        canScrollForward = candidateListState.canScrollForward,
+    )
+    val displayCandidates = content.candidates
+    val displayComments = content.comments
+    val displayImages = content.images
+    val hasAnyMore = content.hasAnyMore
+    val showLeftIcon = content.showLeftIcon
 
-    when (val s = state) {
-        is CandidateBarState.Idle -> {
-            displayCandidates = emptyList()
-            displayAssociation = emptyList()
-            displayComments = emptyList()
-            displayImages = emptyList()
-            hasAnyMore = false
-            showLeftIcon = true
-        }
-        is CandidateBarState.ChineseCandidates -> {
-            // 候选栏按设置的"每页候选词数"显示引擎当前页，可左右滑动查看放不下的候选。
-            // 页容量由设置决定（默认 50），不再硬编码 20——否则把每页调到 50 也只显示 20。
-            val taken = s.candidates.take(pageSize)
-            displayCandidates = taken
-            displayComments = s.comments
-            displayImages = emptyList()
-
-            hasAnyMore = s.hasMore || candidateListState.canScrollForward
-            showLeftIcon = false
-            displayAssociation = remember(s.associationCandidates, taken, s.inputText, textMeasurer) {
-                if (taken.isEmpty()) {
-                    s.associationCandidates.take(PredictionManager.MAX_ASSOCIATION_COUNT)
-                } else {
-                    val measureText = { text: String ->
-                        textMeasurer.measure(
-                            text = AnnotatedString(text),
-                            style = TextStyle(fontSize = candidateTextSize.sp)
-                        ).size.width.toFloat()
-                    }
-                    val leftPx = with(density) { rowPaddingPx + 32.dp.toPx() }
-                    val rowWidthPx = screenWidthPx - leftPx - rightSidePx
-                    val regularWidthPx = taken.sumOf { c ->
-                        measureText(c).toDouble() + itemPaddingPx
-                    }.toFloat()
-                    val dividerWidthPx = with(density) { 12.dp.toPx() }
-                    val availablePx = rowWidthPx - regularWidthPx - dividerWidthPx
-
-                    var used = 0f
-                    val result = mutableListOf<String>()
-                    for (c in s.associationCandidates) {
-                        val w =
-                            measureText(c) + itemPaddingPx + (if (result.isEmpty()) 0f else spacingPx)
-                        if (used + w <= availablePx) {
-                            used += w
-                            result.add(c)
-                        } else break
-                    }
-                    result
+    val displayAssociation: List<String> = when (val s = state) {
+        is CandidateBarState.ChineseCandidates -> remember(
+            s.associationCandidates, displayCandidates, s.inputText, textMeasurer
+        ) {
+            if (displayCandidates.isEmpty()) {
+                s.associationCandidates.take(PredictionManager.MAX_ASSOCIATION_COUNT)
+            } else {
+                val measureText = { text: String ->
+                    textMeasurer.measure(
+                        text = AnnotatedString(text),
+                        style = TextStyle(fontSize = candidateTextSize.sp)
+                    ).size.width.toFloat()
                 }
+                val leftPx = with(density) { rowPaddingPx + 32.dp.toPx() }
+                val rowWidthPx = screenWidthPx - leftPx - rightSidePx
+                val regularWidthPx = displayCandidates.sumOf { c ->
+                    measureText(c).toDouble() + itemPaddingPx
+                }.toFloat()
+                val dividerWidthPx = with(density) { 12.dp.toPx() }
+                val availablePx = rowWidthPx - regularWidthPx - dividerWidthPx
+
+                var used = 0f
+                val result = mutableListOf<String>()
+                for (c in s.associationCandidates) {
+                    val w = measureText(c) + itemPaddingPx + (if (result.isEmpty()) 0f else spacingPx)
+                    if (used + w <= availablePx) {
+                        used += w
+                        result.add(c)
+                    } else break
+                }
+                result
             }
         }
-        is CandidateBarState.AssociationOnly -> {
-            displayCandidates = emptyList()
-            displayAssociation = s.candidates.take(PredictionManager.MAX_ASSOCIATION_COUNT)
-            hasAnyMore = s.hasMore
-            showLeftIcon = false
-            displayComments = s.comments
-            displayImages = emptyList()
-        }
-        is CandidateBarState.EnglishCandidates -> {
-            displayCandidates = s.candidates.take(pageSize)
-            displayComments = s.comments
-            displayAssociation = emptyList()
-            hasAnyMore = false
-            showLeftIcon = false
-            displayImages = emptyList()
-        }
-        is CandidateBarState.ClipboardDisplay -> {
-            // images 与 candidates 由服务层按同一列表同序构造，take 必须同源同步，否则索引错位
-            displayCandidates = s.candidates.take(20)
-            displayImages = s.images.take(20)
-            displayComments = emptyList()
-            displayAssociation = emptyList()
-            hasAnyMore = false
-            showLeftIcon = true
-        }
-        is CandidateBarState.Calculator -> {
-            displayCandidates = s.candidates.take(20)
-            displayComments = s.comments
-            displayAssociation = emptyList()
-            hasAnyMore = false
-            showLeftIcon = false
-            displayImages = emptyList()
-        }
+        is CandidateBarState.AssociationOnly ->
+            s.candidates.take(PredictionManager.MAX_ASSOCIATION_COUNT)
+        else -> emptyList()
     }
-    showInputTextRow = when (page) {
+    val showInputTextRow = when (page) {
         is KeyboardPage.Overlay -> page.route !is OverlayRoute.Clipboard
         else -> true
     }

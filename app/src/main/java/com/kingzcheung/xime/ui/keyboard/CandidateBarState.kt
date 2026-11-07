@@ -98,3 +98,75 @@ sealed interface CandidateBarState {
         }
     }
 }
+
+/**
+ * 候选栏展示数据：候选栏各状态到「实际渲染条目」的唯一映射。
+ *
+ * 截断口径、更多指示、左侧图标集中在此，避免分支内散落 take(N) 造成
+ * 「候选被截断但注释/图片没同步截断」这类索引错位。
+ */
+data class CandidateBarContent(
+    val candidates: List<String>,
+    val comments: List<String>,
+    val images: List<ClipboardItem?>,
+    val hasAnyMore: Boolean,
+    val showLeftIcon: Boolean,
+) {
+    companion object {
+        /** 剪贴板/计算器固定展示上限（保持历史行为）。 */
+        const val FIXED_LIMIT = 20
+
+        fun from(
+            state: CandidateBarState,
+            pageSize: Int,
+            canScrollForward: Boolean,
+        ): CandidateBarContent {
+            val limit = pageSize.coerceAtLeast(0)
+            return when (state) {
+                is CandidateBarState.Idle -> CandidateBarContent(
+                    candidates = emptyList(),
+                    comments = emptyList(),
+                    images = emptyList(),
+                    hasAnyMore = false,
+                    showLeftIcon = true,
+                )
+                is CandidateBarState.ChineseCandidates -> CandidateBarContent(
+                    candidates = state.candidates.take(limit),
+                    comments = state.comments,
+                    images = emptyList(),
+                    hasAnyMore = state.hasMore || canScrollForward,
+                    showLeftIcon = false,
+                )
+                is CandidateBarState.AssociationOnly -> CandidateBarContent(
+                    candidates = emptyList(),
+                    comments = state.comments,
+                    images = emptyList(),
+                    hasAnyMore = state.hasMore,
+                    showLeftIcon = false,
+                )
+                is CandidateBarState.EnglishCandidates -> CandidateBarContent(
+                    candidates = state.candidates.take(limit),
+                    comments = state.comments,
+                    images = emptyList(),
+                    hasAnyMore = false,
+                    showLeftIcon = false,
+                )
+                is CandidateBarState.ClipboardDisplay -> CandidateBarContent(
+                    candidates = state.candidates.take(FIXED_LIMIT),
+                    // 与服务层同源同序截断，保证图片位索引不错位
+                    images = state.images.take(FIXED_LIMIT),
+                    comments = emptyList(),
+                    hasAnyMore = false,
+                    showLeftIcon = true,
+                )
+                is CandidateBarState.Calculator -> CandidateBarContent(
+                    candidates = state.candidates.take(FIXED_LIMIT),
+                    comments = state.comments,
+                    images = emptyList(),
+                    hasAnyMore = false,
+                    showLeftIcon = false,
+                )
+            }
+        }
+    }
+}
