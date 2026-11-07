@@ -132,9 +132,11 @@ fun KeyboardView(
         candidateState.value.candidates.size,
         candidateState.value.associationCandidates.size
     ) {
-        if (candidatePageExpanded &&
-            candidateState.value.candidates.isEmpty() &&
-            candidateState.value.associationCandidates.isEmpty()
+        if (CandidatePageRules.shouldAutoCollapse(
+                candidatePageExpanded,
+                candidateState.value.candidates.size,
+                candidateState.value.associationCandidates.size,
+            )
         ) {
             viewModel.setCandidatePageExpanded(false)
         }
@@ -316,8 +318,9 @@ fun KeyboardView(
             // 数据源（展开与否即切换点）：展开态下候选栏与展开页同吃全量列表
             // （expandedCandidates，展开时服务层重新拉取）；非展开态候选栏保持
             // 引擎当前页（"每页候选词数"）
-            val expandedDataMode = candidatePageExpanded &&
-                candidateState.value.expandedCandidates.isNotEmpty()
+            val expandedDataMode = CandidatePageRules.usesExpandedData(
+                candidatePageExpanded, candidateState.value.expandedCandidates.size
+            )
 
             val isHandwritingPage = page is KeyboardPage.Main && (page as KeyboardPage.Main).type == MainType.HANDWRITING
             val showHandwritingCandidates = (isHandwritingPage || isHandwritingLookup) && handwritingCandidates.isNotEmpty()
@@ -326,16 +329,9 @@ fun KeyboardView(
             // 展开态候选栏数据源：全量列表（筛选态取单字子列表，仍是同源关系）。
             // 每项携带全量原索引：筛选态过滤掉词组后位置索引 ≠ 全局索引，
             // 点选/长按必须经 first 换算回全局索引，与展开页 globalIndices 同口径
-            val railExpanded = if (expandedDataMode) {
-                if (singleCharFilter) {
-                    cs.expandedCandidates.withIndex()
-                        .mapNotNull { (i, c) -> if (c.text.length == 1) i to c else null }
-                } else {
-                    cs.expandedCandidates.withIndex().map { it.index to it.value }
-                }
-            } else {
-                emptyList()
-            }
+            val railExpanded = CandidatePageRules.railItems(
+                expandedDataMode, singleCharFilter, cs.expandedCandidates
+            )
             val candidateBarState = remember(
                 cs.candidates, cs.candidateComments, cs.inputText, cs.preeditText, cs.isComposing,
                 cs.associationCandidates, cs.pendingEnglishText, cs.isShowingRecentClipboard, cs.hasNextPage,

@@ -420,9 +420,13 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     /** 候选展开页自动收起：一次选词结束（候选与联想均空）后收起并恢复键盘 UI。
      *  选词过程中仍有候选/联想时保持展开，避免选一个字就中断长候选选择。 */
     internal fun maybeCollapseCandidatePage() {
-        if (!keyboardViewModel.candidatePageExpanded.value) return
         val cs = candidateState.value
-        if (cs.candidates.isEmpty() && cs.associationCandidates.isEmpty()) {
+        if (com.kingzcheung.xime.ui.keyboard.CandidatePageRules.shouldAutoCollapse(
+                keyboardViewModel.candidatePageExpanded.value,
+                cs.candidates.size,
+                cs.associationCandidates.size,
+            )
+        ) {
             keyboardViewModel.setCandidatePageExpanded(false)
         }
     }
