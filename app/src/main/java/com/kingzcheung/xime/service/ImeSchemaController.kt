@@ -62,6 +62,8 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
                 // 部署后记录 hash 与完成标记，否则下次启动会因 hash 不一致再次全量编译
                 RimeConfigHelper.storeDeploymentHash(service)
                 SettingsPreferences.setDeploymentDone(service, true)
+                // 部署会编译数据目录里的所有 schema.yaml：清掉未启用方案的产物
+                RimeConfigHelper.pruneUnusedSchemaArtifacts(service)
                 
                 // 部署完成后重新加载配置（Rime 可能在部署过程中改写文件）
                 KeysConfigHelper.loadConfig(service)
@@ -103,6 +105,7 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
             // 部署后记录 hash 与完成标记，避免下次启动再次全量编译
             RimeConfigHelper.storeDeploymentHash(service)
             SettingsPreferences.setDeploymentDone(service, true)
+            RimeConfigHelper.pruneUnusedSchemaArtifacts(service)
             val savedSchema = SettingsPreferences.getCurrentSchema(service)
             applyPageSizeSetting(savedSchema)
             service.rimeEngine.switchSchema(savedSchema)
@@ -506,6 +509,10 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
             RimeConfigHelper.ensureBuiltinBaseFiles(service)
 
             val success = service.rimeEngine.deploy()
+            if (success) {
+                // 部署会编译数据目录里的所有 schema.yaml：清掉未启用方案的产物
+                RimeConfigHelper.pruneUnusedSchemaArtifacts(service)
+            }
             
             withContext(Dispatchers.Main) {
                 if (success) {

@@ -54,6 +54,8 @@ object RimeConfigHelper {
         copyAssetsToRimeDir(context, rimeDir)
         // 首次安装/升级后补建内置包的 per-package 清单
         SchemaManifestManager.refreshBuiltinManifest(context)
+        // 清理已安装方案的源包（历史版本安装后遗留的 market/*.zip，实测单包可达 40MB+）
+        SchemaManager.cleanupInstalledArchives(context)
         // F1: assets 会用内置 default.yaml 覆盖，这里把启用方案重新写回 schema_list
         SchemaManager.applyEnabledSchemasToDefaultYaml(context)
         // 为所有启用方案打个人词库补丁
@@ -134,10 +136,10 @@ object RimeConfigHelper {
         if (!buildDir.isDirectory) return
         val enabled = SchemaManager.getEnabledSchemas(context).toSet()
         if (enabled.isEmpty()) return
-        // 启用集合没变过就不再重复扫描（每次启动都读 4 份 schema.yaml 没必要）
-        val stamp = File(rimeDir, ".prune_stamp")
-        val want = enabled.sorted().joinToString(",")
-        if (stamp.isFile && runCatching { stamp.readText() }.getOrNull() == want) return
+        // 每次都扫描：librime 部署会编译数据目录里的**所有** schema.yaml，
+        // 未启用方案的产物会在每次部署后重新出现；旧的 stamp 短路正是残留累积的原因。
+        // 扫描成本只是读几份 schema.yaml（<100KB），不值得用 stamp 省。
+        runCatching { File(rimeDir, ".prune_stamp").delete() }
 
         val enabledText = buildString {
             for (id in enabled) {
@@ -160,9 +162,12 @@ object RimeConfigHelper {
                 }
             }
         }
-        runCatching { stamp.writeText(want) }
         if (removed > 0) {
-            Log.i(TAG, "Pruned $removed unused schema artifacts, freed ${freed / 1024}KB")
+            Log.i(
+                TAG,
+                "Pruned $removed unused schema artifacts, freed ${freed / 1024}KB, " +
+                    "enabled=${enabled.sorted()}"
+            )
         }
     }
 

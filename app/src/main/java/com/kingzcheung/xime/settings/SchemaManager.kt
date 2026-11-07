@@ -118,6 +118,41 @@ object SchemaManager {
         return dir.exists() && (dir.listFiles()?.any { it.isFile } == true)
     }
 
+    /**
+     * 清理已安装方案的源包（zip/tar.gz）：内容已解压进 rime/，保留只会重复占用空间。
+     *
+     * - [onlyPackageId] 非空时只清理该方案目录（安装完成后立即调用）；
+     * - 为空时扫描 market/ 下所有目录，但仅清理**已有清单**的方案（证明安装成功）。
+     *
+     * @return 释放的字节数
+     */
+    suspend fun cleanupInstalledArchives(context: Context, onlyPackageId: String? = null): Long =
+        withContext(Dispatchers.IO) {
+            val root = getMarketDir(context)
+            if (!root.isDirectory) return@withContext 0L
+            val dirs = if (onlyPackageId != null) {
+                listOf(getMarketDir(context, onlyPackageId))
+            } else {
+                root.listFiles()?.filter { it.isDirectory }.orEmpty()
+            }
+            var freed = 0L
+            for (dir in dirs) {
+                if (!dir.isDirectory) continue
+                if (onlyPackageId == null &&
+                    SchemaManifestManager.loadManifest(context, dir.name) == null
+                ) continue
+                dir.listFiles()?.filter { it.isFile && isArchive(it.name) }?.forEach { archive ->
+                    val length = archive.length()
+                    if (archive.delete()) freed += length
+                }
+                if (dir.listFiles()?.isEmpty() == true) dir.delete()
+            }
+            if (freed > 0) {
+                FileLogger.i(TAG, "cleanupInstalledArchives: freed ${freed / 1024 / 1024}MB")
+            }
+            freed
+        }
+
     /** 删除 market 中指定方案的整个子目录（含压缩包），并清理本地版本记录。 */
     fun deleteSchemeArchive(context: Context, schemeId: String): Boolean {
         val dir = getMarketDir(context, schemeId)
@@ -335,6 +370,11 @@ object SchemaManager {
                 val obsolete = SchemaManifestManager.obsoleteFilesOnlyInOld(oldFiles, targetFiles, preserve)
                 val pruned = SchemaManifestManager.pruneObsoleteFiles(context, packageId, obsolete)
                 if (pruned > 0) FileLogger.i(TAG, "installPackageFromMarketDir: pruned $pruned obsolete file(s)")
+            }
+
+            // 安装成功：源包内容已解压进 rime/，删掉源包避免重复占用（清单失败则保留以便重装）
+            if (manifestOk) {
+                cleanupInstalledArchives(context, onlyPackageId = packageId)
             }
 
             if (fromMarket) {

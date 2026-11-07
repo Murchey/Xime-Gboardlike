@@ -102,6 +102,8 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
         val newlyEnabled = schema.schemaId in enabled
         viewModelScope.launch(Dispatchers.IO) {
             SchemaManager.setEnabledSchemas(context, enabled)
+            // 取消启用后立即清掉它的编译产物（不被其他启用方案引用时），无需等到下次部署
+            if (!newlyEnabled) RimeConfigHelper.pruneUnusedSchemaArtifacts(context)
             // 新启用的方案可能还没有编译产物（librime 只编译 schema_list 内的方案）。
             // 这里只把部署标记置失效，交给既有的 ensureDeployment（应用/服务启动时）
             // 去补编译——不在点击回调里直接跑部署，避免卡住开关、也避免与主流程抢锁。
@@ -300,6 +302,8 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
             val deployed = engine.deploy()
             if (deployed) {
                 RimeConfigHelper.storeDeploymentHash(context)
+                // 部署会编译数据目录里的所有 schema.yaml：清掉未启用方案的产物
+                RimeConfigHelper.pruneUnusedSchemaArtifacts(context)
             }
             deployed to RimeConfigHelper.missingReverseLookupTables(context)
         }
