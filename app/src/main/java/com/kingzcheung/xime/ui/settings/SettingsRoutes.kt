@@ -28,6 +28,11 @@ object SettingsRoutes {
     const val Correction = "correction"
     const val FuzzyPinyin = "fuzzy_pinyin"
     const val GrammarModel = "grammar_model"
+    const val GrammarParams = "grammar_params/{language}"
+
+    /** 语法参数页路由：language 为 .gram 模型名，需要 URL 编码。 */
+    fun grammarParams(language: String): String =
+        "grammar_params/" + android.net.Uri.encode(language)
     const val SpeechToText = "speech_to_text"
     const val About = "about"
     const val Developer = "developer"

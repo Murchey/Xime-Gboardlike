@@ -862,6 +862,10 @@
     <string name="s_weibu_chengfa">尾部惩罚</string>
     <string name="s_shangxiawen_lianxiang">上下文联想</string>
     <string name="s_huifutuijianzhi">恢复推荐值</string>
+    <string name="s_canshu_yibaocun_qingqiyong">参数已保存，启用该模型后生效</string>
+    <string name="s_zhengshu_fanwei">请输入 %1$d–%2$d 的整数</string>
+    <string name="s_shuzhi_fanwei">请输入 %1$s–%2$s 的数值</string>
+    <string name="s_yufamoxing_canshu_zhaiyao">上下文 %1$d ／ 组合 %2$s ／ 非组合 %3$s</string>
     <string name="s_yufamoxing_daoru">导入 .gram 文件</string>
     <string name="s_yufamoxing_daochu">导出</string>
     <string name="s_yufamoxing_daochuchenggong">导出成功</string>

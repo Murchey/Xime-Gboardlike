@@ -6,6 +6,8 @@ import com.kingzcheung.xime.i18n.tr
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import com.kingzcheung.xime.settings.GramPreferences
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -230,7 +232,18 @@ fun SettingsScreen(
         }
         composable(SettingsRoutes.GrammarModel) {
             GrammarModelSettingsContent(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onEditParams = { language ->
+                    navController.navigate(SettingsRoutes.grammarParams(language))
+                },
+            )
+        }
+        composable(SettingsRoutes.GrammarParams) { entry ->
+            val language = entry.arguments?.getString("language").orEmpty()
+            GrammarParamsScreen(
+                language = language,
+                isActive = language == GramPreferences.activeLanguage(LocalContext.current),
+                onBack = { navController.popBackStack() },
             )
         }
         composable(SettingsRoutes.SpeechToText) {
