@@ -82,7 +82,7 @@ object SettingsPreferences {
         getPrefs(context).edit().putBoolean(KEY_MODE_CHANGE_TARGET, isNumber).apply()
     }
 
-    private const val KEY_AUTO_NUMBER_KEYBOARD = "auto_number_keyboard_for_number_fields"
+    const val KEY_AUTO_NUMBER_KEYBOARD = "auto_number_keyboard_for_number_fields"
 
     /** 进入纯数字输入框（号码/验证码等）时自动弹出数字键盘，默认开启。 */
     fun isAutoNumberKeyboardEnabled(context: Context): Boolean {
@@ -437,8 +437,8 @@ object SettingsPreferences {
     const val KEY_SHOW_DOUBLE_PINYIN_FINALS = "show_double_pinyin_finals"
 
     /** 字母键显示大小写：小写 / 大写；小写时可跟随 Shift。 */
-    private const val KEY_LETTER_DISPLAY_CASE = "letter_display_case"
-    private const val KEY_LETTER_CASE_FOLLOW_SHIFT = "letter_case_follow_shift"
+    const val KEY_LETTER_DISPLAY_CASE = "letter_display_case"
+    const val KEY_LETTER_CASE_FOLLOW_SHIFT = "letter_case_follow_shift"
     const val LETTER_CASE_LOWER = "lower"
     const val LETTER_CASE_UPPER = "upper"
 

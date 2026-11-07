@@ -61,14 +61,35 @@ sealed interface SettingSpec {
     @get:StringRes val descriptionRes: Int?
     val visibility: SettingVisibility?
 
-    /** 开关行。 */
+    /** 可见但禁用（如"跟随 Shift"仅在小写模式下可用）；null = 始终可用。 */
+    val enabledWhen: SettingVisibility?
+
+    /**
+     * 开关行。
+     *
+     * [onText]/[offText] 同时非空时，用字符串枚举存值（如字母大小写 upper/lower），
+     * 开关只是它的一种视图。
+     */
     data class Switch(
         override val key: String,
         override val titleRes: Int,
         override val descriptionRes: Int? = null,
         val default: Boolean = false,
+        val onText: String? = null,
+        val offText: String? = null,
+        /** 禁用时强制显示为关（联动项"不生效"时更直观）。 */
+        val offWhenDisabled: Boolean = false,
         override val visibility: SettingVisibility? = null,
-    ) : SettingSpec
+        override val enabledWhen: SettingVisibility? = null,
+    ) : SettingSpec {
+        init {
+            require((onText == null) == (offText == null)) {
+                "onText / offText must be provided together"
+            }
+        }
+
+        val isTextBacked: Boolean get() = onText != null
+    }
 
     /** 滑杆行；[suffix] 为数值后缀（如 "%"），[zeroLabelRes] 用于 0 值显示"系统默认"。 */
     data class Slider(
@@ -82,6 +103,7 @@ sealed interface SettingSpec {
         val suffix: String? = null,
         @StringRes val zeroLabelRes: Int? = null,
         override val visibility: SettingVisibility? = null,
+        override val enabledWhen: SettingVisibility? = null,
     ) : SettingSpec {
         init {
             require(max > min) { "slider range must be increasing" }
@@ -98,6 +120,7 @@ sealed interface SettingSpec {
         val default: String,
         val options: List<ChoiceOption>,
         override val visibility: SettingVisibility? = null,
+        override val enabledWhen: SettingVisibility? = null,
     ) : SettingSpec
 }
 
@@ -112,7 +135,9 @@ fun SettingSpec.defaultValue(): SettingValue = when (this) {
 
 /** 从存储读取当前值；未设置时回落到声明默认值。 */
 fun SettingSpec.read(store: SettingsStore): SettingValue = when (this) {
-    is SettingSpec.Switch -> SettingValue.Flag(store.flag(key, default))
+    is SettingSpec.Switch -> SettingValue.Flag(
+        if (isTextBacked) store.text(key, offText!!) == onText else store.flag(key, default)
+    )
     is SettingSpec.Slider -> SettingValue.Number(coerce(store.number(key, coerce(default))))
     is SettingSpec.Choice -> SettingValue.Text(
         store.text(key, default).takeIf { saved -> options.any { it.value == saved } }
@@ -120,10 +145,28 @@ fun SettingSpec.read(store: SettingsStore): SettingValue = when (this) {
     )
 }
 
+/**
+ * 读取存储原始值（按实际存储类型）：枚举型开关存 Text，普通开关存 Flag。
+ * 渲染层快照用它，保证依赖该键的可见性/禁用条件能正确求值。
+ */
+fun SettingSpec.readRaw(store: SettingsStore): SettingValue = when (this) {
+    is SettingSpec.Switch -> if (isTextBacked) {
+        SettingValue.Text(store.text(key, offText!!))
+    } else {
+        SettingValue.Flag(store.flag(key, default))
+    }
+    is SettingSpec.Slider -> SettingValue.Number(coerce(store.number(key, coerce(default))))
+    is SettingSpec.Choice -> SettingValue.Text(store.text(key, default))
+}
+
 /** 写入存储；滑杆值越界时收敛到声明范围。 */
 fun SettingSpec.write(store: SettingsStore, value: SettingValue) {
     when (this) {
-        is SettingSpec.Switch -> store.putFlag(key, (value as SettingValue.Flag).value)
+        is SettingSpec.Switch -> {
+            val flag = (value as SettingValue.Flag).value
+            if (isTextBacked) store.putText(key, if (flag) onText!! else offText!!)
+            else store.putFlag(key, flag)
+        }
         is SettingSpec.Slider -> store.putNumber(key, coerce((value as SettingValue.Number).value))
         is SettingSpec.Choice -> {
             val text = (value as SettingValue.Text).value

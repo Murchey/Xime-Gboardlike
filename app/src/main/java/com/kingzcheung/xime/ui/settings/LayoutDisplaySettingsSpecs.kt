@@ -56,5 +56,49 @@ object LayoutDisplaySettingsSpecs {
                 DoublePinyinFinals.isDoublePinyin(currentSchema)
             },
         ),
+        // 字母大小写用字符串枚举存值（upper/lower），开关只是它的视图
+        SettingSpec.Switch(
+            key = SettingsPreferences.KEY_LETTER_DISPLAY_CASE,
+            titleRes = R.string.s_zimudaxiaoxie,
+            descriptionRes = R.string.s_zimudaxiaoxie_fu,
+            default = false,
+            onText = SettingsPreferences.LETTER_CASE_UPPER,
+            offText = SettingsPreferences.LETTER_CASE_LOWER,
+        ),
+        SettingSpec.Switch(
+            key = SettingsPreferences.KEY_LETTER_CASE_FOLLOW_SHIFT,
+            titleRes = R.string.s_gensuishiftjianqiehuan,
+            descriptionRes = R.string.s_gensuishiftjianqiehuan_fu,
+            default = true,
+            // 大写模式下不生效：可见但禁用，并显示为关
+            enabledWhen = SettingVisibility.whenText(
+                SettingsPreferences.KEY_LETTER_DISPLAY_CASE,
+                SettingsPreferences.LETTER_CASE_LOWER,
+            ),
+            offWhenDisabled = true,
+        ),
+    )
+
+    /** 输入框适配段。 */
+    val inputField: List<SettingSpec> = listOf(
+        SettingSpec.Switch(
+            key = SettingsPreferences.KEY_AUTO_NUMBER_KEYBOARD,
+            titleRes = R.string.s_shuzikuangzidongshuzijianpan,
+            descriptionRes = R.string.s_jinruhaoma_yanzhengmadengshuzi_1aed9,
+            default = true,
+        ),
+    )
+
+    /** 候选词段：展开页逐条注释开关（依赖编码注释总开关）。 */
+    val candidateComments: List<SettingSpec> = listOf(
+        SettingSpec.Switch(
+            key = SettingsPreferences.KEY_SHOW_EXPANDED_CANDIDATE_COMMENTS,
+            titleRes = R.string.s_zhanakaiye_xianshibianma,
+            descriptionRes = R.string.s_zhanakaiye_xianshibianma_fu,
+            default = false,
+            enabledWhen = SettingVisibility.whenFlag(
+                SettingsPreferences.KEY_SHOW_CANDIDATE_COMMENTS
+            ),
+        ),
     )
 }

@@ -107,85 +107,6 @@ fun LayoutDisplaySettingsContent(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
 
-                    var letterCaseUpper by remember {
-                        mutableStateOf(
-                            SettingsPreferences.getLetterDisplayCase(context) == SettingsPreferences.LETTER_CASE_UPPER
-                        )
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = tr(R.string.s_zimudaxiaoxie),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = tr(R.string.s_zimudaxiaoxie_fu),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = letterCaseUpper,
-                            onCheckedChange = { enabled ->
-                                letterCaseUpper = enabled
-                                SettingsPreferences.setLetterDisplayCase(
-                                    context,
-                                    if (enabled) SettingsPreferences.LETTER_CASE_UPPER
-                                    else SettingsPreferences.LETTER_CASE_LOWER
-                                )
-                            }
-                        )
-                    }
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    var followShift by remember {
-                        mutableStateOf(SettingsPreferences.followShiftForLetterCase(context))
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = tr(R.string.s_gensuishiftjianqiehuan),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = tr(R.string.s_gensuishiftjianqiehuan_fu),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = followShift && !letterCaseUpper,
-                            enabled = !letterCaseUpper,
-                            onCheckedChange = { enabled ->
-                                followShift = enabled
-                                SettingsPreferences.setFollowShiftForLetterCase(context, enabled)
-                            }
-                        )
-                    }
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
                     var keyboardTextScale by remember {
                         mutableStateOf(SettingsPreferences.getKeyboardTextScale(context).toFloat())
                     }
@@ -403,46 +324,10 @@ fun LayoutDisplaySettingsContent(
                         )
                     }
 
-                    // 展开页的逐条注释单独开关：默认关，避免展开后每个候选都挂拼音/字根
-                    var showExpandedComments by remember {
-                        mutableStateOf(SettingsPreferences.showExpandedCandidateComments(context))
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(enabled = showComments) {
-                                showExpandedComments = !showExpandedComments
-                                SettingsPreferences.setShowExpandedCandidateComments(
-                                    context, showExpandedComments
-                                )
-                            }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = tr(R.string.s_zhanakaiye_xianshibianma),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium,
-                                color = if (showComments) MaterialTheme.colorScheme.onSurface
-                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                            )
-                            Text(
-                                text = tr(R.string.s_zhanakaiye_xianshibianma_fu),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = showExpandedComments,
-                            onCheckedChange = {
-                                showExpandedComments = it
-                                SettingsPreferences.setShowExpandedCandidateComments(context, it)
-                            },
-                            enabled = showComments
-                        )
-                    }
-
+                    DeclarativeSettingItems(
+                        specs = LayoutDisplaySettingsSpecs.candidateComments,
+                        store = settingsStore,
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
 
                     HorizontalDivider(
@@ -603,35 +488,10 @@ fun LayoutDisplaySettingsContent(
 
             item {
                 SettingsSection(title = tr(R.string.s_shurukuangshipei), content = {
-                    var autoNumberKeyboard by remember {
-                        mutableStateOf(SettingsPreferences.isAutoNumberKeyboardEnabled(context))
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = tr(R.string.s_shuzikuangzidongshuzijianpan),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = tr(R.string.s_jinruhaoma_yanzhengmadengshuzi_1aed9),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = autoNumberKeyboard,
-                            onCheckedChange = { newValue ->
-                                autoNumberKeyboard = newValue
-                                SettingsPreferences.setAutoNumberKeyboardEnabled(context, newValue)
-                            }
-                        )
-                    }
+                    DeclarativeSettingItems(
+                        specs = LayoutDisplaySettingsSpecs.inputField,
+                        store = settingsStore,
+                    )
                 })
             }
         }

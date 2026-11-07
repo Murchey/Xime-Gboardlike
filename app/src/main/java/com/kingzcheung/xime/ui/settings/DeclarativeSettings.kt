@@ -29,6 +29,7 @@ import com.kingzcheung.xime.settings.declarative.SettingSpec
 import com.kingzcheung.xime.settings.declarative.SettingValue
 import com.kingzcheung.xime.settings.declarative.SettingsStore
 import com.kingzcheung.xime.settings.declarative.read
+import com.kingzcheung.xime.settings.declarative.readRaw
 import com.kingzcheung.xime.settings.declarative.write
 import kotlin.math.roundToInt
 
@@ -47,16 +48,15 @@ fun DeclarativeSettingItems(
 ) {
     val snapshot = remember(specs) {
         mutableStateMapOf<String, SettingValue>().apply {
-            specs.forEach { put(it.key, it.read(store)) }
+            specs.forEach { put(it.key, it.readRaw(store)) }
         }
     }
     val localStore = remember(snapshot) { SnapshotSettingsStore(snapshot) }
 
     val commit: (SettingSpec, SettingValue) -> Unit = { spec, value ->
         spec.write(store, value)
-        val saved = spec.read(store)
-        snapshot[spec.key] = saved
-        onChange?.invoke(spec, saved)
+        snapshot[spec.key] = spec.readRaw(store)
+        onChange?.invoke(spec, spec.read(store))
     }
 
     val visible = specs.filter { it.visibility?.evaluate(localStore) != false }
@@ -70,20 +70,26 @@ fun DeclarativeSettingItems(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
             }
+            val enabled = spec.enabledWhen?.evaluate(localStore) != false
             when (spec) {
                 is SettingSpec.Switch -> SwitchSettingRow(
                     spec = spec,
-                    checked = localStore.flag(spec.key, spec.default),
+                    // 禁用且声明了 offWhenDisabled 时显示为关（联动项"不生效"）
+                    checked = if (!enabled && spec.offWhenDisabled) false
+                    else (spec.read(localStore) as SettingValue.Flag).value,
+                    enabled = enabled,
                     onCheckedChange = { commit(spec, SettingValue.Flag(it)) }
                 )
                 is SettingSpec.Slider -> SliderSettingRow(
                     spec = spec,
                     value = localStore.number(spec.key, spec.coerce(spec.default)),
+                    enabled = enabled,
                     onValueChange = { commit(spec, SettingValue.Number(it)) }
                 )
                 is SettingSpec.Choice -> ChoiceSettingRow(
                     spec = spec,
                     selected = localStore.text(spec.key, spec.default),
+                    enabled = enabled,
                     onSelect = { commit(spec, SettingValue.Text(it)) }
                 )
             }
@@ -95,6 +101,7 @@ fun DeclarativeSettingItems(
 private fun SwitchSettingRow(
     spec: SettingSpec.Switch,
     checked: Boolean,
+    enabled: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
@@ -117,7 +124,7 @@ private fun SwitchSettingRow(
                 )
             }
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }
 
@@ -125,6 +132,7 @@ private fun SwitchSettingRow(
 private fun SliderSettingRow(
     spec: SettingSpec.Slider,
     value: Int,
+    enabled: Boolean,
     onValueChange: (Int) -> Unit,
 ) {
     Column(
@@ -156,6 +164,7 @@ private fun SliderSettingRow(
         Spacer(modifier = Modifier.height(8.dp))
         Slider(
             value = value.toFloat(),
+            enabled = enabled,
             onValueChange = { raw ->
                 val stepped = ((raw / spec.step).roundToInt() * spec.step).coerceIn(spec.min, spec.max)
                 onValueChange(stepped)
@@ -170,6 +179,7 @@ private fun SliderSettingRow(
 private fun ChoiceSettingRow(
     spec: SettingSpec.Choice,
     selected: String,
+    enabled: Boolean,
     onSelect: (String) -> Unit,
 ) {
     Column(
@@ -197,6 +207,7 @@ private fun ChoiceSettingRow(
             spec.options.forEach { option: ChoiceOption ->
                 FilterChip(
                     selected = selected == option.value,
+                    enabled = enabled,
                     onClick = { onSelect(option.value) },
                     label = { Text(tr(option.labelRes)) },
                     colors = FilterChipDefaults.filterChipColors(

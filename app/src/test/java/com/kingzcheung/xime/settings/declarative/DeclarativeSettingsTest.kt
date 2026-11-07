@@ -101,6 +101,53 @@ class DeclarativeSettingsTest {
     }
 
     @Test
+    fun `枚举型开关按字符串存值`() {
+        val spec = SettingSpec.Switch(
+            key = "letter_display_case",
+            titleRes = 7,
+            default = false,
+            onText = "upper",
+            offText = "lower",
+        )
+        val store = MapSettingsStore()
+        // 未设置时按 off 值处理
+        assertEquals(SettingValue.Flag(false), spec.read(store))
+        spec.write(store, SettingValue.Flag(true))
+        assertEquals("upper", store.text("letter_display_case", ""))
+        assertEquals(SettingValue.Flag(true), spec.read(store))
+        spec.write(store, SettingValue.Flag(false))
+        assertEquals("lower", store.text("letter_display_case", ""))
+    }
+
+    @Test
+    fun `枚举型开关的原始值按字符串保存供依赖项求值`() {
+        val spec = SettingSpec.Switch(
+            key = "letter_display_case",
+            titleRes = 7,
+            default = false,
+            onText = "upper",
+            offText = "lower",
+        )
+        val store = MapSettingsStore(mapOf("letter_display_case" to "lower"))
+        // 快照按存储类型保存字符串，依赖它的可见性/禁用条件才能读到 lower
+        assertEquals(SettingValue.Text("lower"), spec.readRaw(store))
+        assertEquals(SettingValue.Flag(false), spec.read(store))
+    }
+
+    @Test
+    fun `枚举型开关遇到未知存值时视为关`() {
+        val spec = SettingSpec.Switch(
+            key = "letter_display_case",
+            titleRes = 7,
+            default = true,
+            onText = "upper",
+            offText = "lower",
+        )
+        val store = MapSettingsStore(mapOf("letter_display_case" to "legacy"))
+        assertEquals(SettingValue.Flag(false), spec.read(store))
+    }
+
+    @Test
     fun `复合可见性要求所有条件同时满足`() {
         val visibility = SettingVisibility.all(
             SettingVisibility.whenText("haptic_mode", "enabled"),
