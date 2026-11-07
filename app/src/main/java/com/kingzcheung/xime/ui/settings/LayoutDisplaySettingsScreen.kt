@@ -56,6 +56,15 @@ fun LayoutDisplaySettingsContent(
 ) {
     val context = LocalContext.current
 
+    // 声明式设置层：与 SettingsPreferences 共用同一份 SharedPreferences
+    val settingsStore = androidx.compose.runtime.remember(context) {
+        com.kingzcheung.xime.settings.declarative.SharedPreferencesSettingsStore(
+            SettingsPreferences.getPrefsPublic(context)
+        )
+    }
+    // 双拼开关的可见性依赖当前方案
+    val layoutSpecsSchema = SettingsPreferences.getCurrentSchema(context)
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
@@ -85,207 +94,18 @@ fun LayoutDisplaySettingsContent(
         ) {
             item {
                 SettingsSection(title = tr(R.string.s_jianpanbuju), content = {
-                    var hardwareKeyboardDetectionEnabled by remember {
-                        mutableStateOf(SettingsPreferences.isHardwareKeyboardDetectionEnabled(context))
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = tr(R.string.s_shitijianpanjiance), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                            Text(text = tr(R.string.s_guanbihoubujianceshitijianpan_6aaf1), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Switch(
-                            checked = hardwareKeyboardDetectionEnabled,
-                            onCheckedChange = { enabled ->
-                                hardwareKeyboardDetectionEnabled = enabled
-                                SettingsPreferences.setHardwareKeyboardDetectionEnabled(context, enabled)
-                            }
-                        )
-                    }
-
-                    var landscapeSplitKeyboardEnabled by remember {
-                        mutableStateOf(SettingsPreferences.isLandscapeSplitKeyboardEnabled(context))
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = tr(R.string.s_hengpingshiyongfentijianpan),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = tr(R.string.s_guanbihou_hengpingjiangxianshi_e98c9),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = landscapeSplitKeyboardEnabled,
-                            onCheckedChange = { enabled ->
-                                landscapeSplitKeyboardEnabled = enabled
-                                SettingsPreferences.setLandscapeSplitKeyboardEnabled(context, enabled)
-                            }
-                        )
-                    }
+                    DeclarativeSettingItems(
+                        specs = androidx.compose.runtime.remember(layoutSpecsSchema) {
+                            LayoutDisplaySettingsSpecs.keyboardLayout(layoutSpecsSchema)
+                        },
+                        store = settingsStore,
+                    )
 
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 16.dp),
                         thickness = 0.5.dp,
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
-
-                    var keyboardFlushBottom by remember {
-                        mutableStateOf(SettingsPreferences.isKeyboardFlushBottom(context))
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = tr(R.string.s_jianpantiedixianshi),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = tr(R.string.s_yincangdibudaohanglanhuoshoush_daf00),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = keyboardFlushBottom,
-                            onCheckedChange = { enabled ->
-                                keyboardFlushBottom = enabled
-                                SettingsPreferences.setKeyboardFlushBottom(context, enabled)
-                            }
-                        )
-                    }
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    var hideKeyLabels by remember {
-                        mutableStateOf(SettingsPreferences.isKeyLabelsHidden(context))
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = tr(R.string.s_yincanganjianzifu),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = tr(R.string.s_yincanganjianzifu_fu),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = hideKeyLabels,
-                            onCheckedChange = { enabled ->
-                                hideKeyLabels = enabled
-                                SettingsPreferences.setKeyLabelsHidden(context, enabled)
-                            }
-                        )
-                    }
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    var showLetterHintSymbols by remember {
-                        mutableStateOf(SettingsPreferences.showLetterHintSymbols(context))
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = tr(R.string.s_xianshizimujianfushangfangdefuhao),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = tr(R.string.s_xianshizimujianfushangfangdefuhao_fu),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = showLetterHintSymbols,
-                            onCheckedChange = { enabled ->
-                                showLetterHintSymbols = enabled
-                                SettingsPreferences.setShowLetterHintSymbols(context, enabled)
-                            }
-                        )
-                    }
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    if (DoublePinyinFinals.isDoublePinyin(SettingsPreferences.getCurrentSchema(context))) {
-                        var showDoublePinyinFinals by remember {
-                            mutableStateOf(SettingsPreferences.showDoublePinyinFinals(context))
-                        }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = tr(R.string.s_shuangpin_yunmu_tihuan_fuhao),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = tr(R.string.s_shuangpin_yunmu_tihuan_fuhao_fu),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Switch(
-                                checked = showDoublePinyinFinals,
-                                onCheckedChange = { enabled ->
-                                    showDoublePinyinFinals = enabled
-                                    SettingsPreferences.setShowDoublePinyinFinals(context, enabled)
-                                }
-                            )
-                        }
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 16.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                    }
 
                     var letterCaseUpper by remember {
                         mutableStateOf(

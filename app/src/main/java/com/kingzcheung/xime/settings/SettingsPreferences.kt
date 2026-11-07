@@ -428,13 +428,13 @@ object SettingsPreferences {
     val LONG_PRESS_BUBBLE_DELAY_RANGE = 100..600
 
     /** 隐藏主键盘字符键的键面文字（功能键图标不受影响）。 */
-    private const val KEY_HIDE_KEY_LABELS = "hide_key_labels"
+    const val KEY_HIDE_KEY_LABELS = "hide_key_labels"
 
     /** 在字母键右上角显示长按/上滑符号提示（默认显示）。 */
-    private const val KEY_SHOW_LETTER_HINT_SYMBOLS = "show_letter_hint_symbols"
+    const val KEY_SHOW_LETTER_HINT_SYMBOLS = "show_letter_hint_symbols"
 
     /** 双拼方案下用韵母替换字母键右上角符号（默认关闭）。 */
-    private const val KEY_SHOW_DOUBLE_PINYIN_FINALS = "show_double_pinyin_finals"
+    const val KEY_SHOW_DOUBLE_PINYIN_FINALS = "show_double_pinyin_finals"
 
     /** 字母键显示大小写：小写 / 大写；小写时可跟随 Shift。 */
     private const val KEY_LETTER_DISPLAY_CASE = "letter_display_case"
@@ -907,7 +907,7 @@ object SettingsPreferences {
     }
 
     /** 键盘贴底显示：忽略底部系统 inset，把键盘内容下移到屏幕底边（隐藏导航栏/手势条时使用）。 */
-    private const val KEY_KEYBOARD_FLUSH_BOTTOM = "keyboard_flush_bottom"
+    const val KEY_KEYBOARD_FLUSH_BOTTOM = "keyboard_flush_bottom"
 
     fun isKeyboardFlushBottom(context: Context): Boolean {
         return getPrefs(context).getBoolean(KEY_KEYBOARD_FLUSH_BOTTOM, false)
