@@ -198,6 +198,29 @@ public:
         return session_id_ != 0;
     }
 
+    /**
+     * 强制重建会话。
+     *
+     * 部署/维护会让 librime 内部销毁会话，但本地 session_id_ 可能仍非空
+     * （僵死会话）：此时 hasSession() 撒谎，按键全部落到已释放的会话上，
+     * 表现为「能敲出编码、但没有候选」。部署结束后必须显式销毁再重建。
+     */
+    bool recreateSession()
+    {
+        if (!rime)
+        {
+            LOGE("recreateSession: rime not available");
+            return false;
+        }
+        destroyBypassSession();
+        if (session_id_)
+        {
+            rime->destroy_session(session_id_);
+            session_id_ = 0;
+        }
+        return createSession();
+    }
+
     bool hasSession()
     {
         return session_id_ != 0;
@@ -1631,6 +1654,15 @@ extern "C"
         jobject thiz)
     {
         return Rime::Instance().createSession() ? JNI_TRUE : JNI_FALSE;
+    }
+
+    // 强制重建会话（部署/维护后清理僵死会话）
+    JNIEXPORT jboolean JNICALL
+    Java_com_kingzcheung_xime_rime_RimeEngine_nativeRecreateSession(
+        JNIEnv *env,
+        jobject thiz)
+    {
+        return Rime::Instance().recreateSession() ? JNI_TRUE : JNI_FALSE;
     }
 
     // 检查会话是否存在

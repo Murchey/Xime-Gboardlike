@@ -614,12 +614,40 @@ object RimeConfigHelper {
         // 刚卸载过冲突方案时 schema_list 可能还指着已删方案，会让维护中断
         SchemaManager.applyEnabledSchemasToDefaultYaml(context)
         runBlocking { PersonalDictManager.ensureSchemaPacks(context) }
-        if (ensureDeployment(context) && isDeploymentComplete(context)) return true
-        // 产物不完整：清 hash 后全量重编一次
-        SettingsPreferences.setDeploymentHash(context, "")
-        val deployed = RimeEngine.getInstance().deploy()
-        if (deployed) storeDeploymentHash(context)
+        val deployed = if (ensureDeployment(context) && isDeploymentComplete(context)) {
+            true
+        } else {
+            // 产物不完整：清 hash 后全量重编一次
+            SettingsPreferences.setDeploymentHash(context, "")
+            RimeEngine.getInstance().deploy().also { if (it) storeDeploymentHash(context) }
+        }
+        if (deployed) restoreLiveSession(context)
         return deployed
+    }
+
+    /**
+     * 部署后恢复运行中的输入会话。
+     *
+     * librime 的部署/维护会销毁当前会话。模糊音保存、方案导入、恢复备份等入口
+     * 都可能在键盘正在使用时触发 [deployInstalledSchema]：不重建会话并切回用户
+     * 当前方案，输入法就会停在「无会话 / 旧方案」上——症状正是开着模糊音打字
+     * 无候选或候选不对，必须重启输入法才恢复。
+     */
+    private fun restoreLiveSession(context: Context) {
+        if (!RimeEngine.isInitialized()) return
+        val engine = RimeEngine.getInstance()
+        // 关键：维护结束后旧会话可能已被 librime 销毁，而本地 session_id 仍非空
+        // （僵死会话）。不显式重建的话，按键会一直落到死会话上——症状正是
+        // 「能敲出编码、候选栏空、空格把原始编码上屏」，只能重启输入法恢复。
+        engine.recreateSession()
+        val schema = SettingsPreferences.getCurrentSchema(context)
+        if (schema.isNotBlank() && engine.getCurrentSchema() != schema) {
+            val ok = engine.switchSchema(schema)
+            FileLogger.i(
+                TAG,
+                "restoreLiveSession: reapply $schema -> $ok, current=${engine.getCurrentSchema()}"
+            )
+        }
     }
 
     /**

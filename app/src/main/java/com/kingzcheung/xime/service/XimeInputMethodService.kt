@@ -928,6 +928,19 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     }
                     
                     sessionController.updateSchemaName()
+                    // 部署/维护结束前后仍有并发维护可能刚销毁会话，导致上面的
+                    // switchSchema 被跳过；这里校验一次，不一致就再补切
+                    //（switchSchema 内部会补建会话，见 RimeEngine.switchSchema）。
+                    if (savedSchema in availableSchemas && RimeEngine.isInitialized() &&
+                        rimeEngine.getCurrentSchema() != savedSchema
+                    ) {
+                        val retried = rimeEngine.switchSchema(savedSchema)
+                        FileLogger.w(
+                            TAG,
+                            "initRimeEngine: schema mismatch, retry switch $savedSchema -> $retried, " +
+                                "current=${rimeEngine.getCurrentSchema()}"
+                        )
+                    }
                     // onStartInput 在部署进行中会跳过 schema 切换与选项恢复，
                     // 部署完成后这里补齐 UI 状态，保证键盘可用
                     sessionController.restorePersistedSchemaOptions()

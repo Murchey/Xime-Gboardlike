@@ -508,6 +508,15 @@ class RimeEngine {
         }
     }
 
+    /**
+     * 强制重建会话：部署/维护后旧会话可能已被 librime 销毁但本地 id 仍非空
+     * （僵死会话，hasSession 会撒谎），必须销毁重建，否则按键无候选。
+     */
+    fun recreateSession(): Boolean {
+        if (!isInitialized) return false
+        return locked { nativeRecreateSession() }
+    }
+
     /** 确保存在 Rime 会话；方案开关在用户首次打字前点击时也能立刻生效。 */
     fun ensureSession(): Boolean {
         if (!isInitialized) return false
@@ -555,8 +564,11 @@ class RimeEngine {
             return false
         }
         locked {
-            if (!nativeHasSession()) {
-                FileLogger.w(TAG, "switchSchema($schemaId) failed: no rime session")
+            // 部署/维护结束时 librime 会销毁会话，而重建与后续调度之间存在窗口：
+            // 这里先补建会话，否则切换被静默丢弃，引擎会停留在旧方案上
+            // （症状：设置里已切到新方案，键盘却仍按旧方案出词）。
+            if (!nativeHasSession() && !nativeCreateSession()) {
+                FileLogger.w(TAG, "switchSchema($schemaId) failed: no rime session (create failed)")
                 return false
             }
             // 在切换方案前，确保 T9 方案的 schema 补丁已注入
@@ -819,6 +831,7 @@ class RimeEngine {
     private external fun nativeInstallSignalHandler(userDataDir: String)
     private external fun nativeSetVerboseLogging(enabled: Boolean)
     private external fun nativeCreateSession(): Boolean
+    private external fun nativeRecreateSession(): Boolean
     private external fun nativeHasSession(): Boolean
     private external fun nativeIsMaintaining(): Boolean
     private external fun nativeGetCurrentSchema(): String?
