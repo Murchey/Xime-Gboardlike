@@ -1,6 +1,7 @@
 package com.kingzcheung.xime.ui.keyboard
 
 import com.kingzcheung.xime.rime.RimeCandidate
+import com.kingzcheung.xime.service.ExpandedCandidatePager
 
 /**
  * 候选展开页的纯规则（可 JVM 单测）。
@@ -9,6 +10,28 @@ import com.kingzcheung.xime.rime.RimeCandidate
  * 收敛到此处后，收起/数据源切换只有一个事实来源。
  */
 object CandidatePageRules {
+
+    /**
+     * 展开页宽度基准：悬浮模式固定按卡片宽（卡片渲染在父容器内）；
+     * 否则优先用实测宽（收窄/分屏），首帧尚未测量时回退屏宽。
+     */
+    fun expandedPageWidthDp(
+        isFloating: Boolean,
+        cardWidthDp: Int,
+        measuredWidthDp: Int,
+        screenWidthDp: Int,
+    ): Int = when {
+        isFloating -> cardWidthDp.coerceAtLeast(1)
+        measuredWidthDp > 0 -> measuredWidthDp
+        else -> screenWidthDp
+    }
+
+    /** 悬浮模式页高有限：右栏 4 键等分压缩（与横屏同款）。 */
+    fun rightRailEqualSplit(isFloating: Boolean): Boolean = isFloating
+
+    /** 网格列数：扣除左右栏与内边距后按可用宽度估算。 */
+    fun gridColumnsFor(pageWidthDp: Int): Int =
+        ExpandedCandidatePager.gridColumns((pageWidthDp - 100f).coerceAtLeast(160f))
 
     /** 展开态且已有全量候选时，候选栏与展开页都切换到全量数据源。 */
     fun usesExpandedData(expanded: Boolean, expandedCount: Int): Boolean =

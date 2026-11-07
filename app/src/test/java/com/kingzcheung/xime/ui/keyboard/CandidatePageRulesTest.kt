@@ -12,6 +12,33 @@ class CandidatePageRulesTest {
     private fun candidate(text: String) = RimeCandidate(text = text, comment = "")
 
     @Test
+    fun `悬浮模式展开页宽度优先按卡片宽`() {
+        // 悬浮卡片渲染在父容器内，即使有实测宽也必须按卡片宽算，否则候选被裁成细条
+        assertEquals(349, CandidatePageRules.expandedPageWidthDp(true, 349, 900, 1080))
+        // 卡片宽异常时退化为 1，避免后续除零
+        assertEquals(1, CandidatePageRules.expandedPageWidthDp(true, 0, 900, 1080))
+    }
+
+    @Test
+    fun `非悬浮优先实测宽，首帧回退屏宽`() {
+        assertEquals(900, CandidatePageRules.expandedPageWidthDp(false, 349, 900, 1080))
+        assertEquals(1080, CandidatePageRules.expandedPageWidthDp(false, 349, 0, 1080))
+    }
+
+    @Test
+    fun `网格列数按扣除左右栏后的宽度估算`() {
+        assertEquals(3, CandidatePageRules.gridColumnsFor(360))   // 260/72
+        assertEquals(6, CandidatePageRules.gridColumnsFor(560))   // 460/72
+        assertEquals(8, CandidatePageRules.gridColumnsFor(1000))  // 封顶 8 列
+    }
+
+    @Test
+    fun `仅悬浮模式右栏等分压缩`() {
+        assertTrue(CandidatePageRules.rightRailEqualSplit(true))
+        assertFalse(CandidatePageRules.rightRailEqualSplit(false))
+    }
+
+    @Test
     fun `展开且全量候选非空才切换数据源`() {
         assertFalse(CandidatePageRules.usesExpandedData(expanded = false, expandedCount = 5))
         assertFalse(CandidatePageRules.usesExpandedData(expanded = true, expandedCount = 0))

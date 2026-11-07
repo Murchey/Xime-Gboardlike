@@ -714,11 +714,12 @@ fun KeyboardView(
                 // 页宽基准：悬浮模式展开页渲染在卡片内（0.85×短边宽），必须按卡片宽
                 // 计算——此前用全屏 screenWidthDp，横屏悬浮下左栏 ≈0.16×长边，占掉
                 // 窄卡片四成宽度，中间候选区被压成细条（候选字裁成"细线"）
-                val expandedPageWidthDp = when {
-                    state.isFloatingMode -> cardWidthDp
-                    measuredWidthDp > 0 -> measuredWidthDp
-                    else -> screenW
-                }
+                val expandedPageWidthDp = CandidatePageRules.expandedPageWidthDp(
+                    isFloating = state.isFloatingMode,
+                    cardWidthDp = cardWidthDp,
+                    measuredWidthDp = measuredWidthDp,
+                    screenWidthDp = screenW,
+                )
                 val isT9Layout = keyboardState is KeyboardLayoutState.T9Pinyin
                 val hasT9LeftRail = isT9Layout && t9HasLeftRail(isLandscape, isTablet())
                 val t9RailWidthDp = if (hasT9LeftRail) {
@@ -757,9 +758,7 @@ fun KeyboardView(
                 val gridColumns =
                     if (expandedStyle == SettingsPreferences.EXPANDED_STYLE_GRID) {
                         // 扣掉左右栏（约 86dp）与内边距，避免用整页宽估出过密的列
-                        ExpandedCandidatePager.gridColumns(
-                            (expandedPageWidthDp - 100f).coerceAtLeast(160f)
-                        )
+                        CandidatePageRules.gridColumnsFor(expandedPageWidthDp)
                     } else 0
                 val candidateRows = remember(
                     allExpanded, singleCharFilter, rowWidthUnits, showExpandedComments, gridColumns
@@ -806,7 +805,7 @@ fun KeyboardView(
                         railPinyinOptions = railPinyinOptions,
                         railSelectedPinyinIndex = railSelectedPinyinIndex,
                         railAccentColor = accentColor,
-                        rightRailEqualSplit = state.isFloatingMode,
+                        rightRailEqualSplit = CandidatePageRules.rightRailEqualSplit(state.isFloatingMode),
                     ),
                     callbacks = CandidatePageCallbacks(
                         onCandidateSelect = { entry ->
