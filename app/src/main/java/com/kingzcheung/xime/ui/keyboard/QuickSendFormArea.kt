@@ -40,6 +40,8 @@ fun QuickSendFormArea(
     titleOverride: String? = null,
     /** 是否显示「触发编码」输入框（剪贴板内容编辑不需要编码）。 */
     showCodeField: Boolean = true,
+    /** 文本实时变化回调（剪贴板编辑据此「改即保存」）。 */
+    onTextChanged: ((String) -> Unit)? = null,
     onClose: (text: String, code: String) -> Unit,
     onFocusChange: (Boolean) -> Unit,
     onCodeFocusChange: (Boolean) -> Unit,
@@ -102,6 +104,15 @@ fun QuickSendFormArea(
                             onFocusChange(true)
                         }
                         QuickSendFormEditTextHolder.editText = this
+                        onTextChanged?.let { cb ->
+                            addTextChangedListener(object : android.text.TextWatcher {
+                                override fun afterTextChanged(s: android.text.Editable?) {
+                                    cb(s?.toString() ?: "")
+                                }
+                                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+                                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+                            })
+                        }
                         if (isFocused) {
                             post { requestFocus() }
                         }

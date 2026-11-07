@@ -6,6 +6,9 @@ import com.kingzcheung.xime.i18n.tr
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -688,6 +691,18 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun toggleClipboardPin(id: Long) = clipboardManager.toggleClipboardPin(id)
+
+    /** 编辑剪贴板内容的防抖自动保存：停止输入 350ms 后落库，回车/关闭不再依赖。 */
+    private var clipboardEditSaveJob: kotlinx.coroutines.Job? = null
+
+    fun autoSaveClipboardEdit(id: Long, text: String) {
+        if (text.isBlank()) return
+        clipboardEditSaveJob?.cancel()
+        clipboardEditSaveJob = viewModelScope.launch {
+            delay(350)
+            clipboardManager.updateClipboardItemText(id, text)
+        }
+    }
 
     fun updateClipboardItemText(id: Long, text: String): Boolean =
         clipboardManager.updateClipboardItemText(id, text)

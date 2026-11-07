@@ -384,6 +384,11 @@ fun KeyboardView(
                         tr(R.string.s_bianjirongjian)
                     } else null,
                     showCodeField = state.quickSendEditClipboardItemId == null,
+                    onTextChanged = { text ->
+                        state.quickSendEditClipboardItemId?.let { id ->
+                            viewModel.autoSaveClipboardEdit(id, text)
+                        }
+                    },
                     onClose = { text: String, code: String ->
                         val clipboardId = state.quickSendEditClipboardItemId
                         if (clipboardId != null) {

@@ -1,12 +1,16 @@
 package com.kingzcheung.xime.ui.menubar
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +24,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -39,24 +45,27 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.offset
+import kotlin.math.roundToInt
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -70,6 +79,7 @@ import com.kingzcheung.xime.ui.keyboard.WIDE_CONTAINER_WIDTH
 import com.kingzcheung.xime.ui.keyboard.tolerantClick
 import com.kingzcheung.xime.ui.rememberClipboardImageRequest
 import com.kingzcheung.xime.viewmodel.KeyboardViewModel
+import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
@@ -735,40 +745,61 @@ private fun SwipeToDeleteBox(
         content()
         return
     }
-    val state = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onDelete()
-                true
-            } else {
-                false
-            }
-        }
-    )
-    SwipeToDismissBox(
-        state = state,
-        enableDismissFromStartToEnd = false,
-        enableDismissFromEndToStart = true,
-        backgroundContent = {
-            Box(
+    val scope = rememberCoroutineScope()
+    val offsetX = remember { Animatable(0f) }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val cardWidthPx = constraints.maxWidth.toFloat().coerceAtLeast(1f)
+        val thresholdPx = cardWidthPx * 0.35f
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.errorContainer),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = tr(R.string.s_shanchu),
+                tint = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.errorContainer),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = tr(R.string.s_shanchu),
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier
-                        .padding(end = 18.dp)
-                        .size(20.dp),
-                )
-            }
-        },
-    ) {
-        content()
+                    .padding(end = 18.dp)
+                    .size(20.dp),
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .pointerInput(enabled, cardWidthPx) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            if (offsetX.value <= -thresholdPx) {
+                                scope.launch {
+                                    offsetX.animateTo(-cardWidthPx, tween(140))
+                                    onDelete()
+                                    // 删除是异步的：先复位，条目被移除前不会卡在划开状态
+                                    offsetX.snapTo(0f)
+                                }
+                            } else {
+                                scope.launch { offsetX.animateTo(0f, tween(160)) }
+                            }
+                        },
+                        onDragCancel = {
+                            scope.launch { offsetX.animateTo(0f, tween(160)) }
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            scope.launch {
+                                offsetX.snapTo(
+                                    (offsetX.value + dragAmount).coerceIn(-cardWidthPx, 0f)
+                                )
+                            }
+                        },
+                    )
+                },
+        ) {
+            content()
+        }
     }
 }
 
@@ -919,10 +950,14 @@ fun LongPressMenuOverlay(
                 .clickable(onClick = onDismiss)
         )
 
-        Row(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 10.dp, vertical = 2.dp),
+                .padding(horizontal = 10.dp, vertical = 2.dp)
+        ) {
+            val menuMaxHeight = maxHeight - 12.dp
+        Row(
+            modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Box(
@@ -936,7 +971,12 @@ fun LongPressMenuOverlay(
                         textColor = textColor
                     )
                 } else {
-                    MenuCard(menuItems = menuItems, cardBgColor = contentBgColor, onDismiss = onDismiss)
+                    MenuCard(
+                        menuItems = menuItems,
+                        cardBgColor = contentBgColor,
+                        maxHeight = menuMaxHeight,
+                        onDismiss = onDismiss,
+                    )
                 }
             }
 
@@ -945,7 +985,12 @@ fun LongPressMenuOverlay(
                 contentAlignment = Alignment.Center
             ) {
                 if (isLeftColumn) {
-                    MenuCard(menuItems = menuItems, cardBgColor = contentBgColor, onDismiss = onDismiss)
+                    MenuCard(
+                        menuItems = menuItems,
+                        cardBgColor = contentBgColor,
+                        maxHeight = menuMaxHeight,
+                        onDismiss = onDismiss,
+                    )
                 } else {
                     ContentCard(
                         text = text,
@@ -954,6 +999,7 @@ fun LongPressMenuOverlay(
                     )
                 }
             }
+        }
         }
     }
 }
@@ -985,6 +1031,7 @@ private fun ContentCard(
 private fun MenuCard(
     menuItems: List<LongPressMenuEntry>,
     cardBgColor: Color,
+    maxHeight: Dp = Dp.Unspecified,
     onDismiss: () -> Unit,
 ) {
     Surface(
@@ -992,7 +1039,12 @@ private fun MenuCard(
         shape = RoundedCornerShape(12.dp),
         color = cardBgColor
     ) {
-        Column(modifier = Modifier.padding(vertical = 6.dp)) {
+        Column(
+            modifier = Modifier
+                .then(if (maxHeight != Dp.Unspecified) Modifier.heightIn(max = maxHeight) else Modifier)
+                .verticalScroll(rememberScrollState())
+                .padding(vertical = 6.dp)
+        ) {
             menuItems.forEachIndexed { index, entry ->
                 if (index > 0) {
                     HorizontalDivider(

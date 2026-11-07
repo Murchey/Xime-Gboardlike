@@ -5,25 +5,25 @@ import com.kingzcheung.xime.R
 import com.kingzcheung.xime.i18n.tr
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.Assignment
-import androidx.compose.material.icons.automirrored.twotone.LastPage
-import androidx.compose.material.icons.twotone.ContentCopy
-import androidx.compose.material.icons.twotone.ContentPaste
-import androidx.compose.material.icons.twotone.EmojiEmotions
-import androidx.compose.material.icons.twotone.FirstPage
-import androidx.compose.material.icons.twotone.KeyboardAlt
-import androidx.compose.material.icons.twotone.LastPage
-import androidx.compose.material.icons.twotone.Paid
-import androidx.compose.material.icons.twotone.Quickreply
-import androidx.compose.material.icons.twotone.SelectAll
-import androidx.compose.material.icons.filled.Computer
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.PictureInPicture
+import androidx.compose.material.icons.automirrored.rounded.Assignment
+import androidx.compose.material.icons.automirrored.rounded.LastPage
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.EmojiEmotions
+import androidx.compose.material.icons.rounded.FirstPage
+import androidx.compose.material.icons.rounded.KeyboardAlt
+import androidx.compose.material.icons.rounded.LastPage
+import androidx.compose.material.icons.rounded.Paid
+import androidx.compose.material.icons.rounded.Quickreply
+import androidx.compose.material.icons.rounded.SelectAll
+import androidx.compose.material.icons.rounded.Computer
+import androidx.compose.material.icons.rounded.Create
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.PictureInPicture
 import androidx.compose.material.icons.outlined.Gesture
-import androidx.compose.material.icons.twotone.Edit
-import androidx.compose.material.icons.twotone.Mic
-import androidx.compose.material.icons.twotone.Settings
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class ToolbarButton(
@@ -31,21 +31,21 @@ enum class ToolbarButton(
     val label: String,
     val icon: ImageVector
 ) {
-    SETTINGS("settings", tr(R.string.s_shezhi), Icons.TwoTone.Settings),
-    EMOJI("emoji", tr(R.string.s_biaoqing), Icons.TwoTone.EmojiEmotions),
-    CLIPBOARD("clipboard", tr(R.string.s_jiantieban), Icons.AutoMirrored.TwoTone.Assignment),
-    SCHEMA("schema", tr(R.string.s_fanganxuanze), Icons.TwoTone.KeyboardAlt),
-    QUICK_PHRASE("quick_phrase", tr(R.string.s_kuaijiefasong), Icons.TwoTone.Quickreply),
-    SYMBOL("symbol", tr(R.string.s_fuhao), Icons.TwoTone.Paid),
-    FLOAT("float", tr(R.string.s_xuanfu), Icons.Default.PictureInPicture),
-    SELECT_ALL("select_all", tr(R.string.s_quanxuan), Icons.TwoTone.SelectAll),
-    COPY("copy", tr(R.string.s_fuzhi), Icons.TwoTone.ContentCopy),
-    PASTE("paste", tr(R.string.s_zhantie), Icons.TwoTone.ContentPaste),
-    HOME("home", tr(R.string.s_duanshou), Icons.TwoTone.FirstPage),
-    END("end", tr(R.string.s_duanwei), Icons.AutoMirrored.TwoTone.LastPage),
+    SETTINGS("settings", tr(R.string.s_shezhi), Icons.Rounded.Settings),
+    EMOJI("emoji", tr(R.string.s_biaoqing), Icons.Rounded.EmojiEmotions),
+    CLIPBOARD("clipboard", tr(R.string.s_jiantieban), Icons.AutoMirrored.Rounded.Assignment),
+    SCHEMA("schema", tr(R.string.s_fanganxuanze), Icons.Rounded.KeyboardAlt),
+    QUICK_PHRASE("quick_phrase", tr(R.string.s_kuaijiefasong), Icons.Rounded.Quickreply),
+    SYMBOL("symbol", tr(R.string.s_fuhao), Icons.Rounded.Paid),
+    FLOAT("float", tr(R.string.s_xuanfu), Icons.Rounded.PictureInPicture),
+    SELECT_ALL("select_all", tr(R.string.s_quanxuan), Icons.Rounded.SelectAll),
+    COPY("copy", tr(R.string.s_fuzhi), Icons.Rounded.ContentCopy),
+    PASTE("paste", tr(R.string.s_zhantie), Icons.Rounded.ContentPaste),
+    HOME("home", tr(R.string.s_duanshou), Icons.Rounded.FirstPage),
+    END("end", tr(R.string.s_duanwei), Icons.AutoMirrored.Rounded.LastPage),
     HANDWRITING_LOOKUP("handwriting_lookup", tr(R.string.s_shouxiezhaozi), Icons.Outlined.Gesture),
-    EDIT("edit", tr(R.string.s_bianji), Icons.TwoTone.Edit),
-    VOICE("voice", tr(R.string.s_yuyin), Icons.TwoTone.Mic);
+    EDIT("edit", tr(R.string.s_bianji), Icons.Rounded.Edit),
+    VOICE("voice", tr(R.string.s_yuyin), Icons.Rounded.Mic);
 
     companion object {
         /** Gboard 风格的首次启用工具：设置、表情、剪贴板、方案切换和快捷短语。 */
