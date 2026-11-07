@@ -25,8 +25,9 @@ object SettingsPreferences {
 
     private const val KEY_CORRECTOR_ENABLED = "corrector_enabled"
     
-    private const val KEY_SOUND_ENABLED = "sound_enabled"
-    private const val KEY_SOUND_VOLUME = "sound_volume"
+    /** 公开给声明式设置层：键名与读写共用同一份数据。 */
+    const val KEY_SOUND_ENABLED = "sound_enabled"
+    const val KEY_SOUND_VOLUME = "sound_volume"
     private const val KEY_VIBRATION_ENABLED = "vibration_enabled"
     private const val KEY_VIBRATION_INTENSITY = "vibration_intensity"
     private const val KEY_KEYBOARD_THEME_LIGHT = "keyboard_theme_light"

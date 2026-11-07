@@ -48,6 +48,13 @@ fun KeyEffectSettingsContent(
 ) {
     val viewModel: KeyEffectSettingsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // 声明式设置层：与 SettingsPreferences 共用同一份 SharedPreferences
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val settingsStore = androidx.compose.runtime.remember(context) {
+        com.kingzcheung.xime.settings.declarative.SharedPreferencesSettingsStore(
+            SettingsPreferences.getPrefsPublic(context)
+        )
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -114,64 +121,10 @@ fun KeyEffectSettingsContent(
 
             item {
                 SettingsSection(title = tr(R.string.s_anjianyinxiao), content = {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = tr(R.string.s_qiyonganjianyin),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = tr(R.string.s_anjianshibofangyinxiao),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = uiState.soundEnabled,
-                            onCheckedChange = { viewModel.setSoundEnabled(it) }
-                        )
-                    }
-
-                    if (uiState.soundEnabled) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 16.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                        Column(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = tr(R.string.s_yinliangdaxiao),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "${uiState.soundVolume}%",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Slider(
-                                value = uiState.soundVolume.toFloat(),
-                                onValueChange = { viewModel.setSoundVolume(it.toInt()) },
-                                valueRange = 0f..100f,
-                                steps = 19
-                            )
-                        }
-                    }
+                    DeclarativeSettingItems(
+                        specs = KeyEffectSettingsSpecs.sound,
+                        store = settingsStore,
+                    )
                 })
             }
 
