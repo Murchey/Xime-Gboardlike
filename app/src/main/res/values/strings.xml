@@ -852,6 +852,16 @@
     <string name="s_yufamoxing_fu">导入 .gram 语言模型，全局提升候选排序</string>
     <string name="s_yufamoxing_shuoming">语言模型根据上文重排候选顺序（纯本地，不联网）。选择一个模型后保存并部署，对所有输入方案全局生效；停用后候选恢复引擎默认排序。</string>
     <string name="s_yufamoxing_tingyong">停用</string>
+    <string name="s_yufamoxing_canshu">语法参数</string>
+    <string name="s_yufamoxing_canshu_shuoming">不同 .gram 模型的打分尺度不同（有的存 lnP，有的存 lnP+10），参数需按模型调整。切换模型时会载入该模型上次保存的参数。</string>
+    <string name="s_zuida_shangwen_changdu">最大上下文长度</string>
+    <string name="s_zuixiao_zuhe_changdu">最小组合长度</string>
+    <string name="s_zuhe_chengfa">组合惩罚</string>
+    <string name="s_feizuhe_chengfa">非组合惩罚</string>
+    <string name="s_ruozuhe_chengfa">弱组合惩罚</string>
+    <string name="s_weibu_chengfa">尾部惩罚</string>
+    <string name="s_shangxiawen_lianxiang">上下文联想</string>
+    <string name="s_huifutuijianzhi">恢复推荐值</string>
     <string name="s_yufamoxing_daoru">导入 .gram 文件</string>
     <string name="s_yufamoxing_daochu">导出</string>
     <string name="s_yufamoxing_daochuchenggong">导出成功</string>

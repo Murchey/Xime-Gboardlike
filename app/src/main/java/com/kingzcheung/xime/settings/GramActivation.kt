@@ -1,6 +1,7 @@
 package com.kingzcheung.xime.settings
 
 import android.content.Context
+import org.json.JSONObject
 import java.io.File
 
 /**
@@ -13,6 +14,9 @@ object GramPreferences {
 
     /** 已写入的调参版本：老版本只写了 2 个 key，升级后需要补齐 GrammarProfile。 */
     private const val KEY_PROFILE_VERSION = "profile_version"
+
+    /** 按模型保存的调参（JSON：language -> GrammarProfile）。 */
+    private const val KEY_PROFILES = "profiles"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -33,6 +37,26 @@ object GramPreferences {
 
     fun setProfileVersion(context: Context, version: Int) {
         prefs(context).edit().putInt(KEY_PROFILE_VERSION, version).apply()
+    }
+
+    /** 取模型专属调参；未保存过时返回该模型的推荐值。 */
+    fun profile(context: Context, language: String): GrammarProfile {
+        val fallback = GrammarProfile.recommended(language)
+        if (language.isBlank()) return fallback
+        val raw = prefs(context).getString(KEY_PROFILES, null) ?: return fallback
+        val obj = runCatching { JSONObject(raw) }.getOrNull() ?: return fallback
+        return GrammarProfile.fromJson(obj.optJSONObject(language)?.toString()) ?: fallback
+    }
+
+    /** 保存模型专属调参（按 language 分别存，切换模型不会互相覆盖）。 */
+    fun setProfile(context: Context, language: String, profile: GrammarProfile) {
+        if (language.isBlank()) return
+        val prefs = prefs(context)
+        val obj = runCatching {
+            JSONObject(prefs.getString(KEY_PROFILES, null) ?: "{}")
+        }.getOrElse { JSONObject() }
+        obj.put(language, JSONObject(profile.coerce().toJson()))
+        prefs.edit().putString(KEY_PROFILES, obj.toString()).apply()
     }
 }
 
@@ -183,7 +207,10 @@ object GramActivation {
      *
      * @return 失败的方案数（0 = 全部成功）
      */
-    fun applyGlobal(context: Context, profile: GrammarProfile = GrammarProfile()): Int {
+    fun applyGlobal(
+        context: Context,
+        profile: GrammarProfile = GramPreferences.profile(context, GramPreferences.activeLanguage(context)),
+    ): Int {
         val language = GramPreferences.activeLanguage(context).ifBlank { null }
         var failed = 0
         for (schemaId in SchemaManager.getEnabledSchemas(context)) {
