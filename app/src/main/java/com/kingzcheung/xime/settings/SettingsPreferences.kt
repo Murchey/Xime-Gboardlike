@@ -154,7 +154,11 @@ object SettingsPreferences {
     private const val KEY_CANDIDATE_TEXT_SIZE = "candidate_text_size"
     const val INPUT_TEXT_INPUT_BOX = "input_box"
     const val INPUT_TEXT_CANDIDATE_BAR = "candidate_bar"
-    const val DEFAULT_PAGE_SIZE = 20 // 手机候选栏每页候选词数；schema 里的 page_size 来自 PC 版（5），太短，默认用 20
+    // 手机候选栏每页候选词数。schema 自带值是 PC 版默认（5），太短；
+    // 参考 fcitx5-android：虚拟键盘一次性取回全部候选横向滚动（bulk），这里用较大的
+    // 页容量 + 横向滚动达到同样体验，默认 50（旧版 20）。
+    const val DEFAULT_PAGE_SIZE = 50
+    const val MAX_PAGE_SIZE = 100
 
     fun isCompactModeEnabled(context: Context): Boolean {
         return getPrefs(context).getBoolean(KEY_COMPACT_MODE, true)

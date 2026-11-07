@@ -590,7 +590,7 @@
     <string name="s_xianshizaihouxuanlan">显示在候选栏</string>
     <string name="s_meiyehouxuancishu">每页候选词数</string>
     <string name="s_ge">%1$s 个</string>
-    <string name="s_xiugaihouxudaofanganshezhizhon_603c8">修改后需到方案设置中点击部署才能生效</string>
+    <string name="s_xiugaihouxudaofanganshezhizhon_603c8">修改后立即生效；引擎未启动时下次弹出键盘生效</string>
     <string name="s_shurukuangshipei">输入框适配</string>
     <string name="s_shuzikuangzidongshuzijianpan">数字框自动数字键盘</string>
     <string name="s_jinruhaoma_yanzhengmadengshuzi_1aed9">进入号码、验证码等数字输入框时自动弹出数字键盘</string>

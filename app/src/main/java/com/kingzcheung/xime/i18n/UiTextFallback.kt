@@ -578,7 +578,7 @@ internal object UiTextFallback {
         R.string.s_xianshizaihouxuanlan to "显示在候选栏",
         R.string.s_meiyehouxuancishu to "每页候选词数",
         R.string.s_ge to "%1\$s 个",
-        R.string.s_xiugaihouxudaofanganshezhizhon_603c8 to "修改后需到方案设置中点击部署才能生效",
+        R.string.s_xiugaihouxudaofanganshezhizhon_603c8 to "修改后立即生效；引擎未启动时下次弹出键盘生效",
         R.string.s_shurukuangshipei to "输入框适配",
         R.string.s_shuzikuangzidongshuzijianpan to "数字框自动数字键盘",
         R.string.s_jinruhaoma_yanzhengmadengshuzi_1aed9 to "进入号码、验证码等数字输入框时自动弹出数字键盘",

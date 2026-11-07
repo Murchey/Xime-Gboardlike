@@ -159,6 +159,9 @@ fun CandidateBar(
     )
     val iconButtonTint = MaterialTheme.colorScheme.onSurfaceVariant
     val showComments = SettingsPreferences.showCandidateComments(context)
+    // 每页候选词数（默认 50，设置里可调 5~100）；候选栏与引擎分页同口径
+    val pageSize = SettingsPreferences.getPageSize(context)
+        .coerceIn(1, SettingsPreferences.MAX_PAGE_SIZE)
     val inputTextLocation = SettingsPreferences.getInputTextLocation(context)
     val showInputBoxStyle = inputTextLocation == SettingsPreferences.INPUT_TEXT_INPUT_BOX
     val candidateTextSize = SettingsPreferences.getCandidateTextSize(context)
@@ -202,8 +205,9 @@ fun CandidateBar(
             showLeftIcon = true
         }
         is CandidateBarState.ChineseCandidates -> {
-            val taken = s.candidates.take(20)
-            // 候选栏按设置的"每页候选词数"显示引擎当前页，可左右滑动查看放不下的候选
+            // 候选栏按设置的"每页候选词数"显示引擎当前页，可左右滑动查看放不下的候选。
+            // 页容量由设置决定（默认 50），不再硬编码 20——否则把每页调到 50 也只显示 20。
+            val taken = s.candidates.take(pageSize)
             displayCandidates = taken
             displayComments = s.comments
             displayImages = emptyList()
@@ -251,7 +255,7 @@ fun CandidateBar(
             displayImages = emptyList()
         }
         is CandidateBarState.EnglishCandidates -> {
-            displayCandidates = s.candidates.take(20)
+            displayCandidates = s.candidates.take(pageSize)
             displayComments = s.comments
             displayAssociation = emptyList()
             hasAnyMore = false

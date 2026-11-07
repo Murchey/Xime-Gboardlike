@@ -35,12 +35,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.kingzcheung.xime.rime.RimeEngine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.kingzcheung.xime.settings.DoublePinyinFinals
 import com.kingzcheung.xime.settings.SettingsPreferences
 
@@ -681,10 +685,13 @@ fun LayoutDisplaySettingsContent(
                     )
 
                     val pageSizePref = SettingsPreferences.getPageSize(context)
-                    val effectiveValue = if (pageSizePref == 0) 20f else pageSizePref.toFloat()
+                    val effectiveValue = pageSizePref.toFloat()
                     var pageSizeSlider by remember(effectiveValue) {
                         mutableStateOf(effectiveValue)
                     }
+                    // 立即生效：引擎已初始化时直接改方案配置并重建 Schema（与会话启动同一条
+                    // 路径 applyPageSizeOverride），不再要求用户去方案页重新部署。
+                    val pageSizeScope = rememberCoroutineScope()
 
                     Column(
                         modifier = Modifier.padding(16.dp)
@@ -712,9 +719,16 @@ fun LayoutDisplaySettingsContent(
                             onValueChangeFinished = {
                                 val intValue = pageSizeSlider.toInt()
                                 SettingsPreferences.setPageSize(context, intValue)
+                                pageSizeScope.launch(Dispatchers.IO) {
+                                    if (RimeEngine.isInitialized()) {
+                                        RimeEngine.getInstance().setPageSize(
+                                            SettingsPreferences.getCurrentSchema(context), intValue
+                                        )
+                                    }
+                                }
                             },
-                            valueRange = 5f..50f,
-                            steps = 44
+                            valueRange = 5f..SettingsPreferences.MAX_PAGE_SIZE.toFloat(),
+                            steps = SettingsPreferences.MAX_PAGE_SIZE - 6
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(

@@ -571,7 +571,7 @@
     <string name="s_xianshizaihouxuanlan">顯示在候選欄</string>
     <string name="s_meiyehouxuancishu">每頁候選詞數</string>
     <string name="s_ge">%1$s 個</string>
-    <string name="s_xiugaihouxudaofanganshezhizhon_603c8">修改後需到方案設定中點擊部署才能生效</string>
+    <string name="s_xiugaihouxudaofanganshezhizhon_603c8">修改後立即生效；引擎未啟動時下次彈出鍵盤生效</string>
     <string name="s_shurukuangshipei">輸入框適配</string>
     <string name="s_shuzikuangzidongshuzijianpan">數字框自動數字鍵盤</string>
     <string name="s_jinruhaoma_yanzhengmadengshuzi_1aed9">進入號碼、驗證碼等數字輸入框時自動彈出數字鍵盤</string>
