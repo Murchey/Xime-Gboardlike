@@ -151,7 +151,7 @@ object SettingsPreferences {
     /** 公开给键盘视图监听：候选栏与展开页共用同一开关。 */
     const val KEY_SHOW_CANDIDATE_COMMENTS = "show_candidate_comments"
     private const val KEY_INPUT_TEXT_LOCATION = "input_text_location"
-    private const val KEY_PAGE_SIZE = "page_size"
+    const val KEY_PAGE_SIZE = "page_size"
     private const val KEY_CANDIDATE_TEXT_SIZE = "candidate_text_size"
     const val INPUT_TEXT_INPUT_BOX = "input_box"
     const val INPUT_TEXT_CANDIDATE_BAR = "candidate_bar"

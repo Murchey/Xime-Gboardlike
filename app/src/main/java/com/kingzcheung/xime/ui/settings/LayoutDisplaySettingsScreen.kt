@@ -21,7 +21,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.twotone.Straighten
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,6 +47,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.kingzcheung.xime.settings.DoublePinyinFinals
 import com.kingzcheung.xime.settings.SettingsPreferences
+import com.kingzcheung.xime.settings.declarative.SettingValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -390,102 +390,38 @@ fun LayoutDisplaySettingsContent(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
 
-                    val pageSizePref = SettingsPreferences.getPageSize(context)
-                    val effectiveValue = pageSizePref.toFloat()
-                    var pageSizeSlider by remember(effectiveValue) {
-                        mutableStateOf(effectiveValue)
-                    }
-                    // 立即生效：引擎已初始化时直接改方案配置并重建 Schema（与会话启动同一条
-                    // 路径 applyPageSizeOverride），不再要求用户去方案页重新部署。
+                    // 立即生效：拖动结束改方案配置并重建 Schema（与会话启动同一条路径）
                     val pageSizeScope = rememberCoroutineScope()
-
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = tr(R.string.s_meiyehouxuancishu),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = tr(R.string.s_ge, pageSizeSlider.toInt()),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Slider(
-                            value = pageSizeSlider,
-                            onValueChange = { pageSizeSlider = it },
-                            onValueChangeFinished = {
-                                val intValue = pageSizeSlider.toInt()
-                                SettingsPreferences.setPageSize(context, intValue)
-                                pageSizeScope.launch(Dispatchers.IO) {
-                                    if (RimeEngine.isInitialized()) {
-                                        RimeEngine.getInstance().setPageSize(
-                                            SettingsPreferences.getCurrentSchema(context), intValue
-                                        )
-                                    }
+                    DeclarativeSettingItems(
+                        specs = LayoutDisplaySettingsSpecs.pageSize,
+                        store = settingsStore,
+                        onChangeFinished = { _, value ->
+                            val size = (value as SettingValue.Number).value
+                            pageSizeScope.launch(Dispatchers.IO) {
+                                if (RimeEngine.isInitialized()) {
+                                    RimeEngine.getInstance().setPageSize(
+                                        SettingsPreferences.getCurrentSchema(context), size
+                                    )
                                 }
-                            },
-                            valueRange = 5f..SettingsPreferences.MAX_PAGE_SIZE.toFloat(),
-                            steps = SettingsPreferences.MAX_PAGE_SIZE - 6
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = tr(R.string.s_xiugaihouxudaofanganshezhizhon_603c8),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                    }
+                            }
+                        }
+                    )
+                    Text(
+                        text = tr(R.string.s_xiugaihouxudaofanganshezhizhon_603c8),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                    )
                 })
             }
-
             item {
                 SettingsSection(title = tr(R.string.s_zhanakaiye_buju), content = {
-                    var expandedStyle by remember {
-                        mutableStateOf(SettingsPreferences.expandedCandidateStyle(context))
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // 分组标题已说明「展开页布局」，行内只放说明文字，避免重复
-                        Text(
-                            text = tr(R.string.s_zhanakaiye_buju_fu),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        FilterChip(
-                            selected = expandedStyle == SettingsPreferences.EXPANDED_STYLE_GRID,
-                            onClick = {
-                                expandedStyle = SettingsPreferences.EXPANDED_STYLE_GRID
-                                SettingsPreferences.setExpandedCandidateStyle(context, expandedStyle)
-                            },
-                            label = { Text(tr(R.string.s_wangge)) }
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        FilterChip(
-                            selected = expandedStyle == SettingsPreferences.EXPANDED_STYLE_FLOW,
-                            onClick = {
-                                expandedStyle = SettingsPreferences.EXPANDED_STYLE_FLOW
-                                SettingsPreferences.setExpandedCandidateStyle(context, expandedStyle)
-                            },
-                            label = { Text(tr(R.string.s_liushi)) }
-                        )
-                    }
+                    DeclarativeSettingItems(
+                        specs = LayoutDisplaySettingsSpecs.expandedLayout,
+                        store = settingsStore,
+                    )
                 })
             }
-
             item {
                 SettingsSection(title = tr(R.string.s_shurukuangshipei), content = {
                     DeclarativeSettingItems(

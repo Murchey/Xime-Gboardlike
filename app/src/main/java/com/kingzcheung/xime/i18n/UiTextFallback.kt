@@ -578,6 +578,7 @@ internal object UiTextFallback {
         R.string.s_xianshizaihouxuanlan to "显示在候选栏",
         R.string.s_meiyehouxuancishu to "每页候选词数",
         R.string.s_zhanakaiye_buju to "展开页布局",
+        R.string.s_paibufangshi to "排布方式",
         R.string.s_zhanakaiye_buju_fu to "网格更整齐；流式按词长自适应，长词不截断",
         R.string.s_wangge to "网格",
         R.string.s_liushi to "流式",

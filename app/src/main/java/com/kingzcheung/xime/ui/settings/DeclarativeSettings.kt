@@ -45,6 +45,8 @@ fun DeclarativeSettingItems(
     store: SettingsStore,
     modifier: Modifier = Modifier,
     onChange: ((SettingSpec, SettingValue) -> Unit)? = null,
+    /** 滑杆拖动结束回调（用于需要"松手才生效"的副作用，如重建 Schema）。 */
+    onChangeFinished: ((SettingSpec, SettingValue) -> Unit)? = null,
 ) {
     val snapshot = remember(specs) {
         mutableStateMapOf<String, SettingValue>().apply {
@@ -84,7 +86,13 @@ fun DeclarativeSettingItems(
                     spec = spec,
                     value = localStore.number(spec.key, spec.coerce(spec.default)),
                     enabled = enabled,
-                    onValueChange = { commit(spec, SettingValue.Number(it)) }
+                    onValueChange = { commit(spec, SettingValue.Number(it)) },
+                    onValueChangeFinished = {
+                        onChangeFinished?.invoke(
+                            spec,
+                            SettingValue.Number(localStore.number(spec.key, spec.coerce(spec.default)))
+                        )
+                    }
                 )
                 is SettingSpec.Choice -> ChoiceSettingRow(
                     spec = spec,
@@ -134,6 +142,7 @@ private fun SliderSettingRow(
     value: Int,
     enabled: Boolean,
     onValueChange: (Int) -> Unit,
+    onValueChangeFinished: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -170,7 +179,8 @@ private fun SliderSettingRow(
                 onValueChange(stepped)
             },
             valueRange = spec.min.toFloat()..spec.max.toFloat(),
-            steps = ((spec.max - spec.min) / spec.step - 1).coerceAtLeast(0)
+            steps = ((spec.max - spec.min) / spec.step - 1).coerceAtLeast(0),
+            onValueChangeFinished = onValueChangeFinished
         )
     }
 }

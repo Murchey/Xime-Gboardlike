@@ -572,6 +572,7 @@
     <string name="s_xianshizaihouxuanlan">顯示在候選欄</string>
     <string name="s_meiyehouxuancishu">每頁候選詞數</string>
     <string name="s_zhanakaiye_buju">展開頁佈局</string>
+    <string name="s_paibufangshi">排布方式</string>
     <string name="s_zhanakaiye_buju_fu">網格更整齊；流式按詞長自適應，長詞不截斷</string>
     <string name="s_wangge">網格</string>
     <string name="s_liushi">流式</string>

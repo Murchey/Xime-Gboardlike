@@ -591,6 +591,7 @@
     <string name="s_xianshizaihouxuanlan">显示在候选栏</string>
     <string name="s_meiyehouxuancishu">每页候选词数</string>
     <string name="s_zhanakaiye_buju">展开页布局</string>
+    <string name="s_paibufangshi">排布方式</string>
     <string name="s_zhanakaiye_buju_fu">网格更整齐；流式按词长自适应，长词不截断</string>
     <string name="s_wangge">网格</string>
     <string name="s_liushi">流式</string>

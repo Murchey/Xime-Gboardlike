@@ -3,6 +3,7 @@ package com.kingzcheung.xime.ui.settings
 import com.kingzcheung.xime.R
 import com.kingzcheung.xime.settings.DoublePinyinFinals
 import com.kingzcheung.xime.settings.SettingsPreferences
+import com.kingzcheung.xime.settings.declarative.ChoiceOption
 import com.kingzcheung.xime.settings.declarative.SettingSpec
 import com.kingzcheung.xime.settings.declarative.SettingVisibility
 
@@ -76,6 +77,33 @@ object LayoutDisplaySettingsSpecs {
                 SettingsPreferences.LETTER_CASE_LOWER,
             ),
             offWhenDisabled = true,
+        ),
+    )
+
+    /** 展开页布局：网格 / 流式（枚举存值）。 */
+    val expandedLayout: List<SettingSpec> = listOf(
+        SettingSpec.Choice(
+            key = SettingsPreferences.KEY_EXPANDED_CANDIDATE_STYLE,
+            titleRes = R.string.s_paibufangshi,
+            descriptionRes = R.string.s_zhanakaiye_buju_fu,
+            default = SettingsPreferences.EXPANDED_STYLE_FLOW,
+            options = listOf(
+                ChoiceOption(SettingsPreferences.EXPANDED_STYLE_GRID, R.string.s_wangge),
+                ChoiceOption(SettingsPreferences.EXPANDED_STYLE_FLOW, R.string.s_liushi),
+            ),
+        ),
+    )
+
+    /** 每页候选词数（松手后由页面调用引擎立即生效）。 */
+    val pageSize: List<SettingSpec> = listOf(
+        SettingSpec.Slider(
+            key = SettingsPreferences.KEY_PAGE_SIZE,
+            titleRes = R.string.s_meiyehouxuancishu,
+            default = SettingsPreferences.DEFAULT_PAGE_SIZE,
+            min = 5,
+            max = SettingsPreferences.MAX_PAGE_SIZE,
+            step = 1,
+            suffix = " 个",
         ),
     )
 
