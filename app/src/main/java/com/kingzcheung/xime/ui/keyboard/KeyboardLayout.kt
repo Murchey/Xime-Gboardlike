@@ -820,9 +820,8 @@ internal fun resolveKeyboardPalette(themeId: String, isDarkTheme: Boolean): Keyb
         ?: if (isDarkTheme) longToColor(kbColors.keyTextColorDark) else longToColor(kbColors.keyTextColor)
     // 功能键组（退格/字符/shift）：主题显式 token 优先；否则按 Gboard 的层次推导——
     // 暗色比普通键略亮一档，浅色比白键略暗一档，保证两种模式都能看出分组。
-    val specialKeyBackgroundColor = KeyboardThemes.getFunctionKeyBackground(themeId, isDarkTheme)
-        ?: if (isDarkTheme) lerp(keyBackgroundColor, Color.White, 0.10f)
-        else lerp(keyBackgroundColor, Color.Black, 0.06f)
+    val specialKeyBackgroundColor =
+        KeyboardThemes.resolveFunctionKeyColor(themeId, isDarkTheme, keyBackgroundColor)
     val specialKeyTextColor = KeyboardThemes.getSpecialKeyTextColorForBackground(
         specialKeyBackgroundColor, keyTextColor
     )
@@ -837,12 +836,10 @@ internal fun resolveKeyboardPalette(themeId: String, isDarkTheme: Boolean): Keyb
         specialKeyTextColor = specialKeyTextColor,
         bubbleBgColor = popupBg,
         // 回车使用主题强调色（Gboard 行为），不再和功能键同色
-        accentKeyBackgroundColor = KeyboardThemes.getAccentKeyBackground(themeId, isDarkTheme)
-            ?: KeyboardThemes.getAccentColor(themeId, isDarkTheme),
+        accentKeyBackgroundColor = KeyboardThemes.resolveEnterKeyColor(themeId, isDarkTheme),
         accentKeyTextColor = KeyboardThemes.getAccentKeyTextColor(themeId, isDarkTheme)
             ?: KeyboardThemes.getSpecialKeyTextColorForBackground(
-                KeyboardThemes.getAccentKeyBackground(themeId, isDarkTheme)
-                    ?: KeyboardThemes.getAccentColor(themeId, isDarkTheme),
+                KeyboardThemes.resolveEnterKeyColor(themeId, isDarkTheme),
                 keyTextColor,
             ),
         popupTextColor = popupText,

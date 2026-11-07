@@ -117,6 +117,15 @@ private const val APPEAR_SCALE_DURATION_MS = 220
 private const val APPEAR_ALPHA_DURATION_MS = 150
 private const val BUBBLE_SCALE_FROM = 0.9f
 
+/**
+ * 消失动画（逐值对照 Gboard 反编译资源）：
+ * - res/5T8.xml：scale 1→0.9，pivotX=50% pivotY=100%，duration 220ms（0x7f0c0002）
+ * - res/UXQ.xml：alpha 1→0，duration 150ms（0x7f0c0003）
+ * 之前松手是瞬间移除，缺少缩回按键的收尾，长按动画因此与 Gboard 不一致。
+ */
+private const val HIDE_SCALE_DURATION_MS = 220
+private const val HIDE_ALPHA_DURATION_MS = 150
+
 /** Android `@android:anim/decelerate_interpolator` = PathInterpolator(0, 0, 0.2, 1)。 */
 private val DecelerateEasing = CubicBezierEasing(0f, 0f, 0.2f, 1f)
 
@@ -141,18 +150,44 @@ class SwipeBubbleController(private val scope: CoroutineScope) {
      */
     private val scaleAnim = Animatable(1f)
     private val alphaAnim = Animatable(1f)
+    /** 消失动画：1→0（缩放 220ms / 透明度 150ms，与出现独立）。 */
+    private val hideScale = Animatable(1f)
+    private val hideAlpha = Animatable(1f)
     /** 缩放进度 0→1。 */
-    val appearProgress: Float get() = scaleAnim.value
+    val appearProgress: Float get() = scaleAnim.value * hideScale.value
     /** 透明度进度 0→1（比缩放先完成）。 */
-    val appearAlpha: Float get() = alphaAnim.value
+    val appearAlpha: Float get() = alphaAnim.value * hideAlpha.value
     private var gestureSession by mutableIntStateOf(0)
     private var animJob: Job? = null
+    private var hideJob: Job? = null
+
+    /** 按 Gboard 的两段时长收起气泡；动画结束后才真正清空状态。 */
+    private fun startHide() {
+        hideJob?.cancel()
+        hideJob = scope.launch {
+            val kept = state
+            launch { hideAlpha.animateTo(0f, tween(HIDE_ALPHA_DURATION_MS, easing = DecelerateEasing)) }
+            hideScale.animateTo(0f, tween(HIDE_SCALE_DURATION_MS, easing = DecelerateEasing))
+            if (state === kept) state = SwipeState()
+            hideScale.snapTo(1f)
+            hideAlpha.snapTo(1f)
+        }
+    }
 
     fun update(newState: SwipeState, bounds: Rect) {
         releaseJob?.cancel()
         releaseJob = null
         val prev = state
         val gestureActive = newState.isSwiping || newState.isPressed || newState.isLongPress
+        if (gestureActive) {
+            // 新手势打断消失动画：复位到完全显示，避免气泡停在半透明状态
+            hideJob?.cancel()
+            hideJob = null
+            scope.launch {
+                hideScale.snapTo(1f)
+                hideAlpha.snapTo(1f)
+            }
+        }
         if (!gestureActive &&
             prev.isPressed && prev.pressedText != null &&
             !prev.isSwiping && !prev.isLongPress
@@ -161,7 +196,7 @@ class SwipeBubbleController(private val scope: CoroutineScope) {
             keyBounds = bounds
             releaseJob = scope.launch {
                 delay(PRESS_BUBBLE_RELEASE_DELAY_MS)
-                state = SwipeState()
+                startHide()
             }
             return
         }
@@ -178,6 +213,10 @@ class SwipeBubbleController(private val scope: CoroutineScope) {
                 }
                 scaleAnim.animateTo(1f, tween(APPEAR_SCALE_DURATION_MS, easing = DecelerateEasing))
             }
+        }
+        if (!gestureActive && (prev.isSwiping || prev.isLongPress)) {
+            // 滑动选择/长按选择松手：立即走收起动画（候选已提交）
+            startHide()
         }
         state = newState
         keyBounds = bounds

@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.core.graphics.ColorUtils
 import com.kingzcheung.xime.settings.BackgroundConfig
@@ -240,7 +241,6 @@ object KeyboardThemes {
                 specialKey = Color(0xFFD7E2F4),
                 functionKey = Color(0xFFD7E2F4),
                 accentKeyBg = Color(0xFFD7E2F4), accentKeyText = Color(0xFF46506B),
-                popupBg = Color(0xFFFFFFFF), popupText = Color(0xFF1F1F23),
             ),
             dark = ThemePalette(
                 background = Color(0xFF1E1F24), key = Color(0xFF38393E),
@@ -249,7 +249,6 @@ object KeyboardThemes {
                 specialKey = Color(0xFF3B4956),
                 functionKey = Color(0xFF3B4956),
                 accentKeyBg = Color(0xFF3B4956), accentKeyText = Color(0xFFDCE6F5),
-                popupBg = Color(0xFF2A2B30), popupText = Color(0xFFE7E8EA),
             ),
         ),
         // 参照 Gboard 黑（浅：白键 + 灰功能键 + Google 蓝回车；深：纯黑底 + 浅灰键）
@@ -262,7 +261,6 @@ object KeyboardThemes {
                 specialKey = Color(0xFFE1E3E2),
                 functionKey = Color(0xFFE1E3E2),
                 accentKeyBg = Color(0xFF1A73E8), accentKeyText = Color(0xFFFFFFFF),
-                popupBg = Color(0xFFFFFFFF), popupText = Color(0xFF202124),
             ),
             dark = ThemePalette(
                 background = Color(0xFF161616), key = Color(0xFF4E4E50),
@@ -271,7 +269,6 @@ object KeyboardThemes {
                 specialKey = Color(0xFF282828),
                 functionKey = Color(0xFF282828),
                 accentKeyBg = Color(0xFF282828), accentKeyText = Color(0xFFF2F2F2),
-                popupBg = Color(0xFF2A2A2A), popupText = Color(0xFFF2F2F2),
             ),
         ),
         buildTheme(
@@ -1023,6 +1020,20 @@ object KeyboardThemes {
     /** 功能键组（退格/字符/shift）底色；null 时渲染层按普通键推导。 */
     fun getFunctionKeyBackground(themeId: String, isDark: Boolean): Color? =
         themeColor(themeId) { if (isDark) it.functionKeyBackgroundDark else it.functionKeyBackgroundLight }
+
+    /**
+     * 功能键组最终底色：主题 token 优先，否则按 Gboard 层次推导——
+     * 暗色键面略提亮、浅色键面略压暗，保证两种模式都能看出分组。
+     * 预览与实际键盘共用本函数，避免两处推导漂移。
+     */
+    fun resolveFunctionKeyColor(themeId: String, isDark: Boolean, keyBg: Color): Color =
+        getFunctionKeyBackground(themeId, isDark)
+            ?: if (isDark) lerp(keyBg, Color.White, 0.10f)
+            else lerp(keyBg, Color.Black, 0.06f)
+
+    /** 回车键底色：主题 token 优先，否则用主题强调色（Gboard 行为）。 */
+    fun resolveEnterKeyColor(themeId: String, isDark: Boolean): Color =
+        getAccentKeyBackground(themeId, isDark) ?: getAccentColor(themeId, isDark)
 
     /** 强调键文字色；null 时沿用功能键文字色。 */
     fun getAccentKeyTextColor(themeId: String, isDark: Boolean): Color? =

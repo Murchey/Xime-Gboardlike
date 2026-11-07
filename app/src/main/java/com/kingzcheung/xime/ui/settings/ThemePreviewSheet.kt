@@ -25,7 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
-import androidx.compose.material.icons.twotone.KeyboardControlKey
+import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -228,7 +228,6 @@ internal fun ThemeKeyboardPreview(
 ) {
     val bgColor = if (isDark) theme.keyboardBgDark else theme.keyboardBgLight
     val accent = if (isDark) theme.accentDark else theme.accentLight
-    val specialKeyColor = if (isDark) theme.specialKeyDark else theme.specialKeyLight
     val textColor = if (isDark) theme.keyTextColorDark else theme.keyTextColorLight
 
     val kbColors = KeysConfigHelper.getKeyboardColors()
@@ -242,10 +241,15 @@ internal fun ThemeKeyboardPreview(
     val selectedTextColor = selectedTextColorOverride
         ?: KeyboardThemes.getCandidateSelectedTextColorOverride(theme.id, isDark)
         ?: if (isDark) theme.candidateSelectedTextColorDark else theme.candidateSelectedTextColorLight
-    // 与实机键盘同一条取色逻辑（亮度自适应），保证预览所见即所得
-    val specialTextColor = KeyboardThemes.getSpecialKeyTextColorForBackground(
-        specialKeyColor, textColor
+    // 与实机键盘同一条取色逻辑：功能键分组色、回车强调色都走共用推导，
+    // 否则预览会把功能键画成旧式 tinted container，与实机对不上。
+    val functionKeyColor = KeyboardThemes.resolveFunctionKeyColor(theme.id, isDark, keyColor)
+    val functionTextColor = KeyboardThemes.getSpecialKeyTextColorForBackground(
+        functionKeyColor, textColor
     )
+    val enterKeyColor = KeyboardThemes.resolveEnterKeyColor(theme.id, isDark)
+    val enterTextColor = KeyboardThemes.getAccentKeyTextColor(theme.id, isDark)
+        ?: KeyboardThemes.getSpecialKeyTextColorForBackground(enterKeyColor, textColor)
     val context = LocalContext.current
     val candidateTextSize = SettingsPreferences.getCandidateTextSize(context)
 
@@ -315,8 +319,8 @@ internal fun ThemeKeyboardPreview(
                     ) {
                         PreviewKey(
                             label = "",
-                            icon = rememberVectorPainter(Icons.TwoTone.KeyboardControlKey),
-                            color = specialKeyColor, textColor = specialTextColor, weight = 1.4f,
+                            icon = rememberVectorPainter(Icons.Outlined.ArrowUpward),
+                            color = functionKeyColor, textColor = functionTextColor, weight = 1.4f,
                             extraModifier = Modifier.padding(0.5.dp, 2.dp)
                         )
 
@@ -340,7 +344,7 @@ internal fun ThemeKeyboardPreview(
                         PreviewKey(
                             label = "",
                             icon = rememberVectorPainter(Icons.AutoMirrored.Filled.Backspace),
-                            color = specialKeyColor, textColor = specialTextColor, weight = 1.4f,
+                            color = functionKeyColor, textColor = functionTextColor, weight = 1.4f,
                             extraModifier = Modifier.padding(0.5.dp, 2.dp)
                         )
                     }
@@ -352,11 +356,11 @@ internal fun ThemeKeyboardPreview(
                             .weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        PreviewKey("?123", specialKeyColor, specialTextColor, 1.2f,extraModifier = Modifier.padding(0.5.dp, 2.dp))
+                        PreviewKey("?123", functionKeyColor, functionTextColor, 1.2f,extraModifier = Modifier.padding(0.5.dp, 2.dp))
                         PreviewKey("，", keyColor, textColor, 0.8f,extraModifier = Modifier.padding(0.5.dp, 2.dp))
                         PreviewKey(tr(R.string.s_kongge), keyColor, textColor, 3f, fontSize = 9.sp,extraModifier = Modifier.padding(0.5.dp, 2.dp))
-                        PreviewKey(tr(R.string.s_zhong_en), specialKeyColor, specialTextColor, 0.8f, fontSize = 8.sp,extraModifier = Modifier.padding(0.5.dp, 2.dp))
-                        PreviewKey(tr(R.string.s_queding), specialKeyColor, specialTextColor, 1.2f,extraModifier = Modifier.padding(0.5.dp, 2.dp))
+                        PreviewKey(tr(R.string.s_zhong_en), functionKeyColor, functionTextColor, 0.8f, fontSize = 8.sp,extraModifier = Modifier.padding(0.5.dp, 2.dp))
+                        PreviewKey(tr(R.string.s_queding), enterKeyColor, enterTextColor, 1.2f,extraModifier = Modifier.padding(0.5.dp, 2.dp))
                     }
                 }
             }
