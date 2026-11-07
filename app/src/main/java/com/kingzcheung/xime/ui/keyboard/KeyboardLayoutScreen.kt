@@ -1,6 +1,7 @@
 package com.kingzcheung.xime.ui.keyboard
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -66,6 +67,14 @@ fun KeyboardLayoutScreen(
     val specialKeyTextColor = KeyboardThemes.getSpecialKeyTextColorForBackground(
         specialKeyBgColor, keyTextColor
     )
+    // 主题可选 token：强调键 / 弹窗 / 按压高亮（未配置时回退到既有推导）
+    val accentKeyBgColor = KeyboardThemes.getAccentKeyBackground(uiState.themeId, uiState.isDarkTheme)
+        ?: specialKeyBgColor
+    val accentKeyTextColor = KeyboardThemes.getAccentKeyTextColor(uiState.themeId, uiState.isDarkTheme)
+        ?: specialKeyTextColor
+    val popupBgColor = KeyboardThemes.getPopupBackground(uiState.themeId, uiState.isDarkTheme)
+        ?: keyBgColor
+    val pressHighlightColor = KeyboardThemes.getKeyPressHighlightColor(uiState.themeId, uiState.isDarkTheme)
     val kbShadow = KeysConfigHelper.getKeyboardShadow()
     val kbKey = KeysConfigHelper.getKeyboardKeyConfig()
     val accentColor = KeyboardThemes.getAccentColor(uiState.themeId, uiState.isDarkTheme)
@@ -106,6 +115,9 @@ fun KeyboardLayoutScreen(
     // 所有键的 remember 状态重置、所有进行中手势协程被 Compose 取消，彻底清干净。
     key(keyboardState) {
         key(uiState.swipeCancelEpoch) {
+            CompositionLocalProvider(
+                LocalKeyPressHighlightColor provides pressHighlightColor
+            ) {
             when (keyboardState) {
             is KeyboardLayoutState.Chinese -> {
                 if (isHandwritingLookup) {
@@ -186,7 +198,7 @@ fun KeyboardLayoutScreen(
                     keyBackgroundColor = keyBgColor,
                     keyTextColor = keyTextColor,
                     specialKeyBackgroundColor = specialKeyBgColor,
-                    bubbleBackgroundColor = themeSpecialKeyColor,
+                    bubbleBackgroundColor = popupBgColor,
                     keyboardBackgroundColor = keyboardBgColor,
                     shadowEnabled = kbShadow.enabled,
                     shadowElevation = kbShadow.elevation.dp,
@@ -214,7 +226,7 @@ fun KeyboardLayoutScreen(
                     keyBackgroundColor = keyBgColor,
                     keyTextColor = keyTextColor,
                     specialKeyBackgroundColor = specialKeyBgColor,
-                    bubbleBackgroundColor = themeSpecialKeyColor,
+                    bubbleBackgroundColor = popupBgColor,
                     keyboardBackgroundColor = keyboardBgColor,
                     shadowEnabled = kbShadow.enabled,
                     shadowElevation = kbShadow.elevation.dp,
@@ -235,7 +247,7 @@ fun KeyboardLayoutScreen(
                     keyBackgroundColor = keyBgColor,
                     keyTextColor = keyTextColor,
                     specialKeyBackgroundColor = specialKeyBgColor,
-                    bubbleBackgroundColor = themeSpecialKeyColor,
+                    bubbleBackgroundColor = popupBgColor,
                     keyboardBackgroundColor = keyboardBgColor,
                     shadowEnabled = kbShadow.enabled,
                     shadowElevation = kbShadow.elevation.dp,
@@ -284,7 +296,7 @@ fun KeyboardLayoutScreen(
                         keyBackgroundColor = keyBgColor,
                         keyTextColor = keyTextColor,
                         specialKeyBackgroundColor = specialKeyBgColor,
-                        bubbleBackgroundColor = themeSpecialKeyColor,
+                        bubbleBackgroundColor = popupBgColor,
                         accentColor = accentColor,
                         keyboardBackgroundColor = keyboardBgColor,
                         shadowEnabled = kbShadow.enabled,
@@ -306,6 +318,7 @@ fun KeyboardLayoutScreen(
                 // 符号键盘已改为路由，此处不应到达
             }
         }
+            }
         }
     }
 }

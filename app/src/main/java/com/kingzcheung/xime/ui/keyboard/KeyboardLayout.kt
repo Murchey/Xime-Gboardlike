@@ -211,6 +211,8 @@ fun KeyboardLayout(
     val keyTextColor = palette.keyTextColor
     val specialKeyBackgroundColor = palette.specialKeyBackgroundColor
     val specialKeyTextColor = palette.specialKeyTextColor
+    val accentKeyBgColor = palette.accentKeyBackgroundColor
+    val accentKeyTextColor = palette.accentKeyTextColor
     val bubbleBgColor = palette.bubbleBgColor
     val kbKey = KeysConfigHelper.getKeyboardKeyConfig()
     val shadowParams = resolveKeyboardShadowParams()
@@ -317,7 +319,7 @@ fun KeyboardLayout(
         swipeState = swipeBubble.state,
         keyBounds = swipeBubble.keyBounds,
         keyBackgroundColor = bubbleBgColor,
-        keyTextColor = keyTextColor,
+        keyTextColor = palette.popupTextColor,
         accentColor = KeyboardThemes.getAccentColor(uiState.themeId, isDarkTheme),
         keyWidth = if (swipeBubble.state.isSwiping || swipeBubble.state.isPressed) swipeBubble.keyBounds.width else 0f,
         keyboardWidth = keyboardBounds.width,
@@ -408,6 +410,8 @@ fun KeyboardLayout(
                         specialKeyBackgroundColor = specialKeyBackgroundColor,
                         keyTextColor = keyTextColor,
                         specialKeyTextColor = specialKeyTextColor,
+                        accentKeyBackgroundColor = accentKeyBgColor,
+                        accentKeyTextColor = accentKeyTextColor,
                         keyboardBackgroundColor = keyboardBackgroundColor,
                         shadowEnabled = shadowEnabled,
                         shadowElevation = shadowElevation,
@@ -678,6 +682,9 @@ internal class QwertyRowEnv(
     val specialKeyBackgroundColor: Color,
     val keyTextColor: Color,
     val specialKeyTextColor: Color,
+    /** 强调键（回车）配色；未显式传入时与功能键一致（旧行为）。 */
+    val accentKeyBackgroundColor: Color = specialKeyBackgroundColor,
+    val accentKeyTextColor: Color = specialKeyTextColor,
     val keyboardBackgroundColor: Color = Color.Transparent,
     val shadowEnabled: Boolean,
     val shadowElevation: Dp,
@@ -792,6 +799,11 @@ internal data class KeyboardPalette(
     val specialKeyBackgroundColor: Color,
     val specialKeyTextColor: Color,
     val bubbleBgColor: Color,
+    // ── 主题可选 token（未配置时回退到既有推导）──
+    val accentKeyBackgroundColor: Color = specialKeyBackgroundColor,
+    val accentKeyTextColor: Color = specialKeyTextColor,
+    val popupTextColor: Color = keyTextColor,
+    val pressHighlightColor: Color? = null,
 )
 
 internal fun resolveKeyboardPalette(themeId: String, isDarkTheme: Boolean): KeyboardPalette {
@@ -808,14 +820,22 @@ internal fun resolveKeyboardPalette(themeId: String, isDarkTheme: Boolean): Keyb
     val specialKeyTextColor = KeyboardThemes.getSpecialKeyTextColorForBackground(
         specialKeyBackgroundColor, keyTextColor
     )
+    // 弹窗/气泡：主题显式 token 优先，否则沿用键帽底色（旧行为）
+    val popupBg = KeyboardThemes.getPopupBackground(themeId, isDarkTheme) ?: keyBackgroundColor
+    val popupText = KeyboardThemes.getPopupTextColor(themeId, isDarkTheme) ?: keyTextColor
     return KeyboardPalette(
         keyboardBackgroundColor = KeyboardThemes.getKeyboardBackgroundColor(themeId, isDarkTheme),
         keyBackgroundColor = keyBackgroundColor,
         keyTextColor = keyTextColor,
         specialKeyBackgroundColor = specialKeyBackgroundColor,
         specialKeyTextColor = specialKeyTextColor,
-        // 长按气泡与普通按键同色；特殊键色只用于键帽，不用于气泡。
-        bubbleBgColor = keyBackgroundColor,
+        bubbleBgColor = popupBg,
+        accentKeyBackgroundColor = KeyboardThemes.getAccentKeyBackground(themeId, isDarkTheme)
+            ?: specialKeyBackgroundColor,
+        accentKeyTextColor = KeyboardThemes.getAccentKeyTextColor(themeId, isDarkTheme)
+            ?: specialKeyTextColor,
+        popupTextColor = popupText,
+        pressHighlightColor = KeyboardThemes.getKeyPressHighlightColor(themeId, isDarkTheme),
     )
 }
 
@@ -1408,8 +1428,8 @@ private fun EnterCell(env: QwertyRowEnv, modifier: Modifier, fontSize: TextUnit?
         pressText = null,
         a11yDescription = enterAction.label.ifEmpty { env.enterKeyText },
         onClick = { invokeKeyAction(enterAction, env.onKeyPress, env.onCommitText, env.onGestureAction) },
-        backgroundColor = env.specialKeyBackgroundColor,
-        textColor = env.specialKeyTextColor,
+        backgroundColor = env.accentKeyBackgroundColor,
+        textColor = env.accentKeyTextColor,
         modifier = modifier,
         onSwipe = enterGestures.onUp.withSwipeTextArg(),
         onSwipeDown = enterGestures.onDown.withSwipeTextArg(),

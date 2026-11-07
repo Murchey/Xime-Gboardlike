@@ -92,6 +92,25 @@ data class KeyboardColorScheme(
     // 分隔线颜色
     val dividerColorLight: Color = Color(0xFFDADCE0),
     val dividerColorDark: Color = Color(0xFF3C4043),
+
+    // ── 可选主题 token（null = 沿用既有推导，未配置的主题零影响）──
+    /** 按压高亮色；null 时按键帽亮度自动推导。 */
+    val keyPressHighlightColorLight: Color? = null,
+    val keyPressHighlightColorDark: Color? = null,
+    /** 强调键（回车/确定）底色与文字；null 时沿用功能键配色。 */
+    val accentKeyBackgroundLight: Color? = null,
+    val accentKeyBackgroundDark: Color? = null,
+    val accentKeyTextColorLight: Color? = null,
+    val accentKeyTextColorDark: Color? = null,
+    /** 长按气泡/弹窗底色与文字；null 时沿用键帽底色/键帽文字。 */
+    val popupBackgroundLight: Color? = null,
+    val popupBackgroundDark: Color? = null,
+    val popupTextColorLight: Color? = null,
+    val popupTextColorDark: Color? = null,
+    /** 候选注释（拼音/字根）颜色；null 时与候选文字同色。 */
+    val candidateCommentColorLight: Color? = null,
+    val candidateCommentColorDark: Color? = null,
+
     // 背景配置（纯色/渐变/图片），比上方 flat color 字段优先级更高
     val keyboardBackground: BackgroundConfig? = null,
     val keyBackground: BackgroundConfig? = null,
@@ -124,6 +143,13 @@ object KeyboardThemes {
         val accent: Color,
         val selectedText: Color? = null,
         val container: Color? = null,
+        // 可选 token：不填则沿用推导值
+        val pressHighlight: Color? = null,
+        val accentKeyBg: Color? = null,
+        val accentKeyText: Color? = null,
+        val popupBg: Color? = null,
+        val popupText: Color? = null,
+        val commentText: Color? = null,
     )
 
     private fun buildTheme(
@@ -165,6 +191,18 @@ object KeyboardThemes {
             candidateSelectedTextColorDark = ensureContrast(
                 dark.selectedText ?: dark.accent, dark.background
             ),
+            keyPressHighlightColorLight = light.pressHighlight,
+            keyPressHighlightColorDark = dark.pressHighlight,
+            accentKeyBackgroundLight = light.accentKeyBg,
+            accentKeyBackgroundDark = dark.accentKeyBg,
+            accentKeyTextColorLight = light.accentKeyText,
+            accentKeyTextColorDark = dark.accentKeyText,
+            popupBackgroundLight = light.popupBg,
+            popupBackgroundDark = dark.popupBg,
+            popupTextColorLight = light.popupText,
+            popupTextColorDark = dark.popupText,
+            candidateCommentColorLight = light.commentText,
+            candidateCommentColorDark = dark.commentText,
         )
     }
 
@@ -297,6 +335,54 @@ object KeyboardThemes {
                 keyText = Color(0xFFF2F5F8), candidateText = Color(0xFFA5ADB8),
                 accent = Color(0xFF006EFE), selectedText = Color(0xFF7AB8FF), container = Color(0xFF1C2E46),
                 specialKey = Color(0xFF1C2E46),
+            ),
+        ),
+        // Pixel 中性：贴近 Gboard 近年配色的中性灰蓝，强调键用 Google 蓝
+        buildTheme(
+            id = "pixel", name = "Pixel",
+            light = ThemePalette(
+                background = Color(0xFFF1F3F4), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF202124), candidateText = Color(0xFF5F6368),
+                accent = Color(0xFF1A73E8), selectedText = Color(0xFF0B57D0), container = Color(0xFFE8F0FE),
+                specialKey = Color(0xFFE8F0FE),
+                pressHighlight = Color(0x1F000000),
+                accentKeyBg = Color(0xFF1A73E8), accentKeyText = Color(0xFFFFFFFF),
+                popupBg = Color(0xFFFFFFFF), popupText = Color(0xFF202124),
+                commentText = Color(0xFF5F6368),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF1E1F21), key = Color(0xFF38393B),
+                keyText = Color(0xFFE8EAED), candidateText = Color(0xFF9AA0A6),
+                accent = Color(0xFF8AB4F8), selectedText = Color(0xFFA8C7FA), container = Color(0xFF2D3B52),
+                specialKey = Color(0xFF2D3B52),
+                pressHighlight = Color(0x33FFFFFF),
+                accentKeyBg = Color(0xFF8AB4F8), accentKeyText = Color(0xFF202124),
+                popupBg = Color(0xFF2E3033), popupText = Color(0xFFE8EAED),
+                commentText = Color(0xFF9AA0A6),
+            ),
+        ),
+        // AMOLED：纯黑底 + 低亮度键面，深色省电、边界清楚
+        buildTheme(
+            id = "amoled", name = "AMOLED",
+            light = ThemePalette(
+                background = Color(0xFFFFFFFF), key = Color(0xFFF2F2F2),
+                keyText = Color(0xFF111111), candidateText = Color(0xFF444444),
+                accent = Color(0xFF1A73E8), selectedText = Color(0xFF0B57D0), container = Color(0xFFE8EEF6),
+                specialKey = Color(0xFFE8EEF6),
+                pressHighlight = Color(0x14000000),
+                accentKeyBg = Color(0xFF1A73E8), accentKeyText = Color(0xFFFFFFFF),
+                popupBg = Color(0xFFFFFFFF), popupText = Color(0xFF111111),
+                commentText = Color(0xFF444444),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF000000), key = Color(0xFF1A1A1A),
+                keyText = Color(0xFFF5F5F5), candidateText = Color(0xFFD0D0D0),
+                accent = Color(0xFF8AB4F8), selectedText = Color(0xFF8AB4F8), container = Color(0xFF202020),
+                specialKey = Color(0xFF202020),
+                pressHighlight = Color(0x26FFFFFF),
+                accentKeyBg = Color(0xFF8AB4F8), accentKeyText = Color(0xFF111111),
+                popupBg = Color(0xFF141414), popupText = Color(0xFFF5F5F5),
+                commentText = Color(0xFFB0B0B0),
             ),
         ),
         buildTheme(
@@ -798,7 +884,7 @@ object KeyboardThemes {
     }
 
     /** 从状态化缓存取主题颜色，建立 Compose 订阅；主题不存在时返回 null。 */
-    private inline fun themeColor(themeId: String, selector: (KeyboardColorScheme) -> Color): Color? {
+    private inline fun themeColor(themeId: String, selector: (KeyboardColorScheme) -> Color?): Color? {
         val theme = themesCache.firstOrNull { it.id == themeId } ?: return null
         return selector(theme)
     }
@@ -818,4 +904,30 @@ object KeyboardThemes {
     /** 候选选中文字色：内置/配置/自定义主题都以缓存中的最终色值为准。 */
     fun getCandidateSelectedTextColorOverride(themeId: String, isDark: Boolean): Color? =
         themeColor(themeId) { if (isDark) it.candidateSelectedTextColorDark else it.candidateSelectedTextColorLight }
+
+    // ── 可选 token（null = 沿用既有推导，旧主题零影响）──
+
+    /** 按压高亮色；null 时按键帽亮度自动推导。 */
+    fun getKeyPressHighlightColor(themeId: String, isDark: Boolean): Color? =
+        themeColor(themeId) { if (isDark) it.keyPressHighlightColorDark else it.keyPressHighlightColorLight }
+
+    /** 强调键（回车）底色；null 时沿用功能键底色。 */
+    fun getAccentKeyBackground(themeId: String, isDark: Boolean): Color? =
+        themeColor(themeId) { if (isDark) it.accentKeyBackgroundDark else it.accentKeyBackgroundLight }
+
+    /** 强调键文字色；null 时沿用功能键文字色。 */
+    fun getAccentKeyTextColor(themeId: String, isDark: Boolean): Color? =
+        themeColor(themeId) { if (isDark) it.accentKeyTextColorDark else it.accentKeyTextColorLight }
+
+    /** 气泡/弹窗底色；null 时沿用键帽底色。 */
+    fun getPopupBackground(themeId: String, isDark: Boolean): Color? =
+        themeColor(themeId) { if (isDark) it.popupBackgroundDark else it.popupBackgroundLight }
+
+    /** 气泡/弹窗文字色；null 时沿用键帽文字色。 */
+    fun getPopupTextColor(themeId: String, isDark: Boolean): Color? =
+        themeColor(themeId) { if (isDark) it.popupTextColorDark else it.popupTextColorLight }
+
+    /** 候选注释颜色；null 时与候选文字同色（并做对比度校正）。 */
+    fun getCandidateCommentColor(themeId: String, isDark: Boolean): Color? =
+        themeColor(themeId) { if (isDark) it.candidateCommentColorDark else it.candidateCommentColorLight }
 }

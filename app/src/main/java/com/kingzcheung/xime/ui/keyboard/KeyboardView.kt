@@ -511,8 +511,10 @@ fun KeyboardView(
                     accentColor = accentColor,
                     selectedTextColor = candidateSelectedTextColor,
                     isDarkTheme = state.isDarkTheme,
-                    // 注释（拼音/英文）与候选同对比度，避免浅灰底上不可见
-                    commentColor = KeyboardThemes.ensureContrast(candidateTextColor, keyboardBgColor),
+                    // 注释（拼音/英文）与候选同对比度，避免浅灰底上不可见；主题可单独指定
+                    commentColor = (KeyboardThemes.getCandidateCommentColor(
+                        state.themeId, state.isDarkTheme
+                    ) ?: candidateTextColor).let { KeyboardThemes.ensureContrast(it, keyboardBgColor) },
                     // 编码气泡跟随键盘底色/按键文字色，暗色模式下不再是白底灰字
                     preeditBubbleBackground = keyboardBgColor,
                     preeditBubbleTextColor = keyTextColor,
