@@ -105,7 +105,7 @@ fun ThemeEditorContent(
     // 只把非自定义、非动态的内置主题作为模板；动态配色随壁纸变化，不适合作为固定模板。
     val templateThemes = remember {
         KeyboardThemes.themes.filter {
-            !it.isDynamic && !it.id.startsWith(CustomThemeStore.ID_PREFIX)
+            !it.isDynamic && !it.hidden && !it.id.startsWith(CustomThemeStore.ID_PREFIX)
         }
     }
     var schemes by remember { mutableStateOf(initialSchemes) }

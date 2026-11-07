@@ -53,7 +53,8 @@ fun ThemeSettingsContent(
     val viewModel: ThemeSettingsViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val colorThemes = KeyboardThemes.themes
+    // 合并掉高度相似的历史主题：仍可被已选用户解析，但不再出现在选择器里
+    val colorThemes = KeyboardThemes.themes.filter { !it.hidden }
 
     // 直接读实际选择：从调色面板返回后能立即刷新；两套主题互不影响。
     val lightThemeId = SettingsPreferences.getKeyboardThemeForMode(context, isDark = false)

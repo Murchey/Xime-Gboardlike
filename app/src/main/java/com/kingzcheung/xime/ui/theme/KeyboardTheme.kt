@@ -117,6 +117,11 @@ data class KeyboardColorScheme(
     val candidateBarBackground: BackgroundConfig? = null,
     /** Material You 动态配色：颜色来自壁纸调色板，随壁纸变化。 */
     val isDynamic: Boolean = false,
+    /**
+     * 收录但不在主题列表展示：用于合并高度相似的历史主题。
+     * 已选中的用户仍能正常使用（getThemeById 可解析），只是选择器里不再重复出现。
+     */
+    val hidden: Boolean = false,
 )
 
 object KeyboardThemes {
@@ -157,6 +162,7 @@ object KeyboardThemes {
         name: String,
         light: ThemePalette,
         dark: ThemePalette,
+        hidden: Boolean = false,
     ): KeyboardColorScheme {
         // 功能键取主题的 tinted container：既有品牌色相，又不会像高饱和 accent 那样刺眼。
         val lightSpecial = light.container ?: light.specialKey
@@ -203,6 +209,7 @@ object KeyboardThemes {
             popupTextColorDark = dark.popupText,
             candidateCommentColorLight = light.commentText,
             candidateCommentColorDark = dark.commentText,
+            hidden = hidden,
         )
     }
 
@@ -262,8 +269,10 @@ object KeyboardThemes {
                 specialKey = Color(0xFF1A3B29),
             ),
         ),
+        // 与 X / GitHub 高度重合（浅色 Δ≈11，深色 Δ≈16），合并进蓝色系不再展示
         buildTheme(
             id = "qq", name = "QQ",
+            hidden = true,
             light = ThemePalette(
                 background = Color(0xFFDCE4EC), key = Color(0xFFFFFFFF),
                 keyText = Color(0xFF14181C), candidateText = Color(0xFF57636E),
@@ -322,8 +331,10 @@ object KeyboardThemes {
                 specialKey = Color(0xFF1F3A5F),
             ),
         ),
+        // 与 GitHub 浅色 Δ≈12.5，合并进蓝色系不再展示
         buildTheme(
             id = "chatgpt", name = "ChatGPT",
+            hidden = true,
             light = ThemePalette(
                 background = Color(0xFFDCE2E8), key = Color(0xFFFFFFFF),
                 keyText = Color(0xFF0B1F3A), candidateText = Color(0xFF566270),
@@ -400,7 +411,80 @@ object KeyboardThemes {
                 specialKey = Color(0xFF402D26),
             ),
         ),
+        // Material You（M3 基线紫）：色相与全部中性色都和现有蓝/绿/黄主题拉开
+        buildTheme(
+            id = "material_you", name = "Material You",
+            light = ThemePalette(
+                background = Color(0xFFF3EDF7), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF1C1B1F), candidateText = Color(0xFF49454F),
+                accent = Color(0xFF6750A4), selectedText = Color(0xFF4F378B), container = Color(0xFFEADDFF),
+                specialKey = Color(0xFFEADDFF),
+                pressHighlight = Color(0x1F6750A4),
+                accentKeyBg = Color(0xFF6750A4), accentKeyText = Color(0xFFFFFFFF),
+                popupBg = Color(0xFFFFFFFF), popupText = Color(0xFF1C1B1F),
+                commentText = Color(0xFF79747E),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF1C1B1F), key = Color(0xFF2B2930),
+                keyText = Color(0xFFE6E1E5), candidateText = Color(0xFFCAC4D0),
+                accent = Color(0xFFD0BCFF), selectedText = Color(0xFFEADDFF), container = Color(0xFF4F378B),
+                specialKey = Color(0xFF4F378B),
+                pressHighlight = Color(0x33D0BCFF),
+                accentKeyBg = Color(0xFFD0BCFF), accentKeyText = Color(0xFF381E72),
+                popupBg = Color(0xFF2B2930), popupText = Color(0xFFE6E1E5),
+                commentText = Color(0xFF938F99),
+            ),
+        ),
+        // Nord（fcitx5 社区经典）：蓝灰冷色调，键面与底色靠色相区分
+        buildTheme(
+            id = "nord", name = "Nord 北境",
+            light = ThemePalette(
+                background = Color(0xFFECEFF4), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF2E3440), candidateText = Color(0xFF4C566A),
+                accent = Color(0xFF5E81AC), selectedText = Color(0xFF4C6A92), container = Color(0xFFD8DEE9),
+                specialKey = Color(0xFFD8DEE9),
+                pressHighlight = Color(0x1F2E3440),
+                accentKeyBg = Color(0xFF5E81AC), accentKeyText = Color(0xFFECEFF4),
+                popupBg = Color(0xFFFFFFFF), popupText = Color(0xFF2E3440),
+                commentText = Color(0xFF4C566A),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF2E3440), key = Color(0xFF343B4A),
+                keyText = Color(0xFFECEFF4), candidateText = Color(0xFFA3ABB8),
+                accent = Color(0xFF88C0D0), selectedText = Color(0xFF8FBCBB), container = Color(0xFF434C5E),
+                specialKey = Color(0xFF434C5E),
+                pressHighlight = Color(0x3388C0D0),
+                accentKeyBg = Color(0xFF88C0D0), accentKeyText = Color(0xFF2E3440),
+                popupBg = Color(0xFF3B4252), popupText = Color(0xFFECEFF4),
+                commentText = Color(0xFF8A93A5),
+            ),
+        ),
+        // fcitx5 经典：面板式深灰 + 中性蓝强调，比 Gboard 黑更"桌面"
+        buildTheme(
+            id = "fcitx5_classic", name = "fcitx5 经典",
+            light = ThemePalette(
+                background = Color(0xFFF2F3F5), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF1F2328), candidateText = Color(0xFF5B6570),
+                accent = Color(0xFF3C7DD9), selectedText = Color(0xFF2E63AD), container = Color(0xFFDCE6F2),
+                specialKey = Color(0xFFDCE6F2),
+                pressHighlight = Color(0x1F000000),
+                accentKeyBg = Color(0xFF3C7DD9), accentKeyText = Color(0xFFFFFFFF),
+                popupBg = Color(0xFFFFFFFF), popupText = Color(0xFF1F2328),
+                commentText = Color(0xFF5B6570),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF1F2226), key = Color(0xFF2B2F36),
+                keyText = Color(0xFFE6E9ED), candidateText = Color(0xFF9BA6B2),
+                accent = Color(0xFF5B9BE8), selectedText = Color(0xFF8FC0F0), container = Color(0xFF34404E),
+                specialKey = Color(0xFF34404E),
+                pressHighlight = Color(0x33FFFFFF),
+                accentKeyBg = Color(0xFF5B9BE8), accentKeyText = Color(0xFF101418),
+                popupBg = Color(0xFF2B2F36), popupText = Color(0xFFE6E9ED),
+                commentText = Color(0xFF9BA6B2),
+            ),
+        ),
     )
+
 
     /**
      * 预计算后的主题缓存（避免每次访问都重新计算颜色）。
