@@ -560,7 +560,9 @@
     <string name="s_houxuanci">候選詞</string>
     <string name="s_houxuanzidaxiao">候選字大小</string>
     <string name="s_bianmazhushi">編碼註釋</string>
-    <string name="s_zaihouxuancipangxianshiduiying_de529">在候選詞旁顯示對應的編碼（如五筆字根）</string>
+    <string name="s_zaihouxuancipangxianshiduiying_de529">在候選詞與展開頁旁顯示對應的編碼（如五筆字根）</string>
+    <string name="s_zhanakaiye_xianshibianma">展開頁顯示編碼</string>
+    <string name="s_zhanakaiye_xianshibianma_fu">展開候選時逐條顯示拼音/字根註釋；關閉後只顯示候選詞</string>
     <string name="s_xianshi">顯示</string>
     <string name="s_yincang">隱藏</string>
     <string name="s_bianmaxianshi">編碼顯示</string>

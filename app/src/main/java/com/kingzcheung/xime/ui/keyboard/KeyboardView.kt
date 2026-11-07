@@ -668,6 +668,25 @@ fun KeyboardView(
                 // 数据源为服务层的跨页全量候选（expandedCandidates），行分组惰性渲染
                 // （LazyColumn 只画可见行），可上下滑动 + 翻页键滚动一屏，不驱动 rime 翻页。
                 val allExpanded = candidateState.value.expandedCandidates
+                // 编码注释开关：展开页与候选栏共用同一设置（【布局与显示】→ 编码注释）。
+                // 默认关闭——展开后每个候选都挂拼音会让长列表显得杂乱。
+                val commentContext = LocalContext.current
+                fun readExpandedComments() = SettingsPreferences.showCandidateComments(commentContext) &&
+                    SettingsPreferences.showExpandedCandidateComments(commentContext)
+                var showExpandedComments by remember { mutableStateOf(readExpandedComments()) }
+                DisposableEffect(commentContext) {
+                    val prefs = SettingsPreferences.getPrefsPublic(commentContext)
+                    val listener =
+                        android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                            if (key == SettingsPreferences.KEY_SHOW_CANDIDATE_COMMENTS ||
+                                key == SettingsPreferences.KEY_SHOW_EXPANDED_CANDIDATE_COMMENTS
+                            ) {
+                                showExpandedComments = readExpandedComments()
+                            }
+                        }
+                    prefs.registerOnSharedPreferenceChangeListener(listener)
+                    onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+                }
                 // 左栏符号复刻当前键盘左栏：九键/笔画各自的可自定义 side_symbols
                 // （configVersion 参与重组，保证设置改动后刷新）；其余布局用默认快捷符号
                 val configVersion by KeysConfigHelper.configVersion.collectAsStateWithLifecycle()
@@ -729,7 +748,7 @@ fun KeyboardView(
                     )
                 }
                 val candidateRows = remember(
-                    allExpanded, singleCharFilter, rowWidthUnits
+                    allExpanded, singleCharFilter, rowWidthUnits, showExpandedComments
                 ) {
                     ExpandedCandidatePager.flowRows(
                         ExpandedCandidatePager.filterIndices(allExpanded, singleCharFilter),
@@ -737,7 +756,12 @@ fun KeyboardView(
                         rowWidthUnits
                     ).map { row ->
                         row.map { gi ->
-                            CandidateEntry(allExpanded[gi].text, allExpanded[gi].comment, gi)
+                            CandidateEntry(
+                                text = allExpanded[gi].text,
+                                // 关掉编码注释时展开页不再逐字挂拼音；开关在【布局与显示】
+                                comment = if (showExpandedComments) allExpanded[gi].comment else "",
+                                globalIndex = gi,
+                            )
                         }
                     }
                 }

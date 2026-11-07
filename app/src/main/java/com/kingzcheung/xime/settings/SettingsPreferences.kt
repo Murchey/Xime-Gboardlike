@@ -147,7 +147,8 @@ object SettingsPreferences {
 
     private const val KEY_INSTALLED_MARKET_IDS = "installed_market_ids"
     private const val KEY_COMPACT_MODE = "compact_mode"
-    private const val KEY_SHOW_CANDIDATE_COMMENTS = "show_candidate_comments"
+    /** 公开给键盘视图监听：候选栏与展开页共用同一开关。 */
+    const val KEY_SHOW_CANDIDATE_COMMENTS = "show_candidate_comments"
     private const val KEY_INPUT_TEXT_LOCATION = "input_text_location"
     private const val KEY_PAGE_SIZE = "page_size"
     private const val KEY_CANDIDATE_TEXT_SIZE = "candidate_text_size"
@@ -170,6 +171,23 @@ object SettingsPreferences {
 
     fun setShowCandidateComments(context: Context, show: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_SHOW_CANDIDATE_COMMENTS, show).apply()
+    }
+
+    /**
+     * 候选展开页是否逐条显示编码注释。
+     *
+     * 默认关闭：展开后每个候选都挂拼音/字根会让长列表显得杂乱；
+     * 仅在 [showCandidateComments] 总开关开启时生效（总开关关闭 → 全局不显示）。
+     */
+    const val KEY_SHOW_EXPANDED_CANDIDATE_COMMENTS = "show_expanded_candidate_comments"
+
+    fun showExpandedCandidateComments(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_SHOW_EXPANDED_CANDIDATE_COMMENTS, false)
+
+    fun setShowExpandedCandidateComments(context: Context, show: Boolean) {
+        getPrefs(context).edit()
+            .putBoolean(KEY_SHOW_EXPANDED_CANDIDATE_COMMENTS, show)
+            .apply()
     }
 
     fun getInputTextLocation(context: Context): String {

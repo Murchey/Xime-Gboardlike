@@ -578,6 +578,46 @@ fun LayoutDisplaySettingsContent(
                         )
                     }
 
+                    // 展开页的逐条注释单独开关：默认关，避免展开后每个候选都挂拼音/字根
+                    var showExpandedComments by remember {
+                        mutableStateOf(SettingsPreferences.showExpandedCandidateComments(context))
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = showComments) {
+                                showExpandedComments = !showExpandedComments
+                                SettingsPreferences.setShowExpandedCandidateComments(
+                                    context, showExpandedComments
+                                )
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = tr(R.string.s_zhanakaiye_xianshibianma),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = if (showComments) MaterialTheme.colorScheme.onSurface
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                            )
+                            Text(
+                                text = tr(R.string.s_zhanakaiye_xianshibianma_fu),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = showExpandedComments,
+                            onCheckedChange = {
+                                showExpandedComments = it
+                                SettingsPreferences.setShowExpandedCandidateComments(context, it)
+                            },
+                            enabled = showComments
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
 
                     HorizontalDivider(
