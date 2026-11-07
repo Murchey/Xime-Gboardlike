@@ -15,8 +15,10 @@ import java.util.concurrent.LinkedBlockingQueue
 
 object FileLogger {
     private const val TAG = "FileLogger"
-    private const val MAX_LOG_SIZE = 5 * 1024 * 1024
-    private const val MAX_LOG_FILES = 10
+    /** 单文件上限：超过即轮转（实测单日日志通常 <100KB，2MB 足够排查） */
+    private const val MAX_LOG_SIZE = 2 * 1024 * 1024
+    /** 保留份数：总量上限 5×2MB = 10MB（旧值 10×5MB = 50MB，日志曾长期占 50MB 上限） */
+    private const val MAX_LOG_FILES = 5
     private const val QUEUE_CAPACITY = 4096
     
     private var logFile: File? = null
