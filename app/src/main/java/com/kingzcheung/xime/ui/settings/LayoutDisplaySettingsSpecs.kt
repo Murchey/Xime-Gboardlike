@@ -117,16 +117,13 @@ object LayoutDisplaySettingsSpecs {
         ),
     )
 
-    /** 候选词段：展开页逐条注释开关（依赖编码注释总开关）。 */
+    /** 候选词段：展开页逐条注释开关（与候选栏注音各自独立）。 */
     val candidateComments: List<SettingSpec> = listOf(
         SettingSpec.Switch(
             key = SettingsPreferences.KEY_SHOW_EXPANDED_CANDIDATE_COMMENTS,
             titleRes = R.string.s_zhanakaiye_xianshibianma,
             descriptionRes = R.string.s_zhanakaiye_xianshibianma_fu,
             default = false,
-            enabledWhen = SettingVisibility.whenFlag(
-                SettingsPreferences.KEY_SHOW_CANDIDATE_COMMENTS
-            ),
         ),
     )
 }

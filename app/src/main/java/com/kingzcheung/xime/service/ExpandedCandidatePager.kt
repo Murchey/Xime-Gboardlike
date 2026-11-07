@@ -17,11 +17,18 @@ object ExpandedCandidatePager {
     /** 单字符宽度（字符当量）：CJK 约 1 个字宽，其余（拉丁/数字/标点）约 0.55 */
     fun charUnits(c: Char): Float = if (c.code > 0x2E80) 1.0f else 0.55f
 
-    /** 条目估算宽度：候选词全字宽 + 注释按小字号折算 + 固定开销 */
-    fun estimateItemUnits(candidate: RimeCandidate): Float {
+    /**
+     * 条目估算宽度：候选词全字宽 + 注释按小字号折算 + 固定开销。
+     *
+     * [includeComment] 必须与实际是否渲染注释一致：注释被隐藏时仍按含注释估宽，
+     * 会把每行压到 2~3 个（展开页最常见的错位来源）。
+     */
+    fun estimateItemUnits(candidate: RimeCandidate, includeComment: Boolean = true): Float {
         var units = ITEM_FIXED_UNITS
         candidate.text.forEach { units += charUnits(it) }
-        candidate.comment.forEach { units += charUnits(it) * COMMENT_WIDTH_FACTOR }
+        if (includeComment) {
+            candidate.comment.forEach { units += charUnits(it) * COMMENT_WIDTH_FACTOR }
+        }
         return units
     }
 
@@ -40,13 +47,14 @@ object ExpandedCandidatePager {
         filtered: List<Int>,
         all: List<RimeCandidate>,
         rowWidthUnits: Float,
+        includeComment: Boolean = true,
     ): List<List<Int>> {
         if (filtered.isEmpty()) return emptyList()
         val rows = mutableListOf<List<Int>>()
         var current = mutableListOf<Int>()
         var currentUnits = 0f
         for (index in filtered) {
-            val itemUnits = estimateItemUnits(all[index])
+            val itemUnits = estimateItemUnits(all[index], includeComment)
             val withItem = if (current.isEmpty()) itemUnits else currentUnits + itemUnits
             if (current.isNotEmpty() && withItem > rowWidthUnits) {
                 rows.add(current)

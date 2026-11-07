@@ -26,10 +26,15 @@ class CandidatePageRulesTest {
     }
 
     @Test
-    fun `网格列数按扣除左右栏后的宽度估算`() {
-        assertEquals(3, CandidatePageRules.gridColumnsFor(360))   // 260/72
-        assertEquals(6, CandidatePageRules.gridColumnsFor(560))   // 460/72
-        assertEquals(8, CandidatePageRules.gridColumnsFor(1000))  // 封顶 8 列
+    fun `网格列数：无注释 4-5 列，有注释 3-4 列`() {
+        // 无注释：手机起步 4 列、宽屏封顶 5 列
+        assertEquals(4, CandidatePageRules.gridColumnsFor(360, showComments = false))
+        assertEquals(5, CandidatePageRules.gridColumnsFor(560, showComments = false))
+        assertEquals(5, CandidatePageRules.gridColumnsFor(1000, showComments = false))
+        // 有关注：每格更宽，列数压到 3-4
+        assertEquals(3, CandidatePageRules.gridColumnsFor(360, showComments = true))
+        assertEquals(4, CandidatePageRules.gridColumnsFor(560, showComments = true))
+        assertEquals(4, CandidatePageRules.gridColumnsFor(1000, showComments = true))
     }
 
     @Test

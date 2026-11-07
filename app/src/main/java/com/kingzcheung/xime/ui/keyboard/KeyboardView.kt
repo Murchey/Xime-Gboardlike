@@ -666,10 +666,11 @@ fun KeyboardView(
                 // 数据源为服务层的跨页全量候选（expandedCandidates），行分组惰性渲染
                 // （LazyColumn 只画可见行），可上下滑动 + 翻页键滚动一屏，不驱动 rime 翻页。
                 val allExpanded = candidateState.value.expandedCandidates
-                // 编码注释开关：展开页与候选栏共用同一设置（【布局与显示】→ 编码注释）。
+                // 编码注释开关：展开页有独立开关（【布局与显示】→ 编码注释），
+                // 不再依赖候选栏的注音开关——那个开关只控制候选栏里的小字。
                 // 默认关闭——展开后每个候选都挂拼音会让长列表显得杂乱。
                 val commentContext = LocalContext.current
-                fun readExpandedComments() = SettingsPreferences.showCandidateComments(commentContext) &&
+                fun readExpandedComments() =
                     SettingsPreferences.showExpandedCandidateComments(commentContext)
                 var showExpandedComments by remember { mutableStateOf(readExpandedComments()) }
                 // 展开页布局：流式（按词长换行）/ 网格（固定列数更整齐），设置改动即时生效
@@ -757,8 +758,8 @@ fun KeyboardView(
                 // 网格列数：仅在网格布局下 >0；按展开页真实宽度估算（悬浮/收窄/分屏自适应）
                 val gridColumns =
                     if (expandedStyle == SettingsPreferences.EXPANDED_STYLE_GRID) {
-                        // 扣掉左右栏（约 86dp）与内边距，避免用整页宽估出过密的列
-                        CandidatePageRules.gridColumnsFor(expandedPageWidthDp)
+                        // 扣掉左右栏（约 86dp）与内边距；关注释时手机 4~5 列
+                        CandidatePageRules.gridColumnsFor(expandedPageWidthDp, showExpandedComments)
                     } else 0
                 val candidateRows = remember(
                     allExpanded, singleCharFilter, rowWidthUnits, showExpandedComments, gridColumns
@@ -767,7 +768,10 @@ fun KeyboardView(
                     val rows = if (gridColumns > 0) {
                         ExpandedCandidatePager.gridRows(indices, gridColumns)
                     } else {
-                        ExpandedCandidatePager.flowRows(indices, allExpanded, rowWidthUnits)
+                        ExpandedCandidatePager.flowRows(
+                            indices, allExpanded, rowWidthUnits,
+                            includeComment = showExpandedComments,
+                        )
                     }
                     rows.map { row ->
                         row.map { gi ->

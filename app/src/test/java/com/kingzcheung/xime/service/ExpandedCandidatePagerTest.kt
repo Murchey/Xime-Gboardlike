@@ -85,6 +85,18 @@ class ExpandedCandidatePagerTest {
     }
 
     @Test
+    fun `关闭注释后按无注释估宽，同一行能放更多`() {
+        // "你好" + 注释 "ni hao"：含注释 5.25 单位，无注释 3.2 单位；容量 18
+        val all = List(6) { candidate("你好", "ni hao") }
+        val indices = all.indices.toList()
+        val withComment = ExpandedCandidatePager.flowRows(indices, all, 18f)
+        val withoutComment =
+            ExpandedCandidatePager.flowRows(indices, all, 18f, includeComment = false)
+        assertEquals(3, withComment[0].size)   // 3×5.25 = 15.75，第 4 个超宽
+        assertEquals(5, withoutComment[0].size) // 5×3.2 = 16，第 6 个超宽
+    }
+
+    @Test
     fun `超宽单条独占一行且不被丢弃`() {
         val all = listOf(candidate("超".repeat(50)), candidate("字"))
         val rows = ExpandedCandidatePager.flowRows(listOf(0, 1), all, 5f)

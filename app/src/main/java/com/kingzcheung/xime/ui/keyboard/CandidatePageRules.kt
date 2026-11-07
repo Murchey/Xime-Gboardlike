@@ -29,9 +29,17 @@ object CandidatePageRules {
     /** 悬浮模式页高有限：右栏 4 键等分压缩（与横屏同款）。 */
     fun rightRailEqualSplit(isFloating: Boolean): Boolean = isFloating
 
-    /** 网格列数：扣除左右栏与内边距后按可用宽度估算。 */
-    fun gridColumnsFor(pageWidthDp: Int): Int =
-        ExpandedCandidatePager.gridColumns((pageWidthDp - 100f).coerceAtLeast(160f))
+    /**
+     * 网格列数：扣除左右栏与内边距后按可用宽度估算。
+     *
+     * 注释占宽明显（每个候选多挂一行小字），开启时压到 3~4 列；
+     * 关闭时手机 4~5 列、平板最多 6 列，避免过密或过疏。
+     */
+    fun gridColumnsFor(pageWidthDp: Int, showComments: Boolean): Int {
+        val available = (pageWidthDp - 100f).coerceAtLeast(160f)
+        val columns = if (showComments) available / 110f else available / 90f
+        return columns.toInt().coerceIn(if (showComments) 3 else 4, if (showComments) 4 else 5)
+    }
 
     /** 展开态且已有全量候选时，候选栏与展开页都切换到全量数据源。 */
     fun usesExpandedData(expanded: Boolean, expandedCount: Int): Boolean =
