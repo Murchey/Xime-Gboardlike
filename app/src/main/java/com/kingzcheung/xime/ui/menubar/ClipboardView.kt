@@ -62,6 +62,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -747,12 +748,17 @@ private fun SwipeToDeleteBox(
     }
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val cardWidthPx = constraints.maxWidth.toFloat().coerceAtLeast(1f)
-        val thresholdPx = cardWidthPx * 0.35f
+    var cardWidthPx by remember { mutableStateOf(1f) }
+    // 外层尺寸跟随卡片本身（不 fillMaxWidth）：底板用 matchParentSize 才能与卡片严丝合缝，
+    // 否则网格单元比卡片宽时，滑开会露出一圈多余的红色边。
+    Box(
+        modifier = Modifier.onSizeChanged {
+            cardWidthPx = it.width.toFloat().coerceAtLeast(1f)
+        }
+    ) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .matchParentSize()
                 .clip(RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.errorContainer),
             contentAlignment = Alignment.CenterEnd,
@@ -768,16 +774,14 @@ private fun SwipeToDeleteBox(
         }
         Box(
             modifier = Modifier
-                .fillMaxSize()
                 .offset { IntOffset(offsetX.value.roundToInt(), 0) }
                 .pointerInput(enabled, cardWidthPx) {
                     detectHorizontalDragGestures(
                         onDragEnd = {
-                            if (offsetX.value <= -thresholdPx) {
+                            if (offsetX.value <= -cardWidthPx * 0.35f) {
                                 scope.launch {
                                     offsetX.animateTo(-cardWidthPx, tween(140))
                                     onDelete()
-                                    // 删除是异步的：先复位，条目被移除前不会卡在划开状态
                                     offsetX.snapTo(0f)
                                 }
                             } else {
