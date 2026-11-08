@@ -581,7 +581,17 @@ private fun ThemePreviewCard(
                     .height(220.dp),
                 keyColorOverride = colorSet.keyBackground.toComposeColor(),
                 candidateTextColorOverride = colorSet.candidateText.toComposeColor(),
-                selectedTextColorOverride = colorSet.accent.toComposeColor(),
+                // 强调色开关关闭时不再把强调色当作选中色，预览须与保存后的键盘一致
+                selectedTextColorOverride = if (scheme.highlightFirstCandidate) {
+                    colorSet.accent.toComposeColor()
+                } else {
+                    colorSet.candidateText.toComposeColor()
+                },
+                functionKeyColorOverride = colorSet.functionKeyBackground.toComposeColor(),
+                enterKeyColorOverride = colorSet.enterKeyBackground
+                    .takeIf { it.isNotBlank() }?.toComposeColor(),
+                enterTextColorOverride = colorSet.enterKeyIconColor
+                    .takeIf { it.isNotBlank() }?.toComposeColor(),
             )
         }
     }

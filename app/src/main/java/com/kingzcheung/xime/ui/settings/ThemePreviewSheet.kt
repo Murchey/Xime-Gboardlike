@@ -225,6 +225,12 @@ internal fun ThemeKeyboardPreview(
     keyColorOverride: Color? = null,
     candidateTextColorOverride: Color? = null,
     selectedTextColorOverride: Color? = null,
+    /** 编辑器实时草稿的功能键底色；null 时按主题推导。 */
+    functionKeyColorOverride: Color? = null,
+    /** 编辑器实时草稿的回车键底色；null 时按主题推导。 */
+    enterKeyColorOverride: Color? = null,
+    /** 编辑器实时草稿的回车键图标色；null 时按回车键底色推导。 */
+    enterTextColorOverride: Color? = null,
 ) {
     val bgColor = if (isDark) theme.keyboardBgDark else theme.keyboardBgLight
     val accent = if (isDark) theme.accentDark else theme.accentLight
@@ -243,13 +249,16 @@ internal fun ThemeKeyboardPreview(
         ?: if (isDark) theme.candidateSelectedTextColorDark else theme.candidateSelectedTextColorLight
     // 与实机键盘同一条取色逻辑：功能键分组色、回车强调色都走共用推导，
     // 否则预览会把功能键画成旧式 tinted container，与实机对不上。
-    val functionKeyColor = KeyboardThemes.resolveFunctionKeyColor(theme.id, isDark, keyColor)
+    // 编辑器传入草稿色时以草稿为准，否则与键盘同一条推导——预览必须能反映尚未保存的改动
+    val functionKeyColor = functionKeyColorOverride
+        ?: KeyboardThemes.resolveFunctionKeyColor(theme.id, isDark, keyColor)
     val functionTextColor = KeyboardThemes.getSpecialKeyTextColorForBackground(
         functionKeyColor, textColor
     )
-    val enterKeyColor = KeyboardThemes.resolveEnterKeyColor(theme.id, isDark)
-    // 与实机同一入口，避免预览与键盘的回车图标色不一致
-    val enterTextColor = KeyboardThemes.resolveEnterKeyTextColor(theme.id, isDark)
+    val enterKeyColor = enterKeyColorOverride
+        ?: KeyboardThemes.resolveEnterKeyColor(theme.id, isDark)
+    val enterTextColor = enterTextColorOverride
+        ?: KeyboardThemes.resolveEnterKeyTextColor(theme.id, isDark)
     val context = LocalContext.current
     val candidateTextSize = SettingsPreferences.getCandidateTextSize(context)
 

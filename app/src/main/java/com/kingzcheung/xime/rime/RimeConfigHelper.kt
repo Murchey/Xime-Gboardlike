@@ -60,6 +60,10 @@ object RimeConfigHelper {
         SchemaManager.applyEnabledSchemasToDefaultYaml(context)
         // 为所有启用方案打个人词库补丁
         PersonalDictManager.ensureSchemaPacks(context)
+        // 方案引用了不存在的语法模型时，librime 会在 octagram 初始化阶段卡死
+        // （表现为加载方案后闪退/无响应，随后所有按键"吞拼音"）。部署前先自愈。
+        // 注意顺序：必须在 assets 覆盖/补建之后再执行，否则会把自己写的补丁冲掉。
+        neutraliseMissingGrammars(context)
         // 不再在初始化阶段删 build：build 是否重建统一由 ensureDeployment()
         // 按增量优先策略决定，避免配置变化即全量重编译（60MB 词库持锁 30s+）。
 
@@ -80,6 +84,9 @@ object RimeConfigHelper {
         synchronized(deploymentLock) {
             // 刚补回基础文件：旧 hash 与产物已不可信，强制重编
             if (ensureBuiltinBaseFiles(context) > 0) SettingsPreferences.setDeploymentHash(context, "")
+            // assets 补建可能把用户 schema 覆盖回内置版本，这里再自愈一次才算真正生效
+            val healed = neutraliseMissingGrammars(context)
+            if (healed > 0) SettingsPreferences.setDeploymentHash(context, "")
             val currentHash = computeDeploymentHash(context)
             if (currentHash.isNotEmpty() && currentHash == SettingsPreferences.getDeploymentHash(context)) {
                 SettingsPreferences.setDeploymentDone(context, true)
@@ -130,6 +137,50 @@ object RimeConfigHelper {
      * （例如 pinyin_simp 依赖 stroke、rime_frost 依赖 melt_eng，这些都不会被删）。
      * 产物只是缓存，日后启用该方案时增量部署会自动重建。
      */
+    /**
+     * 方案 `grammar/language` 指向的 `.gram` 不存在时，librime 的 octagram 初始化会卡住，
+     * 用户侧表现为「加载万象拼音闪退 / 卡死」，之后按键全部吞掉（编码在涨但不出候选）。
+     *
+     * 这里在部署前把这类失效引用临时停用：保留原行（注释掉 language），并把 grammar 段
+     * 改名成 grammar_disabled，等模型导入后重新部署即可恢复。
+     *
+     * @return 被临时停用的方案数。
+     */
+    fun neutraliseMissingGrammars(context: Context): Int {
+        val rimeDir = SchemaManager.getRimeDir(context)
+        val gramNames = rimeDir.listFiles { f -> f.isFile && f.name.endsWith(".gram", ignoreCase = true) }
+            ?.map { f -> f.name.removeSuffix(".gram").removeSuffix(".GRAM") }
+            ?.toSet()
+            ?: emptySet()
+        var touched = 0
+        val schemaFiles = rimeDir.listFiles { f -> f.isFile && f.name.endsWith(".schema.yaml") } ?: return 0
+        for (schemaFile in schemaFiles) {
+            val text = try { schemaFile.readText() } catch (_: Exception) { continue }
+            if (!text.contains("grammar:")) continue
+            val grammarBlock = text.substringAfter("grammar:", "")
+            val language = Regex("(?m)^\\s*language:\\s*(\\S+)\\s*$")
+                .find(grammarBlock)?.groupValues?.getOrNull(1)
+                ?.trim('\'', '"') ?: continue
+            if (language in gramNames) continue
+            val patched = text.lines().joinToString("\n") { line ->
+                when {
+                    line.trimStart().startsWith("grammar:") -> line.replace("grammar:", "grammar_disabled:")
+                    line.trimStart().startsWith("language:") && line.contains(language) -> "# " + line
+                    else -> line
+                }
+            }
+            if (patched == text) continue
+            try {
+                schemaFile.writeText(patched)
+                touched++
+                Log.w(TAG, "grammar model '" + language + "' missing, disabled in " + schemaFile.name)
+            } catch (e: Exception) {
+                Log.e(TAG, "failed to disable missing grammar in " + schemaFile.name, e)
+            }
+        }
+        return touched
+    }
+
     fun pruneUnusedSchemaArtifacts(context: Context) {
         val rimeDir = SchemaManager.getRimeDir(context)
         val buildDir = File(rimeDir, "build")

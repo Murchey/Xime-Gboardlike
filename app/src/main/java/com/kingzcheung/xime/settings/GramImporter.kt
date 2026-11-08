@@ -19,7 +19,14 @@ object GramImporter {
 
     /** GramDb::Save 写入的格式串前缀（gram_db.cc: kGrammarFormatPrefix）。 */
     private const val MAGIC = "Rime::Grammar/"
-    private const val MAX_BYTES = 128L * 1024 * 1024
+    /**
+     * 单个 .gram 上限。
+     *
+     * 语法模型随语料规模增长：万象 LTS 的 gram 已达 418MB，旧的 128MB 上限会把这类
+     * 正常模型判成"文件过大"直接拒绝导入（用户侧表现为"加载 gram 模型显示导入失败"）。
+     * 这里放宽到 2GB，仍然拦截异常超大文件；真正的可用性由导入时的剩余空间检查兜底。
+     */
+    private const val MAX_BYTES = 2048L * 1024 * 1024
     private val NAME_REGEX = Regex("^[A-Za-z0-9._-]{1,64}$")
 
     /** 一条已导入的语法模型；name 形如 XimeGboard.gram。 */
