@@ -60,6 +60,8 @@ object RimeConfigHelper {
         SchemaManager.applyEnabledSchemasToDefaultYaml(context)
         // 为所有启用方案打个人词库补丁
         PersonalDictManager.ensureSchemaPacks(context)
+        // 方案包自带的 custom/ 补丁补到根目录（否则简拼等 speller 规则不生效）
+        SchemaManager.seedCustomPatches(context)
         // 方案引用了不存在的语法模型时，librime 会在 octagram 初始化阶段卡死
         // （表现为加载方案后闪退/无响应，随后所有按键"吞拼音"）。部署前先自愈。
         // 注意顺序：必须在 assets 覆盖/补建之后再执行，否则会把自己写的补丁冲掉。

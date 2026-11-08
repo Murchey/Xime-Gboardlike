@@ -82,6 +82,40 @@ object SchemaManager {
         .followRedirects(true)
         .build()
 
+    /**
+     * 方案包初始化：把包内 `custom/` 目录下的 `*.custom.yaml` 补到 rime 根目录。
+     *
+     * 万象这类方案把 patch 放在 `custom/` 子目录，必须复制到根目录 librime 才会合并；
+     * 缺这一步时简拼/模糊音等 speller/algebra 规则全部不生效，长编码直接没有候选
+     * （用户侧表现为「打超过三个字母就不出拼音、吞拼音」）。
+     *
+     * 只在根目录**不存在**同名文件时复制，绝不覆盖用户已改过的补丁。
+     *
+     * @return 补入的文件名列表。
+     */
+    fun seedCustomPatches(context: Context): List<String> {
+        val rimeDir = getRimeDir(context)
+        val customDir = File(rimeDir, "custom")
+        if (!customDir.isDirectory) return emptyList()
+        val seeded = mutableListOf<String>()
+        val patches = customDir.listFiles { f -> f.isFile && f.name.endsWith(".custom.yaml") }
+            ?: return emptyList()
+        for (src in patches) {
+            val dst = File(rimeDir, src.name)
+            if (dst.exists()) continue
+            try {
+                src.copyTo(dst, overwrite = false)
+                seeded.add(src.name)
+            } catch (e: Exception) {
+                Log.w(TAG, "failed to seed custom patch " + src.name, e)
+            }
+        }
+        if (seeded.isNotEmpty()) {
+            Log.i(TAG, "seeded " + seeded.size + " custom patch(es): " + seeded)
+            SettingsPreferences.setDeploymentHash(context, "")
+        }
+        return seeded
+    }
     fun getRimeDir(context: Context): File =
         File(context.filesDir, "rime")
 

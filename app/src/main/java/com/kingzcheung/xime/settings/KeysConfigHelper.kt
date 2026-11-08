@@ -1009,6 +1009,14 @@ object KeysConfigHelper {
     private var mergedConfigCache: XimeConfig? = null
     private var mergedConfigVersion = 0
     
+    // 进程内是否已完成过一次全量配置解析：避免 IME 服务重建时在同步路径上重复解析
+    @Volatile
+    private var configLoadedOnce = false
+
+    /** 是否已加载过一次配置（供 IME 初始化决定要不要同步解析）。 */
+    fun isConfigLoaded(): Boolean = configLoadedOnce
+
+    fun markConfigLoaded() { configLoadedOnce = true }
     fun loadConfig(context: Context): KeysConfig {
         loadXimeConfig(context)
         config = config.copy(

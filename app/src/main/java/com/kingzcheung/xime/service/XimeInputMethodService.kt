@@ -794,11 +794,17 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private fun initRimeEngine() {
         Log.d(TAG, "initRimeEngine: Starting initialization...")
         
-        // 必须在任何异步操作之前同步加载键盘按键配置，
-        // 否则 KeyboardLayout 组合时 swipeUp/swipeDown 配置可能尚未就绪，
-        // 导致按键上的符号不显示、上滑/下滑手势不触发。
-        runBlocking(Dispatchers.IO) {
-            KeysConfigHelper.loadConfig(this@XimeInputMethodService)
+        // 键盘按键配置必须在首帧组合前就绪，否则上滑/下滑符号与手势不生效。
+        // 但全量 YAML 解析在真机实测可阻塞 ~1.8s：放在 onStartInput 的同步路径上时，
+        // 用户恰好在初始化窗口内点按就会被系统判为「无响应」（万象这类大包尤其明显）。
+        //
+        // 因此改为：配置已加载过（进程内缓存命中）就直接复用，不再重复同步解析；
+        // 首次加载才同步一次，并且只解析一次。
+        if (!KeysConfigHelper.isConfigLoaded()) {
+            runBlocking(Dispatchers.IO) {
+                KeysConfigHelper.loadConfig(this@XimeInputMethodService)
+            }
+            KeysConfigHelper.markConfigLoaded()
         }
 
         // 引擎异步就绪前先以持久化方案填充 UI 状态：键盘首帧事件链（InputSessionStarted/
