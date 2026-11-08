@@ -82,19 +82,34 @@ object RimeConfigHelper {
      * 该入口被 Application 预初始化与输入法服务共享，配合 deploymentLock
      * 避免两者并发触发两次全量编译。
      */
-    fun ensureDeployment(context: Context): Boolean {
+    fun ensureDeployment(context: Context, alwaysMaintain: Boolean = false): Boolean {
         synchronized(deploymentLock) {
+            // 外部编辑器保存 YAML 可能写入 UTF-8 BOM，librime 不跳过 BOM，
+            // 整份配置会解析失败（部署后无产物、打字无候选），部署前统一清掉。
+            val bomFixed = stripBomFromUserYaml(File(context.filesDir, "rime"))
+            if (bomFixed > 0) {
+                FileLogger.w(TAG, "Stripped UTF-8 BOM from $bomFixed yaml file(s) before deploy")
+            }
             // 刚补回基础文件：旧 hash 与产物已不可信，强制重编
             if (ensureBuiltinBaseFiles(context) > 0) SettingsPreferences.setDeploymentHash(context, "")
             // assets 补建可能把用户 schema 覆盖回内置版本，这里再自愈一次才算真正生效
             val healed = neutraliseMissingGrammars(context)
             if (healed > 0) SettingsPreferences.setDeploymentHash(context, "")
             val currentHash = computeDeploymentHash(context)
-            if (currentHash.isNotEmpty() && currentHash == SettingsPreferences.getDeploymentHash(context)) {
+            // 产物也要齐全才算部署完成：只看 hash 会把「部分方案没编译出来」当成已部署永久跳过
+            val missingBefore = missingCompiledSchemas(context)
+            if (!alwaysMaintain &&
+                currentHash.isNotEmpty() &&
+                currentHash == SettingsPreferences.getDeploymentHash(context) &&
+                missingBefore.isEmpty()
+            ) {
                 SettingsPreferences.setDeploymentDone(context, true)
                 // 老版本升级上来的用户 build 里可能残留未启用方案的产物，这里补一次清理
                 pruneUnusedSchemaArtifacts(context)
                 return true
+            }
+            if (missingBefore.isNotEmpty()) {
+                FileLogger.w(TAG, "Missing build artifacts for enabled schemas: " + missingBefore.joinToString())
             }
             Log.i(TAG, "Deployment hash mismatch or missing")
             val buildDir = File(context.filesDir, "rime/build")
@@ -118,13 +133,31 @@ object RimeConfigHelper {
                 buildDir.mkdirs()
                 deployed = engine.deploy()
             }
-            if (deployed) {
-                pruneUnusedSchemaArtifacts(context)
-                storeDeploymentHash(context)
-                SettingsPreferences.setDeploymentDone(context, true)
-                return true
+            if (!deployed) return false
+            // 部署完成但仍有方案没产物（YAML 错误、依赖缺失等）：强制清空重建一次，
+            // 否则「部署成功」会把导入的方案永久停在不可用状态。
+            var stillMissing = missingCompiledSchemas(context)
+            if (stillMissing.isNotEmpty()) {
+                FileLogger.w(
+                    TAG,
+                    "Still missing after maintenance, forcing full rebuild: " + stillMissing.joinToString(),
+                )
+                buildDir.deleteRecursively()
+                buildDir.mkdirs()
+                engine.deploy()
+                stillMissing = missingCompiledSchemas(context)
             }
-            return false
+            pruneUnusedSchemaArtifacts(context)
+            storeDeploymentHash(context)
+            SettingsPreferences.setDeploymentDone(context, stillMissing.isEmpty())
+            if (stillMissing.isNotEmpty()) {
+                FileLogger.e(
+                    TAG,
+                    "Deployment finished but schemas are not compiled: " + stillMissing.joinToString(),
+                )
+                return false
+            }
+            return true
         }
     }
     
@@ -182,6 +215,58 @@ object RimeConfigHelper {
         }
         return touched
     }
+
+    /** 用户配置 BOM 扫描上限：词典等大文件不参与（体积大且不应被编辑器改写）。 */
+    private const val BOM_SCAN_MAX_BYTES = 4L * 1024 * 1024
+
+    /**
+     * 去掉用户 YAML 的 UTF-8 BOM，返回实际改写的文件数。
+     *
+     * 文件管理器/记事本类编辑器保存时可能写入 BOM；librime 的 YAML 解析不跳过 BOM，
+     * 整份配置会解析失败，表现正是「导入的方案不可用」：部署看起来成功，但方案没有
+     * 编译产物，打字没有候选。幂等：无 BOM 不写盘；跳过 `*.dict.yaml` 与超大文件。
+     */
+    internal fun stripBomFromUserYaml(rimeDir: File): Int {
+        if (!rimeDir.isDirectory) return 0
+        var fixed = 0
+        rimeDir.listFiles()?.forEach { file ->
+            if (!file.isFile || !file.name.endsWith(".yaml")) return@forEach
+            if (file.name.endsWith(".dict.yaml") || file.length() > BOM_SCAN_MAX_BYTES) return@forEach
+            runCatching {
+                val bytes = file.readBytes()
+                if (bytes.size >= 3 &&
+                    bytes[0] == 0xEF.toByte() &&
+                    bytes[1] == 0xBB.toByte() &&
+                    bytes[2] == 0xBF.toByte()
+                ) {
+                    file.writeBytes(bytes.copyOfRange(3, bytes.size))
+                    fixed++
+                }
+            }.onFailure { FileLogger.w(TAG, "strip BOM failed: " + file.name, it) }
+        }
+        return fixed
+    }
+
+    /**
+     * 已启用但缺少编译产物的方案 id。
+     *
+     * librime 部署失败只写日志、部署任务本身仍返回成功；宿主若不自行校验，
+     * 「部署完成」会掩盖方案未编译（导入的方案因此表现为「不可用」）。
+     */
+    fun missingCompiledSchemas(context: Context): List<String> {
+        val rimeDir = File(context.filesDir, "rime")
+        // 只看源码还在的启用方案：源码已卸载的残留项重编也补不出产物
+        val enabled = SchemaManager.getEnabledSchemas(context)
+            .filter { File(rimeDir, "$it.schema.yaml").isFile }
+        return missingCompiledSchemas(enabled, File(rimeDir, "build"))
+    }
+
+    /** 纯文件校验（可单测）：启用方案是否都有至少一个编译产物。 */
+    internal fun missingCompiledSchemas(enabled: List<String>, buildDir: File): List<String> =
+        enabled.filter { schemaId ->
+            !File(buildDir, "$schemaId.prism.bin").exists() &&
+                !File(buildDir, "$schemaId.schema.yaml").exists()
+        }
 
     fun pruneUnusedSchemaArtifacts(context: Context) {
         val rimeDir = SchemaManager.getRimeDir(context)
