@@ -22,6 +22,30 @@
 
 An Android input method built on the [Rime](https://rime.im/) engine, designed for efficient Chinese text input with Wubi (五笔) and Pinyin support.
 
+## UI style is not for everyone
+
+> **The most important note in this repo — please read it before deciding to use this build.**
+
+This fork makes substantial UI changes: a wider candidate bar, vertical separators between candidates, larger key corners, Gboard-leaning palettes, and reworked toolbar and menus. **These are aesthetic choices, not universal improvements** — they may feel cleaner to some and cramped, unfamiliar, or simply worse than upstream to others.
+
+A few concrete examples of "the same design, two honest opinions":
+
+- **Candidate separators**: some find them helpful for telling candidates apart and avoiding mis-taps; others find them pure horizontal overhead that leaves fewer candidates on screen.
+- **Wider candidate cells**: some prefer the roomier feel; others lose candidates per screen.
+- **Gboard-inspired palettes**: some find them restrained and easy on the eyes; others prefer the original look upstream.
+
+None of this has a right answer. **If something feels off, the most direct fix is to use a version that suits you:**
+
+| What you want | Suggestion |
+|---|---|
+| Clean behavior close to the original | Use upstream [ximeiorg/Xime](https://github.com/ximeiorg/Xime) |
+| This fork, but different colors / key shapes | Settings → Theme & customization → personalize colors, or switch themes |
+| Want to change it yourself | Fork this repo (community keystore is published — see "Why publish the signing key?") |
+
+**We do not claim this fork's UI is better than upstream — only that it is a different option.** Upstream is the source of the project and its design has had far more polish over time; this fork simply carries over some Gboard / fcitx5-android habits for people with matching taste.
+
+---
+
 ## About this fork
 
 > **This is a personal fork: [Xime-Gboardlike](https://github.com/Murchey/Xime-Gboardlike), based on the original [Xime](https://github.com/ximeiorg/Xime) by Kingz Cheung and contributors. It is not the upstream project and does not speak for the original author.**
@@ -40,6 +64,20 @@ An Android input method built on the [Rime](https://rime.im/) engine, designed f
 - Schema settings: a smart deploy/rebuild button and one-tap clearing of compiled schema caches to free up storage.
 - A public signing key and `build_apk.bat` for signed, ABI-split personal builds.
 - A redesigned application icon: an original SVG mark (blue tile, white keyboard, turquoise X key) in the clean, rounded spirit of Gboard — not a copy of it. Source at [docs/branding/app-icon.svg](docs/branding/app-icon.svg); regenerate Android assets with `python scripts/generate-icons.py`.
+
+**Recent updates (V1.1.3, 14 commits since V1.1.2):**
+
+- **Wanxiang Pinyin made usable**: three stacked defects fixed — a schema referencing a missing grammar model hung the engine on load; the schema's bundled `custom/` patches were never initialized, so shorthand-algebra rules did not apply and long codes produced no candidates; the `.gram` import cap was raised from 128MB to 2GB (Wanxiang LTS ships 418MB). Verified on device: `nihaoshijie` yields candidates at every step with a properly segmented preedit, and nothing lingers after picking a candidate; the T9 schema works too.
+- **Keyboard now spans the full width**: some ROMs report non-zero horizontal insets in portrait, and we previously applied them unconditionally, leaving a strip on each side. Insets are now honored in landscape only (where cutouts and 3-button navigation genuinely need clearance).
+- **Half-width symbols**: full-width `＠` → `@` (only half-width triggers the @-mention in chat apps) and `＿` → `_` (full-width underscores are unusable in code and email addresses).
+- **More reliable schema imports**: a UTF-8 BOM at the head of user YAML (common when saved by Notepad) is stripped before deploy, and every enabled schema is now verified to have produced build artifacts — previously "deploy succeeded" could be a lie while the schema was actually unusable.
+- **Keyboard height and width settable per orientation**: previously a single stored value, so narrowing in portrait also narrowed landscape.
+- **Theme preview matches the keyboard**: `?123` and Enter use the real 24dp corner radius in the preview, and the "highlight first candidate" switch now updates the preview immediately.
+- **Gboard themes are more faithful**: Gboard Gray/Black no longer highlight the first candidate, and candidate text is pure black (light) / pure white (dark) instead of gray.
+- **New customization options**: Enter key background, Enter key icon color (can follow the accent color), and the highlight-first-candidate switch.
+- **Upstream features adopted**: voice recognition results scroll instead of truncating at 4 lines, a `cycle_schema` action for rotating input schemas, and OpenCC data for simplified/traditional conversion.
+- **Long-press bubble has a proper hide animation**: it shrinks and fades out on release instead of vanishing.
+- **Plugins**: the backup extension timeout was raised from 180s to 300s and a timeout no longer disables the plugin (slow uploads are not infinite loops).
 
 **Respect for the original work.** The Rime engine integration, plugin system, architecture, documentation, and the vast majority of the code are the work of **Kingz Cheung and the Xime contributors**. This fork only adds changes on top of their work and is released under the same **GPLv3** license. All credit for the original project remains with its authors. Upstream is the source of truth: if you want the original behavior, official releases, or official support, please use [ximeiorg/Xime](https://github.com/ximeiorg/Xime).
 
