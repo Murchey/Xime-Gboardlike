@@ -170,6 +170,8 @@ object KeyboardThemes {
         light: ThemePalette,
         dark: ThemePalette,
         hidden: Boolean = false,
+        /** 是否显著标注第一个候选词；Gboard 系列关闭。 */
+        highlightFirstCandidate: Boolean = true,
     ): KeyboardColorScheme {
         // 功能键取主题的 tinted container：既有品牌色相，又不会像高饱和 accent 那样刺眼。
         val lightSpecial = light.container ?: light.specialKey
@@ -219,6 +221,7 @@ object KeyboardThemes {
             candidateCommentColorLight = light.commentText,
             candidateCommentColorDark = dark.commentText,
             hidden = hidden,
+            highlightFirstCandidate = highlightFirstCandidate,
         )
     }
 
@@ -236,9 +239,11 @@ object KeyboardThemes {
         // 参照 Gboard 实机配色（浅：白键 + 蓝灰功能键；深：深灰键 + 蓝灰功能键）
         buildTheme(
             id = "gboard_gray", name = "Gboard 灰",
+            // Gboard 风格不强调第一个候选词；候选文字按背景对比取纯黑/纯白
+            highlightFirstCandidate = false,
             light = ThemePalette(
                 background = Color(0xFFEDEEF2), key = Color(0xFFFFFFFF),
-                keyText = Color(0xFF1F1F23), candidateText = Color(0xFF5F6368),
+                keyText = Color(0xFF1F1F23), candidateText = Color(0xFF000000),
                 accent = Color(0xFF1A73E8), selectedText = Color(0xFF0B57D0), container = Color(0xFFD7E2F4),
                 specialKey = Color(0xFFD7E2F4),
                 functionKey = Color(0xFFD7E2F4),
@@ -246,7 +251,7 @@ object KeyboardThemes {
             ),
             dark = ThemePalette(
                 background = Color(0xFF1E1F24), key = Color(0xFF38393E),
-                keyText = Color(0xFFE7E8EA), candidateText = Color(0xFF9AA0A6),
+                keyText = Color(0xFFE7E8EA), candidateText = Color(0xFFFFFFFF),
                 accent = Color(0xFFA8C7FA), selectedText = Color(0xFFC9DDFF), container = Color(0xFF3B4956),
                 specialKey = Color(0xFF3B4956),
                 functionKey = Color(0xFF3B4956),
@@ -256,9 +261,11 @@ object KeyboardThemes {
         // 参照 Gboard 黑（浅：白键 + 灰功能键 + Google 蓝回车；深：纯黑底 + 浅灰键）
         buildTheme(
             id = "gboard_black", name = "Gboard 黑",
+            // 同上：Gboard 风格不强调首候选，候选文字纯黑/纯白
+            highlightFirstCandidate = false,
             light = ThemePalette(
                 background = Color(0xFFF1F3F7), key = Color(0xFFFFFFFF),
-                keyText = Color(0xFF202124), candidateText = Color(0xFF5F6368),
+                keyText = Color(0xFF202124), candidateText = Color(0xFF000000),
                 accent = Color(0xFF1A73E8), selectedText = Color(0xFF0B57D0), container = Color(0xFFE1E3E2),
                 specialKey = Color(0xFFE1E3E2),
                 functionKey = Color(0xFFE1E3E2),
@@ -266,7 +273,7 @@ object KeyboardThemes {
             ),
             dark = ThemePalette(
                 background = Color(0xFF161616), key = Color(0xFF4E4E50),
-                keyText = Color(0xFFF2F2F2), candidateText = Color(0xFFA6A6A8),
+                keyText = Color(0xFFF2F2F2), candidateText = Color(0xFFFFFFFF),
                 accent = Color(0xFF8AB4F8), selectedText = Color(0xFFA8C7FA), container = Color(0xFF282828),
                 specialKey = Color(0xFF282828),
                 functionKey = Color(0xFF282828),

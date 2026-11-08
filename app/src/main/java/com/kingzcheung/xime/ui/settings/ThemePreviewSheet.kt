@@ -231,6 +231,8 @@ internal fun ThemeKeyboardPreview(
     enterKeyColorOverride: Color? = null,
     /** 编辑器实时草稿的回车键图标色；null 时按回车键底色推导。 */
     enterTextColorOverride: Color? = null,
+    /** 是否显著标注第一个候选词（自定义配色可关闭）。 */
+    highlightFirstCandidate: Boolean = true,
 ) {
     val bgColor = if (isDark) theme.keyboardBgDark else theme.keyboardBgLight
     val accent = if (isDark) theme.accentDark else theme.accentLight
@@ -277,7 +279,13 @@ internal fun ThemeKeyboardPreview(
                     .fillMaxSize()
                     .padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
             ) {
-                CandidateBarPreview(accent, candidateTextColor, selectedTextColor, candidateTextSize)
+                CandidateBarPreview(
+                    accent = accent,
+                    textColor = candidateTextColor,
+                    selectedTextColor = selectedTextColor,
+                    textSize = candidateTextSize,
+                    highlightFirstCandidate = highlightFirstCandidate,
+                )
 
                 Column(modifier = Modifier
                     .fillMaxWidth()
@@ -365,11 +373,26 @@ internal fun ThemeKeyboardPreview(
                             .weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        PreviewKey("?123", functionKeyColor, functionTextColor, 1.2f,extraModifier = Modifier.padding(0.5.dp, 2.dp))
+                        PreviewKey(
+                            label = "?123",
+                            color = functionKeyColor,
+                            textColor = functionTextColor,
+                            weight = 1.2f,
+                            extraModifier = Modifier.padding(0.5.dp, 2.dp),
+                            bottomAction = true,
+                        )
                         PreviewKey("，", keyColor, textColor, 0.8f,extraModifier = Modifier.padding(0.5.dp, 2.dp))
                         PreviewKey(tr(R.string.s_kongge), keyColor, textColor, 3f, fontSize = 9.sp,extraModifier = Modifier.padding(0.5.dp, 2.dp))
                         PreviewKey(tr(R.string.s_zhong_en), functionKeyColor, functionTextColor, 0.8f, fontSize = 8.sp,extraModifier = Modifier.padding(0.5.dp, 2.dp))
-                        PreviewKey(tr(R.string.s_queding), enterKeyColor, enterTextColor, 1.2f,extraModifier = Modifier.padding(0.5.dp, 2.dp))
+                        // 回车与 ?123 在实机用 24dp 大圆角，预览同步
+                        PreviewKey(
+                            label = tr(R.string.s_queding),
+                            color = enterKeyColor,
+                            textColor = enterTextColor,
+                            weight = 1.2f,
+                            extraModifier = Modifier.padding(0.5.dp, 2.dp),
+                            bottomAction = true,
+                        )
                     }
                 }
             }
@@ -383,6 +406,8 @@ private fun CandidateBarPreview(
     textColor: Color,
     selectedTextColor: Color,
     textSize: Int,
+    /** 是否显著标注第一个候选词；关闭后首个候选不加底色、不用强调文字色。 */
+    highlightFirstCandidate: Boolean = true,
 ) {
     Column(
         modifier = Modifier
@@ -397,7 +422,7 @@ private fun CandidateBarPreview(
         ) {
             PreviewCandidate(
                 text = tr(R.string.s_xima),
-                isSelected = true,
+                isSelected = highlightFirstCandidate,
                 accent = accent,
                 textColor = textColor,
                 selectedTextColor = selectedTextColor,
@@ -441,6 +466,9 @@ private fun PreviewCandidate(
     }
 }
 
+/** 底行功能键（?123 / 回车）在实机上用更大的圆角，预览必须一致，否则形状对不上。 */
+private val PreviewBottomActionCornerRadius = 24.dp
+
 @Composable
 private fun RowScope.PreviewKey(
     label: String,
@@ -450,9 +478,12 @@ private fun RowScope.PreviewKey(
     icon: Painter? = null,
     fontSize: androidx.compose.ui.unit.TextUnit = 14.sp,
     extraModifier: Modifier = Modifier,
+    /** 底行功能键（?123 / 回车）：使用与实机一致的 24dp 大圆角。 */
+    bottomAction: Boolean = false,
 ) {
     val shadow = KeysConfigHelper.getKeyboardShadow()
-    val cornerRadius = LocalKeyCornerRadius.current
+    val baseCornerRadius = LocalKeyCornerRadius.current
+    val cornerRadius = if (bottomAction) PreviewBottomActionCornerRadius else baseCornerRadius
     val shadowModifier = remember(shadow.enabled, cornerRadius, color) {
         Modifier.keyOutline(
             enabled = shadow.enabled,
@@ -467,7 +498,7 @@ private fun RowScope.PreviewKey(
             .fillMaxHeight()
             .fillMaxWidth()
             .then(shadowModifier)
-            .clip(RoundedCornerShape(LocalKeyCornerRadius.current))
+            .clip(RoundedCornerShape(cornerRadius))
             .background(color),
         contentAlignment = Alignment.Center,
     ) {
