@@ -155,10 +155,12 @@ internal fun rememberImeKeyboardCallbacks(
                     service.uiState.value = service.uiState.value.copy(
                         showKeyboardResize = true,
                         resizePreviewHeightDp = SettingsPreferences.getKeyboardHeightDp(service, isLandscape),
-                        resizePreviewMarginStartDp = SettingsPreferences.getKeyboardMarginStartDp(service)
-                            .coerceIn(0, maxMargin),
-                        resizePreviewMarginEndDp = SettingsPreferences.getKeyboardMarginEndDp(service)
-                            .coerceIn(0, maxMargin),
+                        resizePreviewMarginStartDp =
+                            SettingsPreferences.getKeyboardMarginStartDp(service, isLandscape)
+                                .coerceIn(0, maxMargin),
+                        resizePreviewMarginEndDp =
+                            SettingsPreferences.getKeyboardMarginEndDp(service, isLandscape)
+                                .coerceIn(0, maxMargin),
                     )
                 }
             },

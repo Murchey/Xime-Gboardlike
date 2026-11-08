@@ -923,20 +923,46 @@ object SettingsPreferences {
     /** 键盘右边距（dp）。 */
     private const val KEY_KEYBOARD_MARGIN_END_DP = "keyboard_margin_end_dp"
 
-    fun getKeyboardMarginStartDp(context: Context): Int {
-        return getPrefs(context).getInt(KEY_KEYBOARD_MARGIN_START_DP, 0)
+    /** 横屏独立的左右边距：横屏短边有限，竖屏的宽度设置搬过去会挤掉按键。 */
+    private const val KEY_KEYBOARD_MARGIN_START_DP_LANDSCAPE = "keyboard_margin_start_dp_landscape"
+    private const val KEY_KEYBOARD_MARGIN_END_DP_LANDSCAPE = "keyboard_margin_end_dp_landscape"
+
+    /** 当前界面是否横屏（键盘调节相关取值统一走这里，避免各处判断口径不一致）。 */
+    fun isLandscapeNow(context: Context): Boolean {
+        val config = context.resources.configuration
+        return config.screenWidthDp > config.screenHeightDp
     }
 
-    fun setKeyboardMarginStartDp(context: Context, marginDp: Int) {
-        getPrefs(context).edit().putInt(KEY_KEYBOARD_MARGIN_START_DP, marginDp).apply()
+    private fun marginKey(start: Boolean, isLandscape: Boolean): String = when {
+        isLandscape && start -> KEY_KEYBOARD_MARGIN_START_DP_LANDSCAPE
+        isLandscape -> KEY_KEYBOARD_MARGIN_END_DP_LANDSCAPE
+        start -> KEY_KEYBOARD_MARGIN_START_DP
+        else -> KEY_KEYBOARD_MARGIN_END_DP
     }
 
-    fun getKeyboardMarginEndDp(context: Context): Int {
-        return getPrefs(context).getInt(KEY_KEYBOARD_MARGIN_END_DP, 0)
+    fun getKeyboardMarginStartDp(context: Context, isLandscape: Boolean = false): Int {
+        val key = marginKey(start = true, isLandscape = isLandscape)
+        val stored = getPrefs(context).getInt(key, -1)
+        if (stored >= 0) return stored
+        // 不做跨方向回退：横屏可用宽度明显更小，搬竖屏边距会把键盘挤没
+        return 0
     }
 
-    fun setKeyboardMarginEndDp(context: Context, marginDp: Int) {
-        getPrefs(context).edit().putInt(KEY_KEYBOARD_MARGIN_END_DP, marginDp).apply()
+    fun setKeyboardMarginStartDp(context: Context, marginDp: Int, isLandscape: Boolean = false) {
+        getPrefs(context).edit()
+            .putInt(marginKey(start = true, isLandscape = isLandscape), marginDp).apply()
+    }
+
+    fun getKeyboardMarginEndDp(context: Context, isLandscape: Boolean = false): Int {
+        val key = marginKey(start = false, isLandscape = isLandscape)
+        val stored = getPrefs(context).getInt(key, -1)
+        if (stored >= 0) return stored
+        return 0
+    }
+
+    fun setKeyboardMarginEndDp(context: Context, marginDp: Int, isLandscape: Boolean = false) {
+        getPrefs(context).edit()
+            .putInt(marginKey(start = false, isLandscape = isLandscape), marginDp).apply()
     }
 
     fun isSchemaImportWarningDismissed(context: Context): Boolean {

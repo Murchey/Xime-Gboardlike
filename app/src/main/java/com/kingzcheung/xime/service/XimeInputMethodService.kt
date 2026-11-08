@@ -596,8 +596,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             keyboardHeightDp = SettingsPreferences.getKeyboardHeightDp(this, isLandscape),
             keyboardBottomPaddingDp = SettingsPreferences.getKeyboardBottomPaddingDp(this),
             keyboardFlushBottom = SettingsPreferences.isKeyboardFlushBottom(this),
-            keyboardMarginStartDp = SettingsPreferences.getKeyboardMarginStartDp(this).coerceIn(0, maxMargin),
-            keyboardMarginEndDp = SettingsPreferences.getKeyboardMarginEndDp(this).coerceIn(0, maxMargin),
+            keyboardMarginStartDp = SettingsPreferences.getKeyboardMarginStartDp(this, isLandscape)
+                .coerceIn(0, maxMargin),
+            keyboardMarginEndDp = SettingsPreferences.getKeyboardMarginEndDp(this, isLandscape)
+                .coerceIn(0, maxMargin),
             // 调节进行中的预览值同样收紧（旋转/折叠切换后可能超出新屏宽上限）
             resizePreviewMarginStartDp = uiState.value.resizePreviewMarginStartDp.coerceIn(0, maxMargin),
             resizePreviewMarginEndDp = uiState.value.resizePreviewMarginEndDp.coerceIn(0, maxMargin),
@@ -1958,8 +1960,16 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                       val snapshot = uiState.value
                                       schemaController.setKeyboardHeight(snapshot.resizePreviewHeightDp)
                                       SettingsPreferences.setKeyboardBottomPaddingDp(this@XimeInputMethodService, snapshot.keyboardBottomPaddingDp)
-                                      SettingsPreferences.setKeyboardMarginStartDp(this@XimeInputMethodService, snapshot.resizePreviewMarginStartDp)
-                                      SettingsPreferences.setKeyboardMarginEndDp(this@XimeInputMethodService, snapshot.resizePreviewMarginEndDp)
+                                      SettingsPreferences.setKeyboardMarginStartDp(
+                                          this@XimeInputMethodService,
+                                          snapshot.resizePreviewMarginStartDp,
+                                          SettingsPreferences.isLandscapeNow(this@XimeInputMethodService),
+                                      )
+                                      SettingsPreferences.setKeyboardMarginEndDp(
+                                          this@XimeInputMethodService,
+                                          snapshot.resizePreviewMarginEndDp,
+                                          SettingsPreferences.isLandscapeNow(this@XimeInputMethodService),
+                                      )
                                       uiState.value = snapshot.copy(
                                           showKeyboardResize = false,
                                           keyboardHeightDp = snapshot.resizePreviewHeightDp,
@@ -1969,8 +1979,14 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                   },
                                   onCancel = {
                                       val restoreHeight = SettingsPreferences.getKeyboardHeightDp(this@XimeInputMethodService, isLandscape)
-                                      val restoreStart = SettingsPreferences.getKeyboardMarginStartDp(this@XimeInputMethodService)
-                                      val restoreEnd = SettingsPreferences.getKeyboardMarginEndDp(this@XimeInputMethodService)
+                                      val restoreStart = SettingsPreferences.getKeyboardMarginStartDp(
+                                          this@XimeInputMethodService,
+                                          SettingsPreferences.isLandscapeNow(this@XimeInputMethodService),
+                                      )
+                                      val restoreEnd = SettingsPreferences.getKeyboardMarginEndDp(
+                                          this@XimeInputMethodService,
+                                          SettingsPreferences.isLandscapeNow(this@XimeInputMethodService),
+                                      )
                                       uiState.value = uiState.value.copy(
                                           showKeyboardResize = false,
                                           keyboardHeightDp = restoreHeight,
