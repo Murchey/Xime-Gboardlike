@@ -26,6 +26,15 @@ import java.io.IOException
 object RimeConfigHelper {
     private const val TAG = "RimeConfigHelper"
     private const val ASSETS_RIME_DIR = "rime"
+    /** 内置 OpenCC 简繁转换数据目录（相对 assets）。 */
+    private const val ASSETS_OPENCC_DIR = "rime/opencc"
+    /** librime 查找 OpenCC 配置的目录名（相对 rime 数据目录）。 */
+    private const val RIME_OPENCC_DIR = "opencc"
+
+    /** OpenCC 数据里需要落盘的扩展名：转换配置(json) + 词典(txt/ocd2)。 */
+    private val OPENCC_ASSET_EXTS = setOf("json", "txt", "ocd2")
+
+
     /** app 固定的 default.custom.yaml 模板（assets 根，与 xime.yaml 并列，不随 submodule 分发）。 */
     private const val ASSETS_DEFAULT_CUSTOM = "default.custom.yaml"
     private const val BUFFER_SIZE = 8192
@@ -488,6 +497,50 @@ object RimeConfigHelper {
         return digest.digest().joinToString("") { String.format("%02x", it) }
     }
 
+
+    /**
+     * 补齐内置 OpenCC 简繁转换数据。
+     *
+     * librime 的 simplifier 按 `<user_data_dir>/opencc/<config>` 查找转换配置，
+     * 缺目录时「简入繁出」（s2t / s2hk / s2tw 等）不生效，日志报
+     * `opencc config not found: s2t.json`。已经装过第三方方案的用户走增量路径时
+     * 不会触发全量资产复制，因此这里单独补齐。
+     *
+     * 只补缺失文件，不覆盖用户自有数据（方案包可能自带更新的词典）；
+     * 我们的资产是文本词典（`*.txt` + `*.json`），因此按扩展名白名单放行而非只认 ocd2。
+     *
+     * @return 本次补齐的文件数。
+     */
+    internal fun ensureOpenccAssets(context: Context, rimeDir: File): Int {
+        val names = try {
+            context.assets.list(ASSETS_OPENCC_DIR)
+        } catch (e: IOException) {
+            FileLogger.e(TAG, "Failed to list opencc assets", e)
+            null
+        } ?: return 0
+
+        val targetDir = File(rimeDir, RIME_OPENCC_DIR)
+        var copied = 0
+        for (name in names) {
+            // 只落转换配置与词典；说明文件（LICENSE 等）不写进 rime 数据目录
+            val ext = name.substringAfterLast('.', "").lowercase()
+            if (ext !in OPENCC_ASSET_EXTS) continue
+            val target = File(targetDir, name)
+            if (target.isFile && target.length() > 0L) continue
+            try {
+                target.parentFile?.mkdirs()
+                context.assets.open("$ASSETS_OPENCC_DIR/$name").use { input ->
+                    target.outputStream().use { output -> input.copyTo(output) }
+                }
+                copied++
+            } catch (e: IOException) {
+                FileLogger.e(TAG, "Failed to copy opencc asset: $name", e)
+            }
+        }
+        if (copied > 0) FileLogger.i(TAG, "Restored $copied builtin opencc file(s)")
+        return copied
+    }
+
     private fun copyAssetsToRimeDir(context: Context, targetDir: File): Boolean {
         // 判断 rime/ 是否已部署过任何方案（存在任意 <name>.schema.yaml）。
         // 全新安装时 rime/ 为空 → 全量复制内置默认方案与系统文件，保证开箱即用。
@@ -498,6 +551,9 @@ object RimeConfigHelper {
             ?.any { it.isFile && it.name.endsWith(".schema.yaml") } == true
         // 有内置包被卸载时也走增量路径，避免全量复制把已卸载的包灌回来。
         if (alreadyHasSchemas || BuiltinSeedState.isDisabled(context)) {
+            // 增量路径不会全量复制资产，opencc 简繁数据要单独补齐
+            // （不是编译输入，但会话懒加载，缺了「简入繁出」就不生效）
+            ensureOpenccAssets(context, targetDir)
             // 仅兜底确保 default.yaml 存在（librime 入口必需），缺失时补一份，不覆盖已有。
             ensureDefaultYaml(context, targetDir)
             // 默认方案强制更新（维护者决策）：默认方案随 app 发布、由维护者统一

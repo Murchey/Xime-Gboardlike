@@ -33,6 +33,17 @@ import kotlinx.coroutines.withContext
  * 中英切换已收敛至 [AsciiModeController]。
  * 共享状态通过 service 引用访问。
  */
+/**
+ * 轮换目标：已启用方案列表中当前方案的下一个（末尾回到首个）。
+ *
+ * 当前方案不在列表内（列表过期/刚部署完）时取首个；列表为空返回 null。
+ */
+internal fun nextSchemaId(schemaIds: List<String>, currentSchemaId: String): String? {
+    if (schemaIds.isEmpty()) return null
+    val index = schemaIds.indexOf(currentSchemaId)
+    return schemaIds[(index + 1) % schemaIds.size]
+}
+
 internal class ImeSchemaController(private val service: XimeInputMethodService) {
     internal fun reloadConfig() {
         
@@ -407,6 +418,26 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         if (userPageSize > 0) {
             service.rimeEngine.setPageSize(schemaId, userPageSize)
         }
+    }
+
+    /**
+     * 轮换切换到下一个已启用方案（菜单栏方案列表顺序）。
+     *
+     * 复用 [switchSchema]：中英模式、键盘类型、手写模型校验等行为与在菜单里选方案一致。
+     * 只有一个方案（或列表尚未就绪）时不做任何事。
+     */
+    internal fun cycleSchema() {
+        val state = service.uiState.value
+        val target = nextSchemaId(state.schemas.map { it.schemaId }, state.currentSchemaId)
+        if (target == null || target == state.currentSchemaId) {
+            FileLogger.i(
+                XimeInputMethodService.TAG,
+                "cycleSchema skipped: current=" + state.currentSchemaId +
+                    ", enabled=" + state.schemas.joinToString { it.schemaId }
+            )
+            return
+        }
+        switchSchema(target)
     }
 
     internal fun switchSchema(schemaId: String) {

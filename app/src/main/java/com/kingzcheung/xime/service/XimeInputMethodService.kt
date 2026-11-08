@@ -2130,6 +2130,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     // ── ActionExecutor 实现 ──
 
+    override fun cycleSchema() {
+        schemaController.cycleSchema()
+    }
+
     override fun performEditorMenuAction(actionId: Int) {
         when (actionId) {
             android.R.id.undo -> {

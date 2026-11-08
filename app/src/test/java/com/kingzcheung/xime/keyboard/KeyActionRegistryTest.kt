@@ -114,5 +114,8 @@ class KeyActionRegistryTest {
         override fun dispatchKey(key: String) {
             dispatched.add(key)
         }
+        override fun cycleSchema() {
+            dispatched.add("cycle_schema")
+        }
     }
 }
