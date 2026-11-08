@@ -77,7 +77,8 @@ class KeyboardPanelConfigTest {
             listOf(
                 listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0"),
                 // ＠ 已改为半角 @：只有半角才能触发微信等聊天工具的 @ 提醒
-                listOf("@", "＃", "＄", "＆", "＿", "－", "＋", "（", "）", "/"),
+                // 下划线用半角 _：全角 ＿ 在代码/邮箱里不可用
+                listOf("@", "＃", "＄", "＆", "_", "－", "＋", "（", "）", "/"),
                 listOf("open_symbols", "*", "“", "”", "！", "？", ",", ".", "delete"),
                 listOf("back", "number", "space_key", "enter"),
             ),
@@ -85,9 +86,9 @@ class KeyboardPanelConfigTest {
         )
         // 符号默认中文形态（全角）；@、*、/、, 与 . 保留半角 ASCII
         // （@ 必须半角，否则微信等聊天工具不触发 @ 提醒）
-        val halfWidthAllowed = setOf("@", "/")
+        val halfWidthAllowed = setOf("@", "_", "/")
         assertTrue(
-            "除 @ 与 / 外的符号键应为全角中文形态",
+            "除 @、_ 与 / 外的符号键应为全角中文形态",
             symbols.rows[1].filter { it !in halfWidthAllowed }
                 .all { it.length == 1 && it[0].code > 0x7E },
         )
@@ -247,7 +248,7 @@ class KeyboardPanelConfigTest {
         assertEquals(
             listOf(
                 listOf("tab", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "delete"),
-                listOf("caps", "@", "＃", "＄", "＿", "＆", "－", "＋", "（", "）", "enter"),
+                listOf("caps", "@", "＃", "＄", "_", "＆", "－", "＋", "（", "）", "enter"),
                 listOf("open_symbols", "*", "“", "”", "：", "；", "！", "？", "/", ",", "."),
                 listOf("back", "number", "space_key", "cursor_left", "cursor_right", "back_right"),
             ),
@@ -259,8 +260,12 @@ class KeyboardPanelConfigTest {
             symbols.rows[1].drop(1).first() == "@",
         )
         assertTrue(
-            "除 @ 外的符号键应为全角中文形态",
-            symbols.rows[1].drop(2).dropLast(1).all { it[0].code > 0x7E },
+            "下划线应为半角 _",
+            "_" in symbols.rows[1],
+        )
+        assertTrue(
+            "除 @、_ 外的符号键应为全角中文形态",
+            symbols.rows[1].drop(2).dropLast(1).filter { it != "_" }.all { it[0].code > 0x7E },
         )
         assertTrue("* 应使用标准半角星号", "*" in symbols.rows[2])
         assertTrue("/ 应使用标准半角斜杠", "/" in symbols.rows[2])

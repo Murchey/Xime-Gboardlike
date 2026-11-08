@@ -113,12 +113,31 @@ internal fun getActiveBottomInsetPx(imeWindow: Window?): Int {
 
 /**
  * 多类型检测左右 inset（px），取 displayCutout / systemBars / tappableElement
- * 各方向的最大值：手机横屏时挖孔/刘海位于屏幕左右边缘，三键导航时导航栏贴左右缘；
- * 竖屏下这三项的左右分量均为 0，不影响竖屏布局。
+ * 各方向的最大值。
+ *
+ * **只在横屏生效**：挖孔/刘海在横屏时位于屏幕左右边缘、三键导航栏横屏贴左右缘，
+ * 这些确实需要避让。竖屏时左右本该为 0，但部分 ROM（实测 MIUI）的
+ * tappableElement/systemBars 会给出左右非 0 值，照单全收会把键盘整体内缩、
+ * 屏幕上留出两条边——表现为「键盘没有占满屏幕宽度」。
+ *
  * 有意不含手势区（systemGestures / mandatorySystemGestures）：
  * 竖屏返回手势区贴左右缘且全高，计入会把竖屏键盘内容整体内缩。
  */
-internal fun extractHorizontalInsets(insets: WindowInsets): Pair<Int, Int> {
+/**
+ * 键盘内容是否需要按左右 inset 内缩。
+ *
+ * 只有横屏才避让：横屏时挖孔/刘海与三键导航栏贴屏幕左右缘；
+ * 竖屏左右本该为 0，但部分 ROM（实测 MIUI）的 tappableElement/systemBars
+ * 会给出非 0 值，照单全收会把键盘整体内缩、屏幕两侧留白——
+ * 用户看到的就是「键盘没有占满屏幕宽度」。
+ */
+internal fun shouldApplyHorizontalInsets(isLandscape: Boolean): Boolean = isLandscape
+
+internal fun extractHorizontalInsets(
+    insets: WindowInsets,
+    isLandscape: Boolean,
+): Pair<Int, Int> {
+    if (!shouldApplyHorizontalInsets(isLandscape)) return 0 to 0
     val cutout = insets.getInsets(WindowInsets.Type.displayCutout())
     val sys = insets.getInsets(WindowInsets.Type.systemBars())
     val tappable = insets.getInsets(WindowInsets.Type.tappableElement())
@@ -129,11 +148,11 @@ internal fun extractHorizontalInsets(insets: WindowInsets): Pair<Int, Int> {
 }
 
 /** 获取当前活跃的左右 inset（px）。 */
-internal fun getActiveHorizontalInsetsPx(imeWindow: Window?): Pair<Int, Int> {
+internal fun getActiveHorizontalInsetsPx(imeWindow: Window?, isLandscape: Boolean): Pair<Int, Int> {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return 0 to 0
     return try {
         val decorView = imeWindow?.decorView ?: return 0 to 0
         val insets = decorView.rootWindowInsets ?: return 0 to 0
-        extractHorizontalInsets(insets)
+        extractHorizontalInsets(insets, isLandscape)
     } catch (e: Exception) { 0 to 0 }
 }

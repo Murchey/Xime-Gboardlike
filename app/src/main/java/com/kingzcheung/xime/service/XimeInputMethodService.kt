@@ -1555,14 +1555,20 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         keyboardContainer.clipChildren = false
 
         bottomInsetPxState.value = getActiveBottomInsetPx(window.window)
-        horizontalInsetPxState.value = getActiveHorizontalInsetsPx(window.window)
+        horizontalInsetPxState.value = getActiveHorizontalInsetsPx(
+            window.window,
+            resources.configuration.screenWidthDp > resources.configuration.screenHeightDp,
+        )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             keyboardContainer.setOnApplyWindowInsetsListener { v, insets ->
                 val px = extractBottomInset(insets)
                 if (px != bottomInsetPxState.value) {
                     bottomInsetPxState.value = px
                 }
-                val h = extractHorizontalInsets(insets)
+                val h = extractHorizontalInsets(
+                    insets,
+                    resources.configuration.screenWidthDp > resources.configuration.screenHeightDp,
+                )
                 if (h != horizontalInsetPxState.value) {
                     horizontalInsetPxState.value = h
                 }
