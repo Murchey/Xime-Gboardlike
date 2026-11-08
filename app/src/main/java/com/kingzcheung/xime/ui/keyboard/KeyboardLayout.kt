@@ -837,11 +837,7 @@ internal fun resolveKeyboardPalette(themeId: String, isDarkTheme: Boolean): Keyb
         bubbleBgColor = popupBg,
         // 回车使用主题强调色（Gboard 行为），不再和功能键同色
         accentKeyBackgroundColor = KeyboardThemes.resolveEnterKeyColor(themeId, isDarkTheme),
-        accentKeyTextColor = KeyboardThemes.getAccentKeyTextColor(themeId, isDarkTheme)
-            ?: KeyboardThemes.getSpecialKeyTextColorForBackground(
-                KeyboardThemes.resolveEnterKeyColor(themeId, isDarkTheme),
-                keyTextColor,
-            ),
+        accentKeyTextColor = KeyboardThemes.resolveEnterKeyTextColor(themeId, isDarkTheme),
         popupTextColor = popupText,
         pressHighlightColor = KeyboardThemes.getKeyPressHighlightColor(themeId, isDarkTheme),
     )

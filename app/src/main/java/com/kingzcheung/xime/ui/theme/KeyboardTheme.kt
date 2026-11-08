@@ -126,6 +126,8 @@ data class KeyboardColorScheme(
      * 已选中的用户仍能正常使用（getThemeById 可解析），只是选择器里不再重复出现。
      */
     val hidden: Boolean = false,
+    /** 是否显著标注第一个候选词；自定义配色可关闭。 */
+    val highlightFirstCandidate: Boolean = true,
 )
 
 object KeyboardThemes {
@@ -1034,6 +1036,35 @@ object KeyboardThemes {
     /** 回车键底色：主题 token 优先，否则用主题强调色（Gboard 行为）。 */
     fun resolveEnterKeyColor(themeId: String, isDark: Boolean): Color =
         getAccentKeyBackground(themeId, isDark) ?: getAccentColor(themeId, isDark)
+
+    /**
+     * 回车键图标/文字色：主题显式 token 优先；否则按回车键底色的亮度取黑或白。
+     *
+     * 此前直接用功能键文字色推导，X 主题的强调色与功能键同色系时，
+     * 图标会和底色融成一片——这里改为只依赖回车键自身底色。
+     */
+    fun highlightFirstCandidate(themeId: String): Boolean {
+        val scheme = themesCache.firstOrNull { it.id == themeId } ?: return true
+        return scheme.highlightFirstCandidate
+    }
+
+    /** 按方案对象推导功能键组颜色（不查缓存，模板转换等场景可用）。 */
+    fun resolveFunctionKeyColor(scheme: KeyboardColorScheme, isDark: Boolean): Color {
+        val keyBg = if (isDark) scheme.keyBgDark else scheme.keyBgLight
+        val token = if (isDark) scheme.functionKeyBackgroundDark else scheme.functionKeyBackgroundLight
+        return token ?: if (isDark) lerp(keyBg, Color.White, 0.10f) else lerp(keyBg, Color.Black, 0.06f)
+    }
+
+    /** 按方案对象推导回车键颜色（token 优先，否则用强调色）。 */
+    fun resolveEnterKeyColor(scheme: KeyboardColorScheme, isDark: Boolean): Color =
+        (if (isDark) scheme.accentKeyBackgroundDark else scheme.accentKeyBackgroundLight)
+            ?: (if (isDark) scheme.accentDark else scheme.accentLight)
+
+    fun resolveEnterKeyTextColor(themeId: String, isDark: Boolean): Color {
+        val bg = resolveEnterKeyColor(themeId, isDark)
+        getAccentKeyTextColor(themeId, isDark)?.let { return it }
+        return if (bg.luminance() > 0.5f) Color(0xFF1F1F23) else Color(0xFFF2F5F8)
+    }
 
     /** 强调键文字色；null 时沿用功能键文字色。 */
     fun getAccentKeyTextColor(themeId: String, isDark: Boolean): Color? =

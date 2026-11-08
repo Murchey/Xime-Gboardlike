@@ -105,6 +105,8 @@ data class CandidateBarVisuals(
     val preeditBubbleBackground: Color = backgroundColor,
     /** 编码气泡文字：传按键文字色，与键盘正文一致。 */
     val preeditBubbleTextColor: Color = textColor,
+    /** 是否显著标注第一个候选词；关闭时首个候选不加底色、不用强调文字色。 */
+    val highlightFirstCandidate: Boolean = true,
 )
 
 data class CandidateBarCallbacks(
@@ -433,7 +435,7 @@ fun CandidateBar(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             ClipboardImageCandidateItem(
                                 file = clipboardImageFileOf?.invoke(imageItem),
-                                isSelected = index == 0,
+                                isSelected = index == 0 && visuals.highlightFirstCandidate,
                                 onClick = { callbacks.onCandidateSelect(index) },
                                 onLongClick = if (callbacks.onCandidateLongPress != null) {
                                     { callbacks.onCandidateLongPress(index) }
@@ -464,7 +466,7 @@ fun CandidateBar(
                                         else -> ""
                                     }
                                 } else "",
-                                isSelected = index == 0,
+                                isSelected = index == 0 && visuals.highlightFirstCandidate,
                                 accentColor = visuals.accentColor,
                                 selectedTextColor = visuals.selectedTextColor,
                                 commentColor = visuals.commentColor,

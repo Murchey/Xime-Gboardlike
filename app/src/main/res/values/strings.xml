@@ -1207,6 +1207,11 @@
     <string name="s_anjianwenzi">按键文字</string>
     <string name="s_houxuanwenzi">候选文字</string>
     <string name="s_qiangdiaose">强调色</string>
+    <string name="s_huichejianbeijing">回车键背景</string>
+    <string name="s_huichejiantubiao">回车键图标色</string>
+    <string name="s_genzhuqiangdiaose">跟随强调色</string>
+    <string name="s_qiangdiaodiyigehouxuan">强调第一个候选</string>
+    <string name="s_qiangdiaodiyigehouxuan_shuoming">关闭后第一个候选词不再加底色与强调文字色，仅按普通候选显示。</string>
     <string name="s_yansegeshicuowu">请输入 #RRGGBB 或 #AARRGGBB</string>
     <string name="s_sexian">色相</string>
     <string name="s_baohedu">饱和度</string>

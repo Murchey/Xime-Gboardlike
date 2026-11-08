@@ -15,6 +15,7 @@ fun CustomColorScheme.toKeyboardColorScheme(): KeyboardColorScheme {
     return KeyboardColorScheme(
         id = id,
         name = name,
+        highlightFirstCandidate = highlightFirstCandidate,
         specialKeyLight = light.functionKeyBackground.toComposeColor(),
         specialKeyDark = dark.functionKeyBackground.toComposeColor(),
         // 自定义主题的「功能键背景」直接驱动 shift/退格/字符键分组
@@ -38,8 +39,14 @@ fun CustomColorScheme.toKeyboardColorScheme(): KeyboardColorScheme {
         keyTextColorDark = dark.keyText.toComposeColor(),
         candidateTextColorLight = light.candidateText.toComposeColor(),
         candidateTextColorDark = dark.candidateText.toComposeColor(),
-        candidateSelectedTextColorLight = lightAccent,
-        candidateSelectedTextColorDark = darkAccent,
+        // 关闭"强调第一个候选"时，选中色回退为普通候选色（仍有底色以外的最小标识）
+        candidateSelectedTextColorLight = if (highlightFirstCandidate) lightAccent else light.candidateText.toComposeColor(),
+        candidateSelectedTextColorDark = if (highlightFirstCandidate) darkAccent else dark.candidateText.toComposeColor(),
+        // 回车键：面板里单独配过就用配置值，否则留空跟随强调色
+        accentKeyBackgroundLight = light.enterKeyBackground.takeIf { it.isNotBlank() }?.toComposeColor(),
+        accentKeyBackgroundDark = dark.enterKeyBackground.takeIf { it.isNotBlank() }?.toComposeColor(),
+        accentKeyTextColorLight = light.enterKeyIconColor.takeIf { it.isNotBlank() }?.toComposeColor(),
+        accentKeyTextColorDark = dark.enterKeyIconColor.takeIf { it.isNotBlank() }?.toComposeColor(),
     )
 }
 
@@ -71,25 +78,36 @@ fun CustomColorScheme.toColorSchemeEntry(): ColorSchemeEntry {
     )
 }
 
-/** 内置主题 → 自定义配色模板：把当前浅/深色板完整带入，用户从它开始微调。 */
+/**
+ * 内置主题 → 自定义配色模板：把**实际渲染用的**浅/深色板完整带入。
+ *
+ * 关键点：功能键组与回车键在键盘上是经 [KeyboardThemes.resolveFunctionKeyColor] /
+ * [KeyboardThemes.resolveEnterKeyColor] 推导出来的，直接读 specialKey/accent token
+ * 会让模板颜色和键盘实际颜色对不上（此前就是这个问题）。
+ */
 fun KeyboardColorScheme.toCustomColorScheme(name: String): CustomColorScheme = CustomColorScheme(
     id = CustomThemeStore.newId(),
     name = name,
     light = ThemeColorSet(
         keyboardBackground = keyboardBgLight.toHexString(),
         keyBackground = keyBgLight.toHexString(),
-        functionKeyBackground = (functionKeyBackgroundLight ?: specialKeyLight).toHexString(),
+        functionKeyBackground = KeyboardThemes.resolveFunctionKeyColor(this, false).toHexString(),
         keyText = keyTextColorLight.toHexString(),
         candidateText = candidateTextColorLight.toHexString(),
         accent = accentLight.toHexString(),
+        // 回车键取键盘实际渲染色，保证模板与真实效果一致
+        enterKeyBackground = KeyboardThemes.resolveEnterKeyColor(this, false).toHexString(),
+        enterKeyIconColor = accentKeyTextColorLight?.toHexString().orEmpty(),
     ),
     dark = ThemeColorSet(
         keyboardBackground = keyboardBgDark.toHexString(),
         keyBackground = keyBgDark.toHexString(),
-        functionKeyBackground = (functionKeyBackgroundDark ?: specialKeyDark).toHexString(),
+        functionKeyBackground = KeyboardThemes.resolveFunctionKeyColor(this, true).toHexString(),
         keyText = keyTextColorDark.toHexString(),
         candidateText = candidateTextColorDark.toHexString(),
         accent = accentDark.toHexString(),
+        enterKeyBackground = KeyboardThemes.resolveEnterKeyColor(this, true).toHexString(),
+        enterKeyIconColor = accentKeyTextColorDark?.toHexString().orEmpty(),
     ),
 )
 

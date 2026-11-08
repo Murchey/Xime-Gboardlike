@@ -41,6 +41,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -76,6 +77,8 @@ private enum class ThemeColorField(val labelRes: Int) {
     KEY_TEXT(R.string.s_anjianwenzi),
     CANDIDATE_TEXT(R.string.s_houxuanwenzi),
     ACCENT(R.string.s_qiangdiaose),
+    ENTER_KEY_BG(R.string.s_huichejianbeijing),
+    ENTER_KEY_ICON(R.string.s_huichejiantubiao),
 }
 
 private val COLOR_PRESETS = listOf(
@@ -304,6 +307,35 @@ fun ThemeEditorContent(
                 }
             }
 
+            // 强调候选开关：关闭后第一个候选不再加底色/强调文字，只做普通展示
+            item {
+                SettingsSection(title = tr(R.string.s_houxuanci)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = tr(R.string.s_qiangdiaodiyigehouxuan),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = tr(R.string.s_qiangdiaodiyigehouxuan_shuoming),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = draft.highlightFirstCandidate,
+                            onCheckedChange = { draft = draft.copy(highlightFirstCandidate = it) },
+                        )
+                    }
+                }
+            }
+
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -405,10 +437,18 @@ fun ThemeEditorContent(
 
     editingField?.let { field ->
         val colorSet = if (isDarkMode) draft.dark else draft.light
+        // 回车键两个色是"可选"：清空即回到跟随强调色
+        val optional = field == ThemeColorField.ENTER_KEY_BG || field == ThemeColorField.ENTER_KEY_ICON
         ColorPickerDialog(
             title = tr(field.labelRes),
             initialHex = colorSet.valueFor(field),
             onDismiss = { editingField = null },
+            onClear = if (optional) {
+                {
+                    draft = draft.withColor(field, isDarkMode, "")
+                    editingField = null
+                }
+            } else null,
             onConfirm = { hex ->
                 draft = draft.withColor(field, isDarkMode, hex)
                 editingField = null
@@ -563,7 +603,8 @@ private fun ThemeColorRow(label: String, value: String, onClick: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = value.uppercase(),
+            // 可选色为空 = 跟随强调色，明确提示而不是显示空白
+            text = if (value.isBlank()) tr(R.string.s_genzhuqiangdiaose) else value.uppercase(),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -572,7 +613,10 @@ private fun ThemeColorRow(label: String, value: String, onClick: () -> Unit) {
             modifier = Modifier
                 .size(28.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(value.toComposeColor())
+                .background(
+                    if (value.isBlank()) MaterialTheme.colorScheme.surfaceVariant
+                    else value.toComposeColor()
+                )
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
         )
     }
@@ -641,6 +685,8 @@ private fun ColorPickerDialog(
     title: String,
     initialHex: String,
     onDismiss: () -> Unit,
+    /** 非 null 时提供"跟随强调色"入口（清空可选色）。 */
+    onClear: (() -> Unit)? = null,
     onConfirm: (String) -> Unit,
 ) {
     var color by remember { mutableStateOf(initialHex.toComposeColor()) }
@@ -738,7 +784,12 @@ private fun ColorPickerDialog(
             ) { Text(tr(R.string.s_queding)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(tr(R.string.s_quxiao)) }
+            Row {
+                onClear?.let { clear ->
+                    TextButton(onClick = clear) { Text(tr(R.string.s_genzhuqiangdiaose)) }
+                }
+                TextButton(onClick = onDismiss) { Text(tr(R.string.s_quxiao)) }
+            }
         },
     )
 }
@@ -780,6 +831,9 @@ private fun ThemeColorSet.valueFor(field: ThemeColorField): String = when (field
     ThemeColorField.KEY_TEXT -> keyText
     ThemeColorField.CANDIDATE_TEXT -> candidateText
     ThemeColorField.ACCENT -> accent
+    // 空串表示"跟随强调色"，面板显示为未设置提示
+    ThemeColorField.ENTER_KEY_BG -> enterKeyBackground
+    ThemeColorField.ENTER_KEY_ICON -> enterKeyIconColor
 }
 
 private fun ThemeColorSet.withValue(field: ThemeColorField, value: String): ThemeColorSet = when (field) {
@@ -789,6 +843,8 @@ private fun ThemeColorSet.withValue(field: ThemeColorField, value: String): Them
     ThemeColorField.KEY_TEXT -> copy(keyText = value)
     ThemeColorField.CANDIDATE_TEXT -> copy(candidateText = value)
     ThemeColorField.ACCENT -> copy(accent = value)
+    ThemeColorField.ENTER_KEY_BG -> copy(enterKeyBackground = value)
+    ThemeColorField.ENTER_KEY_ICON -> copy(enterKeyIconColor = value)
 }
 
 private fun CustomColorScheme.withColor(field: ThemeColorField, isDark: Boolean, value: String): CustomColorScheme =

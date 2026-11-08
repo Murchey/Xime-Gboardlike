@@ -248,8 +248,8 @@ internal fun ThemeKeyboardPreview(
         functionKeyColor, textColor
     )
     val enterKeyColor = KeyboardThemes.resolveEnterKeyColor(theme.id, isDark)
-    val enterTextColor = KeyboardThemes.getAccentKeyTextColor(theme.id, isDark)
-        ?: KeyboardThemes.getSpecialKeyTextColorForBackground(enterKeyColor, textColor)
+    // 与实机同一入口，避免预览与键盘的回车图标色不一致
+    val enterTextColor = KeyboardThemes.resolveEnterKeyTextColor(theme.id, isDark)
     val context = LocalContext.current
     val candidateTextSize = SettingsPreferences.getCandidateTextSize(context)
 

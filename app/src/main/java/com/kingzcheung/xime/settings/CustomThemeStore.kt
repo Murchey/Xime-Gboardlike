@@ -6,7 +6,12 @@ import org.json.JSONObject
 import java.io.File
 import java.util.UUID
 
-/** 一套配色在浅色或深色模式下的六个可调颜色，统一存 #RRGGBB / #AARRGGBB。 */
+/**
+ * 一套配色在浅色或深色模式下的可调颜色，统一存 #RRGGBB / #AARRGGBB。
+ *
+ * [enterKeyBackground]/[enterKeyIconColor] 为空串表示"跟随主题强调色"（回车键沿用 accent，
+ * 图标色按对比度自动取），仅自定义配色面板会写入具体值。
+ */
 data class ThemeColorSet(
     val keyboardBackground: String,
     val keyBackground: String,
@@ -14,14 +19,21 @@ data class ThemeColorSet(
     val keyText: String,
     val candidateText: String,
     val accent: String,
+    val enterKeyBackground: String = "",
+    val enterKeyIconColor: String = "",
 )
 
-/** 用户自定义配色方案：浅色与深色各自一套颜色，id 以 custom_ 开头。 */
+/**
+ * 用户自定义配色方案：浅色与深色各自一套颜色，id 以 custom_ 开头。
+ *
+ * [highlightFirstCandidate] = false 时不显著标注第一个候选词（去掉候选底色与强调文字色）。
+ */
 data class CustomColorScheme(
     val id: String,
     val name: String,
     val light: ThemeColorSet,
     val dark: ThemeColorSet,
+    val highlightFirstCandidate: Boolean = true,
 )
 
 /**
@@ -153,11 +165,20 @@ object CustomThemeStore {
             name = name,
             light = parseColorSet(lightJson, GBOARD_LIGHT),
             dark = parseColorSet(darkJson, GBOARD_DARK),
+            // 缺省 true：旧文件没有该字段时保持既有"标注第一个候选"的行为
+            highlightFirstCandidate = json.optBoolean("highlight_first_candidate", true),
         )
     }
 
     private fun parseColorSet(json: JSONObject, fallback: ThemeColorSet): ThemeColorSet {
         fun color(key: String, default: String): String {
+            val raw = json.optString(key)
+            if (raw.isBlank()) return default
+            return normalizeHexColor(raw)
+                ?: throw ThemeFormatException("$key 不是有效颜色：$raw")
+        }
+        // 可选色：空串 = 跟随主题强调色；写了非法值仍报错，避免静默忽略。
+        fun optionalColor(key: String, default: String): String {
             val raw = json.optString(key)
             if (raw.isBlank()) return default
             return normalizeHexColor(raw)
@@ -170,12 +191,15 @@ object CustomThemeStore {
             keyText = color("key_text", fallback.keyText),
             candidateText = color("candidate_text", fallback.candidateText),
             accent = color("accent", fallback.accent),
+            enterKeyBackground = optionalColor("enter_key_background", fallback.enterKeyBackground),
+            enterKeyIconColor = optionalColor("enter_key_icon_color", fallback.enterKeyIconColor),
         )
     }
 
     private fun CustomColorScheme.toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("name", name)
+        put("highlight_first_candidate", highlightFirstCandidate)
         put("light", light.toJson())
         put("dark", dark.toJson())
     }
@@ -187,6 +211,8 @@ object CustomThemeStore {
         put("key_text", keyText)
         put("candidate_text", candidateText)
         put("accent", accent)
+        if (enterKeyBackground.isNotBlank()) put("enter_key_background", enterKeyBackground)
+        if (enterKeyIconColor.isNotBlank()) put("enter_key_icon_color", enterKeyIconColor)
     }
 
     private fun file(context: Context): File =

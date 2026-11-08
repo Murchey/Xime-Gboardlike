@@ -229,6 +229,12 @@ Core rules:
 - **Minimal changes** — PRs must contain only the minimum changes needed
 - **GPG signing** — All commits must be GPG-signed
 
+## Donations
+
+**Please note: your support motivates the developer to keep improving the app, but it is not tied to any specific development outcome. Donations are voluntary and are in no way a purchase of this software's services!**
+
+![WeChat donation QR code](docs/BUY_ME_A_COFFEE.jpg)
+
 ## Acknowledgments
 
 - [Rime](https://rime.im/) - Input method engine

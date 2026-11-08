@@ -527,6 +527,10 @@ fun KeyboardView(
                     // 编码气泡跟随键盘底色/按键文字色，暗色模式下不再是白底灰字
                     preeditBubbleBackground = keyboardBgColor,
                     preeditBubbleTextColor = keyTextColor,
+                    // 自定义配色可关闭"强调第一个候选"；内置主题恒为 true
+                    highlightFirstCandidate = KeyboardThemes.highlightFirstCandidate(
+                        state.themeId
+                    ),
                 ),
                 callbacks = CandidateBarCallbacks(
                     // 常驻语音：点按候选栏频谱区域结束识别。
