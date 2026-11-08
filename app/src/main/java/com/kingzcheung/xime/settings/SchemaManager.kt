@@ -774,6 +774,35 @@ object SchemaManager {
      * 从 YAML 文本中提取顶层 `schema:` 块及其子内容，返回一个可独立解析的 YAML 片段。
      * 避免 kaml 因为文件的其他部分（重复 `__include`、锚点等）而报错。
      */
+
+    /**
+     * 方案包健康自检：找出「存在但解析不出 schema_id」的 `.schema.yaml`。
+     *
+     * 这类文件是「导入方案不可用」的直接来源——文件在目录里、方案列表也显示，
+     * 但 librime 编译时拿不到 schema 块，部署后没有产物、打字没有候选。
+     *
+     * 只做静态检查，不触发部署；返回文件名便于在导入结果里提示用户。
+     */
+    fun findBrokenSchemaFiles(rimeDir: File): List<String> {
+        if (!rimeDir.isDirectory) return emptyList()
+        val files = rimeDir.listFiles { f -> f.isFile && f.name.endsWith(".schema.yaml") }
+            ?: return emptyList()
+        return files.filter { file ->
+            try {
+                // 带 BOM 的文件会在部署前被清掉，这里按修复后语义判断
+                val text = file.readText().trimStart('\uFEFF')
+                val block = extractSchemaBlock(text)
+                if (block == null) {
+                    true
+                } else {
+                    yaml.decodeFromString(SchemaYaml.serializer(), block).schema.schemaId.isEmpty()
+                }
+            } catch (_: Exception) {
+                true
+            }
+        }.map { it.name }
+    }
+
     internal fun extractSchemaBlock(yamlText: String): String? {
         val lines = yamlText.lines()
         val schemaLineIndex = lines.indexOfFirst {

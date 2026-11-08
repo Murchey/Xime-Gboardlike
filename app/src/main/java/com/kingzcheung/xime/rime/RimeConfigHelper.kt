@@ -90,6 +90,12 @@ object RimeConfigHelper {
             if (bomFixed > 0) {
                 FileLogger.w(TAG, "Stripped UTF-8 BOM from $bomFixed yaml file(s) before deploy")
             }
+            // 解析不出 schema_id 的方案文件必定编译不出产物，提前记日志便于排查
+            // 「导入的方案不可用」；不阻断部署，避免误伤语法特殊但可用的方案。
+            val broken = SchemaManager.findBrokenSchemaFiles(File(context.filesDir, "rime"))
+            if (broken.isNotEmpty()) {
+                FileLogger.w(TAG, "Unparsable schema file(s): " + broken.joinToString())
+            }
             // 刚补回基础文件：旧 hash 与产物已不可信，强制重编
             if (ensureBuiltinBaseFiles(context) > 0) SettingsPreferences.setDeploymentHash(context, "")
             // assets 补建可能把用户 schema 覆盖回内置版本，这里再自愈一次才算真正生效
