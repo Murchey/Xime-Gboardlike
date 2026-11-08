@@ -1,97 +1,120 @@
 # ANR 诊断报告（2026-11-08）
 
-## 结论先行
+> 本报告基于真机实测。结论在第二轮做了重要修正：**ANR 与点击时机无关**，
+> 主因是测试设备系统过载 + 小米的系统级进程管理，我们的主线程优化收益有限。
 
-adb 调试期间的「无响应」**不是单一原因**，实测证据指向三层：
-
-1. **冷启动主线程卡顿（我们可控，已定位）** —— 启动期主线程被重活占住约 1.5 秒
-2. **系统侧干扰（不可控）** —— 小米注入的 `libMEOW` / `QT` 库在进程启动时同步加载
-3. **调试方式放大（测量伪影）** —— 冷启动后立刻 adb 点击，落在初始化窗口内必然触发 5s ANR 阈值
-
-## 实测数据
+## 一、实测数据
 
 设备：Xiaomi 21091116AC / Android 13 (SDK 33) / 1080×2260 @2.75
 
-```
-am start -W 结果：
-  TotalTime: 2171 ms
+### 1.1 冷启动耗时
 
-主线程卡顿证据：
-  Choreographer: Skipped 51 frames!
-  Choreographer: Skipped 83 frames!
-  OpenGLRenderer: Davey! duration=1530ms
-```
+`am start -W` 连续多次：
 
-### 冷启动时间线
-
-| 时间 | 事件 |
+| 次数 | TotalTime |
 |---|---|
-| 15:51:57.239 | `JNI_OnLoad success` |
-| 15:51:57.385 | FileLogger 初始化 |
-| 15:51:57.392 | CorrectionPriors init（含 ONNX 模型路径） |
-| 15:51:57.441 | PluginManager 初始化（异步派发到 7023 线程） |
-| **15:51:57.797** | **ModelRuntime attached** |
-| 15:51:57.805–57.812 | `libMEOW` / `QT` 系统库加载（主线程 6996） |
-| 15:51:58.877 | **Davey! duration=1530ms** ← 卡顿峰值 |
-| 15:51:59.012 | `initRimeEngine: Starting initialization` |
-| 15:51:59.978 | Rime 引擎初始化完成 |
-| 15:52:01.425 | CorrectionPriors selfCheck |
+| 基线（优化前） | 2171 ms |
+| P0 优化后 ×3 | 2235 / 2178 / 2224 ms |
 
-关键观察：**真正的 1.5 秒卡顿发生在 Rime 初始化之前**，即 Application.onCreate → 首次绘制之间，
-而不是 rime 部署或方案加载。
+**结论：把 FileLogger 的日志清理由主线程移到后台线程后，冷启动耗时没有可测量变化**
+（2171 → ~2200，属测量噪声）。这说明日志清理不是瓶颈。
 
-## 分层归因
+### 1.2 主线程卡顿
 
-### A. 我们可控的部分
+```
+Choreographer: Skipped 52 frames!
+OpenGLRenderer: Davey! duration=1524ms
+Choreographer: Skipped 82 frames!
+Looper: PerfMonitor longMsg : seq=3 wall=1029ms h=android.app.ActivityThread$H w=110
+```
 
-| 项 | 现状 | 风险 |
-|---|---|---|
-| Application.onCreate 主线程重活 | FileLogger、CorrectionPriors、PluginManager、ModelRuntime 依次同步初始化 | 中 |
-| `CorrectionPriors` ONNX 模型路径解析 | 在 onCreate 主线程 | 中 |
-| `initRimeEngine` 首次 `KeysConfigHelper.loadConfig` | 已改为进程内只同步解析一次（上一轮修复） | 低（已优化） |
-| 大方案（万象）引擎初始化 | 实测约 0.97s，且已在 IO 线程 | 中 |
+`w=110` 对应 `BIND_APPLICATION`，即 Application 初始化 + 首个 Activity 创建，
+wall=1029ms 是这一段的总耗时。
 
-### B. 不可控部分
+### 1.3 关键修正：ANR 与点击时机无关
 
-- `libMEOW`（`libMEOW_gift.so`）与 `QT` 是**小米系统注入**的库，在进程启动时同步初始化，
-  我们无法绕过。日志中的 `Support!!` / `[QT]file does not exist` 都来自它。
+按不同等待时间点击输入框，统计是否触发 ANR：
 
-### C. 测量伪影
+| 等待 | ANR |
+|---|---|
+| 3 s | 0 |
+| 6 s | 1 |
+| 10 s | 0 |
+| 15 s | 1 |
+| 20 s | **1** |
 
-adb 脚本「启动后立刻点击」的模式，正好落在 Application 初始化 + 首帧渲染的窗口内。
-系统判定 `Waited 5001ms for MotionEvent(action=DOWN)` 后弹 ANR——
-这不是应用真的挂了，而是**点击得太早**。
+**等 20 秒再点仍然会 ANR**，因此「点击太早撞上启动窗口」这个假设不成立，
+第一轮的推断需要修正。
 
-本轮复现记录：15:20、15:22、15:29、15:30、15:32 连续 5 次，均为此模式；
-等待 10–15 秒后再点击则从不复现。
+### 1.4 真正的主因
 
-## 改进方案（按收益/成本排序）
+```
+ActivityManager: ANR in com.ximegboard (...MainActivity)
+Reason: Input dispatching timed out (... Waited 5001ms for MotionEvent(action=DOWN))
+Load: 16.93 / 16.56 / 16.18        ← 系统 1/5/15 分钟负载
+ActivityManagerServiceImpl: checkThawTime uid=10169 report=Input dispatching timed out
+```
 
-### P0：把 Application.onCreate 的主线程工作继续外移
+两点关键信息：
 
-- `CorrectionPriors.init`：ONNX 模型路径解析与状态加载改为懒加载（首次用到纠错时再初始化）
-- `FileLogger`：日志文件创建改为后台线程（初始化本身只是建目录+打开流，但仍在主线程）
-- 目标：把 onCreate 主线程耗时压到 200ms 内
+1. **系统负载 16.9**：这台设备在测试期间长期高负载，主线程拿不到 CPU 时间片，
+   5 秒内无法处理 MotionEvent，系统就判 ANR。这与应用代码质量无关。
+2. **ANR 主体是 `MainActivity`（设置页），不是输入法 Service**。
+   `dumpsys` 里输入法 Service 状态为 `FGS LACT SLTA UI CAPS`（前台服务、可见），
+   本身工作正常。
+3. `checkThawTime` 表明进程可能经历系统的冻结/解冻（小米后台管控），
+   解冻期间不响应输入也会被判超时。
 
-### P1：启动期输入防护
+## 二、分层归因（修正后）
 
-在 IME 未就绪期间，对触摸事件做「吞掉并给出进度提示」而不是让系统等满 5 秒：
+| 层 | 内容 | 可控性 | 实际影响 |
+|---|---|---|---|
+| A | Application.onCreate 主线程初始化（FileLogger / CorrectionPriors / PluginManager / ModelRuntime） | ✅ 部分可优化 | **小**（优化后无测量差异） |
+| B | 首帧渲染（libMEOW 注入、DecorView、SurfaceFactory、硬件加速初始化） | ❌ 不可控 | 中（1.5s Davey 主要在这里） |
+| C | **设备系统负载 16.9 + 小米冻结/解冻** | ❌ 不可控 | **大（ANR 的直接原因）** |
 
-- `XimeInputMethodService` 已有 `isDeploying` 状态，可在该状态下把键盘视图设为
-  `importantForAccessibility` + 拦截点击，避免系统判定输入超时
+## 三、已完成的优化
 
-### P2：测量方法规范化
+### 3.1 日志清理移出主线程
 
-- 调试脚本统一「启动后等待 12s 再交互」
-- 需要精确计时时用 `am start -W` 的 TotalTime，而不是靠点击是否响应推断
+`FileLogger.init` 原先在主线程执行三趟目录扫描（`cleanOldLogs` / `cleanRimeLogs` /
+`cleanOrphanedLogs`）。已改为后台线程执行，初始化路径只保留「打开今天的日志文件」。
 
-## 本次已修复（与本报告相关）
+**实测效果**：冷启动耗时无显著变化（2171 → ~2200ms）。收益是主线程少做三趟文件 IO，
+但在这台设备上被系统负载掩盖，无法量测。
 
-- `KeysConfigHelper` 全量 YAML 解析（真机约 1.8s）不再每次 `initRimeEngine` 都同步执行
-- 插件备份扩展点超时从 180s 放宽到 300s 且不再停用插件
+### 3.2 插件备份超时（上一轮）
 
-## 未验证项
+180s → 300s 且超时不停用插件。
 
-`/data/anr/` 下的 trace 文件需要 root 才能读取，本机 adb shell 无 `su`，
-因此**没有拿到 ANR 发生瞬间的 Java 堆栈**。上面的归因基于时间线日志与
-Choreographer/Davey 证据，不是堆栈直证。
+### 3.3 KeysConfigHelper 同步解析（更早）
+
+全量 YAML 解析（真机约 1.8s）不再每次 `initRimeEngine` 都同步执行。
+
+## 四、改进方案（修正优先级）
+
+### 不再推荐
+
+- ~~「启动期输入防护」~~：ANR 与启动窗口无关（1.3 实测否定），
+  加防护层只会增加复杂度而无收益。
+
+### P1：先确认设备环境
+
+**这是当前最高优先级**。在做任何应用侧优化前，需要先排除测量环境问题：
+
+1. 换一台负载正常的设备复测
+2. 关闭小米的「后台弹出界面」「省电策略」对 com.ximegboard 的限制（设为无限制）
+3. 测量前先 `adb shell am force-stop` 清理后台并静置 1 分钟
+
+如果换设备后 ANR 消失，说明问题在测试环境而非应用。
+
+### P2：可选的进一步优化
+
+- `CorrectionPriors` 的 ONNX 模型路径解析改为懒加载（首次用到纠错时才做）
+- 首帧渲染路径：检查设置页 Compose 首屏是否有可延迟的重活
+
+## 五、未验证项
+
+- `/data/anr/` 下的 trace 需要 root，本机 adb 无 `su`，
+  **未拿到 ANR 瞬间的 Java 堆栈**。本报告归因基于时间线日志、
+  Choreographer/Davey、系统负载与 `checkThawTime` 证据。

@@ -49,15 +49,21 @@ object FileLogger {
             verboseLoggingEnabled = SettingsPreferences.isVerboseLoggingEnabled(context)
             
             openLogFile()
-            cleanOldLogs()
-            cleanRimeLogs(context)
-            cleanOrphanedLogs()
             
             running = true
             Thread({ flusherLoop() }, "log-flusher").also { it.isDaemon = true }.start()
             
             isInitialized = true
             i(TAG, "FileLogger initialized, log file: ${logFile!!.absolutePath}")
+
+            // 日志清理是纯文件 IO（listFiles + lastModified + delete，最多三次目录扫描），
+            // 放在 Application.onCreate 主线程上会直接拖慢冷启动首帧。
+            // 清理与「今天这份日志能否写入」无因果关系，异步执行完全等价。
+            Thread({
+                cleanOldLogs()
+                cleanRimeLogs(context)
+                cleanOrphanedLogs()
+            }, "log-cleaner").also { it.isDaemon = true }.start()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize FileLogger", e)
         }
