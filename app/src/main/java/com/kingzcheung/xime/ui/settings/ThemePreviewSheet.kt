@@ -177,6 +177,8 @@ private fun ThemePreviewPager(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 2.dp),
+                    // 主题选择页的预览按主题自身设置：Gboard 主题不强调首候选
+                    highlightFirstCandidate = theme.highlightFirstCandidate,
                 )
             }
         }
@@ -216,6 +218,15 @@ private fun PageIndicator(
         }
     }
 }
+
+/**
+ * 预览里首个候选是否显示为「已选中」。
+ *
+ * 抽成纯函数便于单测：此前预览硬编码 true、编辑器又漏传开关值，
+ * 导致来回切「强调第一个候选」预览毫无变化。
+ */
+internal fun previewFirstCandidateSelected(highlightFirstCandidate: Boolean): Boolean =
+    highlightFirstCandidate
 
 @Composable
 internal fun ThemeKeyboardPreview(
@@ -422,7 +433,7 @@ private fun CandidateBarPreview(
         ) {
             PreviewCandidate(
                 text = tr(R.string.s_xima),
-                isSelected = highlightFirstCandidate,
+                isSelected = previewFirstCandidateSelected(highlightFirstCandidate),
                 accent = accent,
                 textColor = textColor,
                 selectedTextColor = selectedTextColor,

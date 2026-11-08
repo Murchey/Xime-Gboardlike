@@ -592,6 +592,9 @@ private fun ThemePreviewCard(
                     .takeIf { it.isNotBlank() }?.toComposeColor(),
                 enterTextColorOverride = colorSet.enterKeyIconColor
                     .takeIf { it.isNotBlank() }?.toComposeColor(),
+                // 开关状态直接来自草稿：此前漏传，预览恒用默认值 true，
+                // 来回切「强调第一个候选」预览都不变
+                highlightFirstCandidate = scheme.highlightFirstCandidate,
             )
         }
     }
