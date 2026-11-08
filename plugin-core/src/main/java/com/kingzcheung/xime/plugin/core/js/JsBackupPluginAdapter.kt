@@ -31,6 +31,18 @@ class JsBackupPluginAdapter(
     pluginContext: PluginContext,
     private val blobStore: BlobStore? = null
 ) : JsPluginAdapter(runtime, pluginContext), BackupPlugin {
+    /**
+     * 备份扩展点统一入口：长耗时网络 IO，超时只中止本次调用（不中毒）。
+     *
+     * 慢网络上传/下载几十 MB 是正常行为，不该被 180s 通用超时当成死循环而停用插件。
+     */
+    private fun callBackup(path: String, vararg args: Any?): Any? =
+        runtime.callAsync(
+            path, *args,
+            timeoutMs = JsScriptRuntime.BACKUP_CALL_TIMEOUT_MS,
+            poisonOnTimeout = false,
+        )
+
 
     override suspend fun pushBackup(name: String, archive: File): BackupResult =
         withContext(Dispatchers.IO) {
@@ -39,8 +51,7 @@ class JsBackupPluginAdapter(
             // 所有权仍属调用方（BackupManager）：release 只注销句柄，不删文件
             val blobId = store.register(pluginContext.pluginInfo.id, archive, owned = false)
             try {
-                val result = runtime.callAsync(
-                    JsPluginContract.PATH_BACKUP_PUSH,
+                val result = callBackup(JsPluginContract.PATH_BACKUP_PUSH,
                     mapOf("name" to name, "size" to archive.length(), "archiveId" to blobId)
                 )
                 parseBackupResult(result)
@@ -54,7 +65,7 @@ class JsBackupPluginAdapter(
 
     override suspend fun pullBackup(id: String): BackupDownload? = withContext(Dispatchers.IO) {
         try {
-            val result = runtime.callAsync(JsPluginContract.PATH_BACKUP_PULL, id)
+            val result = callBackup(JsPluginContract.PATH_BACKUP_PULL, id)
             val blobId = (JsScriptRuntime.jsToKotlin(result) as? String)?.takeIf { it.isNotEmpty() }
                 ?: return@withContext null
             val store = blobStore ?: return@withContext null
@@ -73,7 +84,7 @@ class JsBackupPluginAdapter(
 
     override suspend fun listBackups(): List<RemoteBackupEntry>? = withContext(Dispatchers.IO) {
         try {
-            val result = runtime.callAsync(JsPluginContract.PATH_BACKUP_LIST)
+            val result = callBackup(JsPluginContract.PATH_BACKUP_LIST)
             val items = JsScriptRuntime.jsToKotlin(result) as? List<*> ?: return@withContext null
             items.mapNotNull { item ->
                 val map = JsScriptRuntime.jsToKotlin(item) as? Map<*, *> ?: return@mapNotNull null
@@ -93,7 +104,7 @@ class JsBackupPluginAdapter(
 
     override suspend fun deleteBackup(id: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            (JsScriptRuntime.jsToKotlin(runtime.callAsync(JsPluginContract.PATH_BACKUP_REMOVE, id)) as? Boolean) ?: false
+            (JsScriptRuntime.jsToKotlin(callBackup(JsPluginContract.PATH_BACKUP_REMOVE, id)) as? Boolean) ?: false
         } catch (e: Exception) {
             Log.e("JsBackup", "deleteBackup failed", e)
             false
@@ -102,7 +113,7 @@ class JsBackupPluginAdapter(
 
     override suspend fun testConnection(): String? = withContext(Dispatchers.IO) {
         try {
-            val result = runtime.callAsync(JsPluginContract.PATH_BACKUP_TEST)
+            val result = callBackup(JsPluginContract.PATH_BACKUP_TEST)
             val v = JsScriptRuntime.jsToKotlin(result)
             when (v) {
                 null -> null

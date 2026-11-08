@@ -93,6 +93,15 @@ class JsScriptRuntime(
         /** 插件业务调用（load/call/onLoad/onUnload）超时；超时后插件标记中毒不再执行。 */
         private const val CALL_TIMEOUT_MS = 180_000L
 
+        /**
+         * 备份扩展点调用上限（5 分钟）。
+         *
+         * 整包上传/下载是真实耗时可到几十秒到几分钟的网络操作，而通用 180s 在看门狗眼里
+         * 与死循环无法区分——慢网络因此被误判、插件被停用（上游 issue #1244）。
+         * 这里放宽到 5 分钟兜底，真正的卡顿仍由 HTTP 层超时与用户取消兜住。
+         */
+        const val BACKUP_CALL_TIMEOUT_MS = 300_000L
+
         /** JS 执行线程名前缀（[executor] 单线程）：[awaitIdle] 据此避免自等死锁。 */
         private const val JS_THREAD_PREFIX = "xime-js-"
 
@@ -1379,12 +1388,22 @@ class JsScriptRuntime(
      * @param args 参数（null/Boolean/Int/Long/Double/String/Map/List/ByteArray/Uint8Array）
      * @return 返回值（已转纯 Kotlin 结构）；方法不存在 / rejected / 报错 / 超时返回 null
      */
-    fun callAsync(name: String, vararg args: Any?): Any? {
+    /**
+     * @param timeoutMs 本次调用超时，缺省 [callTimeoutMs]（180s）
+     * @param poisonOnTimeout 超时后是否把插件标记为已中毒（后续调用直接拒绝）。
+     *   长耗时网络操作（备份整包上传/下载）应传 false：慢网络不该被当成死循环。
+     */
+    fun callAsync(
+        name: String,
+        vararg args: Any?,
+        timeoutMs: Long = callTimeoutMs,
+        poisonOnTimeout: Boolean = true,
+    ): Any? {
         if (!loaded || closed) return null
         return try {
             val (argsJs, binaries) = argsExpr(args.toList())
             val invoke = callExpr(name, argsJs)
-            val result = runGuarded(callTimeoutMs, poisonOnTimeout = true, binaries = binaries) {
+            val result = runGuarded(timeoutMs, poisonOnTimeout = poisonOnTimeout, binaries = binaries) {
                 runBlocking {
                     engine.evaluate<Any?>(asyncStashExpr(invoke), filename = entryScript)
                     engine.evaluate<Any?>(asyncReadExpr(), filename = entryScript)
