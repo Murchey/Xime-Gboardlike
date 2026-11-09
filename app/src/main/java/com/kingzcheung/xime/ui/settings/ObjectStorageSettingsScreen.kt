@@ -133,18 +133,20 @@ fun ObjectStorageSettingsContent(onBack: () -> Unit) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = config.endpoint, onValueChange = { vm.update(config.copy(endpoint = it)) },
-                        enabled = !vm.busy, label = { Text(tr(R.string.os_endpoint)) },
-                        supportingText = { Text(tr(R.string.config_endpoint_hint)) },
+                        enabled = !vm.busy,
+                        label = { Text(tr(if (config.protocol == StorageProtocol.S3) R.string.storage_s3_endpoint else R.string.storage_bucket_url)) },
+                        supportingText = { Text(tr(if (config.protocol == StorageProtocol.S3) R.string.storage_s3_endpoint_hint else R.string.storage_bucket_url_hint)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                         singleLine = true, modifier = Modifier.fillMaxWidth(),
                     )
-                    OutlinedTextField(
-                        value = config.bucket, onValueChange = { vm.update(config.copy(bucket = it)) },
-                        enabled = !vm.busy, label = { Text(tr(R.string.os_bucket)) },
-                        supportingText = { Text(if (config.protocol == StorageProtocol.S3)
-                            tr(R.string.config_bucket_required_hint) else tr(R.string.config_bucket_optional_hint)) },
-                        singleLine = true, modifier = Modifier.fillMaxWidth(),
-                    )
+                    if (config.protocol == StorageProtocol.S3) {
+                        OutlinedTextField(
+                            value = config.bucket, onValueChange = { vm.update(config.copy(bucket = it)) },
+                            enabled = !vm.busy, label = { Text(tr(R.string.os_bucket)) },
+                            supportingText = { Text(tr(R.string.config_bucket_required_hint)) },
+                            singleLine = true, modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                     OutlinedTextField(
                         value = config.accessKeyId, onValueChange = { vm.update(config.copy(accessKeyId = it)) },
                         enabled = !vm.busy, label = { Text(if (config.protocol == StorageProtocol.COS)

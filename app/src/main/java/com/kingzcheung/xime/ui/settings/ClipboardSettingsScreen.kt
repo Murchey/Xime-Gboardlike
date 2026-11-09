@@ -58,8 +58,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kingzcheung.xime.clipboard.ClipboardManager
 import com.kingzcheung.xime.clipboard.ImageUsage
-import com.kingzcheung.xime.plugin.ActivePluginSelection
-import com.kingzcheung.xime.plugin.ExtensionManager
 import com.kingzcheung.xime.settings.SettingsPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -95,17 +93,7 @@ fun ClipboardSettingsContent(
     var maxMb by remember {
         mutableFloatStateOf(SettingsPreferences.getClipboardImageMaxMb(context).toFloat())
     }
-    val syncEnabled = remember { SettingsPreferences.isClipboardSyncEnabled(context) }
-    // 实际生效的同步服务（与引擎同一判定规则 ActivePluginSelection）：副标题要说明"谁在跑 + 能不能同步图片"
-    val activeSyncPlugin = remember {
-        val activeId = ActivePluginSelection.resolve(
-            SettingsPreferences.getClipboardSyncPluginId(context),
-            ExtensionManager.getEnabledClipboardSyncPlugins(context).map { it.first }
-        )
-        ExtensionManager.getAllInstalledPlugins().firstOrNull { it.id == activeId }
-    }
     var usage by remember { mutableStateOf<ImageUsage?>(null) }
-    var syncOn by remember { mutableStateOf(syncEnabled) }
     var maxItems by remember {
         mutableFloatStateOf(SettingsPreferences.getClipboardMaxItems(context).toFloat())
     }
@@ -167,6 +155,7 @@ fun ClipboardSettingsContent(
             ClipboardSyncSummaryRow(
                 onOpen = onNavigateToClipboardSync,
                 onConfigure = onNavigateToObjectStorage,
+                onPluginConfigure = onNavigateToLegacy,
             )
 
             SettingsSection(

@@ -44,6 +44,13 @@ class ObjectStorageOverviewViewModel(app: Application) : AndroidViewModel(app) {
             lastSyncAt = prefs.getLong(ClipboardObjectStoreSync.PREF_LAST_UPDATED, 0),
         ) }
     }
+    fun selectSyncProvider(builtin: Boolean) {
+        prefs.edit().putString(ClipboardObjectStoreSync.PREF_ENGINE,
+            if (builtin) ClipboardObjectStoreSync.ENGINE_BUILTIN else ClipboardObjectStoreSync.ENGINE_PLUGIN).apply()
+    }
+    fun setSelectedAutoSync(enabled: Boolean) {
+        if (state.value.builtin) setAutoSync(enabled) else setPluginAutoSync(enabled)
+    }
     fun setAutoSync(enabled: Boolean) {
         if (enabled && !state.value.config.isConfigured) return
         // 同一批偏好通知看到的是完整选择，关闭不擅自切换原服务。

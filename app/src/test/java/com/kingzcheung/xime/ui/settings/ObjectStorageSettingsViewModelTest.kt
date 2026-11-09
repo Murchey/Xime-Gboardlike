@@ -52,7 +52,7 @@ class ObjectStorageSettingsViewModelTest {
 
     @Test fun explicitSaveNormalizesAndClearsDirtyOnlyAfterSuccess() = runTest(dispatcher) {
         val vm = model()
-        vm.update(initial.copy(bucket = " bucket "))
+        vm.update(initial.copy(protocol = StorageProtocol.S3, bucket = " bucket "))
         var returned = false
         vm.save { returned = true }
         assertTrue(vm.saving)
@@ -88,6 +88,24 @@ class ObjectStorageSettingsViewModelTest {
         assertNull(saved)
         assertNull(tested)
         assertTrue(vm.messageIsError)
+    }
+
+    @Test fun cosAndOssSaveOnlyTheBucketAddressAndIgnoreLegacyBucketField() = runTest(dispatcher) {
+        for (protocol in listOf(StorageProtocol.COS, StorageProtocol.OSS)) {
+            saved = null
+            val vm = model()
+            vm.update(initial.copy(protocol = protocol, bucket = "old invalid/bucket"))
+            vm.save()
+            advanceUntilIdle()
+            assertEquals(protocol, saved?.protocol)
+            assertEquals(initial.endpoint, saved?.endpoint)
+            assertEquals("", saved?.bucket)
+            assertFalse(vm.messageIsError)
+        }
+    }
+
+    @Test fun s3StillValidatesTheBucketUsedInItsRequestPath() {
+        assertNotNull(ObjectStorageSettingsViewModel.validationError(initial.copy(protocol = StorageProtocol.S3, bucket = "invalid/bucket")))
     }
 
     @Test fun publicDraftAllowsAnonymousTestAndS3RequiresBucket() {

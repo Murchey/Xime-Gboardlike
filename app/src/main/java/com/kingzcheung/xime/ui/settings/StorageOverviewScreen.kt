@@ -96,13 +96,32 @@ fun StorageOverviewContent(
 }
 
 @Composable
-fun ClipboardSyncSummaryRow(onOpen: () -> Unit, onConfigure: () -> Unit, model: ObjectStorageOverviewViewModel = viewModel()) {
+fun ClipboardSyncSummaryRow(
+    onOpen: () -> Unit,
+    onConfigure: () -> Unit,
+    onPluginConfigure: () -> Unit,
+    model: ObjectStorageOverviewViewModel = viewModel(),
+) {
     val state by model.state.collectAsStateWithLifecycle()
     SettingsSection(tr(R.string.storage_sync_title)) {
-        SettingsToggleItem(icon = Icons.TwoTone.Sync, title = tr(R.string.storage_sync_title),
+        SettingsToggleItem(icon = Icons.TwoTone.Sync, title = tr(R.string.storage_auto_sync),
             subtitle = storageSyncSummary(state), checked = state.autoSync,
             onCheckedChange = { enabled ->
-                if (enabled && !state.config.isConfigured) onConfigure() else model.setAutoSync(enabled)
-            }, onClick = onOpen, showArrow = true)
+                if (enabled && state.builtin && !state.config.isConfigured) onConfigure()
+                else model.setSelectedAutoSync(enabled)
+            })
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(tr(R.string.storage_sync_provider), style = MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = state.builtin, onClick = { model.selectSyncProvider(true) },
+                    label = { Text(tr(R.string.os_section)) })
+                FilterChip(selected = !state.builtin, onClick = { model.selectSyncProvider(false) },
+                    label = { Text(tr(R.string.storage_provider_plugin)) })
+            }
+        }
+        SettingsItem(icon = if (state.builtin) Icons.TwoTone.Cloud else Icons.TwoTone.Settings,
+            title = tr(if (state.builtin) R.string.storage_object_sync_settings else R.string.storage_plugin_sync),
+            subtitle = tr(if (state.builtin) R.string.storage_object_sync_hint else R.string.storage_plugin_sync_hint),
+            onClick = if (state.builtin) onOpen else onPluginConfigure, showArrow = true)
     }
 }

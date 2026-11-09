@@ -1303,4 +1303,13 @@
     <string name="backup_snapshot_invalid">無效的使用者詞典快照：%1$s</string>
     <string name="backup_snapshot_partial">僅合併 %1$d/%2$d 個快照，請重試還原</string>
     <string name="backup_snapshot_merged">已合併 %1$d 個使用者詞典快照</string>
+    <string name="storage_bucket_url">儲存桶完整位址</string>
+    <string name="storage_bucket_url_hint">填寫已包含桶名的 COS / OSS 存取位址，無需再填寫桶名。</string>
+    <string name="storage_s3_endpoint">S3 服務端點（Endpoint）</string>
+    <string name="storage_s3_endpoint_hint">填寫 S3 服務端點或 MinIO 服務位址；目前使用服務位址加桶名的存取方式。</string>
+    <string name="storage_sync_provider">同步服務</string>
+    <string name="storage_provider_plugin">外掛</string>
+    <string name="storage_object_sync_settings">物件儲存同步設定</string>
+    <string name="storage_object_sync_hint">設定儲存位置、同步方式並檢視同步狀態</string>
+    <string name="storage_plugin_sync_hint">選擇及設定 WebDAV 等剪貼簿同步外掛</string>
 </resources>

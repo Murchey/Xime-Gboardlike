@@ -69,7 +69,13 @@ class ObjectStorageConfigTest {
 
     @Test
     fun `bucketLabel 优先用显式 bucket`() {
-        assertEquals("myb", ObjectStorageConfig(bucket = "myb", endpoint = "x.cos.y.com").bucketLabel)
+        assertEquals("myb", ObjectStorageConfig(protocol = StorageProtocol.S3, bucket = "myb", endpoint = "s3.example.com").bucketLabel)
+    }
+
+    @Test
+    fun `COS 和 OSS 展示实际地址中的桶而非无效的独立桶名`() {
+        assertEquals("actual", ObjectStorageConfig(bucket = "unused", endpoint = "actual.cos.ap-guangzhou.myqcloud.com").bucketLabel)
+        assertEquals("actual", ObjectStorageConfig(protocol = StorageProtocol.OSS, bucket = "unused", endpoint = "actual.oss-cn-hangzhou.aliyuncs.com").bucketLabel)
     }
 
     @Test

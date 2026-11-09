@@ -87,6 +87,35 @@ class ObjectStorageOverviewViewModelTest {
         assertFalse(vm.state.value.autoSync)
         assertTrue(vm.state.value.pushOnly)
     }
+    @Test fun changingSyncProviderDoesNotEnableAutomaticSync() {
+        val vm = model(Prefs())
+        vm.selectSyncProvider(true)
+        assertTrue(vm.state.value.builtin)
+        assertFalse(vm.state.value.autoSync)
+        vm.selectSyncProvider(false)
+        assertFalse(vm.state.value.builtin)
+        assertFalse(vm.state.value.autoSync)
+    }
+    @Test fun selectedPluginIsNotReplacedByObjectStorageWhenSwitchIsEnabled() {
+        val prefs = Prefs()
+        prefs.values[ObjectStorageConfigStore.KEY_ENDPOINT] = "bucket.example.com"
+        prefs.values[ObjectStorageConfigStore.KEY_PRIVATE] = false
+        val vm = model(prefs)
+        vm.selectSyncProvider(false)
+        vm.setSelectedAutoSync(true)
+        assertTrue(vm.state.value.autoSync)
+        assertFalse(vm.state.value.builtin)
+    }
+    @Test fun changingProviderWhileEnabledPreservesTheIndependentSwitch() {
+        val vm = model(Prefs())
+        vm.setPluginAutoSync(true)
+        vm.selectSyncProvider(true)
+        assertTrue(vm.state.value.builtin)
+        assertTrue(vm.state.value.autoSync)
+        vm.selectSyncProvider(false)
+        assertFalse(vm.state.value.builtin)
+        assertTrue(vm.state.value.autoSync)
+    }
     @Test fun pluginPageEnableSelectsPluginAndIsReflectedImmediately() {
         val vm = model(Prefs())
         vm.setPluginAutoSync(true)

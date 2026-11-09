@@ -204,7 +204,8 @@ fun BackupSettingsContent(
     var backupError by remember { mutableStateOf(SettingsPreferences.getLastBackupError(context)) }
 
     // 进页面静默拉一次远端（IO）：主按钮要显示"云端 N 份 / N 台设备"，也省掉"点开才拉取"
-    LaunchedEffect(activePlugin) {
+    LaunchedEffect(activePlugin, localOnly) {
+        if (localOnly) return@LaunchedEffect
         val plugin = activePlugin?.second ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
             syncRemoteList = SyncManager.listRemoteSnapshots(plugin)
@@ -213,7 +214,10 @@ fun BackupSettingsContent(
     }
 
     // 配置就绪（IO 读取；组合期不调插件运行时）：null=读取中
-    val configured = rememberPluginConfigured(activePlugin?.second, activePlugin?.first ?: "")
+    val configured = rememberPluginConfigured(
+        if (localOnly) null else activePlugin?.second,
+        if (localOnly) "" else activePlugin?.first.orEmpty(),
+    )
     // 进行中的操作是否阻塞其他主动作：拉列表是只读轻操作，不阻塞（旧实现整页禁用）
     val blocking = busyOp != null && busyOp != "list"
     val serviceReady = activePlugin != null && configured != false
@@ -535,8 +539,8 @@ fun BackupSettingsContent(
 
             }
 
-            // 本地文件操作始终保留独立入口。
-            SettingsSection(
+            // 本地操作只在本地页面展示，插件页面仅保留云端功能。
+            if (localOnly) SettingsSection(
                 title = tr(R.string.s_gengduo),
                 content = {
                     SettingsItem(

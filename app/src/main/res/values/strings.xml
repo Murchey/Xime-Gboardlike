@@ -1446,4 +1446,13 @@
     <string name="backup_snapshot_invalid">无效的用户词典快照：%1$s</string>
     <string name="backup_snapshot_partial">仅合并 %1$d/%2$d 个快照，请重试恢复</string>
     <string name="backup_snapshot_merged">已合并 %1$d 个用户词典快照</string>
+    <string name="storage_bucket_url">存储桶完整地址</string>
+    <string name="storage_bucket_url_hint">填写已包含桶名的 COS / OSS 访问地址，无需再填写桶名。</string>
+    <string name="storage_s3_endpoint">S3 服务端点（Endpoint）</string>
+    <string name="storage_s3_endpoint_hint">填写 S3 服务端点或 MinIO 服务地址；当前采用服务地址加桶名的访问方式。</string>
+    <string name="storage_sync_provider">同步服务</string>
+    <string name="storage_provider_plugin">插件</string>
+    <string name="storage_object_sync_settings">对象存储同步设置</string>
+    <string name="storage_object_sync_hint">配置存储位置、同步方式并查看同步状态</string>
+    <string name="storage_plugin_sync_hint">选择和配置 WebDAV 等剪贴板同步插件</string>
 </resources>

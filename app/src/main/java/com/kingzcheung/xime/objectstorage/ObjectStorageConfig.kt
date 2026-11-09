@@ -52,9 +52,8 @@ data class ObjectStorageConfig(
 
     /** 用于状态展示的短标识。 */
     val bucketLabel: String
-        get() = bucket.trim().ifBlank {
-            host.substringBefore(".cos.").substringBefore(".oss-").ifBlank { host }
-        }
+        get() = if (protocol == StorageProtocol.S3) bucket.trim().ifBlank { host }
+        else host.substringBefore(".cos.").substringBefore(".oss-").ifBlank { host }
 
     /** 是否具备发起请求的最低条件（不校验 key 是否真实有效）。 */
     val isConfigured: Boolean

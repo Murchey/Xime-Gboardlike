@@ -124,7 +124,8 @@ class ObjectStorageSettingsViewModel(
     companion object {
         internal fun normalized(config: ObjectStorageConfig) = config.copy(
             endpoint = config.endpoint.trim().trimEnd('/'),
-            bucket = config.bucket.trim(), accessKeyId = config.accessKeyId.trim(),
+            bucket = if (config.protocol == StorageProtocol.S3) config.bucket.trim() else "",
+            accessKeyId = config.accessKeyId.trim(),
             secretKey = config.secretKey.trim(),
         )
 
@@ -137,7 +138,8 @@ class ObjectStorageSettingsViewModel(
                 return tr(R.string.config_endpoint_invalid)
             }
             if (config.protocol == StorageProtocol.S3 && config.bucket.isBlank()) return tr(R.string.config_s3_bucket_required)
-            if (config.bucket.any { it.isWhitespace() || it == '/' }) return tr(R.string.config_bucket_invalid)
+            if (config.protocol == StorageProtocol.S3 && config.bucket.any { it.isWhitespace() || it == '/' })
+                return tr(R.string.config_bucket_invalid)
             if (config.privateAuth && (config.accessKeyId.isBlank() || config.secretKey.isBlank()))
                 return tr(R.string.config_credentials_required)
             return null
