@@ -18,23 +18,28 @@ class GlideKeyboardController(
     )
     private val collected = mutableListOf<GlidePoint>()
     @Volatile private var activeGeometry: GlideGeometrySnapshot? = null
+    private var currentHost: String = ""
+    private var currentSchema: String = ""
+    private var glideSessionStarted = false
 
     /** 当前用于绘制的轨迹点（键盘局部 px）。 */
     val trail: List<GlidePoint> get() = collected.toList()
     val isGliding: Boolean get() = arbiter.state.isGlide
+    /** 当前会话的可编辑编码（供阶段B临时送进现有 Rime 输入链路产生候选）。 */
+    fun rawInputForDisplay(): String = coordinator.session.state.rawInput
 
     fun onDown(pointerId: Long, x: Float, y: Float, hostToken: String, schemaFingerprint: String) {
         val geo = registry.snapshot()
         activeGeometry = geo
+        currentHost = hostToken
+        currentSchema = schemaFingerprint
+        glideSessionStarted = false
         collected.clear()
         collected += GlidePoint(x, y, System.currentTimeMillis(), pointerId.toInt())
         val startKey = geo.keyAt(x, y)?.id
         arbiter.onDown(pointerId, x, y, startKey)
-        // 每次新滑动以当前几何/方案为基线；已有未确认组合由 appendCode 续接（阶段D细化）
-        if (arbiter.state.owner == GlideGestureArbiter.Owner.PENDING ||
-            arbiter.state.owner == GlideGestureArbiter.Owner.NONE) {
-            coordinator.session.beginGlide(hostToken, schemaFingerprint, geo.version)
-        }
+        // 不在此创建会话：普通点按(PENDING→TAP)不该清空已有未确认组合；
+        // 只有 onMove 真正升级为 Glide 时才 beginGlide。
     }
 
     fun onMove(pointerId: Long, x: Float, y: Float, secondPointer: Boolean) {
@@ -47,6 +52,11 @@ class GlideKeyboardController(
             return
         }
         if (arbiter.state.isGlide) {
+            // 首次升级：以当前几何/方案为基线开启会话（此时才清空旧组合）
+            if (!glideSessionStarted) {
+                coordinator.session.beginGlide(currentHost, currentSchema, geo.version)
+                glideSessionStarted = true
+            }
             collected += GlidePoint(x, y, System.currentTimeMillis(), pointerId.toInt())
         }
     }
@@ -69,13 +79,8 @@ class GlideKeyboardController(
             GlideGestureArbiter.Decision.DISCARD -> { coordinator.session.cancel(); clearTrail(); UpResult.Discarded }
             GlideGestureArbiter.Decision.EMIT_GLIDE -> {
                 val geo = activeGeometry
-                val codes = if (geo != null) {
-                    GlideTraceSampler.visitedCodes(
-                        GlideTraceSampler.extractFeatures(collected, geo, Float.MAX_VALUE)
-                    )
-                } else emptyList()
+                val raw = if (geo != null) GlideTraceToCode.toRawInput(collected, geo) else ""
                 clearTrail()
-                val raw = codes.joinToString("")
                 if (raw.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
                 coordinator.session.appendCode(raw)
                 val outcome = coordinator.onTraceFinished(
@@ -98,5 +103,6 @@ class GlideKeyboardController(
     private fun clearTrail() {
         collected.clear()
         activeGeometry = null
+        glideSessionStarted = false
     }
 }

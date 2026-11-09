@@ -833,6 +833,7 @@ fun SwipeableKeyButton(
     // 横向接管阈值：低于父层光标手势激活阈值（60dp），使配置了左右滑的键优先接管横向滑动
     val horizontalSwipeSuppressThreshold = with(density) { 30.dp.toPx() }
     val suppressCursorMove = LocalSuppressCursorMove.current
+    val glideCtxLocal = com.kingzcheung.xime.glide.LocalGlideContext.current
 
     /**
      * 本次手势的唯一点击出口：点击分支与拖拽兜底共用，先到者生效。
@@ -1173,6 +1174,17 @@ fun SwipeableKeyButton(
             .onGloballyPositioned { coordinates ->
                 buttonBounds = coordinates.boundsInRoot()
                 KeyTapLogger.recordKeyGeometry(currentText, buttonBounds)
+                // 阶段B：上报物理键矩形（root 坐标）供滑动输入几何快照
+                if (glideCtxLocal.enabled && currentText.length == 1 && currentText[0].lowercaseChar() in 'a'..'z') {
+                    glideCtxLocal.registry?.register(
+                        com.kingzcheung.xime.glide.GlideKey(
+                            id = "k_" + buttonBounds.left.toInt() + "_" + buttonBounds.top.toInt(),
+                            code = currentText.lowercase(),
+                            rect = com.kingzcheung.xime.glide.GlideKeyRect(
+                                buttonBounds.left, buttonBounds.top, buttonBounds.right, buttonBounds.bottom),
+                        )
+                    )
+                }
             }
             .padding(LocalKeyVisualPadding.current)
             .then(shadowModifier)
@@ -1689,6 +1701,7 @@ fun SwipeableIconKeyButton(
     // 横向接管阈值：低于父层光标手势激活阈值（60dp），使配置了左右滑的键优先接管横向滑动
     val horizontalSwipeSuppressThreshold = with(density) { 30.dp.toPx() }
     val suppressCursorMove = LocalSuppressCursorMove.current
+    val glideCtxLocal = com.kingzcheung.xime.glide.LocalGlideContext.current
     val bubbleShowThresholdUp = swipeUpThreshold
     val bubbleShowThresholdDown = swipeDownThreshold
     
@@ -2232,6 +2245,7 @@ fun SwipeableKeyButtonLandscape(
     // 横向接管阈值：低于父层光标手势激活阈值（60dp），使配置了左右滑的键优先接管横向滑动
     val horizontalSwipeSuppressThreshold = with(density) { 18.dp.toPx() }
     val suppressCursorMove = LocalSuppressCursorMove.current
+    val glideCtxLocal = com.kingzcheung.xime.glide.LocalGlideContext.current
     val bubbleShowThresholdUp = swipeUpThreshold * 0.3f
     val bubbleShowThresholdDown = swipeDownThreshold * 0.3f
 
@@ -2533,6 +2547,17 @@ fun SwipeableKeyButtonLandscape(
             .onGloballyPositioned { coordinates ->
                 buttonBounds = coordinates.boundsInRoot()
                 KeyTapLogger.recordKeyGeometry(currentText, buttonBounds)
+                // 阶段B：上报物理键矩形（root 坐标）供滑动输入几何快照
+                if (glideCtxLocal.enabled && currentText.length == 1 && currentText[0].lowercaseChar() in 'a'..'z') {
+                    glideCtxLocal.registry?.register(
+                        com.kingzcheung.xime.glide.GlideKey(
+                            id = "k_" + buttonBounds.left.toInt() + "_" + buttonBounds.top.toInt(),
+                            code = currentText.lowercase(),
+                            rect = com.kingzcheung.xime.glide.GlideKeyRect(
+                                buttonBounds.left, buttonBounds.top, buttonBounds.right, buttonBounds.bottom),
+                        )
+                    )
+                }
             }
             .padding(LocalKeyVisualPadding.current)
             .then(shadowModifier)

@@ -12,6 +12,8 @@ data class GlideContext(
     val enabled: Boolean = false,
     val showTrail: Boolean = true,
     val arbiter: GlideGestureArbiter? = null,
+    /** 物理键位注册表，由 KeyboardLayout 根容器持有；字母键在布局时上报几何。 */
+    val registry: GlideGeometryRegistry? = null,
 )
 
 val LocalGlideContext = compositionLocalOf { GlideContext() }

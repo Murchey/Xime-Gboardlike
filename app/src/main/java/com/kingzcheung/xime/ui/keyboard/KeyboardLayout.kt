@@ -261,6 +261,8 @@ fun KeyboardLayout(
     var glideTrailVisible by remember {
         mutableStateOf(SettingsPreferences.isGlideTrailVisible(context))
     }
+    // 阶段B：轨迹镜像（Compose 可观察），由 GlideTouchModifier 在采样时更新
+    var glideTrail by remember { mutableStateOf(emptyList<com.kingzcheung.xime.glide.GlidePoint>()) }
     var letterCaseSetting by remember {
         mutableStateOf(
             LetterCaseSetting(
@@ -365,6 +367,20 @@ fun KeyboardLayout(
     // Gboard 按键风格下取更大的圆角（见 keyCornerRadiusFor）。
     val qwertyCornerRadius = keyCornerRadiusFor(kbKey, "qwerty", tabletParams)
 
+    // 阶段B：滑动输入编排层（开关关闭时 controller 仍在，但触摸 Modifier 不挂载）
+    val glideRegistry = remember { com.kingzcheung.xime.glide.GlideGeometryRegistry() }
+    val glideCoordinator = remember {
+        com.kingzcheung.xime.glide.GlideCoordinator(
+            com.kingzcheung.xime.glide.RimeGlideSentenceLookup(),
+            com.kingzcheung.xime.glide.RimeGlideCommitter(),
+        )
+    }
+    val glideController = remember(glideRegistry, glideCoordinator) {
+        com.kingzcheung.xime.glide.GlideKeyboardController(glideRegistry, glideCoordinator) {
+            glideTypingEnabled
+        }
+    }
+
     CompositionLocalProvider(
         LocalShowLetterHintSymbols provides showLetterHintSymbols,
         LocalDoublePinyinFinals provides doublePinyinFinals,
@@ -377,7 +393,7 @@ fun KeyboardLayout(
         LocalHintExtraScale provides hintExtraScaleFor(tabletParams),
         // 阶段B：仅把滑动开关状态下发到 26 键树，尚未接管任何 pointerInput
         LocalGlideContext provides GlideContext(
-            enabled = glideTypingEnabled, showTrail = glideTrailVisible),
+            enabled = glideTypingEnabled, showTrail = glideTrailVisible, registry = glideRegistry),
         LocalKeyVisualPadding provides PaddingValues(
             horizontal = if (tabletParams) 4.dp else (kbKey.spacingFor("qwerty").first?.dp ?: 2.dp),
             // 手机横屏：只认 qwerty 专属覆盖（keyboard.key.qwerty.spacing_y），回退 2.5dp；
@@ -395,13 +411,34 @@ fun KeyboardLayout(
                 keyboardBounds = coordinates.boundsInRoot()
                 // 按键坐标日志需要键盘矩形做跨设备归一化
                 KeyTapLogger.keyboardBounds = keyboardBounds
+                glideRegistry.beginFrame(keyboardBounds.width, keyboardBounds.height)
             }
             .drawWithContent {
                 drawContent()
                 drawLongPressScrim(swipeBubble.state.isLongPress)
                 bubbleData?.let { drawSwipeBubble(it) }
+                if (glideTypingEnabled && glideTrailVisible) {
+                    val pts = glideTrail
+                    if (pts.size >= 2) {
+                        val path = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(pts.first().x, pts.first().y)
+                            for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
+                        }
+                        drawPath(path, color = androidx.compose.ui.graphics.Color(0xFF64B5F6),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp.toPx()))
+                    }
+                }
             }
-            .padding(bottom = if (uiState.isFloatingMode || isLandscape) {0.dp} else {0.dp})
+            .then(
+                if (glideTypingEnabled) com.kingzcheung.xime.glide.glideTouchModifier(
+                    controller = glideController,
+                    onGlideCode = { code -> code.forEach { onKeyPress(it.toString()) } },
+                    hostToken = uiState.toString(),
+                    schemaFingerprint = currentSchemaId,
+                    origin = { androidx.compose.ui.geometry.Offset(keyboardBounds.left, keyboardBounds.top) },
+                    onTrailChange = { glideTrail = it },
+                ) else Modifier
+            )
     ) {
             if (useLandscapeSplitKeyboard) {
             LandscapeKeyboardContent(
