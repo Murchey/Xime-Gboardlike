@@ -13,6 +13,7 @@
 #include "t9_processor.h"
 #include "t9_patch_utils.h"
 #include "t9_digit_userdict.h"
+#include "t9_fallback_preedit.h"
 #include <jni.h>
 #include <android/log.h>
 #include <memory>
@@ -386,6 +387,19 @@ public:
                 joined += options[i];
             }
             result.t9SyllableOptions = joined;
+
+            // 无候选时 librime Composition::GetPreedit() 回退为原始数字串，
+            // Kotlin 侧「T9 编码区永不显示数字」会无限沿用上一帧字母而冻结。
+            // 仅在此异常路径用纯算法兜底生成不含数字的字母编码；只改 preeditText，
+            // inputText/候选/左栏/光标全部不动，不改变任何输入与上屏行为。
+            bool preedit_has_digit = false;
+            for (char c : result.preeditText) {
+                if (c >= '0' && c <= '9') { preedit_has_digit = true; break; }
+            }
+            if ((result.preeditText.empty() || preedit_has_digit) &&
+                rime::T9IsPureDigitInput(result.inputText)) {
+                result.preeditText = rime::T9BuildFallbackPreedit(result.inputText);
+            }
         }
     }
 

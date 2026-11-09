@@ -105,4 +105,18 @@ class T9DisplayHelperTest {
         assertTrue(state.displayText.contains("e"))
         assertFalse(state.displayText.any { it.isDigit() })
     }
+
+    @Test
+    fun `兜底字母编码随按键递增 - 不冻结在单个声母`() {
+        val state = buildT9DisplayState(
+            partialTexts = emptyList(),
+            preeditText = "wwww",
+            inputText = "9999",
+            candidates = emptyList(),
+            comments = emptyList(),
+        )
+        assertEquals("wwww", state.displayText)
+        assertFalse(state.displayText.any { it.isDigit() })
+        assertTrue(state.isComposing)
+    }
 }
