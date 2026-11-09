@@ -12,14 +12,6 @@ import androidx.compose.ui.Modifier
  */
 internal object OfflineAsrSettingsSupport {
     @Composable
-    fun EngineSelector(
-        useLocal: Boolean,
-        onUseLocalChange: (Boolean) -> Unit
-    ) {
-        OfflineAsrEngineSelector(useLocal = useLocal, onUseLocalChange = onUseLocalChange)
-    }
-
-    @Composable
     fun ModelSection(onNavigateToDownload: () -> Unit = {}) {
         Column(
             modifier = Modifier

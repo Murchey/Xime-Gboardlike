@@ -1237,4 +1237,29 @@
     <string name="s_xuanzebiaodian">选择标点</string>
     <string name="s_xuanzemoban">选择配色模板</string>
     <string name="s_xuanzemoban_shuoming">选择一套内置主题作为起点，再调整颜色。</string>
+    <!-- 语音识别：引擎选择与内置在线配置 -->
+    <string name="s_shibieyinqing">识别引擎</string>
+    <string name="s_yinqing_bendimoxing">本地模型</string>
+    <string name="s_yinqing_neizhianzaixian">内置在线识别</string>
+    <string name="s_yinqing_chajian">已安装插件</string>
+    <string name="s_yinqing_yijiu">已就绪</string>
+    <string name="s_yinqing_weixiazaimoxing">未下载模型，点击去管理</string>
+    <string name="s_yinqing_weitianmiyao">未填 API Key，点击去填写</string>
+    <string name="s_yinqing_weianzhuangchajian">未安装插件，点击去插件页</string>
+    <string name="s_neizhianzaixian_shi">内置 · %1$s</string>
+    <string name="s_yuyin_fuwushang">服务商</string>
+    <string name="s_yuyin_ceshilianjie">测试连接</string>
+    <string name="s_yuyin_lianjiezhong">正在连接…</string>
+    <string name="s_yuyin_lianjiechenggong">已连接，服务正常</string>
+    <string name="s_yuyin_miyaowuxiao">API Key 无效或无权限</string>
+    <string name="s_yuyin_dizhibudui">请求地址不正确，请检查 Base URL</string>
+    <string name="s_yuyin_gaojishezhi">高级设置</string>
+    <string name="s_yuyin_yuyantishi">语言提示（留空自动判断，可填 zh / en）</string>
+    <string name="s_yuyin_qingtianxiekey">请先填写 API Key</string>
+    <string name="s_yuyin_zidingyimoxing">自定义模型名</string>
+    <string name="s_weixiazaiyuyinmoxing">未下载语音模型，请到「语音转文本」下载</string>
+    <string name="s_weitianxieyuyinmiyao">未填写 API Key，请到「语音转文本」填写</string>
+    <string name="s_weianzhuangyuyinchajian">未安装可用的语音识别插件</string>
+    <string name="s_yuyinyinqingbunengyong">语音引擎不可用，请检查设置</string>
+    <string name="s_fenhao_fenci">分号；长按分词</string>
 </resources>

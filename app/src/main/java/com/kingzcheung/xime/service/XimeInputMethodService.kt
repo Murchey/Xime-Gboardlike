@@ -645,6 +645,15 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                         Thread { AsrBackendFactory.warmup(this@XimeInputMethodService) }.start()
                     }
                 }
+                SettingsPreferences.KEY_STT_ENGINE -> {
+                    // 切到本地引擎时预热，避免第一句语音现加载模型丢掉开头
+                    if (SettingsPreferences.getSttEngine(this@XimeInputMethodService) ==
+                        com.kingzcheung.xime.speech.SttEngine.LOCAL &&
+                        AsrBackendFactory.getLocalName(this@XimeInputMethodService) != null
+                    ) {
+                        Thread { AsrBackendFactory.warmup(this@XimeInputMethodService) }.start()
+                    }
+                }
                 SettingsPreferences.KEY_SMART_PREDICTION_ENABLED -> onPredictionSettingChanged()
                 SettingsPreferences.KEY_CLIPBOARD_SYNC_ENABLED -> updateClipboardSync()
                 SettingsPreferences.KEY_CLIPBOARD_SYNC_PLUGIN_ID -> {

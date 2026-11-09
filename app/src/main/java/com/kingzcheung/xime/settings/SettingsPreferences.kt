@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.kingzcheung.xime.clipboard.ClipboardImageStore
 import com.kingzcheung.xime.plugin.core.runtime.PluginManager
+import com.kingzcheung.xime.speech.SttEngine
 
 object SettingsPreferences {
     private const val PREFS_NAME = "kime_settings"
@@ -44,6 +45,7 @@ object SettingsPreferences {
     
     const val KEY_STT_ENABLED = "stt_enabled"
     const val KEY_STT_ONLINE_PLUGIN_ID = "stt_online_plugin_id"
+    const val KEY_STT_ENGINE = "stt_engine"
     const val KEY_STT_USE_LOCAL = "stt_use_local"
     const val KEY_STT_KEEP_ENGINE_ALIVE = "stt_keep_engine_alive"
     const val KEY_STT_DEBUG_RECORD = "stt_debug_record"
@@ -705,13 +707,33 @@ object SettingsPreferences {
         getPrefs(context).edit().putString(KEY_STT_ONLINE_PLUGIN_ID, pluginId).apply()
     }
 
-    /** 语音转文本是否使用本地（离线）识别引擎。 */
-    fun isSttUseLocal(context: Context): Boolean {
-        return getPrefs(context).getBoolean(KEY_STT_USE_LOCAL, false)
+    /**
+     * 当前识别引擎（本地 / 内置在线 / 已装插件）。
+     *
+     * 历史版本只有 `stt_use_local` 布尔 + 插件 id 两个偏好，没有"内置在线"的位置；
+     * 未写入新键时按旧值推导，保证升级用户的选择不丢。
+     */
+    fun getSttEngine(context: Context): SttEngine {
+        val prefs = getPrefs(context)
+        SttEngine.fromPrefValue(prefs.getString(KEY_STT_ENGINE, null))?.let { return it }
+        if (prefs.getBoolean(KEY_STT_USE_LOCAL, false)) return SttEngine.LOCAL
+        val pluginId = getSttOnlinePluginId(context)
+        return if (pluginId.isNotBlank()) SttEngine.PLUGIN else SttEngine.BUILTIN_ONLINE
     }
 
+    fun setSttEngine(context: Context, engine: SttEngine) {
+        getPrefs(context).edit()
+            .putString(KEY_STT_ENGINE, engine.prefValue)
+            // 双写旧布尔：isSttKeepEngineAlive 与服务的模型预热分支仍读它
+            .putBoolean(KEY_STT_USE_LOCAL, engine == SttEngine.LOCAL)
+            .apply()
+    }
+
+    /** 语音转文本是否使用本地（离线）识别引擎。 */
+    fun isSttUseLocal(context: Context): Boolean = getSttEngine(context) == SttEngine.LOCAL
+
     fun setSttUseLocal(context: Context, useLocal: Boolean) {
-        getPrefs(context).edit().putBoolean(KEY_STT_USE_LOCAL, useLocal).apply()
+        setSttEngine(context, if (useLocal) SttEngine.LOCAL else SttEngine.BUILTIN_ONLINE)
     }
 
     /**
@@ -1275,40 +1297,7 @@ object SettingsPreferences {
         getPrefs(context).edit().putInt(KEY_CORRECTION_ENGINE, engine).apply()
     }
 
-    // ── 内置在线语音识别：服务商与各自 Key ──────────────────────
-
     private const val KEY_ASR_PROVIDER = "asr_provider"
-
-    /** 当前选中的内置在线识别服务商 id。 */
-    fun getAsrProvider(context: Context): String =
-        getPrefs(context).getString(KEY_ASR_PROVIDER, "") ?: ""
-
-    fun setAsrProvider(context: Context, id: String) {
-        getPrefs(context).edit().putString(KEY_ASR_PROVIDER, id.trim()).apply()
-    }
-
-    /** 按服务商分别保存 API Key（换服务商不必重填）。 */
-    fun getAsrApiKey(context: Context, providerId: String): String =
-        getPrefs(context).getString("asr_key_$providerId", "") ?: ""
-
-    fun setAsrApiKey(context: Context, providerId: String, key: String) {
-        getPrefs(context).edit().putString("asr_key_$providerId", key.trim()).apply()
-    }
-
-    fun getAsrModel(context: Context, providerId: String): String =
-        getPrefs(context).getString("asr_model_$providerId", "") ?: ""
-
-    fun setAsrModel(context: Context, providerId: String, model: String) {
-        getPrefs(context).edit().putString("asr_model_$providerId", model.trim()).apply()
-    }
-
-    /** 自定义 Base URL（自建反代 / 区域端点）。 */
-    fun getAsrBaseUrl(context: Context, providerId: String): String =
-        getPrefs(context).getString("asr_base_$providerId", "") ?: ""
-
-    fun setAsrBaseUrl(context: Context, providerId: String, url: String) {
-        getPrefs(context).edit().putString("asr_base_$providerId", url.trim()).apply()
-    }
 
     /** 是否默认启用代理下载。 */
     fun isUpdateUseProxy(context: Context): Boolean =
@@ -1324,31 +1313,36 @@ object SettingsPreferences {
         return custom.ifBlank { "https://gh-proxy.org/" }
     }
 
-    // ── 内置在线语音识别（阿里百炼） ─────────────────────────────
+    // ── 内置在线语音识别：服务商选择与模型（Key 由 AsrKeyStore 加密保存） ──
 
-    private const val KEY_BUILTIN_ASR_API_KEY = "builtin_asr_api_key"
-    private const val KEY_BUILTIN_ASR_MODEL = "builtin_asr_model"
-    private const val KEY_BUILTIN_ASR_ENABLED = "builtin_asr_enabled"
+    /** 当前选中的内置在线识别服务商 id。 */
+    fun getAsrProvider(context: Context): String =
+        getPrefs(context).getString(KEY_ASR_PROVIDER, "") ?: ""
 
-    fun getBuiltinAsrApiKey(context: Context): String =
-        getPrefs(context).getString(KEY_BUILTIN_ASR_API_KEY, "") ?: ""
-
-    fun setBuiltinAsrApiKey(context: Context, key: String) {
-        getPrefs(context).edit().putString(KEY_BUILTIN_ASR_API_KEY, key.trim()).apply()
+    fun setAsrProvider(context: Context, id: String) {
+        getPrefs(context).edit().putString(KEY_ASR_PROVIDER, id.trim()).apply()
     }
 
-    fun getBuiltinAsrModel(context: Context): String =
-        getPrefs(context).getString(KEY_BUILTIN_ASR_MODEL, "qwen-audio-3.1-asr-flash-streaming")
-            ?: "qwen-audio-3.1-asr-flash-streaming"
+    fun getAsrModel(context: Context, providerId: String): String =
+        getPrefs(context).getString("asr_model_$providerId", "") ?: ""
 
-    fun setBuiltinAsrModel(context: Context, model: String) {
-        getPrefs(context).edit().putString(KEY_BUILTIN_ASR_MODEL, model.trim()).apply()
+    fun setAsrModel(context: Context, providerId: String, model: String) {
+        getPrefs(context).edit().putString("asr_model_$providerId", model.trim()).apply()
     }
 
-    fun isBuiltinAsrEnabled(context: Context): Boolean =
-        getPrefs(context).getBoolean(KEY_BUILTIN_ASR_ENABLED, false)
+    /** 自定义 Base URL（自建反代 / 区域端点 / 国际站）。 */
+    fun getAsrBaseUrl(context: Context, providerId: String): String =
+        getPrefs(context).getString("asr_base_$providerId", "") ?: ""
 
-    fun setBuiltinAsrEnabled(context: Context, enabled: Boolean) {
-        getPrefs(context).edit().putBoolean(KEY_BUILTIN_ASR_ENABLED, enabled).apply()
+    fun setAsrBaseUrl(context: Context, providerId: String, url: String) {
+        getPrefs(context).edit().putString("asr_base_$providerId", url.trim()).apply()
+    }
+
+    /** 语言提示（auto / zh / en / …）；空串表示由服务端自动判断。 */
+    fun getAsrLanguage(context: Context, providerId: String): String =
+        getPrefs(context).getString("asr_lang_$providerId", "") ?: ""
+
+    fun setAsrLanguage(context: Context, providerId: String, language: String) {
+        getPrefs(context).edit().putString("asr_lang_$providerId", language.trim()).apply()
     }
 }

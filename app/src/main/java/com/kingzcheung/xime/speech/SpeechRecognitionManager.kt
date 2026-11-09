@@ -365,13 +365,27 @@ class SpeechRecognitionManager(private val context: Context) {
         return true
     }
 
+    /**
+     * 按用户选择的引擎造后端。
+     *
+     * 与历史实现的关键差别：**内置在线**是 App 自己发请求（无需插件），且不可用时
+     * 不再静默换到别的引擎——回退规则集中在 [SttEngineResolver]，只在"插件不可用
+     * 但内置在线已配置"这一种明确场景下降级，避免"以为在跑 A 其实在跑 B"。
+     */
     private fun createBackend(): AsrBackend? {
-        // 用户开启"本地识别"时才使用离线后端，否则走在线插件
-        val useLocal = SettingsPreferences.isSttUseLocal(context)
-        return if (useLocal) {
-            AsrBackendFactory.create(context) ?: createOnlineAsrBackend()
-        } else {
-            createOnlineAsrBackend()
+        val enabledPlugins = ExtensionManager.getEnabledAsrPlugins(context).map { it.first }
+        val engine = SettingsPreferences.getSttEngine(context)
+        val resolution = SttEngineResolver.resolve(
+            preferred = engine,
+            localAvailable = AsrBackendFactory.getLocalName(context) != null,
+            builtinConfigured = AsrBackendFactory.isBuiltinConfigured(context),
+            enabledPluginIds = enabledPlugins,
+        )
+        Log.d(TAG, "STT engine=${resolution.engine} pref=$engine fallback=${resolution.fallbackFrom} unavailable=${resolution.unavailable}")
+        return when (resolution.engine) {
+            SttEngine.LOCAL -> AsrBackendFactory.create(context)
+            SttEngine.BUILTIN_ONLINE -> AsrBackendFactory.createBuiltinOnline(context)
+            SttEngine.PLUGIN -> createOnlineAsrBackend()
         }
     }
 

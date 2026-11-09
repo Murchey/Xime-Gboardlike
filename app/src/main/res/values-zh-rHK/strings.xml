@@ -1094,4 +1094,29 @@
     <string name="s_xuanzebiaodian">選擇標點</string>
     <string name="s_xuanzemoban">選擇配色模板</string>
     <string name="s_xuanzemoban_shuoming">選擇一套內建主題作為起點，再調整顏色。</string>
+    <!-- 語音識別：引擎選擇與內建線上設定 -->
+    <string name="s_shibieyinqing">識別引擎</string>
+    <string name="s_yinqing_bendimoxing">本機模型</string>
+    <string name="s_yinqing_neizhianzaixian">內建線上識別</string>
+    <string name="s_yinqing_chajian">已安裝外掛</string>
+    <string name="s_yinqing_yijiu">已就緒</string>
+    <string name="s_yinqing_weixiazaimoxing">未下載模型，點擊去管理</string>
+    <string name="s_yinqing_weitianmiyao">未填 API Key，點擊去填寫</string>
+    <string name="s_yinqing_weianzhuangchajian">未安裝外掛，點擊去外掛頁</string>
+    <string name="s_neizhianzaixian_shi">內建 · %1$s</string>
+    <string name="s_yuyin_fuwushang">服務商</string>
+    <string name="s_yuyin_ceshilianjie">測試連線</string>
+    <string name="s_yuyin_lianjiezhong">正在連線…</string>
+    <string name="s_yuyin_lianjiechenggong">已連線，服務正常</string>
+    <string name="s_yuyin_miyaowuxiao">API Key 無效或無權限</string>
+    <string name="s_yuyin_dizhibudui">請求位址不正確，請檢查 Base URL</string>
+    <string name="s_yuyin_gaojishezhi">進階設定</string>
+    <string name="s_yuyin_yuyantishi">語言提示（留空自動判斷，可填 zh / en）</string>
+    <string name="s_yuyin_qingtianxiekey">請先填寫 API Key</string>
+    <string name="s_yuyin_zidingyimoxing">自訂模型名</string>
+    <string name="s_weixiazaiyuyinmoxing">未下載語音模型，請到「語音轉文字」下載</string>
+    <string name="s_weitianxieyuyinmiyao">未填寫 API Key，請到「語音轉文字」填寫</string>
+    <string name="s_weianzhuangyuyinchajian">未安裝可用的語音識別外掛</string>
+    <string name="s_yuyinyinqingbunengyong">語音引擎無法使用，請檢查設定</string>
+    <string name="s_fenhao_fenci">分號；長按分詞</string>
 </resources>

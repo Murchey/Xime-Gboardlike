@@ -386,9 +386,19 @@ object BackupManager {
     // ---- prefs 备份/恢复（JSON，类型保留：b/i/l/f/s/ss） ----
 
     /** 序列化 prefs 全部键值（插件配置值为密文字符串，原样存取，不在备份链路解密）。 */
+    /**
+     * 敏感偏好键：API Key 之类的凭据一律不进备份包。
+     *
+     * 导出包会被用户上传到网盘/聊天工具，明文密钥躺在 zip 里等同于泄露；
+     * 恢复侧同样跳过，避免旧包里残留的明文被灌回当前设备。
+     */
+    internal fun isSensitivePrefKey(key: String): Boolean =
+        key.startsWith("asr_key_")
+
     fun prefsToJson(prefs: SharedPreferences): String {
         val root = org.json.JSONObject()
         for ((key, value) in prefs.all) {
+            if (isSensitivePrefKey(key)) continue
             val entry = org.json.JSONObject()
             when (value) {
                 is Boolean -> entry.put("t", "b").put("v", value)
@@ -409,6 +419,7 @@ object BackupManager {
         val root = org.json.JSONObject(json.toString(Charsets.UTF_8))
         val editor = prefs.edit()
         for (key in root.keys()) {
+            if (isSensitivePrefKey(key)) continue
             val entry = root.optJSONObject(key) ?: continue
             when (entry.optString("t")) {
                 "b" -> editor.putBoolean(key, entry.getBoolean("v"))

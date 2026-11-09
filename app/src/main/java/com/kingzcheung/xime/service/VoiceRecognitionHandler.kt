@@ -14,6 +14,9 @@ import com.kingzcheung.xime.plugin.ExtensionManager
 import com.kingzcheung.xime.speech.AsrBackendFactory
 import com.kingzcheung.xime.speech.RecognitionState
 import com.kingzcheung.xime.speech.SpeechRecognitionManager
+import com.kingzcheung.xime.speech.SttEngine
+import com.kingzcheung.xime.speech.SttEngineResolver
+import com.kingzcheung.xime.speech.SttUnavailable
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.util.FileLogger
 
@@ -140,6 +143,10 @@ class VoiceRecognitionHandler(
             return
         }
 
+        // 开录前先解析引擎：不可用时给出"去干什么"的具体提示，而不是等后端造不出来
+        // 再报一句含糊的"无法初始化语音引擎"（用户没法据此自行修复）。
+        if (rejectUnavailableEngine()) return
+
         // 上一次会话若还在收尾等待中（快速再次开始），直接废弃收尾状态
         finishing = false
         mainHandler.removeCallbacks(finishTimeoutRunnable)
@@ -172,23 +179,63 @@ class VoiceRecognitionHandler(
 
     fun isInitialized(): Boolean = ::speechRecognitionManager.isInitialized
 
-    private fun resolveProviderName(): String {
-        // 用户开启"本地识别"且当前构建支持离线语音时，优先显示本地引擎名
-        if (SettingsPreferences.isSttUseLocal(context)) {
-            // 本地引擎显示当前生效模型名；未下载任何模型时用通用名（不默认指定某个模型）
-            return AsrBackendFactory.getLocalName(context) ?: tr(R.string.s_bendilixianshibie)
-        }
-        val enabledPlugins = ExtensionManager.getEnabledAsrPlugins(context)
-        if (enabledPlugins.isNotEmpty()) {
-            val selectedId = SettingsPreferences.getSttOnlinePluginId(context)
-            val selected = enabledPlugins.firstOrNull { it.first == selectedId }
-                ?: enabledPlugins.firstOrNull()
-            if (selected != null) {
-                return ExtensionManager.getAllInstalledPlugins()
-                    .firstOrNull { it.id == selected.first }?.name ?: selected.first
+    /**
+     * 语音面板顶部显示的引擎名。
+     *
+     * 顺序与 [SttEngineResolver] 的实际取用一致，否则会出现"面板写着插件、实际在跑内置"
+     * 的错位（真机排查时误导性极强）。
+     */
+    private fun resolveProviderName(): String =
+        when (SettingsPreferences.getSttEngine(context)) {
+            SttEngine.LOCAL ->
+                // 本地引擎显示当前生效模型名；未下载任何模型时用通用名
+                AsrBackendFactory.getLocalName(context) ?: tr(R.string.s_bendilixianshibie)
+
+            SttEngine.BUILTIN_ONLINE ->
+                tr(R.string.s_neizhianzaixian_shi, AsrBackendFactory.getBuiltinName(context))
+
+            SttEngine.PLUGIN -> {
+                val enabledPlugins = ExtensionManager.getEnabledAsrPlugins(context)
+                val selectedId = SettingsPreferences.getSttOnlinePluginId(context)
+                val selected = enabledPlugins.firstOrNull { it.first == selectedId }
+                    ?: enabledPlugins.firstOrNull()
+                if (selected != null) {
+                    ExtensionManager.getAllInstalledPlugins()
+                        .firstOrNull { it.id == selected.first }?.name ?: selected.first
+                } else {
+                    // 插件不可用时解析器会降级到内置在线
+                    if (AsrBackendFactory.isBuiltinConfigured(context)) {
+                        tr(R.string.s_neizhianzaixian_shi, AsrBackendFactory.getBuiltinName(context))
+                    } else {
+                        tr(R.string.s_weipeizhi)
+                    }
+                }
             }
         }
-        return tr(R.string.s_weipeizhi)
+
+    /**
+     * 开录前检查所选引擎是否可用；不可用则提示并返回 true（调用方放弃本次录音）。
+     *
+     * 提示文案必须可操作：只说"引擎不可用"用户无从下手，要说清缺模型还是缺 Key。
+     */
+    private fun rejectUnavailableEngine(): Boolean {
+        val engine = SettingsPreferences.getSttEngine(context)
+        val resolution = SttEngineResolver.resolve(
+            preferred = engine,
+            localAvailable = AsrBackendFactory.getLocalName(context) != null,
+            builtinConfigured = AsrBackendFactory.isBuiltinConfigured(context),
+            enabledPluginIds = ExtensionManager.getEnabledAsrPlugins(context).map { it.first },
+        )
+        if (resolution.isAvailable) return false
+        val message = when (resolution.unavailable) {
+            SttUnavailable.MODEL_MISSING -> tr(R.string.s_weixiazaiyuyinmoxing)
+            SttUnavailable.KEY_MISSING -> tr(R.string.s_weitianxieyuyinmiyao)
+            SttUnavailable.PLUGIN_MISSING -> tr(R.string.s_weianzhuangyuyinchajian)
+            null -> tr(R.string.s_yuyinyinqingbunengyong)
+        }
+        FileLogger.w(TAG, "STT engine unavailable: \$resolution")
+        handleSpeechError(message, userVisible = true)
+        return true
     }
 
     private var lastPartialText = ""
