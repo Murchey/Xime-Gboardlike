@@ -29,12 +29,42 @@ class ObjectStorageConfigTest {
     }
 
     @Test
-    fun `isConfigured 需要 host 与两把 key`() {
+    fun `私有模式 isConfigured 需要 host 与两把 key`() {
         assertFalse(ObjectStorageConfig(endpoint = "https://a.cos.x.com", accessKeyId = "a").isConfigured)
         assertFalse(ObjectStorageConfig(endpoint = "https://a.cos.x.com", secretKey = "s").isConfigured)
         assertTrue(ObjectStorageConfig(
             endpoint = "https://a.cos.x.com", accessKeyId = "a", secretKey = "s"
         ).isConfigured)
+    }
+
+    @Test
+    fun `公有 COS 和 OSS 允许匿名且无需单独填写 bucket`() {
+        for (protocol in listOf(StorageProtocol.COS, StorageProtocol.OSS)) {
+            assertTrue(ObjectStorageConfig(protocol = protocol, endpoint = "bucket.example.com", privateAuth = false).isConfigured)
+            assertFalse(ObjectStorageConfig(protocol = protocol, privateAuth = false).isConfigured)
+        }
+    }
+
+    @Test
+    fun `S3 不论公有私有都需要 bucket`() {
+        for (privateAuth in listOf(true, false)) {
+            val config = ObjectStorageConfig(protocol = StorageProtocol.S3, endpoint = "s3.example.com",
+                accessKeyId = "id", secretKey = "secret", privateAuth = privateAuth)
+            assertFalse(config.isConfigured)
+            assertFalse(config.copy(bucket = " ").isConfigured)
+            assertTrue(config.copy(bucket = "bucket").isConfigured)
+        }
+    }
+
+    @Test
+    fun `S3 公有无需凭据且切为私有后不可用`() {
+        val config = ObjectStorageConfig(protocol = StorageProtocol.S3, endpoint = "s3.example.com",
+            bucket = "bucket", privateAuth = false)
+        assertTrue(config.isConfigured)
+        assertFalse(config.copy(privateAuth = true).isConfigured)
+        assertFalse(config.copy(privateAuth = true, accessKeyId = "id").isConfigured)
+        assertFalse(config.copy(privateAuth = true, secretKey = "secret").isConfigured)
+        assertTrue(config.copy(privateAuth = true, accessKeyId = "id", secretKey = "secret").isConfigured)
     }
 
     @Test

@@ -7,6 +7,13 @@ import org.json.JSONObject
 object TombstoneStore {
     const val PREF_KEY = "os_clipboard_tombstones"
 
+    /** 与本地删除并发时合并当前值，禁止同步完成覆盖新墓碑。 */
+    @Synchronized
+    fun mergeInto(prefs: android.content.SharedPreferences, incoming: List<ClipboardTombstone>) {
+        val merged = decode(prefs.getString(PREF_KEY, null)) + incoming
+        prefs.edit().putString(PREF_KEY, encode(merged)).apply()
+    }
+
     fun decode(raw: String?): List<ClipboardTombstone> = runCatching {
         if (raw.isNullOrBlank()) return emptyList()
         val arr = JSONArray(raw)

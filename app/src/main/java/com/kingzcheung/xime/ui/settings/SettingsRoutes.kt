@@ -46,6 +46,10 @@ object SettingsRoutes {
     const val ClipboardSync = "clipboard_sync"
     const val Backup = "backup"
     const val ObjectStorage = "object_storage"
+    const val ObjectStorageClipboard = "object_storage_clipboard"
+    const val ObjectStorageRecords = "object_storage_records"
+    const val LocalBackup = "local_backup"
+    const val PluginBackup = "plugin_backup"
     /** 上游 WebDAV 等插件式同步/备份收进此二级页。 */
     const val LegacySync = "legacy_sync"
     const val SchemaDictBrowser = "schema_dict_browser"

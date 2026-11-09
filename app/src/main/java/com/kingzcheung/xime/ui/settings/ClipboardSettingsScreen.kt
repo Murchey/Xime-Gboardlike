@@ -164,10 +164,9 @@ fun ClipboardSettingsContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 内置对象存储同步优先展示（用户要求），上游 WebDAV 等收进二级页
-            ObjectStoragePrimaryCard(
-                onNavigateToConfig = onNavigateToObjectStorage,
-                onNavigateToLegacy = onNavigateToLegacy,
-                showBackup = false,
+            ClipboardSyncSummaryRow(
+                onOpen = onNavigateToClipboardSync,
+                onConfigure = onNavigateToObjectStorage,
             )
 
             SettingsSection(

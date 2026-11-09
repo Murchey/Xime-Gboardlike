@@ -74,13 +74,12 @@ object RimeExportManager {
                 tempZip.delete()
             }
 
-            val resultUri = if (savedToDownloads) {
-                resolveDownloadsUri(context, fileName)
-            } else {
-                null
+            if (!savedToDownloads) {
+                return Result.failure(IllegalStateException(tr(R.string.s_baocundaoxiazaimulushibai)))
             }
+            val resultUri = resolveDownloadsUri(context, fileName)
 
-            // 生成了完整备份包即视为一次备份（本地导出与云备份共用此口径）
+            // 仅成功保存到下载目录才记为一次本地备份。
             SettingsPreferences.setLastBackupAt(context, System.currentTimeMillis())
             return Result.success(ExportResult(resultUri, fileName, savedToDownloads))
         } catch (e: Exception) {
@@ -204,8 +203,9 @@ object RimeExportManager {
                     MediaStore.Downloads.EXTERNAL_CONTENT_URI, values
                 )
                 if (uri == null) return false
-                context.contentResolver.openOutputStream(uri)?.use { output ->
-                    zipFile.inputStream().use { it.copyTo(output) }
+                val output = context.contentResolver.openOutputStream(uri) ?: return false
+                output.use {
+                    zipFile.inputStream().use { input -> input.copyTo(it) }
                 }
                 true
             } else {

@@ -125,8 +125,12 @@ internal fun rememberImeKeyboardCallbacks(
             onClipboardImageSelect = { item -> service.textCommit.selectClipboardImage(item) },
             onClipboardPullRemote = {
                 // 内置对象存储同步优先；未启用时回落到插件桥
-                service.clipboardObjectStoreSync?.syncOnClipboardOpen()
-                    ?: service.clipboardSyncBridge?.pullOnce()
+                if (com.kingzcheung.xime.clipboard.sync.objstore.ClipboardObjectStoreSync.isBuiltinEnabled(service)) {
+                    com.kingzcheung.xime.clipboard.sync.objstore.ObjectStorageSyncCoordinator.of(service)
+                        .requestAutomatic(throttle = true)
+                } else {
+                    service.clipboardSyncBridge?.pullOnce()
+                }
             },
             onCommitText = { text -> service.textCommit.commitClipboardText(text) },
             onDeleteText = { count -> service.textCommit.deleteClipboardChars(count) },

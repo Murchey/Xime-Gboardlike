@@ -95,6 +95,7 @@ import com.kingzcheung.xime.association.AssociationService
 import com.kingzcheung.xime.clipboard.ClipboardManager
 import com.kingzcheung.xime.clipboard.sync.ClipboardSyncBridge
 import com.kingzcheung.xime.clipboard.sync.objstore.ClipboardObjectStoreSync
+import com.kingzcheung.xime.clipboard.sync.objstore.ObjectStorageSyncCoordinator
 import com.kingzcheung.xime.plugin.ActivePluginSelection
 import com.kingzcheung.xime.plugin.ExtensionManager
 import com.kingzcheung.xime.plugin.core.api.ToolPlugin
@@ -660,7 +661,13 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     }
                 }
                 SettingsPreferences.KEY_SMART_PREDICTION_ENABLED -> onPredictionSettingChanged()
-                SettingsPreferences.KEY_CLIPBOARD_SYNC_ENABLED -> updateClipboardSync()
+                SettingsPreferences.KEY_CLIPBOARD_SYNC_ENABLED,
+                ClipboardObjectStoreSync.PREF_ENGINE,
+                ClipboardObjectStoreSync.PREF_MODE,
+                "os_protocol", "os_endpoint", "os_bucket", "os_ak", "os_sk", "os_sk_enc", "os_private" -> {
+                    stopClipboardSync()
+                    updateClipboardSync()
+                }
                 SettingsPreferences.KEY_CLIPBOARD_SYNC_PLUGIN_ID -> {
                     stopClipboardSync()
                     updateClipboardSync()
@@ -1053,14 +1060,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             }
             // 内置对象存储优先：启用后不再启动任何插件桥（两者互斥，避免双跑）
             if (ClipboardObjectStoreSync.isBuiltinEnabled(this)) {
-                val engine = ClipboardObjectStoreSync(
-                    context = this,
-                    clipboardManager = clipboardManager,
-                    dao = com.kingzcheung.xime.clipboard.db.ClipboardDatabase
-                        .getInstance(this).clipboardDao(),
-                )
-                // 本地删除 → 记墓碑 → 下次同步把远端对象也删掉
-                clipboardManager.onEntryDeleted = { uuid -> engine.markDeleted(uuid) }
+                val engine = ObjectStorageSyncCoordinator.of(this).engine
                 engine.start()
                 clipboardObjectStoreSync = engine
                 uiState.value = uiState.value.copy(clipboardSyncEnabled = true)
@@ -1121,6 +1121,16 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     /** 剪贴板同步设置或插件状态变化时调用，按条件动态启停。 */
     private fun updateClipboardSync() {
         if (!::clipboardManager.isInitialized) return
+        if (!SettingsPreferences.isClipboardSyncEnabled(this)) {
+            stopClipboardSync()
+            return
+        }
+        if (ClipboardObjectStoreSync.isBuiltinEnabled(this)) {
+            if (clipboardSyncBridge != null) stopClipboardSync()
+            startClipboardSyncIfEnabled()
+            return
+        }
+        if (clipboardObjectStoreSync != null) stopClipboardSync()
         if (clipboardSyncBridge == null) {
             startClipboardSyncIfEnabled()
             return
@@ -2921,8 +2931,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         // 每次弹出只做两次资源读取对比，取色未变时零成本。
         KeyboardThemes.refreshDynamicSchemes(this)
         // 键盘弹出也视为一次「打开」：内置引擎优先，插件桥回落
-        clipboardObjectStoreSync?.syncOnClipboardOpen()
-            ?: clipboardSyncBridge?.pullOnce()
+        if (ClipboardObjectStoreSync.isBuiltinEnabled(this)) {
+            ObjectStorageSyncCoordinator.of(this).requestAutomatic(throttle = true)
+        } else {
+            clipboardSyncBridge?.pullOnce()
+        }
     }
     
     private fun clearInputState() {

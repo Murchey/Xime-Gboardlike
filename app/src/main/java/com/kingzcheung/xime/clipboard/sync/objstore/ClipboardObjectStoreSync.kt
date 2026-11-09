@@ -7,19 +7,12 @@ import com.kingzcheung.xime.clipboard.ClipboardManager
 import com.kingzcheung.xime.clipboard.db.ClipboardDao
 import com.kingzcheung.xime.clipboard.db.ClipboardEntry
 import com.kingzcheung.xime.objectstorage.ObjectStorageClient
-import com.kingzcheung.xime.objectstorage.ObjectStorageConfig
 import com.kingzcheung.xime.objectstorage.ObjectStorageConfigStore
 import com.kingzcheung.xime.settings.SettingsPreferences
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
@@ -42,6 +35,7 @@ class ClipboardObjectStoreSync(
     private val clipboardManager: ClipboardManager,
     private val dao: ClipboardDao,
     private val configStore: ObjectStorageConfigStore = ObjectStorageConfigStore.of(context),
+    private val clientFactory: (com.kingzcheung.xime.objectstorage.ObjectStorageConfig) -> ObjectStorageClient = { ObjectStorageClient(it) },
 ) {
     companion object {
         private const val TAG = "ClipboardObjSync"
@@ -53,7 +47,6 @@ class ClipboardObjectStoreSync(
         const val MODE_BIDIRECTIONAL = "bidirectional"
         const val PREF_LAST_SHA = "os_last_clipboard_sha"
         const val PREF_LAST_UPDATED = "os_last_clipboard_updated"
-        private const val MIN_SYNC_INTERVAL_MS = 30_000L
         private const val INDEX_KEY = "XimeGboard/index.json"
         private const val CONTENT_PREFIX = "XimeGboard/content"
         private const val IMG_PREFIX = "XimeGboard/content/files/img"
@@ -67,115 +60,81 @@ class ClipboardObjectStoreSync(
                 ?: MODE_BIDIRECTIONAL
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val mutex = Mutex()
+    // 旧公开 API 保留；自动和手动触发均交给应用级协调器。
+    fun start() = ObjectStorageSyncCoordinator.of(context).startAutomatic()
+    fun release() = ObjectStorageSyncCoordinator.of(context).stopAutomatic()
+    fun syncOnClipboardOpen() = ObjectStorageSyncCoordinator.of(context).requestAutomatic(throttle = true)
+    fun syncNow() = ObjectStorageSyncCoordinator.of(context).requestManual()
 
-    @Volatile
-    private var running = false
-    @Volatile
-    private var lastSyncAt = 0L
-    private var changeCollector: Job? = null
+    internal suspend fun sync(throttle: Boolean): SyncOutcome =
+        ObjectStorageSyncCoordinator.of(context).runSync(throttle)
 
-    fun start() {
-        if (running) return
-        running = true
-        // 复制完东西 → 增量触发（复用现有 SharedFlow，与插件桥同一数据源）
-        changeCollector = clipboardManager.clipboardChanged
-            .onEach { scope.launch { syncOnClipboardChange() } }
-            .launchIn(scope)
-        Log.d(TAG, "started")
-    }
-
-    fun release() {
-        running = false
-        changeCollector?.cancel()
-        changeCollector = null
-        scope.cancel()
-    }
-
-    /** 打开剪切板面板时调用（用户明确要求的同步时机）。 */
-    fun syncOnClipboardOpen() {
-        scope.launch { sync(throttle = true) }
-    }
-
-    private fun syncOnClipboardChange() {
-        scope.launch { sync(throttle = false) }
-    }
-
-    /** 手动「立即同步」。 */
-    fun syncNow() {
-        scope.launch { sync(throttle = false) }
-    }
-
-    internal suspend fun sync(throttle: Boolean): SyncOutcome = mutex.withLock {
-        if (!running) return@withLock SyncOutcome.Skipped
-        val now = System.currentTimeMillis()
-        if (throttle && now - lastSyncAt < MIN_SYNC_INTERVAL_MS) {
-            return@withLock SyncOutcome.Skipped
-        }
+    internal suspend fun performSync(): SyncOutcome = withContext(Dispatchers.IO) {
         val config = configStore.load()
-        if (!config.isConfigured) {
-            Log.d(TAG, "config incomplete, skip")
-            return@withLock SyncOutcome.Failure("对象存储未配置")
-        }
-        val client = ObjectStorageClient(config)
+        if (!config.isConfigured) return@withContext SyncOutcome.Failure("对象存储未配置")
+        val client = clientFactory(config)
+        val syncMode = mode(context)
         val prefs = SettingsPreferences.getPrefsPublic(context)
-
-        lastSyncAt = now
-        return@withLock runCatching {
-            // 1) 本地清单（Room 全量历史）
+        val now = System.currentTimeMillis()
+        val targetIdentity = SavedSyncTarget.identity(prefs)
+        try {
             val localItems = buildLocalItems()
             val tombstones = TombstoneStore.decode(prefs.getString(TombstoneStore.PREF_KEY, null))
             val localIndex = ClipboardIndexCalculator.build(localItems, tombstones, now)
-
-            // 2) 远端 index
             val remoteIndex = readRemoteIndex(client)
-            val lastSha = prefs.getString(PREF_LAST_SHA, "").orEmpty()
-            if (remoteIndex.sha256 == localIndex.sha256 && lastSha == localIndex.sha256) {
-                Log.d(TAG, "index sha identical, nothing to do")
-                return@withLock SyncOutcome.UpToDate
-            }
-
-            // 3) 计算差异（模式决定语义）
-            val plan = when (mode(context)) {
+            val plan = when (syncMode) {
                 MODE_PUSH -> ClipboardIndexCalculator.pushOnly(localIndex, remoteIndex, now)
                 else -> ClipboardIndexCalculator.merge(localIndex, remoteIndex, now)
             }
-
-            // 4) 执行传输
-            val itemMap = localItems.associateBy { it.uuid }
-            var uploaded = 0
-            var downloaded = 0
-            var deleted = 0
-
-            for (uuid in plan.toUpload) {
-                val item = itemMap[uuid] ?: continue
-                if (uploadContent(client, uuid, item)) uploaded++
+            val finalIndex = ClipboardIndexCalculator.build(plan.mergedItems, plan.mergedTombstones, now)
+            val localDeletes = localItems.filter { l -> plan.mergedTombstones.any { it.uuid == l.uuid } }
+            if (plan.isEmpty && localDeletes.isEmpty() && remoteIndex.sha256 == finalIndex.sha256) {
+                currentCoroutineContext().ensureActive()
+                check(configStore.load() == config && mode(context) == syncMode) { "同步配置已改变，请重试" }
+                recordSuccess(finalIndex, System.currentTimeMillis(), targetIdentity)
+                return@withContext SyncOutcome.UpToDate
             }
+            val itemMap = localItems.associateBy { it.uuid }
+            for (uuid in plan.toUpload) {
+                currentCoroutineContext().ensureActive()
+                check(uploadContent(client, uuid, itemMap.getValue(uuid))) { "上传失败：$uuid" }
+            }
+            val remoteItems = remoteIndex.items.associateBy { it.uuid }
             for (uuid in plan.toDownload) {
-                if (downloadContent(client, uuid)) downloaded++
+                currentCoroutineContext().ensureActive()
+                check(downloadContent(client, remoteItems.getValue(uuid))) { "下载或内容校验失败：$uuid" }
+            }
+            // 先持久化墓碑，后续网络失败也不能让远端删除的条目复活。
+            TombstoneStore.mergeInto(prefs, plan.mergedTombstones)
+            for (item in localDeletes) {
+                currentCoroutineContext().ensureActive()
+                findEntryByUuid(item.uuid)?.let { dao.deleteClipboardById(it.id) }
             }
             for (uuid in plan.toDelete) {
-                if (deleteContent(client, uuid)) deleted++
+                currentCoroutineContext().ensureActive()
+                check(deleteContent(client, uuid)) { "删除远端内容失败：$uuid" }
             }
-
-            // 5) 回写 index（清单以合并结果为准）
-            val finalIndex = ClipboardIndexCalculator.build(
-                plan.mergedItems, plan.mergedTombstones, now
-            )
-            putIndex(client, finalIndex)
-            prefs.edit()
-                .putString(PREF_LAST_SHA, finalIndex.sha256)
-                .putLong(PREF_LAST_UPDATED, now)
-                .putString(TombstoneStore.PREF_KEY, TombstoneStore.encode(plan.mergedTombstones))
-                .apply()
-
-            Log.d(TAG, "sync done: up=$uploaded down=$downloaded del=$deleted")
-            SyncOutcome.Success(uploaded, downloaded, deleted)
-        }.getOrElse { e ->
+            currentCoroutineContext().ensureActive()
+            check(configStore.load() == config && mode(context) == syncMode) { "同步配置已改变，请重试" }
+            check(putIndex(client, finalIndex)) { "写入远端索引失败" }
+            currentCoroutineContext().ensureActive()
+            check(configStore.load() == config && mode(context) == syncMode) { "同步配置已改变，请重试" }
+            recordSuccess(finalIndex, System.currentTimeMillis(), targetIdentity)
+            SyncOutcome.Success(plan.toUpload.size, plan.toDownload.size, (plan.toDelete + localDeletes.map { it.uuid }).distinct().size)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
             Log.e(TAG, "sync failed", e)
             SyncOutcome.Failure(e.message ?: "同步失败")
         }
+    }
+
+    private fun recordSuccess(index: ClipboardIndex, now: Long, targetIdentity: String) {
+        val prefs = SettingsPreferences.getPrefsPublic(context)
+        TombstoneStore.mergeInto(prefs, index.tombstones)
+        check(SavedSyncTarget.identity(prefs) == targetIdentity) { "同步配置已改变，请重试" }
+        prefs.edit().putString(PREF_LAST_SHA, index.sha256).putLong(PREF_LAST_UPDATED, now)
+            .putString(SavedSyncTarget.PREF_KEY, targetIdentity).apply()
     }
 
     // ── 本地清单 ────────────────────────────────────────────
@@ -206,58 +165,67 @@ class ClipboardObjectStoreSync(
     private suspend fun readRemoteIndex(client: ObjectStorageClient): ClipboardIndex {
         return when (val r = client.getObject(INDEX_KEY)) {
             is ObjectStorageClient.Result.Success ->
-                ClipboardIndex.fromJson(String(r.value, Charsets.UTF_8))
-            else -> ClipboardIndex.empty()
+                ClipboardIndex.parseRemote(String(r.value, Charsets.UTF_8))
+            is ObjectStorageClient.Result.Failure ->
+                if (r.httpCode == 404 && r.message.contains("NoSuchKey") && !r.message.contains("NoSuchBucket"))
+                    ClipboardIndex.empty() else error(r.message)
         }
     }
 
     private suspend fun putIndex(client: ObjectStorageClient, index: ClipboardIndex): Boolean =
         client.putObject(INDEX_KEY, index.toJson().toString().toByteArray(Charsets.UTF_8), "application/json")
-            .let { it is ObjectStorageClient.Result.Success }
+            .let { it.valueOrThrow(); true }
 
     private suspend fun uploadContent(client: ObjectStorageClient, uuid: String, item: ClipboardIndexItem): Boolean {
         val entry = findEntryByUuid(uuid) ?: return false
+        check(contentShaOf(entry) == item.sha256) { "本地内容已改变：$uuid" }
         val json = contentJson(uuid, entry)
-        val ok = client.putObject(
-            "$CONTENT_PREFIX/$uuid.json",
-            json.toString().toByteArray(Charsets.UTF_8),
-            "application/json",
-        ).let { it is ObjectStorageClient.Result.Success }
-        if (!ok) return false
-        // 图片：额外上传二进制到 files/img/
         if (entry.type == ClipboardEntry.TYPE_IMAGE) {
             val file = clipboardManager.imageFileOf(entry.toItem()) ?: return false
-            val ext = file.extension.lowercase().ifEmpty {
-                ClipboardImageStore.sniffExtension(file.readBytes()) ?: "png"
-            }
-            val imgKey = "$IMG_PREFIX/${entry.imageHash}.$ext"
-            return client.putObject(imgKey, file.readBytes(), "image/$ext")
-                .let { it is ObjectStorageClient.Result.Success }
+            val bytes = file.readBytes()
+            check(ObjectStorageHashes.sha256Hex(bytes) == item.sha256) { "本地图片校验失败：$uuid" }
+            val ext = file.extension.lowercase().ifEmpty { ClipboardImageStore.sniffExtension(bytes) ?: "png" }
+            json.put("imagePath", "files/img/${entry.imageHash}.$ext")
+            client.putObject("$IMG_PREFIX/${entry.imageHash}.$ext", bytes,
+                ClipboardImageStore.mimeForExtension(ext) ?: "application/octet-stream").valueOrThrow()
         }
+        // 图片先落 blob，再发布内容对象；最后由 index 一并公布。
+        client.putObject("$CONTENT_PREFIX/$uuid.json", json.toString().toByteArray(Charsets.UTF_8),
+            "application/json").valueOrThrow()
         return true
     }
 
-    private suspend fun downloadContent(client: ObjectStorageClient, uuid: String): Boolean {
+    private fun <T> ObjectStorageClient.Result<T>.valueOrThrow(): T = when (this) {
+        is ObjectStorageClient.Result.Success -> value
+        is ObjectStorageClient.Result.Failure -> error(message)
+    }
+
+    private suspend fun downloadContent(client: ObjectStorageClient, expected: ClipboardIndexItem): Boolean {
+        val uuid = expected.uuid
         val raw = when (val r = client.getObject("$CONTENT_PREFIX/$uuid.json")) {
             is ObjectStorageClient.Result.Success -> r.value
-            else -> return false
+            is ObjectStorageClient.Result.Failure -> error(r.message)
         }
         val o = runCatching { JSONObject(String(raw, Charsets.UTF_8)) }.getOrNull() ?: return false
         val type = o.optString("type", "text")
+        if (o.optString("uuid") != uuid || type != expected.type) return false
         return if (type == "image") {
-            downloadImage(client, o)
+            if (o.optString("imageHash") != expected.sha256 || uuid != "img_${expected.sha256}") return false
+            downloadImage(client, o, expected)
         } else {
             val text = o.optString("text", "")
-            if (text.isBlank()) return false
-            // 写回本地历史；同步引擎自身的写入由 clipboardChanged 回声抑制兜住
-            clipboardManager.addItem(text)
+            if (text.isBlank() || ObjectStorageHashes.sha256Hex(text) != expected.sha256 ||
+                uuid != "txt_${expected.sha256}") return false
+            val existing = dao.findByText(text)
+            dao.insert(ClipboardEntry(id = existing?.id ?: 0, text = text,
+                timestamp = expected.updatedAt, isPinned = o.optBoolean("isPinned", false)))
             true
         }
     }
 
-    private suspend fun downloadImage(client: ObjectStorageClient, o: JSONObject): Boolean {
+    private suspend fun downloadImage(client: ObjectStorageClient, o: JSONObject, item: ClipboardIndexItem): Boolean {
         val imgRel = o.optString("imagePath", "")
-        if (imgRel.isBlank()) return false
+        if (!imgRel.matches(Regex("files/img/[a-f0-9]{64}\\.[a-z0-9]+"))) return false
         val bytes = when (val r = client.getObject("XimeGboard/content/$imgRel")) {
             is ObjectStorageClient.Result.Success -> r.value
             else -> return false
@@ -267,7 +235,13 @@ class ClipboardObjectStoreSync(
             Log.e(TAG, "remote image hash mismatch, discard")
             return false
         }
-        clipboardManager.importImageFromSync(bytes, imgRel.substringAfterLast('/'))
+        if (ClipboardImageStore.sniffExtension(bytes) == null) return false
+        val importedPath = clipboardManager.importImageFromSync(bytes, imgRel.substringAfterLast('/')) ?: return false
+        val importedFile = java.io.File(importedPath)
+        if (!importedFile.isFile || ObjectStorageHashes.sha256Hex(importedFile.readBytes()) != item.sha256) return false
+        val imported = dao.findImageByHash(item.sha256) ?: return false
+        dao.updateTimestamp(imported.id, item.updatedAt)
+        dao.updatePinned(imported.id, o.optBoolean("isPinned", false))
         return true
     }
 
@@ -299,9 +273,7 @@ class ClipboardObjectStoreSync(
     /** 记一条本地删除墓碑（供服务层在删除条目时调用）。 */
     fun markDeleted(uuid: String) {
         val prefs = SettingsPreferences.getPrefsPublic(context)
-        val list = TombstoneStore.decode(prefs.getString(TombstoneStore.PREF_KEY, null)) +
-            ClipboardTombstone(uuid, System.currentTimeMillis())
-        prefs.edit().putString(TombstoneStore.PREF_KEY, TombstoneStore.encode(list)).apply()
+        TombstoneStore.mergeInto(prefs, listOf(ClipboardTombstone(uuid, System.currentTimeMillis())))
     }
 
     sealed class SyncOutcome {

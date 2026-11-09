@@ -1,5 +1,7 @@
 package com.kingzcheung.xime.objectstorage
 
+import com.kingzcheung.xime.R
+import com.kingzcheung.xime.i18n.tr
 import android.util.Xml
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -53,7 +55,57 @@ class ObjectStorageClient(
 
     sealed class Result<out T> {
         data class Success<T>(val value: T) : Result<T>()
-        data class Failure(val message: String) : Result<Nothing>()
+        data class Failure(val message: String, val httpCode: Int? = null) : Result<Nothing>()
+    }
+
+    enum class TestStage { WRITE, READ, VERIFY, CLEANUP }
+
+    sealed class ConnectionTestResult {
+        data object Success : ConnectionTestResult()
+        data class Failure(
+            val stage: TestStage,
+            val detail: String,
+            val cleanupFailed: Boolean = false,
+            val testKey: String? = null,
+        ) : ConnectionTestResult()
+    }
+
+    /** 只操作随机测试对象；即使写入响应失败，也尝试清理可能已落盘的对象。 */
+    suspend fun testConnection(): ConnectionTestResult = withContext(Dispatchers.IO) {
+        val key = "$ROOT_PREFIX/connection-tests/" + java.util.UUID.randomUUID() + ".bin"
+        val payload = java.util.UUID.randomUUID().toString().toByteArray(Charsets.UTF_8)
+        var failure: ConnectionTestResult.Failure? = null
+        var stage = TestStage.WRITE
+        try {
+            when (val written = execute("PUT", key, payload, "application/octet-stream")) {
+                is Result.Failure -> failure = ConnectionTestResult.Failure(stage, written.message)
+                is Result.Success -> {
+                    stage = TestStage.READ
+                    val request = buildRequest("GET", key, null, null)
+                    if (request == null) {
+                        failure = ConnectionTestResult.Failure(stage, tr(R.string.config_incomplete))
+                    } else {
+                        http.newCall(request).execute().use { response ->
+                            if (!response.isSuccessful) {
+                                failure = ConnectionTestResult.Failure(stage, describeHttpError(response))
+                            } else if (!payload.contentEquals(response.body?.bytes())) {
+                                failure = ConnectionTestResult.Failure(TestStage.VERIFY, tr(R.string.config_mismatch))
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            failure = ConnectionTestResult.Failure(stage, tr(R.string.config_network_failed))
+        } finally {
+            val cleaned = runCatching { execute("DELETE", key, null, null) }.getOrNull()
+            if (cleaned !is Result.Success) {
+                failure = failure?.copy(cleanupFailed = true, testKey = key)
+                    ?: ConnectionTestResult.Failure(TestStage.CLEANUP,
+                        (cleaned as? Result.Failure)?.message ?: tr(R.string.config_cleanup_request_failed), true, key)
+            }
+        }
+        failure ?: ConnectionTestResult.Success
     }
 
     /** 是否对请求签名：仅私有读写模式。 */
@@ -65,9 +117,16 @@ class ObjectStorageClient(
         }
 
     suspend fun getObject(key: String): Result<ByteArray> = withContext(Dispatchers.IO) {
-        val raw = executeRaw("GET", key, null, null)
-            ?: return@withContext Result.Failure("读取失败：$key")
-        Result.Success(raw)
+        try {
+            val request = buildRequest("GET", key, null, null)
+                ?: return@withContext Result.Failure(tr(R.string.config_storage_incomplete))
+            http.newCall(request).execute().use { response ->
+                if (response.isSuccessful) Result.Success(response.body?.bytes() ?: ByteArray(0))
+                else Result.Failure(describeHttpError(response), response.code)
+            }
+        } catch (_: Exception) {
+            Result.Failure(tr(R.string.config_network_failed))
+        }
     }
 
     suspend fun deleteObject(key: String): Result<Unit> = withContext(Dispatchers.IO) {
@@ -84,13 +143,13 @@ class ObjectStorageClient(
     /** 仅判断读通道是否可用（GET 一个已知存在或允许 404 的对象）。 */
     suspend fun probeRead(key: String): Result<Unit> = withContext(Dispatchers.IO) {
         val request = buildRequest("GET", key, null, null)
-            ?: return@withContext Result.Failure("配置不完整")
+            ?: return@withContext Result.Failure(tr(R.string.config_incomplete))
         runCatching {
             http.newCall(request).execute().use { resp ->
                 if (resp.isSuccessful || resp.code == 404) Result.Success(Unit)
                 else Result.Failure("HTTP ${resp.code}: ${resp.body?.string().orEmpty().take(200)}")
             }
-        }.getOrElse { Result.Failure(it.message ?: "网络错误") }
+        }.getOrElse { Result.Failure(it.message ?: tr(R.string.config_network_error)) }
     }
 
     /** 列出指定前缀下的对象（GET Bucket /?prefix=...）。 */
@@ -104,7 +163,7 @@ class ObjectStorageClient(
             else -> query["prefix"] = prefix
         }
         val request = buildRequest("GET", "", null, null, query = query, bucketRequest = true)
-            ?: return@withContext Result.Failure("配置不完整")
+            ?: return@withContext Result.Failure(tr(R.string.config_incomplete))
         val body = runCatching {
             http.newCall(request).execute().use { resp ->
                 if (!resp.isSuccessful) return@withContext Result.Failure(
@@ -112,7 +171,7 @@ class ObjectStorageClient(
                 )
                 resp.body?.string().orEmpty()
             }
-        }.getOrElse { return@withContext Result.Failure(it.message ?: "网络错误") }
+        }.getOrElse { return@withContext Result.Failure(it.message ?: tr(R.string.config_network_error)) }
         Result.Success(parseListXml(body))
     }
 
@@ -188,13 +247,13 @@ class ObjectStorageClient(
 
     private fun execute(method: String, key: String, body: ByteArray?, contentType: String?): Result<Unit> {
         val request = buildRequest(method, key, body, contentType)
-            ?: return Result.Failure("对象存储配置不完整")
+            ?: return Result.Failure(tr(R.string.config_storage_incomplete))
         return runCatching {
             http.newCall(request).execute().use { resp ->
                 if (resp.isSuccessful) Result.Success(Unit)
                 else Result.Failure(describeHttpError(resp))
             }
-        }.getOrElse { Result.Failure(it.message ?: "网络错误") }
+        }.getOrElse { Result.Failure(it.message ?: tr(R.string.config_network_error)) }
     }
 
     private fun executeRaw(method: String, key: String, body: ByteArray?, contentType: String?): ByteArray? {
@@ -209,11 +268,11 @@ class ObjectStorageClient(
     private fun describeHttpError(resp: Response): String {
         val detail = resp.body?.string().orEmpty().replace(Regex("\\s+"), " ").trim().take(200)
         val hint = when (resp.code) {
-            403 -> if (config.privateAuth) "签名失败或密钥无权限（检查 key/id 与私有读写设置）"
-            else "公有桶可能不允许匿名写入，请改用私有读写"
-            404 -> "对象或桶不存在（检查 Endpoint / Bucket）"
-            in 500..599 -> "服务端错误，稍后重试"
-            else -> "请求失败"
+            403 -> if (config.privateAuth) tr(R.string.config_private_forbidden)
+            else tr(R.string.config_public_forbidden)
+            404 -> tr(R.string.config_not_found)
+            in 500..599 -> tr(R.string.config_server_failed)
+            else -> tr(R.string.config_request_failed)
         }
         return if (detail.isEmpty()) "HTTP ${resp.code} · $hint" else "HTTP ${resp.code} · $hint：$detail"
     }

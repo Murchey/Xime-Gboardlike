@@ -43,20 +43,46 @@ class ObjectStorageConfigStore(
         )
     }
 
-    fun save(config: ObjectStorageConfig) {
+    sealed class SaveResult {
+        data object Success : SaveResult()
+        data object EncryptionFailure : SaveResult()
+        data object PersistenceFailure : SaveResult()
+    }
+
+    @Synchronized
+    fun save(config: ObjectStorageConfig): SaveResult {
+        // 加密失败时不创建编辑器，避免旧配置被部分覆盖。
+        val sk = config.secretKey.trim()
+        val encrypted = try {
+            if (sk.isEmpty()) null else cipher.encrypt(sk).also { check(it.isNotEmpty()) }
+        } catch (_: Exception) {
+            return SaveResult.EncryptionFailure
+        }
+        val keys = setOf(KEY_PROTOCOL, KEY_ENDPOINT, KEY_BUCKET, KEY_AK, KEY_PRIVATE, KEY_SK, KEY_SK_ENC)
+        val previous = prefs.all.filterKeys { it in keys }
         val editor = prefs.edit()
             .putString(KEY_PROTOCOL, config.protocol.prefValue)
             .putString(KEY_ENDPOINT, config.endpoint.trim())
             .putString(KEY_BUCKET, config.bucket.trim())
             .putString(KEY_AK, config.accessKeyId.trim())
             .putBoolean(KEY_PRIVATE, config.privateAuth)
-        val sk = config.secretKey.trim()
-        if (sk.isEmpty()) {
-            editor.remove(KEY_SK_ENC).remove(KEY_SK)
-        } else {
-            editor.putString(KEY_SK_ENC, cipher.encrypt(sk)).remove(KEY_SK)
+        if (encrypted == null) editor.remove(KEY_SK_ENC).remove(KEY_SK)
+        else editor.putString(KEY_SK_ENC, encrypted).remove(KEY_SK)
+        val committed = try { editor.commit() } catch (_: Exception) { false }
+        if (committed) return SaveResult.Success
+        // commit 失败仍可能更新内存；恢复本次涉及的键，其他偏好不受影响。
+        runCatching {
+            val rollback = prefs.edit()
+            keys.forEach { key ->
+                when (val value = previous[key]) {
+                    is String -> rollback.putString(key, value)
+                    is Boolean -> rollback.putBoolean(key, value)
+                    else -> rollback.remove(key)
+                }
+            }
+            rollback.commit()
         }
-        editor.apply()
+        return SaveResult.PersistenceFailure
     }
 
     private fun readSecretKey(): String {
@@ -65,10 +91,14 @@ class ObjectStorageConfigStore(
         val legacy = prefs.getString(KEY_SK, null)
         if (legacy.isNullOrBlank()) return ""
         // 迁移历史明文
-        prefs.edit()
-            .putString(KEY_SK_ENC, cipher.encrypt(legacy.trim()))
-            .remove(KEY_SK)
-            .apply()
+        runCatching {
+            val encryptedLegacy = cipher.encrypt(legacy.trim())
+            check(encryptedLegacy.isNotEmpty())
+            prefs.edit()
+                .putString(KEY_SK_ENC, encryptedLegacy)
+                .remove(KEY_SK)
+                .commit()
+        }
         return legacy.trim()
     }
 }

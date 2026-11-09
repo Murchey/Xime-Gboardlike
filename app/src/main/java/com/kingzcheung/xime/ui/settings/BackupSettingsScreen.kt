@@ -65,6 +65,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -124,8 +125,7 @@ fun BackupSettingsContent(
     onNavigateToPluginSettings: (String) -> Unit,
     onNavigateToObjectStorage: () -> Unit = {},
     onNavigateToLegacy: () -> Unit = {},
-    /** true = 作为「上游方式」二级页复用：只渲染插件区块，不显示内置对象存储主卡。 */
-    legacyOnly: Boolean = false,
+    localOnly: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -156,7 +156,7 @@ fun BackupSettingsContent(
     // 恢复与删除都先确认：恢复=覆盖式落盘，删除=远端不可恢复
     var pendingRestoreEntry by remember { mutableStateOf<RemoteBackupEntry?>(null) }
     var pendingDeleteEntry by remember { mutableStateOf<RemoteBackupEntry?>(null) }
-    var pendingLocalImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var pendingLocalImportUri by rememberSaveable { mutableStateOf<String?>(null) }
     var showRestartDialog by remember { mutableStateOf(false) }
     var storageBusy by remember { mutableStateOf(false) }
     var storagePath by remember { mutableStateOf(RimeStorage.currentPath(context)) }
@@ -253,7 +253,12 @@ fun BackupSettingsContent(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        pendingLocalImportUri = uri
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+        }
+        pendingLocalImportUri = uri.toString()
     }
 
     //词条区主动作：本机整理（引擎原生 sync）+ 已配置服务时顺带云端多设备合并
@@ -367,7 +372,7 @@ fun BackupSettingsContent(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
-                title = { Text(tr(R.string.s_tongbuyubeifen)) },
+                title = { Text(tr(if (localOnly) R.string.storage_local else R.string.storage_plugin_backup)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -391,29 +396,7 @@ fun BackupSettingsContent(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (!legacyOnly) {
-                // ---------- 内置对象存储（优先展示） ----------
-                ObjectStoragePrimaryCard(
-                    onNavigateToConfig = onNavigateToObjectStorage,
-                    onNavigateToLegacy = onNavigateToLegacy,
-                    showBackup = true,
-                )
-
-                // 主页面保持简明：上游 WebDAV 等收进二级页
-                SettingsSection(
-                    title = tr(R.string.os_legacy),
-                    content = {
-                        SettingsItem(
-                            icon = Icons.TwoTone.Cloud,
-                            title = tr(R.string.os_legacy),
-                            subtitle = tr(R.string.os_legacy_hint),
-                            onClick = onNavigateToLegacy,
-                            showArrow = true,
-                        )
-                    }
-                )
-            }
-            if (legacyOnly) {
+            if (!localOnly) {
             // ---------- 备份服务（词条同步与云端备份共用的通道） ----------
             SettingsSection(
                 title = tr(R.string.s_beifenfuwu),
@@ -550,7 +533,9 @@ fun BackupSettingsContent(
                 }
             )
 
-            // ---------- 更多：低频与危险入口集中（原两个弹层） ----------
+            }
+
+            // 本地文件操作始终保留独立入口。
             SettingsSection(
                 title = tr(R.string.s_gengduo),
                 content = {
@@ -572,7 +557,10 @@ fun BackupSettingsContent(
                             if (busyOp == null) {
                                 busyOp = "export"
                                 scope.launch(Dispatchers.IO) {
-                                    val result = SyncManager.exportToDownloads(context)
+                                    val result = SyncManager.syncNow(context).fold(
+                                        onSuccess = { SyncManager.exportToDownloads(context) },
+                                        onFailure = { Result.failure(it) },
+                                    )
                                     withContext(Dispatchers.Main) {
                                         busyOp = null
                                         snackbar.showSnackbar(
@@ -596,7 +584,10 @@ fun BackupSettingsContent(
                             if (busyOp == null) {
                                 busyOp = "exportLocal"
                                 scope.launch(Dispatchers.IO) {
-                                    val result = RimeExportManager.exportArchive(context)
+                                    val result = SyncManager.syncNow(context).fold(
+                                        onSuccess = { RimeExportManager.exportArchive(context) },
+                                        onFailure = { Result.failure(it) },
+                                    )
                                     withContext(Dispatchers.Main) {
                                         busyOp = null
                                         if (result.isSuccess) {
@@ -803,7 +794,7 @@ fun BackupSettingsContent(
                         pendingLocalImportUri = null
                         busyOp = "importLocal"
                         scope.launch(Dispatchers.IO) {
-                            val result = BackupManager.importLocal(context, uri)
+                            val result = BackupManager.importLocal(context, android.net.Uri.parse(uri))
                             withContext(Dispatchers.Main) {
                                 busyOp = null
                                 lastSyncAt = SettingsPreferences.getLastRimeSyncAt(context)
@@ -846,7 +837,6 @@ fun BackupSettingsContent(
             }
         )
     }
-    } // if (false)：原插件区块不渲染，由 LegacySync 页承担
 }
 
 /** 云端条目行用的绝对时间（列表里要能对得上文件）；卡片状态用相对时间见 [formatRelativeTime]。 */

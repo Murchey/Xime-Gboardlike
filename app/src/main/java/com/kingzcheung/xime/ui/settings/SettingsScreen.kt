@@ -283,7 +283,7 @@ fun SettingsScreen(
             ClipboardSettingsContent(
                 onBack = { navController.popBackStack() },
                 // 内置对象存储优先；上游插件桥收进二级页
-                onNavigateToClipboardSync = { navController.navigate(SettingsRoutes.ClipboardSync) },
+                onNavigateToClipboardSync = { navController.navigate(SettingsRoutes.ObjectStorageClipboard) },
                 onNavigateToObjectStorage = { navController.navigate(SettingsRoutes.ObjectStorage) },
                 onNavigateToLegacy = { navController.navigate(SettingsRoutes.LegacySync) }
             )
@@ -295,28 +295,49 @@ fun SettingsScreen(
             )
         }
         composable(SettingsRoutes.Backup) {
-            BackupSettingsContent(
+            StorageOverviewContent(
                 onBack = { navController.popBackStack() },
-                onNavigateToPlugins = { navController.navigate(SettingsRoutes.Plugins) },
-                onNavigateToMarket = { navController.navigate(SettingsRoutes.MarketPlugins) },
-                onNavigateToPluginSettings = { pluginId ->
-                    navController.navigate("${SettingsRoutes.PluginSettings}/$pluginId")
-                },
-                onNavigateToObjectStorage = { navController.navigate(SettingsRoutes.ObjectStorage) },
-                onNavigateToLegacy = { navController.navigate(SettingsRoutes.LegacySync) }
+                onConfig = { navController.navigate(SettingsRoutes.ObjectStorage) },
+                onClipboardSync = { navController.navigate(SettingsRoutes.ObjectStorageClipboard) },
+                onRecords = { navController.navigate(SettingsRoutes.ObjectStorageRecords) },
+                onLocal = { navController.navigate(SettingsRoutes.LocalBackup) },
+                onPluginBackup = { navController.navigate(SettingsRoutes.PluginBackup) },
             )
         }
         composable(SettingsRoutes.ObjectStorage) {
             ObjectStorageSettingsContent(onBack = { navController.popBackStack() })
         }
+        composable(SettingsRoutes.ObjectStorageClipboard) {
+            ObjectStorageClipboardContent(
+                onBack = { navController.popBackStack() },
+                onConfig = { navController.navigate(SettingsRoutes.ObjectStorage) },
+                onPluginSync = { navController.navigate(SettingsRoutes.ClipboardSync) },
+            )
+        }
+        composable(SettingsRoutes.ObjectStorageRecords) {
+            ObjectStorageBackupRecordsContent(onBack = { navController.popBackStack() })
+        }
+        composable(SettingsRoutes.LocalBackup) {
+            BackupSettingsContent(
+                onBack = { navController.popBackStack() },
+                onNavigateToPlugins = { navController.navigate(SettingsRoutes.Plugins) },
+                onNavigateToMarket = { navController.navigate(SettingsRoutes.MarketPlugins) },
+                onNavigateToPluginSettings = { navController.navigate("${SettingsRoutes.PluginSettings}/$it") },
+                localOnly = true,
+            )
+        }
+        composable(SettingsRoutes.PluginBackup) {
+            BackupSettingsContent(
+                onBack = { navController.popBackStack() },
+                onNavigateToPlugins = { navController.navigate(SettingsRoutes.Plugins) },
+                onNavigateToMarket = { navController.navigate(SettingsRoutes.MarketPlugins) },
+                onNavigateToPluginSettings = { navController.navigate("${SettingsRoutes.PluginSettings}/$it") },
+            )
+        }
         composable(SettingsRoutes.LegacySync) {
-            LegacySyncSettingsContent(
+            ClipboardSyncSettingsContent(
                 onBack = { navController.popBackStack() },
                 onNavigateToMarket = { navController.navigate(SettingsRoutes.MarketPlugins) },
-                onNavigateToPlugins = { navController.navigate(SettingsRoutes.Plugins) },
-                onNavigateToPluginSettings = { pluginId ->
-                    navController.navigate("${SettingsRoutes.PluginSettings}/$pluginId")
-                }
             )
         }
         composable(SettingsRoutes.About) {

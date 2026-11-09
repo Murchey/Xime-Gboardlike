@@ -28,6 +28,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material.icons.twotone.Sync
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,7 +65,9 @@ fun ClipboardSyncSettingsContent(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val syncEnabled = remember { SettingsPreferences.isClipboardSyncEnabled(context) }
+    val overview: ObjectStorageOverviewViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val overviewState by overview.state.collectAsStateWithLifecycle()
+    val syncEnabled = overviewState.autoSync && !overviewState.builtin
     val syncPlugins = remember { ExtensionManager.getEnabledClipboardSyncPlugins(context) }
     // 与引擎同一判定规则（ActivePluginSelection）：偏好为空或指向未启用插件时回退首个已启用项
     var selectedPluginId by remember {
@@ -114,6 +118,11 @@ fun ClipboardSyncSettingsContent(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            SettingsToggleItem(
+                icon = Icons.TwoTone.Sync, title = tr(R.string.storage_auto_sync),
+                subtitle = tr(R.string.storage_plugin_sync), checked = syncEnabled,
+                onCheckedChange = overview::setPluginAutoSync,
+            )
             if (!syncEnabled) {
                 Text(
                     text = tr(R.string.s_tongbuyiguanbi_zaishangyiji_ji_5e4e4),

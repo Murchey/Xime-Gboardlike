@@ -1,261 +1,195 @@
 package com.kingzcheung.xime.ui.settings
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.twotone.Cloud
-import androidx.compose.material.icons.twotone.Info
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.kingzcheung.xime.R
 import com.kingzcheung.xime.i18n.tr
 import com.kingzcheung.xime.objectstorage.ObjectStorageClient
-import com.kingzcheung.xime.objectstorage.ObjectStorageConfig
 import com.kingzcheung.xime.objectstorage.ObjectStorageConfigStore
 import com.kingzcheung.xime.objectstorage.StorageProtocol
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
-/**
- * 对象存储配置页（剪切板同步与数据备份共用一套配置）。
- *
- * 顶部常驻「仅 Android 版互通」说明卡；默认私有读写（推荐）。
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ObjectStorageSettingsContent(onBack: () -> Unit) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val store = remember { ObjectStorageConfigStore.of(context) }
-    var config by remember { mutableStateOf(store.load()) }
+    val context = LocalContext.current.applicationContext
+    val vm: ObjectStorageSettingsViewModel = viewModel(factory = viewModelFactory {
+        initializer {
+            val store = ObjectStorageConfigStore.of(context)
+            ObjectStorageSettingsViewModel(store.load(), { store.save(it) }, {
+                ObjectStorageClient(it).testConnection()
+            })
+        }
+    })
+    val config = vm.draft
     var showSecret by remember { mutableStateOf(false) }
-    var testResult by remember { mutableStateOf<String?>(null) }
-    var testing by remember { mutableStateOf(false) }
-
-    fun persist() { store.save(config) }
-
+    var confirmLeave by rememberSaveable { mutableStateOf(false) }
+    var protocolExpanded by remember { mutableStateOf(false) }
+    fun requestBack() {
+        if (vm.saving) return
+        if (vm.dirty) confirmLeave = true else onBack()
+    }
+    BackHandler { requestBack() }
+    if (confirmLeave) {
+        AlertDialog(
+            onDismissRequest = { if (!vm.saving) confirmLeave = false },
+            title = { Text(tr(R.string.config_leave_title)) },
+            text = { Text(if (vm.messageIsError) vm.message ?: tr(R.string.config_unsaved_short)
+                else tr(R.string.config_leave_body)) },
+            confirmButton = {
+                TextButton(enabled = !vm.busy, onClick = { vm.save { confirmLeave = false; onBack() } }) {
+                    Text(tr(R.string.config_save_back))
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(enabled = !vm.saving, onClick = {
+                        vm.discard(); confirmLeave = false; onBack()
+                    }) { Text(tr(R.string.config_discard)) }
+                    TextButton(enabled = !vm.saving, onClick = { confirmLeave = false }) { Text(tr(R.string.config_continue_edit)) }
+                }
+            },
+        )
+    }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = { Text(tr(R.string.os_configure)) },
                 navigationIcon = {
-                    IconButton(onClick = { persist(); onBack() }) {
+                    IconButton(enabled = !vm.saving, onClick = { requestBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr(R.string.s_fanhui))
                     }
                 },
                 actions = {
-                    TextButton(onClick = { persist(); onBack() }) { Text(tr(R.string.os_save)) }
+                    TextButton(enabled = vm.dirty && !vm.busy, onClick = { vm.save(onBack) }) {
+                        Text(if (vm.saving) tr(R.string.config_saving) else tr(R.string.os_save))
+                    }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
             )
         },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxSize().padding(padding).imePadding()
+                .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // 常驻说明卡：仅 Android 版互通
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                ),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    Icon(
-                        Icons.TwoTone.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = tr(R.string.os_notice),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                }
+            Text(tr(R.string.os_notice), style = MaterialTheme.typography.bodyMedium)
+            Text(if (vm.dirty) tr(R.string.config_dirty) else tr(R.string.config_saved_status), style = MaterialTheme.typography.labelMedium)
+            vm.message?.let {
+                Text(it, color = if (vm.messageIsError) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary)
             }
-
             SettingsSection(title = tr(R.string.os_protocol), content = {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    StorageProtocol.entries.forEach { p ->
-                        FilterChip(
-                            selected = config.protocol == p,
-                            onClick = { config = config.copy(protocol = p); persist() },
-                            label = { Text(p.name) },
-                        )
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box {
+                        OutlinedButton(enabled = !vm.busy, onClick = { protocolExpanded = true }) {
+                            Text(when (config.protocol) {
+                                StorageProtocol.COS -> tr(R.string.config_cos_selected)
+                                StorageProtocol.OSS -> tr(R.string.config_oss_selected)
+                                StorageProtocol.S3 -> tr(R.string.config_s3_selected)
+                            })
+                        }
+                        DropdownMenu(expanded = protocolExpanded, onDismissRequest = { protocolExpanded = false }) {
+                            StorageProtocol.entries.forEach { protocol ->
+                                DropdownMenuItem(text = { Text(when (protocol) {
+                                    StorageProtocol.COS -> tr(R.string.config_cos)
+                                    StorageProtocol.OSS -> tr(R.string.config_oss)
+                                    StorageProtocol.S3 -> tr(R.string.config_s3)
+                                }) }, onClick = {
+                                    vm.update(config.copy(protocol = protocol)); protocolExpanded = false
+                                })
+                            }
+                        }
                     }
+                    Text(when (config.protocol) {
+                        StorageProtocol.COS -> tr(R.string.config_cos_hint)
+                        StorageProtocol.OSS -> tr(R.string.config_oss_hint)
+                        StorageProtocol.S3 -> tr(R.string.config_s3_hint)
+                    }, style = MaterialTheme.typography.bodySmall)
                 }
             })
-
             SettingsSection(title = tr(R.string.os_configure), content = {
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
-                        value = config.endpoint,
-                        onValueChange = { config = config.copy(endpoint = it) },
-                        label = { Text(tr(R.string.os_endpoint)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+                        value = config.endpoint, onValueChange = { vm.update(config.copy(endpoint = it)) },
+                        enabled = !vm.busy, label = { Text(tr(R.string.os_endpoint)) },
+                        supportingText = { Text(tr(R.string.config_endpoint_hint)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                        singleLine = true, modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
-                        value = config.bucket,
-                        onValueChange = { config = config.copy(bucket = it) },
-                        label = { Text(tr(R.string.os_bucket)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+                        value = config.bucket, onValueChange = { vm.update(config.copy(bucket = it)) },
+                        enabled = !vm.busy, label = { Text(tr(R.string.os_bucket)) },
+                        supportingText = { Text(if (config.protocol == StorageProtocol.S3)
+                            tr(R.string.config_bucket_required_hint) else tr(R.string.config_bucket_optional_hint)) },
+                        singleLine = true, modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
-                        value = config.accessKeyId,
-                        onValueChange = { config = config.copy(accessKeyId = it) },
-                        label = { Text(tr(R.string.os_ak)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+                        value = config.accessKeyId, onValueChange = { vm.update(config.copy(accessKeyId = it)) },
+                        enabled = !vm.busy, label = { Text(if (config.protocol == StorageProtocol.COS)
+                            "SecretId" else "AccessKey ID") },
+                        supportingText = { Text(if (config.privateAuth) tr(R.string.config_private_hint) else tr(R.string.config_public_hint)) },
+                        singleLine = true, modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
-                        value = config.secretKey,
-                        onValueChange = { config = config.copy(secretKey = it) },
-                        label = { Text(tr(R.string.os_sk)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        visualTransformation = if (showSecret) VisualTransformation.None
-                        else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            TextButton(onClick = { showSecret = !showSecret }) {
-                                Text(if (showSecret) "隐藏" else "显示")
-                            }
-                        },
+                        value = config.secretKey, onValueChange = { vm.update(config.copy(secretKey = it)) },
+                        enabled = !vm.busy, label = { Text(tr(R.string.os_sk)) },
+                        supportingText = { Text(tr(R.string.config_secret_hint)) },
+                        singleLine = true, modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = if (showSecret) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        trailingIcon = { TextButton(onClick = { showSecret = !showSecret }) {
+                            Text(if (showSecret) tr(R.string.config_hide) else tr(R.string.config_show))
+                        } },
                     )
-
-                    Text(
-                        text = tr(R.string.os_private),
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(
-                            selected = config.privateAuth,
-                            onClick = { config = config.copy(privateAuth = true); persist() },
-                        )
-                        Text(tr(R.string.os_private), style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Text(
-                        text = tr(R.string.os_private_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 32.dp),
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(
-                            selected = !config.privateAuth,
-                            onClick = { config = config.copy(privateAuth = false); persist() },
-                        )
-                        Text(tr(R.string.os_public), style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Text(
-                        text = tr(R.string.os_public_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 32.dp),
-                    )
-
-                    Button(
-                        onClick = {
-                            persist()
-                            testing = true
-                            testResult = null
-                            scope.launch {
-                                val result = withContext(Dispatchers.IO) {
-                                    val c = store.load()
-                                    if (!c.isConfigured) {
-                                        ObjectStorageClient.Result.Failure("配置不完整")
-                                    } else {
-                                        ObjectStorageClient(c).probeRead(
-                                            ObjectStorageClient.ROOT_PREFIX + "/index.json"
-                                        )
-                                    }
-                                }
-                                testing = false
-                                testResult = when (result) {
-                                    is ObjectStorageClient.Result.Success -> tr(R.string.os_test_ok)
-                                    is ObjectStorageClient.Result.Failure -> tr(R.string.os_test_fail, result.message)
+                    Column(Modifier.selectableGroup()) {
+                        listOf(true, false).forEach { privateAuth ->
+                            Row(
+                                Modifier.fillMaxWidth().selectable(
+                                    selected = config.privateAuth == privateAuth, enabled = !vm.busy,
+                                    role = Role.RadioButton, onClick = { vm.update(config.copy(privateAuth = privateAuth)) },
+                                ).padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                RadioButton(selected = config.privateAuth == privateAuth, onClick = null, enabled = !vm.busy)
+                                Spacer(Modifier.width(8.dp))
+                                Column {
+                                    Text(tr(if (privateAuth) R.string.os_private else R.string.os_public))
+                                    Text(tr(if (privateAuth) R.string.os_private_hint else R.string.os_public_hint),
+                                        style = MaterialTheme.typography.bodySmall)
                                 }
                             }
-                        },
-                        enabled = !testing,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Icon(Icons.TwoTone.Cloud, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(if (testing) "…" else tr(R.string.os_test))
+                        }
                     }
-                    testResult?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (it == tr(R.string.os_test_ok))
-                                MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.error,
-                        )
+                    Text(tr(R.string.config_test_hint),
+                        style = MaterialTheme.typography.bodySmall)
+                    Button(enabled = !vm.busy, onClick = { vm.testConnection() }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (vm.testing) tr(R.string.config_testing) else tr(R.string.config_test))
                     }
-                    Spacer(Modifier.height(8.dp))
                 }
             })
+            Spacer(Modifier.height(16.dp))
         }
     }
 }

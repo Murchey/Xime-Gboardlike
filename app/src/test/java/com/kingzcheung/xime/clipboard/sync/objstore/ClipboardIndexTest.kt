@@ -204,4 +204,39 @@ class ClipboardIndexTest {
         assertEquals(listOf("a"), plan.toUpload)
         assertTrue(plan.toDownload.isEmpty())
     }
+    @Test
+    fun `pushOnly 保留远端独有条目与墓碑`() {
+        val local = ClipboardIndex(items = listOf(item("local", "a", 1)))
+        val remote = ClipboardIndex(items = listOf(item("remote", "b", 2)),
+            tombstones = listOf(ClipboardTombstone("deleted", 3)))
+        val plan = ClipboardIndexCalculator.pushOnly(local, remote, 4)
+        assertEquals(listOf("local", "remote"), plan.mergedItems.map { it.uuid })
+        assertEquals(remote.tombstones, plan.mergedTombstones)
+        assertTrue(plan.toDownload.isEmpty())
+    }
+
+    @Test
+    fun `墓碑改变索引哈希`() {
+        val empty = ClipboardIndexCalculator.build(emptyList(), now = 1)
+        val deleted = ClipboardIndexCalculator.build(emptyList(), listOf(ClipboardTombstone("x", 1)), 1)
+        assertTrue(empty.sha256 != deleted.sha256)
+        assertEquals(deleted, ClipboardIndex.parseRemote(deleted.toJson().toString()))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `严格解析拒绝错误索引哈希`() {
+        ClipboardIndex.parseRemote(ClipboardIndex(sha256 = "broken").toJson().toString())
+    }
+
+    @Test(expected = org.json.JSONException::class)
+    fun `严格解析拒绝损坏JSON`() {
+        ClipboardIndex.parseRemote("not-json")
+    }
+
+    @Test
+    fun `兼容旧版不覆盖墓碑的索引哈希`() {
+        val index = ClipboardIndexCalculator.build(listOf(item("a", "b", 1)), now = 2)
+            .copy(tombstones = listOf(ClipboardTombstone("c", 2)))
+        assertEquals(index, ClipboardIndex.parseRemote(index.toJson().toString()))
+    }
 }

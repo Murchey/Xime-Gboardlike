@@ -56,6 +56,29 @@ data class ClipboardIndex(
         .put("tombstones", JSONArray().apply { tombstones.forEach { put(it.toJson()) } })
 
     companion object {
+        /** 网络同步专用严格解析；损坏的索引不能被当作空桶覆盖。 */
+        fun parseRemote(text: String): ClipboardIndex {
+            val o = JSONObject(text)
+            val items = o.getJSONArray("items")
+            val tombs = o.getJSONArray("tombstones")
+            for (i in 0 until items.length()) {
+                val item = items.getJSONObject(i)
+                require(item.getString("uuid").isNotBlank() && item.getString("sha256").isNotBlank())
+                require(item.getString("type") in listOf("text", "image"))
+                require(item.getLong("updatedAt") >= 0)
+            }
+            for (i in 0 until tombs.length()) {
+                require(tombs.getJSONObject(i).getString("uuid").isNotBlank())
+                require(tombs.getJSONObject(i).getLong("deletedAt") >= 0)
+            }
+            val index = fromJson(text)
+            val expected = ClipboardIndexCalculator.build(index.items, index.tombstones, index.updatedAt).sha256
+            // 兼容旧版仅覆盖 items 的哈希；新的写入同时覆盖墓碑。
+            val legacy = ObjectStorageHashes.sha256Hex(ClipboardIndexCalculator.canonicalItemsJson(index.items))
+            require(index.sha256 == expected || index.sha256 == legacy) { "远端索引校验失败" }
+            return index
+        }
+
         /** 空索引（首次配置 / 云端无对象时）。 */
         fun empty(): ClipboardIndex = ClipboardIndex()
 
@@ -119,7 +142,8 @@ object ClipboardIndexCalculator {
         val merged = mergeByUuid(items)
         return ClipboardIndex(
             updatedAt = now,
-            sha256 = ObjectStorageHashes.sha256Hex(canonicalItemsJson(merged)),
+            sha256 = ObjectStorageHashes.sha256Hex(canonicalItemsJson(merged) +
+                if (tombstones.isEmpty()) "" else TombstoneStore.encode(tombstones)),
             items = merged,
             tombstones = mergeTombstones(tombstones),
         )
@@ -174,7 +198,7 @@ object ClipboardIndexCalculator {
                 l != null && r == null -> { upload += uuid; merged += l }
                 l != null && r != null -> {
                     when {
-                        l.sha256 == r.sha256 -> merged += l
+                        l.sha256 == r.sha256 -> merged += if (l.updatedAt >= r.updatedAt) l else r
                         r.updatedAt > l.updatedAt -> { download += uuid; merged += r }
                         else -> { upload += uuid; merged += l }
                     }
@@ -200,7 +224,8 @@ object ClipboardIndexCalculator {
      */
     fun pushOnly(local: ClipboardIndex, remote: ClipboardIndex, now: Long): SyncPlan {
         val remoteMap = mergeByUuid(remote.items).associateBy { it.uuid }
-        val tombstoneUuids = mergeTombstones(local.tombstones).map { it.uuid }.toSet()
+        val tombstones = mergeTombstones(local.tombstones + remote.tombstones)
+        val tombstoneUuids = tombstones.map { it.uuid }.toSet()
         val active = mergeByUuid(local.items).filter { it.uuid !in tombstoneUuids }
 
         val upload = active.filter { l ->
@@ -213,8 +238,8 @@ object ClipboardIndexCalculator {
             toUpload = upload.sorted(),
             toDownload = emptyList(),
             toDelete = delete.sorted(),
-            mergedItems = active,
-            mergedTombstones = mergeTombstones(local.tombstones),
+            mergedItems = mergeByUuid(remote.items.filter { it.uuid !in tombstoneUuids && it.uuid !in active.map { l -> l.uuid }.toSet() } + active),
+            mergedTombstones = tombstones,
         )
     }
 }

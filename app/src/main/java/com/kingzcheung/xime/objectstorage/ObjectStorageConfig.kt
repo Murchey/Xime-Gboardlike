@@ -36,7 +36,7 @@ data class ObjectStorageConfig(
     val protocol: StorageProtocol = StorageProtocol.COS,
     /** 桶访问域名或 Endpoint，如 xxx-1250000000.cos.ap-guangzhou.myqcloud.com */
     val endpoint: String = "",
-    /** Bucket 名（COS 可从 host 推导，S3/OSS 需显式填写）。 */
+    /** Bucket 名（S3 路径式访问必填；COS/OSS 使用 host 中的桶）。 */
     val bucket: String = "",
     /** AccessKey ID / SecretId / AccessKey */
     val accessKeyId: String = "",
@@ -53,12 +53,14 @@ data class ObjectStorageConfig(
     /** 用于状态展示的短标识。 */
     val bucketLabel: String
         get() = bucket.trim().ifBlank {
-            host.substringBefore(".cos.").substringBefore(".").ifBlank { host }
+            host.substringBefore(".cos.").substringBefore(".oss-").ifBlank { host }
         }
 
     /** 是否具备发起请求的最低条件（不校验 key 是否真实有效）。 */
     val isConfigured: Boolean
-        get() = host.isNotBlank() && accessKeyId.isNotBlank() && secretKey.isNotBlank()
+        get() = host.isNotBlank() &&
+            (protocol != StorageProtocol.S3 || bucket.isNotBlank()) &&
+            (!privateAuth || (accessKeyId.isNotBlank() && secretKey.isNotBlank()))
 
     /** 是否使用 https（默认）。用户显式写 http 时尊重。 */
     val useHttps: Boolean
