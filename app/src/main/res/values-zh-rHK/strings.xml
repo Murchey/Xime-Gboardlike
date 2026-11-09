@@ -391,7 +391,7 @@
     <string name="s_congwenjianhuifuwanzhengbeifen">從檔案還原完整備份</string>
     <string name="s_fugaishihuifu_huixiandanqueren">覆蓋式還原；會先彈確認</string>
     <string name="s_xuanzebeifenfuwu">選擇備份服務</string>
-    <string name="s_nbeifenxieyi">"\\n備份協議: "</string>
+    <string name="s_nbeifenxieyi">"\n備份協議: "</string>
     <string name="s_shanchuyunduanbeifen">刪除雲端備份</string>
     <string name="s_jiangyongjiushanchu_shanchuhou_95640">將永久刪除「%1$s」，刪除後無法找回。確定刪除？</string>
     <string name="s_huifudaobenji">還原到本機</string>
@@ -447,8 +447,8 @@
     <string name="s_weianzhuangjiantiebantongbucha_9bf61">未安裝剪貼簿同步插件，請先在擴展商店安裝後再配置。</string>
     <string name="s_peizhi_2">%1$s 配置</string>
     <string name="s_xuanzetongbufuwu">選擇同步服務</string>
-    <string name="s_ntongbuxieyi">"\\n同步協議: "</string>
-    <string name="s_ngaichajianbuzhichitupiantongb_4018b">\\n該插件不支援圖片同步（僅文本）</string>
+    <string name="s_ntongbuxieyi">"\n同步協議: "</string>
+    <string name="s_ngaichajianbuzhichitupiantongb_4018b">\n該插件不支援圖片同步（僅文本）</string>
     <string name="s_weixuanzetongbufuwu">未選擇同步服務</string>
     <string name="s_tongbuxieyi">"同步協議: "</string>
     <string name="s_qiehuan">切換</string>
@@ -733,7 +733,7 @@
     <string name="s_wufadakai">無法開啟: %1$s</string>
     <string name="s_xiezai">解除安裝</string>
     <string name="s_xiezaichajian">解除安裝插件</string>
-    <string name="s_quedingyaoxiezai_ma_nchajianwe_4f200">確定要解除安裝「%1$s」嗎？\\n插件檔案和配置將被刪除，此操作無法還原。</string>
+    <string name="s_quedingyaoxiezai_ma_nchajianwe_4f200">確定要解除安裝「%1$s」嗎？\n插件檔案和配置將被刪除，此操作無法還原。</string>
     <string name="s_qiyongfeiguanfangchajian">啟用非官方插件</string>
     <string name="s_feiguanfangchajiankenengfangwe_08b02">非官方插件可能訪問您輸入的內容或網絡，請確認來源可信後再啟用。</string>
     <string name="s_miaoshu">描述：%1$s</string>
@@ -745,7 +745,7 @@
     <string name="s_weishouquan">未授權</string>
     <string name="s_shouquan">授權</string>
     <string name="s_shouquanwangluofangwen">授權網絡訪問</string>
-    <string name="s_yunxuchajian_lianjie_bingfason_8adc0">允許插件「%1$s」連接 %2$s 併發送數據？\\n\\n數據將發送到該域名，請確認信任此插件。</string>
+    <string name="s_yunxuchajian_lianjie_bingfason_8adc0">允許插件「%1$s」連接 %2$s 併發送數據？\n\n數據將發送到該域名，請確認信任此插件。</string>
     <string name="s_yunxu">允許</string>
     <string name="s_guanfang">官方</string>
     <string name="s_disanfang">第三方</string>
@@ -932,8 +932,8 @@
     <string name="s_guanlichajian">管理插件</string>
     <string name="s_zaixian_asr_xuyaowangluolianji_2e59f">在線 ASR 需要網絡連接，適合需要高準確率的場景</string>
     <string name="s_xuanzeyuyinshibiefuwu">選擇語音辨識服務</string>
-    <string name="s_nyipeizhi">\\n已配置</string>
-    <string name="s_nweipeizhi">\\n未配置</string>
+    <string name="s_nyipeizhi">已配置</string>
+    <string name="s_nweipeizhi">未配置</string>
     <string name="s_weixuanzefuwu">未選擇服務</string>
     <string name="s_qingxuanzeyaoshiyongdezaixiany_07ac7">請選擇要使用的在線語音辨識服務</string>
     <string name="s_peizhi_3">配置 %1$s</string>
@@ -1011,7 +1011,7 @@
     <string name="s_anzhuangshibai_weizhicuowu">安裝失敗：未知錯誤</string>
     <string name="s_yianzhuang_bingwanchengbushu">已安裝「%1$s」並完成部署</string>
     <string name="s_yianzhuang_qingdian_bushu_shen_cf341">已安裝「%1$s」，請點「部署」生效</string>
-    <string name="s_nyixiafanganjiexishibai">\\n以下方案解析失敗：</string>
+    <string name="s_nyixiafanganjiexishibai">\n以下方案解析失敗：</string>
     <string name="s_xiezaichongtufangan_shibai_anz_ab29f">解除安裝衝突方案「%1$s」失敗，安裝已取消</string>
     <string name="s_neizhifanganbukeshanchu">內建方案不可刪除</string>
     <string name="s_yishanchu_2">已刪除</string>
@@ -1126,4 +1126,16 @@
     <string name="s_fanganbaolaiyuan">方案包來源</string>
     <string name="s_yiqiyong_ge">已啟用 %1$d 個</string>
     <string name="s_shoudaoru">手動匯入</string>
+    <string name="s_bushujindu">正在部署方案…</string>
+    <string name="s_bushu_jieduan_zhunbei_base">準備內建基礎檔案</string>
+    <string name="s_bushu_jieduan_zhunbei_patch">寫入方案補丁</string>
+    <string name="s_bushu_jieduan_zhunbei_config">載入鍵位與主題</string>
+    <string name="s_bushu_jieduan_bianyi">編譯方案與詞庫（最耗時）</string>
+    <string name="s_bushu_jieduan_qingli">清理未啟用方案的產物</string>
+    <string name="s_bushu_jieduan_wancheng">完成</string>
+    <string name="s_bushu_qingbuyaoguanbi">請保持應用在前景，不要鎖屏</string>
+    <string name="s_houxuanfengexian">候選分隔豎線</string>
+    <string name="s_houxuanfengexian_fu">在候選之間顯示豎線（Gboard 風格）。關閉後與上游排版一致，一屏可多顯示候選。</string>
+    <string name="s_wubi_lianda">五筆連打</string>
+    <string name="s_wubi_lianda_fu">打出的字先留在候選欄攢成一句，按空白或 Enter 一次上屏；退格逐字刪。適合整句輸入後再改。</string>
 </resources>

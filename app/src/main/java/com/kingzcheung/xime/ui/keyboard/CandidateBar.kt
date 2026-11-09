@@ -161,6 +161,8 @@ fun CandidateBar(
     )
     val iconButtonTint = MaterialTheme.colorScheme.onSurfaceVariant
     val showComments = SettingsPreferences.showCandidateComments(context)
+    // 分割线开关：关掉后与上游排版一致（不占那 1dp，一屏多显示一两个候选）
+    val showDivider = SettingsPreferences.showCandidateDivider(context)
     // 每页候选词数（默认 50，设置里可调 5~100）；候选栏与引擎分页同口径
     val pageSize = SettingsPreferences.getPageSize(context)
         .coerceIn(1, SettingsPreferences.MAX_PAGE_SIZE)
@@ -447,7 +449,7 @@ fun CandidateBar(
                                 fontSize = candidateTextSize.sp,
                                 fontFamily = candidateFontFamily,
                             )
-                            if (hasFollowing) CandidateBarDivider(visuals.dividerColor)
+                            if (hasFollowing && showDivider) CandidateBarDivider(visuals.dividerColor)
                         }
                     } else {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -475,7 +477,7 @@ fun CandidateBar(
                                 commentFontFamily = commentFontFamily,
                                 minWidth = 46.dp,
                             )
-                            if (hasFollowing) CandidateBarDivider(visuals.dividerColor)
+                            if (hasFollowing && showDivider) CandidateBarDivider(visuals.dividerColor)
                         }
                     }
                 }
@@ -498,7 +500,7 @@ fun CandidateBar(
                             commentFontFamily = commentFontFamily,
                             minWidth = 46.dp,
                         )
-                        if (index < displayAssociation.lastIndex) {
+                        if (showDivider && index < displayAssociation.lastIndex) {
                             CandidateBarDivider(visuals.dividerColor)
                         }
                     }

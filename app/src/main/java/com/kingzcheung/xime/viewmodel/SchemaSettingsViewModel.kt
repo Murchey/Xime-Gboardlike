@@ -19,6 +19,7 @@ import com.kingzcheung.xime.settings.KeysConfigHelper
 import com.kingzcheung.xime.settings.PersonalDictManager
 import com.kingzcheung.xime.settings.SchemaManifestManager
 import com.kingzcheung.xime.settings.SchemaManager
+import com.kingzcheung.xime.settings.DeployStage
 import com.kingzcheung.xime.settings.SchemaPackageGroups
 import com.kingzcheung.xime.settings.SchemaPresets
 import com.kingzcheung.xime.settings.StorageStats
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -45,6 +47,10 @@ data class SchemaUiState(
     val toastMessage: String? = null,
     val marketPackages: List<SchemaManifestManager.MarketPackageInfo> = emptyList(),
     val showUninstallDialog: Boolean = false,
+    /** 部署当前阶段（IDLE 时表示没有在部署）。 */
+    val deployStage: DeployStage = DeployStage.IDLE,
+    /** 粗略进度 0f..1f，仅供进度条观感，不代表精确百分比。 */
+    val deployProgress: Float = 0f,
     /** schemaId → 所属方案包（来自注册表），用于按包分组。 */
     val schemaToPackage: Map<String, String> = emptyMap(),
     /** 包 id → 显示名。 */
@@ -339,8 +345,42 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
         viewModelScope.launch { runDeploy(clearCacheFirst = true) }
     }
 
+    private fun updateStage(stage: DeployStage, progress: Float) {
+        _uiState.update {
+            if (!it.isDeploying) it
+            else it.copy(
+                deployStage = stage,
+                // 阶段之间只允许前进，避免"时间推进"与"阶段跳变"打架导致进度条回退
+                deployProgress = maxOf(it.deployProgress, progress),
+            )
+        }
+    }
+
     private suspend fun runDeploy(clearCacheFirst: Boolean) {
-        _uiState.update { it.copy(isDeploying = true) }
+        _uiState.update {
+            it.copy(isDeploying = true, deployStage = DeployStage.PREPARE_BASE, deployProgress = 0.05f)
+        }
+        // 进度由后台线程写入；librime 不给回调，靠"阶段 + 时间"粗估，
+        // 只为让用户知道还在动、以及现在在做什么，不做精确百分比承诺。
+        val progressTicker = viewModelScope.launch(Dispatchers.Default) {
+            var elapsed = 0
+            while (true) {
+                delay(400)
+                elapsed += 400
+                _uiState.update { st ->
+                    if (!st.isDeploying) return@update st
+                    // 编译阶段最长：按时间把 0.35 渐近推到 0.9（永远到不了 1）
+                    val current = st.deployProgress
+                    val ceiling = when (st.deployStage) {
+                        DeployStage.COMPILING, DeployStage.PREPARE_PATCHES -> 0.9f
+                        else -> 0.95f
+                    }
+                    val next = if (current >= ceiling) current
+                    else current + (ceiling - current) * 0.08f
+                    st.copy(deployProgress = next)
+                }
+            }
+        }
         if (clearCacheFirst) {
             withContext(Dispatchers.IO) {
                 runCatching { StorageStats.clearCategory(context, StorageStats.ID_SCHEMA_CACHE) }
@@ -349,19 +389,27 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
         val (success, missingReverseDicts) = withContext(Dispatchers.IO) {
             // 先补齐内置基础文件（symbols/default 等），避免方案 __include 失败导致编译报错
             RimeConfigHelper.ensureBuiltinBaseFiles(context)
+            updateStage(DeployStage.PREPARE_PATCHES, 0.15f)
             PersonalDictManager.ensureSchemaPacks(context)
+            updateStage(DeployStage.PREPARE_CONFIG, 0.22f)
             KeysConfigHelper.loadConfig(context)
             KeyboardThemes.reload(context)
+            updateStage(DeployStage.COMPILING, 0.3f)
             val engine = RimeEngine.getInstance()
             val deployed = engine.deploy()
             if (deployed) {
+                updateStage(DeployStage.PRUNE, 0.92f)
                 RimeConfigHelper.storeDeploymentHash(context)
                 // 部署会编译数据目录里的所有 schema.yaml：清掉未启用方案的产物
                 RimeConfigHelper.pruneUnusedSchemaArtifacts(context)
             }
             deployed to RimeConfigHelper.missingReverseLookupTables(context)
         }
-        _uiState.update { it.copy(isDeploying = false) }
+        progressTicker.cancel()
+        if (success) updateStage(DeployStage.DONE, 1f) else Unit
+        _uiState.update {
+            it.copy(isDeploying = false, deployStage = DeployStage.IDLE, deployProgress = 0f)
+        }
         val missing = missingReverseDicts.map { it.second }.distinct()
         if (missing.isNotEmpty()) {
             FileLogger.w(

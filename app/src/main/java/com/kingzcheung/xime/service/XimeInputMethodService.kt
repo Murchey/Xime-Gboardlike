@@ -115,6 +115,7 @@ import com.kingzcheung.xime.settings.SchemaConfigHelper
 import com.kingzcheung.xime.settings.SchemaManager
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.settings.SyncManager
+import com.kingzcheung.xime.settings.WubiSchemas
 import com.kingzcheung.xime.ui.keyboard.KeyboardView
 import com.kingzcheung.xime.ui.keyboard.isT9Schema
 import com.kingzcheung.xime.ui.keyboard.isHandwritingSchema
@@ -3190,6 +3191,54 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     /** 候选词变换协调器（插件 candidate_transform 能力，hotPath：key-processing 线程同步调用）。 */
     internal val candidateTransform = CandidateTransformCoordinator(this)
+
+    /** 五笔连打的累积缓冲：满码不逐字上屏，先攒在这里（见 [commitText]）。 */
+    internal val chainedCommit = ChainedCommitBuffer()
+
+    /** 当前方案是否开启了连打。 */
+    internal fun isChainedInputActive(): Boolean =
+        WubiSchemas.isChainedEnabledFor(this, SettingsPreferences.getCurrentSchema(this))
+
+    /**
+     * 连打模式下把文本攒进缓冲并刷新候选栏，而不是直接落盘。
+     *
+     * 返回 true 表示已被连打接管（调用方不要再 commitText）。
+     */
+    internal fun appendToChainedBuffer(text: String): Boolean {
+        if (!isChainedInputActive() || text.isEmpty()) return false
+        chainedCommit.append(text)
+        refreshChainedCandidates()
+        return true
+    }
+
+    /** 把连打缓冲刷新到候选栏：整句作为唯一"候选"，同时保留引擎的后续候选。 */
+    internal fun refreshChainedCandidates() {
+        val staged = chainedCommit.text
+        val current = candidateState.value
+        candidateState.value = current.copy(
+            associationCandidates = if (staged.isEmpty()) emptyList() else listOf(staged),
+            // 连打时编码区显示已攒内容，用户能直观看到"这句话还差什么"
+            preeditText = staged,
+        )
+    }
+
+    /** 提交连打缓冲（空格/回车/选词时调用）；返回实际上屏的文本。 */
+    internal fun drainChainedBuffer(): String {
+        val text = chainedCommit.drain()
+        if (text.isNotEmpty()) {
+            commitText(text)
+            refreshChainedCandidates()
+        }
+        return text
+    }
+
+    /** 连打模式下退格：删缓冲末尾一个字；缓冲空时返回 false 交给常规退格。 */
+    internal fun deleteChainedLast(): Boolean {
+        if (!isChainedInputActive() || chainedCommit.isEmpty) return false
+        chainedCommit.deleteLast()
+        refreshChainedCandidates()
+        return true
+    }
 
     override fun commitText(text: String) {
         commitTextAndPredict(text, isPaste = false)

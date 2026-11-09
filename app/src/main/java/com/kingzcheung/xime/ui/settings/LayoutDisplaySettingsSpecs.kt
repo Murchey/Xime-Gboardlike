@@ -3,6 +3,7 @@ package com.kingzcheung.xime.ui.settings
 import com.kingzcheung.xime.R
 import com.kingzcheung.xime.settings.DoublePinyinFinals
 import com.kingzcheung.xime.settings.SettingsPreferences
+import com.kingzcheung.xime.settings.WubiSchemas
 import com.kingzcheung.xime.settings.declarative.ChoiceOption
 import com.kingzcheung.xime.settings.declarative.SettingSpec
 import com.kingzcheung.xime.settings.declarative.SettingVisibility
@@ -45,6 +46,22 @@ object LayoutDisplaySettingsSpecs {
             key = SettingsPreferences.KEY_SHOW_LETTER_HINT_SYMBOLS,
             titleRes = R.string.s_xianshizimujianfushangfangdefuhao,
             descriptionRes = R.string.s_xianshizimujianfushangfangdefuhao_fu,
+            default = true,
+        ),
+        SettingSpec.Switch(
+            key = SettingsPreferences.KEY_WUBI_CHAINED_INPUT,
+            titleRes = R.string.s_wubi_lianda,
+            descriptionRes = R.string.s_wubi_lianda_fu,
+            default = false,
+            // 仅五笔族方案下显示
+            visibility = SettingVisibility.whenTrue {
+                WubiSchemas.isWubi(currentSchema)
+            },
+        ),
+        SettingSpec.Switch(
+            key = SettingsPreferences.KEY_CANDIDATE_DIVIDER,
+            titleRes = R.string.s_houxuanfengexian,
+            descriptionRes = R.string.s_houxuanfengexian_fu,
             default = true,
         ),
         SettingSpec.Switch(

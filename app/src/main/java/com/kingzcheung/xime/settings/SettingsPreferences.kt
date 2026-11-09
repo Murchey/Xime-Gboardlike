@@ -438,6 +438,12 @@ object SettingsPreferences {
     /** 双拼方案下用韵母替换字母键右上角符号（默认关闭）。 */
     const val KEY_SHOW_DOUBLE_PINYIN_FINALS = "show_double_pinyin_finals"
 
+    /** 候选之间的竖分割线（Gboard 风格，默认开启）。 */
+    const val KEY_CANDIDATE_DIVIDER = "candidate_divider"
+
+    /** 五笔连打：打出的字先攒在候选栏，不逐字上屏（默认关闭）。 */
+    const val KEY_WUBI_CHAINED_INPUT = "wubi_chained_input"
+
     /** 字母键显示大小写：小写 / 大写；小写时可跟随 Shift。 */
     const val KEY_LETTER_DISPLAY_CASE = "letter_display_case"
     const val KEY_LETTER_CASE_FOLLOW_SHIFT = "letter_case_follow_shift"
@@ -538,6 +544,30 @@ object SettingsPreferences {
 
     fun showDoublePinyinFinals(context: Context): Boolean =
         getPrefs(context).getBoolean(KEY_SHOW_DOUBLE_PINYIN_FINALS, false)
+
+    /**
+     * 候选之间是否画竖分割线。
+     *
+     * 默认开启（本分支的 Gboard 风格）；关闭后候选区回到上游的紧凑排版，
+     * 不再占用那 1dp 宽度，一屏能多显示一两个候选。
+     */
+    fun showCandidateDivider(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_CANDIDATE_DIVIDER, true)
+
+    fun setShowCandidateDivider(context: Context, show: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_CANDIDATE_DIVIDER, show).apply()
+    }
+
+    /**
+     * 五笔连打：满码不直接上屏，先在候选栏累积成一句，空格/回车时一次性提交。
+     * 默认关闭——它与"打完一个字立刻想要那个字"的传统五笔手感不同。
+     */
+    fun isWubiChainedInput(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_WUBI_CHAINED_INPUT, false)
+
+    fun setWubiChainedInput(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_WUBI_CHAINED_INPUT, enabled).apply()
+    }
 
     fun setShowDoublePinyinFinals(context: Context, show: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_SHOW_DOUBLE_PINYIN_FINALS, show).apply()

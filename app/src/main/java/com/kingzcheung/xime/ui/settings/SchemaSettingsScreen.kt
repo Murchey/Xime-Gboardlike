@@ -48,6 +48,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -79,6 +80,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kingzcheung.xime.settings.DeployStage
 import com.kingzcheung.xime.settings.SchemaManager
 import com.kingzcheung.xime.settings.SchemaMeta
 import com.kingzcheung.xime.settings.SchemaPackageGroups
@@ -212,6 +214,35 @@ fun SchemaSettingsContent(
                     Text(tr(R.string.s_quxiao))
                 }
             }
+        )
+    }
+
+    // 部署进度弹窗：librime 是一次性长调用，用户看不到任何反馈，容易以为卡死；
+    // 这里给出"现在在做什么"的粗略阶段 + 渐近进度条，并禁止误点返回。
+    if (uiState.isDeploying) {
+        AlertDialog(
+            onDismissRequest = { /* 部署不可中断，屏蔽误触 */ },
+            title = { Text(tr(R.string.s_bushujindu)) },
+            text = {
+                Column {
+                    Text(
+                        text = deployStageLabel(uiState.deployStage),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    LinearProgressIndicator(
+                        progress = { uiState.deployProgress },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = tr(R.string.s_bushu_qingbuyaoguanbi),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = {},
         )
     }
 
@@ -533,6 +564,18 @@ fun SchemaSettingsContent(
  *
  * 每行显示包名 + 该包方案数 + 已启用数；顶部「全部方案」回到平铺列表。
  */
+/** 部署阶段 → 用户可读文案。 */
+@Composable
+private fun deployStageLabel(stage: DeployStage): String = when (stage) {
+    DeployStage.PREPARE_BASE -> tr(R.string.s_bushu_jieduan_zhunbei_base)
+    DeployStage.PREPARE_PATCHES -> tr(R.string.s_bushu_jieduan_zhunbei_patch)
+    DeployStage.PREPARE_CONFIG -> tr(R.string.s_bushu_jieduan_zhunbei_config)
+    DeployStage.COMPILING -> tr(R.string.s_bushu_jieduan_bianyi)
+    DeployStage.PRUNE -> tr(R.string.s_bushu_jieduan_qingli)
+    DeployStage.DONE -> tr(R.string.s_bushu_jieduan_wancheng)
+    DeployStage.IDLE -> tr(R.string.s_bushujindu)
+}
+
 @Composable
 private fun PackageGroupDrawer(
     groups: List<SchemaPackageGroups.Group>,

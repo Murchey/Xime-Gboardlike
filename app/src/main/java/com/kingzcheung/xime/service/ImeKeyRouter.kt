@@ -438,6 +438,10 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                     needsUIUpdate = true
                 }
                 "enter" -> {
+                    // 五笔连打：回车先把整句落盘，再走常规回车语义
+                    if (service.chainedCommit.isEmpty.not()) {
+                        withContext(Dispatchers.Main) { service.drainChainedBuffer() }
+                    }
                     // 动态回车：组合态提交编码；空闲态按编辑器 imeOptions 执行动作（发送/搜索/下一项…）或换行。
                     service.calculatorEngine.clear()
                     updateCalculatorCandidates()
@@ -478,6 +482,14 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                     resetEnterLikeCandidates(state.currentSchemaId)
                 }
                 "space" -> {
+                    // 五笔连打：空格把累积的整句一次性上屏（连打时它才是"结束这句"的动作）
+                    if (service.chainedCommit.isEmpty.not() || service.isChainedInputActive()) {
+                        if (service.chainedCommit.isEmpty.not()) {
+                            withContext(Dispatchers.Main) { service.drainChainedBuffer() }
+                            needsUIUpdate = true
+                            return@launch
+                        }
+                    }
                     val pendingEnglish = candState.pendingEnglishText
                     val now = SystemClock.uptimeMillis()
                     val lastSpaceAt = service.lastSpaceCommitAt
@@ -772,7 +784,12 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                                         sendTransformedResult(result) { if (service.calculatorEngine.isActive()) updateCalculatorCandidates() }
                                     } else {
                                         if (committed.isNotEmpty()) {
-                                            withContext(Dispatchers.Main) { service.commitText(committed) }
+                                            // 五笔连打：满码先攒进候选栏，不逐字上屏
+                                            withContext(Dispatchers.Main) {
+                                                if (!service.appendToChainedBuffer(committed)) {
+                                                    service.commitText(committed)
+                                                }
+                                            }
                                         }
                                         sendTransformedResult(result) { if (service.calculatorEngine.isActive()) updateCalculatorCandidates() }
                                     }
@@ -992,6 +1009,14 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
      * 候选栏 UI 更新保持平滑，抬手后最多多删 1~2 个字符。
      */
     internal fun handleDeleteKey() {
+        // 五笔连打：先删候选栏里攒着的字，删空后才落进常规退格（也避免触发删除会话记账）
+        if (service.deleteChainedLast()) {
+            service.uiState.value = service.uiState.value.copy(
+                // 触发一次候选栏重绘（缓冲已由 deleteChainedLast 内部刷新）
+                voiceRecognizedText = service.uiState.value.voiceRecognizedText,
+            )
+            return
+        }
         val shouldLaunch = synchronized(service.deleteCoalesceLock) {
             if (service.deleteJobActive) {
                 service.pendingDeleteCount++
