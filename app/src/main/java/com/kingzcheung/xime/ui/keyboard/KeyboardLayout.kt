@@ -1239,46 +1239,45 @@ private fun panelKeyIcon(name: String): Painter? = when (name) {
 
 @Composable
 private fun ShiftCell(env: QwertyRowEnv, modifier: Modifier, id: String = "shift") {
-    // 分号韵母键（微软/搜狗/紫光双拼的 ing）：**不看组合态**。
-    //
-    // 放在 isComposing 之外是关键——用户常常"先打一个满码、上屏后才想起来补 ing"，
-    // 或开新句时直接就是分号起手；只在组合态给分号会让这两种最常见的情况
-    // 打不出 ing（真机反馈"有的方案不生效"即此）。分词功能退到长按。
-    if (LocalSemicolonFinal.current && !env.isAsciiMode) {
-        KeyButton(
-            text = ";",
-            onClick = { env.onKeyPress(";") },
-            onLongClick = { env.onKeyPress("word_separator") },
-            backgroundColor = env.specialKeyBackgroundColor,
-            textColor = env.specialKeyTextColor,
-            modifier = modifier,
-            fontSize = 14.sp,
-            onPress = { env.onKeyPressDown?.invoke(";") },
-            onRelease = { env.onKeyRelease?.invoke(";") },
-            shadowEnabled = env.shadowEnabled,
-            shadowElevation = env.shadowElevation,
-            shadowShapeRadius = env.shadowShapeRadius,
-            a11yDescription = tr(R.string.s_fenhao_fenci),
-        )
-        return
-    }
-    // 中文组合态：Shift 键变为拼音分隔符键 '（全部字母方案通用），
-    // 用户手动切分音节（xi' + an → xi'an），不做自动识别。
+    // 中文组合态下 Shift 键的语义取决于方案的韵母键：
+    // - 分号韵母方案（微软/搜狗/紫光双拼及其音形变体）：Shift = 分号键（ing），
+    //   只在**输入韵母期间**（组合态、候选尚未消失）出现；空闲态保持原 Shift 功能。
+    // - 其它方案（小鹤等）：Shift = 分词键 '（手动切分音节）。
+    // 判定依据是 speller/algebra 里的规则，不看方案名——任意基于这三种双拼的
+    // 音形/辅码变体自动兼容。
     if (env.isComposing && !env.isAsciiMode) {
-        KeyButton(
-            text = tr(R.string.keyboard_split_word),
-            onClick = { env.onKeyPress("word_separator") },
-            backgroundColor = env.specialKeyBackgroundColor,
-            textColor = env.specialKeyTextColor,
-            modifier = modifier,
-            fontSize = 14.sp,
-            onPress = { env.onKeyPressDown?.invoke("word_separator") },
-            onRelease = { env.onKeyRelease?.invoke("word_separator") },
-            shadowEnabled = env.shadowEnabled,
-            shadowElevation = env.shadowElevation,
-            shadowShapeRadius = env.shadowShapeRadius,
-            a11yDescription = tr(R.string.keyboard_split_word),
-        )
+        if (LocalSemicolonFinal.current) {
+            KeyButton(
+                text = ";",
+                onClick = { env.onKeyPress(";") },
+                onLongClick = { env.onKeyPress("word_separator") },
+                backgroundColor = env.specialKeyBackgroundColor,
+                textColor = env.specialKeyTextColor,
+                modifier = modifier,
+                fontSize = 14.sp,
+                onPress = { env.onKeyPressDown?.invoke(";") },
+                onRelease = { env.onKeyRelease?.invoke(";") },
+                shadowEnabled = env.shadowEnabled,
+                shadowElevation = env.shadowElevation,
+                shadowShapeRadius = env.shadowShapeRadius,
+                a11yDescription = tr(R.string.s_fenhao_fenci),
+            )
+        } else {
+            KeyButton(
+                text = tr(R.string.keyboard_split_word),
+                onClick = { env.onKeyPress("word_separator") },
+                backgroundColor = env.specialKeyBackgroundColor,
+                textColor = env.specialKeyTextColor,
+                modifier = modifier,
+                fontSize = 14.sp,
+                onPress = { env.onKeyPressDown?.invoke("word_separator") },
+                onRelease = { env.onKeyRelease?.invoke("word_separator") },
+                shadowEnabled = env.shadowEnabled,
+                shadowElevation = env.shadowElevation,
+                shadowShapeRadius = env.shadowShapeRadius,
+                a11yDescription = tr(R.string.keyboard_split_word),
+            )
+        }
         return
     }
     // 按 env.section 取：主键盘为 "qwerty"（与旧入口等价），面板段则读本段配置——

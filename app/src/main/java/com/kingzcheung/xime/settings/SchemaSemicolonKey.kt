@@ -95,7 +95,10 @@ object SchemaSemicolonKey {
         val srcSep = beforeLast.indexOf('/')
         if (srcSep < 0) return false
         val dst = beforeLast.substring(srcSep + 1)
-        return dst.trimStart().startsWith(";")
+        // 替换侧包含分号即判定为分号韵母键：可能是裸分号（xform/ing$/;/）、
+        // 带捕获组的分号（xform/(.)ing$/$1;/）、或带韵律标记的（xform/ing$;/;$1/），
+        // 三者都表示该方案用分号作为 ing 的韵母键
+        return dst.contains(";")
     }
 
     /** 解析一段 yaml 文本里所有 algebra 规则。 */
