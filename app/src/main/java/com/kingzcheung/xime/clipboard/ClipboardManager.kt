@@ -505,6 +505,13 @@ class ClipboardManager private constructor(private val context: Context) {
     private val _clipboardChanged = MutableSharedFlow<ClipboardItem>(extraBufferCapacity = 16)
     val clipboardChanged: SharedFlow<ClipboardItem> = _clipboardChanged.asSharedFlow()
 
+    /**
+     * 本地删除事件（条目被删时回调 uuid）。供内置对象存储同步记墓碑，
+     * 使「本地删除内容减量到储存筒」生效；插件桥不关心，可为空。
+     */
+    @Volatile
+    var onEntryDeleted: ((uuid: String) -> Unit)? = null
+
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     /** 到点主动清理的排程任务（见 [scheduleNextPurge]），重复排程会取消旧任务。 */
@@ -804,10 +811,27 @@ class ClipboardManager private constructor(private val context: Context) {
 
     /** 删除条目并回收对应图片文件（文本条目无文件，行为不变）。 */
     private suspend fun deleteEntriesAndFiles(ids: List<Long>) {
-        val paths = dao.findByIds(ids).filter { it.imagePath.isNotEmpty() }.map { it.imagePath }
+        val entries = dao.findByIds(ids)
+        val paths = entries.filter { it.imagePath.isNotEmpty() }.map { it.imagePath }
+        // 删除前先算出 uuid，通知同步引擎记墓碑（uuid 规则与同步引擎一致）
+        onEntryDeleted?.let { cb ->
+            entries.forEach { e ->
+                val uuid = when {
+                    e.type == ClipboardEntry.TYPE_IMAGE && e.imageHash.isNotBlank() -> "img_${e.imageHash}"
+                    e.text.isNotBlank() -> "txt_" + sha256Hex(e.text)
+                    else -> null
+                }
+                if (uuid != null) cb(uuid)
+            }
+        }
         dao.deleteClipboardByIds(ids)
         paths.forEach { imageStore.delete(it) }
     }
+
+    private fun sha256Hex(text: String): String =
+        java.security.MessageDigest.getInstance("SHA-256")
+            .digest(text.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
 
     fun splitItem(id: Long) {
         scope.launch {

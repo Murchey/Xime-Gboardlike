@@ -393,7 +393,11 @@ object BackupManager {
      * 恢复侧同样跳过，避免旧包里残留的明文被灌回当前设备。
      */
     internal fun isSensitivePrefKey(key: String): Boolean =
-        key.startsWith("asr_key_")
+        key.startsWith("asr_key_") ||
+            // 对象存储 SecretKey（密文也不带走：换机 Keystore 解不开，且避免密文被复制）
+            key == "os_sk" || key == "os_sk_enc" ||
+            // 对象存储 AccessKey ID 虽非密钥，但与 SecretKey 成对，同样不进备份包
+            key == "os_ak"
 
     fun prefsToJson(prefs: SharedPreferences): String {
         val root = org.json.JSONObject()

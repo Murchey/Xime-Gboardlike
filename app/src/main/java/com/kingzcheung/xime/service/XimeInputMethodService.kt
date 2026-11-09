@@ -94,6 +94,7 @@ import com.kingzcheung.xime.viewmodel.KeyboardViewModel
 import com.kingzcheung.xime.association.AssociationService
 import com.kingzcheung.xime.clipboard.ClipboardManager
 import com.kingzcheung.xime.clipboard.sync.ClipboardSyncBridge
+import com.kingzcheung.xime.clipboard.sync.objstore.ClipboardObjectStoreSync
 import com.kingzcheung.xime.plugin.ActivePluginSelection
 import com.kingzcheung.xime.plugin.ExtensionManager
 import com.kingzcheung.xime.plugin.core.api.ToolPlugin
@@ -242,6 +243,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     internal lateinit var clipboardManager: ClipboardManager
 
     internal var clipboardSyncBridge: ClipboardSyncBridge? = null
+
+    /** 内置对象存储剪切板同步引擎（与插件桥互斥）。 */
+    internal var clipboardObjectStoreSync: com.kingzcheung.xime.clipboard.sync.objstore.ClipboardObjectStoreSync? = null
     
     internal lateinit var keyboardContainer: VoiceKeyboardContainer
     
@@ -1041,10 +1045,26 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     private fun startClipboardSyncIfEnabled() {
-        if (clipboardSyncBridge != null) return
+        if (clipboardSyncBridge != null || clipboardObjectStoreSync != null) return
         try {
             if (!SettingsPreferences.isClipboardSyncEnabled(this)) {
                 Log.d(TAG, "Clipboard sync disabled in settings")
+                return
+            }
+            // 内置对象存储优先：启用后不再启动任何插件桥（两者互斥，避免双跑）
+            if (ClipboardObjectStoreSync.isBuiltinEnabled(this)) {
+                val engine = ClipboardObjectStoreSync(
+                    context = this,
+                    clipboardManager = clipboardManager,
+                    dao = com.kingzcheung.xime.clipboard.db.ClipboardDatabase
+                        .getInstance(this).clipboardDao(),
+                )
+                // 本地删除 → 记墓碑 → 下次同步把远端对象也删掉
+                clipboardManager.onEntryDeleted = { uuid -> engine.markDeleted(uuid) }
+                engine.start()
+                clipboardObjectStoreSync = engine
+                uiState.value = uiState.value.copy(clipboardSyncEnabled = true)
+                Log.d(TAG, "Clipboard object-store sync started (builtin)")
                 return
             }
             val enabled = ExtensionManager.getEnabledClipboardSyncPlugins(this)
@@ -1092,6 +1112,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private fun stopClipboardSync() {
         clipboardSyncBridge?.release()
         clipboardSyncBridge = null
+        clipboardObjectStoreSync?.release()
+        clipboardObjectStoreSync = null
+        if (::clipboardManager.isInitialized) clipboardManager.onEntryDeleted = null
         uiState.value = uiState.value.copy(clipboardSyncEnabled = false)
     }
 
@@ -2897,7 +2920,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         // 键盘弹出时对比系统取色与缓存的动态主题色，壁纸取色变化则重建主题并热更新 UI。
         // 每次弹出只做两次资源读取对比，取色未变时零成本。
         KeyboardThemes.refreshDynamicSchemes(this)
-        clipboardSyncBridge?.pullOnce()
+        // 键盘弹出也视为一次「打开」：内置引擎优先，插件桥回落
+        clipboardObjectStoreSync?.syncOnClipboardOpen()
+            ?: clipboardSyncBridge?.pullOnce()
     }
     
     private fun clearInputState() {

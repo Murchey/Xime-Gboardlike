@@ -13,6 +13,10 @@ interface ClipboardDao {
     @Query("SELECT * FROM clipboard_entries WHERE isQuickSend = 0 ORDER BY isPinned DESC, timestamp DESC")
     fun observeAll(): Flow<List<ClipboardEntry>>
 
+    /** 一次性取全部历史（对象存储同步构建 index 用，避免常驻 Flow 订阅）。 */
+    @Query("SELECT * FROM clipboard_entries WHERE isQuickSend = 0")
+    suspend fun allClipboardOnce(): List<ClipboardEntry>
+
     @Query("SELECT * FROM clipboard_entries WHERE isQuickSend = 1 ORDER BY timestamp DESC")
     fun observeQuickSend(): Flow<List<ClipboardEntry>>
 

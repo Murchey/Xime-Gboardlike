@@ -123,7 +123,11 @@ internal fun rememberImeKeyboardCallbacks(
             onClipboard = {},
             onClipboardSelect = { text -> service.textCommit.selectClipboardItem(text) },
             onClipboardImageSelect = { item -> service.textCommit.selectClipboardImage(item) },
-            onClipboardPullRemote = { service.clipboardSyncBridge?.pullOnce() },
+            onClipboardPullRemote = {
+                // 内置对象存储同步优先；未启用时回落到插件桥
+                service.clipboardObjectStoreSync?.syncOnClipboardOpen()
+                    ?: service.clipboardSyncBridge?.pullOnce()
+            },
             onCommitText = { text -> service.textCommit.commitClipboardText(text) },
             onDeleteText = { count -> service.textCommit.deleteClipboardChars(count) },
             onHandwritingAutoCommit = { newTail, expectedTail ->
