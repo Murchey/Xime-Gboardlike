@@ -5,6 +5,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 
 import com.kingzcheung.xime.i18n.tr
+import com.kingzcheung.xime.glide.GlideContext
+import com.kingzcheung.xime.glide.LocalGlideContext
 
 import android.annotation.SuppressLint
 import android.widget.Toast
@@ -253,6 +255,12 @@ fun KeyboardLayout(
     var showDoublePinyinFinals by remember {
         mutableStateOf(SettingsPreferences.showDoublePinyinFinals(context))
     }
+    var glideTypingEnabled by remember {
+        mutableStateOf(SettingsPreferences.isGlideTypingEnabled(context))
+    }
+    var glideTrailVisible by remember {
+        mutableStateOf(SettingsPreferences.isGlideTrailVisible(context))
+    }
     var letterCaseSetting by remember {
         mutableStateOf(
             LetterCaseSetting(
@@ -276,6 +284,10 @@ fun KeyboardLayout(
                         showLetterHintSymbols = SettingsPreferences.showLetterHintSymbols(context)
                     "show_double_pinyin_finals" ->
                         showDoublePinyinFinals = SettingsPreferences.showDoublePinyinFinals(context)
+                    SettingsPreferences.KEY_GLIDE_TYPING ->
+                        glideTypingEnabled = SettingsPreferences.isGlideTypingEnabled(context)
+                    SettingsPreferences.KEY_GLIDE_SHOW_TRAIL ->
+                        glideTrailVisible = SettingsPreferences.isGlideTrailVisible(context)
                     "letter_display_case", "letter_case_follow_shift" ->
                         letterCaseSetting = LetterCaseSetting(
                             upperCase = SettingsPreferences.getLetterDisplayCase(context) ==
@@ -363,6 +375,9 @@ fun KeyboardLayout(
         LocalSwipeHintCorner provides swipeHintCornerFor(isLandscape, tabletParams),
         // 平板键面提示统一放大（字母上标/退格"清空"等所有键组件一致），手机为 1f
         LocalHintExtraScale provides hintExtraScaleFor(tabletParams),
+        // 阶段B：仅把滑动开关状态下发到 26 键树，尚未接管任何 pointerInput
+        LocalGlideContext provides GlideContext(
+            enabled = glideTypingEnabled, showTrail = glideTrailVisible),
         LocalKeyVisualPadding provides PaddingValues(
             horizontal = if (tabletParams) 4.dp else (kbKey.spacingFor("qwerty").first?.dp ?: 2.dp),
             // 手机横屏：只认 qwerty 专属覆盖（keyboard.key.qwerty.spacing_y），回退 2.5dp；

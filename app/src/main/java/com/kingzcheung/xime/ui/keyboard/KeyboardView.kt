@@ -8,8 +8,6 @@ import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +42,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,7 +83,6 @@ import com.kingzcheung.xime.util.PermissionHelper
 import com.kingzcheung.xime.viewmodel.KeyboardUiState
 import com.kingzcheung.xime.viewmodel.KeyboardViewModel
 import com.kingzcheung.xime.viewmodel.asToolbarItem
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 val LocalStretchFactor = compositionLocalOf { 1f }
@@ -910,65 +906,12 @@ fun KeyboardView(
                 val mainType = (page as KeyboardPage.Main).type
                 when (mainType) {
                     MainType.FULL -> {
-                        val currentOnCursorMove = rememberUpdatedState(callbacks.onCursorMove)
                         val suppressCursorMove = remember { mutableStateOf(false) }
                         val cursorGestureActive = remember { mutableStateOf(false) }
-                        val cursorMod = if (callbacks.onCursorMove != null) {
-                            Modifier.pointerInput(Unit) {
-                                val stepThresholdPx = 25.dp.toPx()
-                                val activationThresholdPx = 60.dp.toPx()
-                                awaitEachGesture {
-                                    suppressCursorMove.value = false
-                                    cursorGestureActive.value = false
-                                    val down = awaitFirstDown(requireUnconsumed = false)
-                                    var isCursorGesture = false
-                                    var lastSteps = 0
-                                    var activationAnchorX = down.position.x
-
-                                    // 手势结束即清标志，避免跨手势残留（26 键已改按本次手势峰值判定）
-                                    try {
-                                        do {
-                                            val event = awaitPointerEvent()
-                                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                            val dx = change.position.x - down.position.x
-                                            val dy = change.position.y - down.position.y
-
-                                            if (!change.pressed) {
-                                                if (isCursorGesture) {
-                                                    event.changes.forEach { it.consume() }
-                                                }
-                                                break
-                                            }
-                                            if (suppressCursorMove.value) break
-                                            if (abs(dx) > abs(dy) * 4f) {
-
-                                                if (!isCursorGesture && abs(dx) > activationThresholdPx) {
-                                                    isCursorGesture = true
-                                                    activationAnchorX = change.position.x
-                                                    cursorGestureActive.value = true
-                                                }
-
-                                                if (isCursorGesture) {
-                                                    event.changes.forEach { it.consume() }
-                                                    val dxFromAnchor = change.position.x - activationAnchorX
-                                                    val steps = (dxFromAnchor / stepThresholdPx).toInt()
-                                                    if (steps != lastSteps) {
-                                                        val delta = steps - lastSteps
-                                                        currentOnCursorMove.value?.invoke(delta)
-                                                        lastSteps = steps
-                                                    }
-                                                }
-                                            }
-                                        } while (true)
-                                    } finally {
-                                        cursorGestureActive.value = false
-                                    }
-                                }
-                            }
-                        } else {
-                            Modifier
-                        }
-
+                        // 滑动输入方案：不再提供整区左右滑动光标（用户明确要求）。
+                        // 光标定位通过输入框点选/编码区编辑/编辑面板完成；
+                        // 保留两个 CompositionLocal 供 KeyButton 读取，避免破坏现有引用。
+                        val cursorMod = Modifier
                         val context = LocalContext.current
                         var keyboardTextScale by remember {
                             mutableFloatStateOf(
