@@ -1312,4 +1312,6 @@
     <string name="storage_object_sync_settings">物件儲存同步設定</string>
     <string name="storage_object_sync_hint">設定儲存位置、同步方式並檢視同步狀態</string>
     <string name="storage_plugin_sync_hint">選擇及設定 WebDAV 等剪貼簿同步外掛</string>
+    <string name="s_huadongshuru">滑動輸入</string>
+    <string name="s_huadongshuru_fu">26 鍵中文全拼／雙拼可連續滑動整句輸入；開啟後字母滑動快捷動作暫不觸發，且不使用左右滑動游標。</string>
 </resources>

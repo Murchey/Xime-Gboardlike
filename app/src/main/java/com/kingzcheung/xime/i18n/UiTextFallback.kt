@@ -1204,6 +1204,8 @@ internal object UiTextFallback {
         R.string.storage_records_hint to "查看、恢复或删除云端备份",
         R.string.storage_cancel to "取消",
         R.string.storage_configuration to "存储位置",
+        R.string.s_huadongshuru to "滑动输入",
+        R.string.s_huadongshuru_fu to "26 键中文全拼/双拼可连续滑动整句输入；开启后字母滑动快捷动作暂不触发，且不使用左右滑动光标。",
         R.string.storage_bucket_url to "存储桶完整地址",
         R.string.storage_bucket_url_hint to "填写已包含桶名的 COS / OSS 访问地址，无需再填写桶名。",
         R.string.storage_s3_endpoint to "S3 服务端点（Endpoint）",

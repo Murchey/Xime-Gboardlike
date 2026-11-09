@@ -19,6 +19,12 @@ object LayoutDisplaySettingsSpecs {
     /** 键盘布局段的纯开关项（按原页面顺序）。 */
     fun keyboardLayout(currentSchema: String): List<SettingSpec> = listOf(
         SettingSpec.Switch(
+            key = SettingsPreferences.KEY_GLIDE_TYPING,
+            titleRes = R.string.s_huadongshuru,
+            descriptionRes = R.string.s_huadongshuru_fu,
+            default = false,
+        ),
+        SettingSpec.Switch(
             key = SettingsPreferences.KEY_HARDWARE_KEYBOARD_DETECTION_ENABLED,
             titleRes = R.string.s_shitijianpanjiance,
             descriptionRes = R.string.s_guanbihoubujianceshitijianpan_6aaf1,

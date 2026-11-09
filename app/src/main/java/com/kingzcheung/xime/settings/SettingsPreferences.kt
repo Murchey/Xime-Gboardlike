@@ -441,6 +441,11 @@ object SettingsPreferences {
     /** 候选之间的竖分割线（Gboard 风格，默认开启）。 */
     const val KEY_CANDIDATE_DIVIDER = "candidate_divider"
 
+    /** 26 键中文全拼/双拼滑动输入（默认关闭）。 */
+    const val KEY_GLIDE_TYPING = "glide_typing"
+    /** 是否绘制滑动轨迹（滑动输入开启时有效，默认开启）。 */
+    const val KEY_GLIDE_SHOW_TRAIL = "glide_show_trail"
+
     /** 五笔连打：打出的字先攒在候选栏，不逐字上屏（默认关闭）。 */
     const val KEY_WUBI_CHAINED_INPUT = "wubi_chained_input"
 
@@ -556,6 +561,21 @@ object SettingsPreferences {
 
     fun setShowCandidateDivider(context: Context, show: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_CANDIDATE_DIVIDER, show).apply()
+    }
+
+    /** 滑动输入：默认关闭。开启后 26 键中文区域的拖动由 glide 接管。 */
+    fun isGlideTypingEnabled(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_GLIDE_TYPING, false)
+
+    fun setGlideTypingEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_GLIDE_TYPING, enabled).apply()
+    }
+
+    fun isGlideTrailVisible(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_GLIDE_SHOW_TRAIL, true)
+
+    fun setGlideTrailVisible(context: Context, visible: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_GLIDE_SHOW_TRAIL, visible).apply()
     }
 
     /**
