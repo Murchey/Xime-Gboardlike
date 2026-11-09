@@ -66,6 +66,7 @@ import com.kingzcheung.xime.R
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.ui.isTablet
 import com.kingzcheung.xime.settings.DoublePinyinFinals
+import com.kingzcheung.xime.settings.SchemaSemicolonKey
 import com.kingzcheung.xime.settings.DisplayMode
 import com.kingzcheung.xime.settings.ButtonLayout
 import com.kingzcheung.xime.settings.KeyAction
@@ -132,6 +133,12 @@ internal val LocalShowLetterHintSymbols = staticCompositionLocalOf { true }
 
 /** 当前双拼方案键位韵母；空表示不替换符号。 */
 internal val LocalDoublePinyinFinals = staticCompositionLocalOf<Map<Char, String>> { emptyMap() }
+
+/**
+ * 当前方案的 `;` 是否为韵母键（微软/搜狗/紫光双拼的 `ing`）。
+ * 为 true 时组合态 Shift 键打字面分号，否则维持"分词"行为。
+ */
+internal val LocalSemicolonFinal = staticCompositionLocalOf { false }
 
 /** 字母键显示大小写：大写固定 / 小写是否跟随 Shift。 */
 internal data class LetterCaseSetting(
@@ -300,6 +307,10 @@ fun KeyboardLayout(
             emptyMap()
         }
     }
+    // 与"韵母提示"开关无关：提示可以关，分号键不能没有（否则 ing 打不出来）
+    val semicolonFinal = remember(currentSchemaId, cfgVer) {
+        SchemaSemicolonKey.forSchema(context, currentSchemaId)
+    }
 
     fun processSwipeState(state: SwipeState, bounds: Rect) {
         val newState = if (state.isSwipeDown && state.swipeText != null) {
@@ -345,6 +356,7 @@ fun KeyboardLayout(
     CompositionLocalProvider(
         LocalShowLetterHintSymbols provides showLetterHintSymbols,
         LocalDoublePinyinFinals provides doublePinyinFinals,
+        LocalSemicolonFinal provides semicolonFinal,
         LocalLetterCaseSetting provides letterCaseSetting,
         LocalKeyCornerRadius provides qwertyCornerRadius,
         // 键面提示档与主键盘同一规则（退格的「清空」等提示的放大倍率与画法）
@@ -1228,8 +1240,28 @@ private fun panelKeyIcon(name: String): Painter? = when (name) {
 @Composable
 private fun ShiftCell(env: QwertyRowEnv, modifier: Modifier, id: String = "shift") {
     // 中文组合态：Shift 键变为拼音分隔符键 '（全部字母方案通用），
-    // 用户手动切分音节（xi' + an → xi'an），不做自动识别
+    // 用户手动切分音节（xi' + an → xi'an），不做自动识别。
+    // 例外：方案若用 `;` 当韵母键（微软/搜狗/紫光双拼的 ing），此时必须能打出分号，
+    // 否则该方案所有 ing 音都输入不了；分词退到长按。
     if (env.isComposing && !env.isAsciiMode) {
+        if (LocalSemicolonFinal.current) {
+            KeyButton(
+                text = ";",
+                onClick = { env.onKeyPress(";") },
+                onLongClick = { env.onKeyPress("word_separator") },
+                backgroundColor = env.specialKeyBackgroundColor,
+                textColor = env.specialKeyTextColor,
+                modifier = modifier,
+                fontSize = 14.sp,
+                onPress = { env.onKeyPressDown?.invoke(";") },
+                onRelease = { env.onKeyRelease?.invoke(";") },
+                shadowEnabled = env.shadowEnabled,
+                shadowElevation = env.shadowElevation,
+                shadowShapeRadius = env.shadowShapeRadius,
+                a11yDescription = tr(R.string.s_fenhao_fenci),
+            )
+            return
+        }
         KeyButton(
             text = tr(R.string.keyboard_split_word),
             onClick = { env.onKeyPress("word_separator") },
