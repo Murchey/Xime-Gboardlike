@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -539,7 +540,10 @@ private fun PackageGroupDrawer(
     selectedPackage: String?,
     onSelect: (String?) -> Unit,
 ) {
-    ModalDrawerSheet {
+    // 必须带上 fillMaxHeight：ModalDrawerSheet 的默认 modifier 就是
+    // fillMaxHeight().width(...)，一旦传自定义 modifier 就会整体替换，
+    // 丢掉高度约束后内部 LazyColumn 会量到 0 尺寸（真机实测：只剩遮罩层）
+    ModalDrawerSheet(modifier = Modifier.fillMaxHeight().width(320.dp)) {
         Spacer(Modifier.height(24.dp))
         Text(
             text = tr(R.string.s_fanganbaolaiyuan),
@@ -550,7 +554,7 @@ private fun PackageGroupDrawer(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
         )
-        LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
             item {
                 NavigationDrawerItem(
                     label = {

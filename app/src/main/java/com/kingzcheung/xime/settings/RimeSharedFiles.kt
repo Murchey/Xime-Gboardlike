@@ -19,6 +19,35 @@ object RimeSharedFiles {
     }
 
     /**
+     * assets/rime/ 下所有内置文件的相对路径（递归，含子目录）。
+     *
+     * 用于判断 rime/ 里某个文件是不是"app 自带的"：只有内置文件才归内置包追踪，
+     * 用户手拷进来的第三方方案包不能被内置包认领（否则卸载内置包会连删，
+     * 分组也会错标成内置来源）。
+     */
+    fun allAssetNames(context: Context): Set<String> {
+        val result = mutableSetOf<String>()
+        fun walk(rel: String, depth: Int) {
+            if (depth > 4) return
+            val entries = runCatching { context.assets.list(rel) }.getOrNull() ?: return
+            for (entry in entries) {
+                val childRel = if (rel.isEmpty()) entry else "$rel/$entry"
+                val grandchildren = runCatching { context.assets.list(childRel) }.getOrNull()
+                if (grandchildren.isNullOrEmpty()) {
+                    result.add(childRel)
+                } else {
+                    walk(childRel, depth + 1)
+                }
+            }
+        }
+        walk(ASSETS_RIME_DIR, 0)
+        // 注册表里的路径是**相对 rime 目录**的（`symbols.yaml`、`cn_dicts/base.dict.yaml`），
+        // 必须去掉 "rime/" 前缀，否则一个都匹配不上（曾因此误清空整个注册表）
+        val prefix = "$ASSETS_RIME_DIR/"
+        return result.mapTo(mutableSetOf()) { it.removePrefix(prefix) }
+    }
+
+    /**
      * 被其他方案用 `__include` / `import_tables` 引用的**预设**方案与词表。
      *
      * 它们自身不作为独立方案启用，但缺了会让依赖方编译失败：`t9.schema.yaml` 首行就是

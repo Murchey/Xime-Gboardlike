@@ -788,6 +788,10 @@ object SchemaManifestManager {
         val rimeDir = SchemaManager.getRimeDir(context)
         if (!rimeDir.exists()) return
 
+        // 先纠正历史误认领：旧版本把用户手拷进 rime/ 的第三方方案包
+        // 一并算进了 builtin_shared，导致分组显示错、卸载内置包时连删用户方案。
+        releaseMisclaimedBuiltinFiles(context)
+
         val registry = loadRegistry(context)
         val allFiles = registry.optJSONObject("files") ?: JSONObject()
 
@@ -803,7 +807,13 @@ object SchemaManifestManager {
         }
 
         if (untracked.isNotEmpty()) {
-            val groups = untracked.entries.groupBy { BuiltinPackages.packageFor(it.key) }
+            // 只有出现在 app 内置资产里的文件才归内置包；其余（用户手拷进 rime/ 的第三方
+            // 方案包）一律**不追踪**，否则会被塞进 builtin_shared，界面上表现为
+            // 「万象拼音来自内置共享资源」这种错误分组，卸载内置包时还会误删用户方案。
+            val assetNames = runCatching { RimeSharedFiles.allAssetNames(context) }.getOrNull()
+            val groups = untracked.entries
+                .filter { BuiltinPackages.isBuiltinAsset(it.key, assetNames) }
+                .groupBy { BuiltinPackages.packageFor(it.key) }
             for ((packageId, entries) in groups) {
                 val existingManifest = loadManifest(context, packageId)
                 val fileEntries = existingManifest?.optJSONObject("files") ?: JSONObject()
@@ -846,6 +856,60 @@ object SchemaManifestManager {
                 manifest.put("version", version)
                 saveManifest(context, packageId, manifest)
             }
+        }
+    }
+
+    /**
+     * 解除内置包对**非内置文件**的认领（历史数据纠正）。
+     *
+     * 旧版 refreshBuiltinManifest 会把 rime/ 里所有未被追踪的文件塞进
+     * builtin_shared（`packageFor` 的兜底分支）。用户手拷进来的第三方方案包
+     * 因此被内置包"认领"：分组显示成「来自内置共享资源」，卸载内置包时还会
+     * 连带删除用户方案。这里按 assets 实际文件表把这类误认领清掉。
+     */
+    private suspend fun releaseMisclaimedBuiltinFiles(context: Context) {
+        val assetNames = runCatching { RimeSharedFiles.allAssetNames(context) }.getOrNull() ?: return
+        val registry = loadRegistry(context)
+        val files = registry.optJSONObject("files") ?: return
+        var changed = false
+        // 先收集再删除：JSONObject 的 keySet 是活视图，边遍历边 remove 会抛
+        // ConcurrentModificationException（真机实测，整个 refresh 就此中断）
+        val toDrop = mutableListOf<String>()
+        val toRewrite = mutableListOf<Pair<JSONObject, List<String>>>()
+        val keys = files.keys()
+        while (keys.hasNext()) {
+            val fn = keys.next() as String
+            if (BuiltinPackages.isBuiltinAsset(fn, assetNames)) continue
+            val entry = files.optJSONObject(fn) ?: continue
+            val claimants = jsonArrayToList(entry.optJSONArray("claimedBy"))
+            val remaining = claimants.filter { !BuiltinPackages.isBuiltin(it) }
+            if (remaining.size == claimants.size) continue
+            if (remaining.isEmpty()) toDrop.add(fn) else toRewrite.add(entry to remaining)
+        }
+        for (fn in toDrop) files.remove(fn)
+        for ((entry, remaining) in toRewrite) entry.put("claimedBy", JSONArray(remaining))
+        changed = toDrop.isNotEmpty() || toRewrite.isNotEmpty()
+        if (changed) {
+            registry.put("files", files)
+            saveRegistry(context, registry)
+            Log.i(TAG, "releaseMisclaimedBuiltinFiles: unclaimed non-builtin files")
+        }
+        // 各内置包清单同步剔除这些条目，避免卸载时仍按清单删除
+        for (packageId in BuiltinPackages.ALL) {
+            val manifest = loadManifest(context, packageId) ?: continue
+            val mf = manifest.optJSONObject("files") ?: continue
+            var dirty = false
+            val fk = mf.keys()
+            val toRemove = mutableListOf<String>()
+            while (fk.hasNext()) {
+                val fn = fk.next() as String
+                if (!BuiltinPackages.isBuiltinAsset(fn, assetNames)) toRemove.add(fn)
+            }
+            for (fn in toRemove) {
+                mf.remove(fn)
+                dirty = true
+            }
+            if (dirty) saveManifest(context, packageId, manifest)
         }
     }
 

@@ -29,6 +29,21 @@ object BuiltinPackages {
         else -> packageId
     }
 
+    /**
+     * 该相对路径是否确实是 app 内置资产。
+     *
+     * apk 的 assets/rime/ 下有哪些文件，就以它为唯一判据。用户自己拷进 rime/ 的
+     * 第三方方案包不在这里面，不能归到任何内置包——否则会被 builtin 包"认领"，
+     * 卸载内置包时连带删掉，分组也显示成内置来源。
+     */
+    fun isBuiltinAsset(relPath: String, assetNames: Set<String>? = null): Boolean {
+        val path = relPath.removePrefix("/").replace('\\', '/')
+        if (path.isEmpty()) return false
+        assetNames?.let { return it.contains(path) }
+        // 拿不到资产清单时**保守返回 true**（保持认领），宁可少清理也不能误删用户文件
+        return true
+    }
+
     /** 资产相对路径 → 所属内置包。未知文件一律归 shared，避免误删。 */
     fun packageFor(relPath: String): String {
         val path = relPath.removePrefix("/")
