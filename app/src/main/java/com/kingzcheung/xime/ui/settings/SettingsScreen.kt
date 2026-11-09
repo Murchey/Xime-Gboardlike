@@ -282,8 +282,10 @@ fun SettingsScreen(
         composable(SettingsRoutes.Clipboard) {
             ClipboardSettingsContent(
                 onBack = { navController.popBackStack() },
-                // 剪贴板同步作为剪贴板的内页（返回回到剪贴板设置）
-                onNavigateToClipboardSync = { navController.navigate(SettingsRoutes.ClipboardSync) }
+                // 内置对象存储优先；上游插件桥收进二级页
+                onNavigateToClipboardSync = { navController.navigate(SettingsRoutes.ClipboardSync) },
+                onNavigateToObjectStorage = { navController.navigate(SettingsRoutes.ObjectStorage) },
+                onNavigateToLegacy = { navController.navigate(SettingsRoutes.LegacySync) }
             )
         }
         composable(SettingsRoutes.ClipboardSync) {
@@ -297,6 +299,21 @@ fun SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onNavigateToPlugins = { navController.navigate(SettingsRoutes.Plugins) },
                 onNavigateToMarket = { navController.navigate(SettingsRoutes.MarketPlugins) },
+                onNavigateToPluginSettings = { pluginId ->
+                    navController.navigate("${SettingsRoutes.PluginSettings}/$pluginId")
+                },
+                onNavigateToObjectStorage = { navController.navigate(SettingsRoutes.ObjectStorage) },
+                onNavigateToLegacy = { navController.navigate(SettingsRoutes.LegacySync) }
+            )
+        }
+        composable(SettingsRoutes.ObjectStorage) {
+            ObjectStorageSettingsContent(onBack = { navController.popBackStack() })
+        }
+        composable(SettingsRoutes.LegacySync) {
+            LegacySyncSettingsContent(
+                onBack = { navController.popBackStack() },
+                onNavigateToMarket = { navController.navigate(SettingsRoutes.MarketPlugins) },
+                onNavigateToPlugins = { navController.navigate(SettingsRoutes.Plugins) },
                 onNavigateToPluginSettings = { pluginId ->
                     navController.navigate("${SettingsRoutes.PluginSettings}/$pluginId")
                 }

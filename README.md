@@ -280,6 +280,14 @@ Core rules:
 - [fcitx5-android](https://github.com/fcitx5-android/fcitx5-android) - Keyboard layout reference
 - [onnxruntime](https://github.com/microsoft/onnxruntime) - ONNX inference runtime for predictive text and speech recognition models
 
+## Object storage sync (built-in)
+
+Configure a COS / OSS / S3-compatible bucket under **Settings → Sync & Backup → Object Storage**
+to sync clipboard history (text + images) and back up user dictionaries (or a full archive of all
+schemas via the advanced option) between XimeGboard **Android** devices. There is currently no
+desktop client, so syncing with a PC is not supported. WebDAV and other upstream plugin-based
+channels remain available under **More sync methods (WebDAV, etc.)**.
+
 ## License
 
 GPLv3 License

@@ -277,6 +277,13 @@ xipm test           # 运行插件测试（QuickJS + mock host，无需真机）
 - [fcitx5-android](https://github.com/fcitx5-android/fcitx5-android) - 键盘布局参考
 - [onnxruntime](https://github.com/microsoft/onnxruntime) - 联想词预测与语音识别的 ONNX 推理引擎
 
+## 内置对象存储同步与备份
+
+在**设置 → 同步与备份 → 对象存储**填写腾讯云 COS / 阿里云 OSS / S3 兼容存储桶信息，即可在
+XimeGboard 的 **Android 版本之间**同步剪切板历史（文字与图片），并备份用户词典；高级选项可
+备份当前所有方案的完整形态。目前暂无电脑版，因此不能与电脑同步。上游 WebDAV 等插件式
+同步/备份保留在「更多同步方式（WebDAV 等）」二级页面。
+
 ## 许可证
 
 GPLv3 License

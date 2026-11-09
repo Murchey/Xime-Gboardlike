@@ -79,6 +79,8 @@ import kotlinx.coroutines.withContext
 fun ClipboardSettingsContent(
     onBack: () -> Unit,
     onNavigateToClipboardSync: () -> Unit,
+    onNavigateToObjectStorage: () -> Unit = {},
+    onNavigateToLegacy: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -161,6 +163,13 @@ fun ClipboardSettingsContent(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // 内置对象存储同步优先展示（用户要求），上游 WebDAV 等收进二级页
+            ObjectStoragePrimaryCard(
+                onNavigateToConfig = onNavigateToObjectStorage,
+                onNavigateToLegacy = onNavigateToLegacy,
+                showBackup = false,
+            )
+
             SettingsSection(
                 title = tr(R.string.s_tupianjilu),
                 content = {
@@ -410,38 +419,6 @@ fun ClipboardSettingsContent(
                 }
             )
 
-            SettingsSection(
-                title = tr(R.string.s_tongbu),
-                content = {
-                    // 开关就地上提到本页（原先藏在子页里），整行点击进子页做"选服务 + 配置"
-                    val activePlugin = activeSyncPlugin
-                    val subtitle = when {
-                        !syncOn -> tr(R.string.s_tongguochajianyuyuanduanshebei_430fe)
-                        activePlugin == null -> tr(R.string.s_yiqiyong_weixuanzetongbufuwu_d_e4fe4)
-                        else -> {
-                            // 能力按实际生效插件说明，避免出现"文案说仅文字、其实能同步图片"
-                            val supportsImages =
-                                activePlugin.capabilities?.clipboardSync?.attachments == true
-                            "已启用 · ${activePlugin.name}（${
-                                if (supportsImages) tr(R.string.s_wenziyutupian) else tr(R.string.s_jinwenzi)
-                            }） · 点按进入服务与配置"
-                        }
-                    }
-                    SettingsToggleItem(
-                        icon = Icons.TwoTone.Sync,
-                        title = tr(R.string.s_jiantiebantongbu),
-                        subtitle = subtitle,
-                        checked = syncOn,
-                        onCheckedChange = { checked ->
-                            syncOn = checked
-                            SettingsPreferences.setClipboardSyncEnabled(context, checked)
-                        },
-                        onClick = onNavigateToClipboardSync,
-                        // 右箭头表明"这一行还有下级页面"（与「语音转文本」行同一惯例）
-                        showArrow = true
-                    )
-                }
-            )
         }
     }
 }

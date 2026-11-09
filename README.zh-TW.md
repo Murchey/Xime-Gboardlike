@@ -276,6 +276,13 @@ build_apk.bat
 - [fcitx5-android](https://github.com/fcitx5-android/fcitx5-android) - 鍵盤佈局參考
 - [onnxruntime](https://github.com/microsoft/onnxruntime) - 聯想詞預測與語音辨識的 ONNX 推論引擎
 
+## 內建物件儲存同步與備份
+
+在**設定 → 同步與備份 → 物件儲存**填寫騰訊雲 COS / 阿里雲 OSS / S3 相容儲存桶資訊，即可在
+XimeGboard 的 **Android 版本之間**同步剪貼簿歷史（文字與圖片），並備份使用者詞典；進階選項可
+備份目前所有方案的完整形態。目前暫無電腦版，因此不能與電腦同步。上游 WebDAV 等外掛式
+同步/備份保留在「更多同步方式（WebDAV 等）」二級頁面。
+
 ## 授權條款
 
 GPLv3 License

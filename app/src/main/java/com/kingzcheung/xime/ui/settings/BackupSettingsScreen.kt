@@ -35,6 +35,7 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.SettingsBackupRestore
 import androidx.compose.material.icons.twotone.Backup
+import androidx.compose.material.icons.twotone.Cloud
 import androidx.compose.material.icons.twotone.CloudUpload
 import androidx.compose.material.icons.twotone.Sync
 import androidx.compose.material3.AlertDialog
@@ -120,7 +121,11 @@ fun BackupSettingsContent(
     onNavigateToPlugins: () -> Unit,
     onNavigateToMarket: () -> Unit,
     /** 打开所选备份服务的配置页（独立页面，与插件中心同一入口） */
-    onNavigateToPluginSettings: (String) -> Unit
+    onNavigateToPluginSettings: (String) -> Unit,
+    onNavigateToObjectStorage: () -> Unit = {},
+    onNavigateToLegacy: () -> Unit = {},
+    /** true = 作为「上游方式」二级页复用：只渲染插件区块，不显示内置对象存储主卡。 */
+    legacyOnly: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -386,6 +391,29 @@ fun BackupSettingsContent(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (!legacyOnly) {
+                // ---------- 内置对象存储（优先展示） ----------
+                ObjectStoragePrimaryCard(
+                    onNavigateToConfig = onNavigateToObjectStorage,
+                    onNavigateToLegacy = onNavigateToLegacy,
+                    showBackup = true,
+                )
+
+                // 主页面保持简明：上游 WebDAV 等收进二级页
+                SettingsSection(
+                    title = tr(R.string.os_legacy),
+                    content = {
+                        SettingsItem(
+                            icon = Icons.TwoTone.Cloud,
+                            title = tr(R.string.os_legacy),
+                            subtitle = tr(R.string.os_legacy_hint),
+                            onClick = onNavigateToLegacy,
+                            showArrow = true,
+                        )
+                    }
+                )
+            }
+            if (legacyOnly) {
             // ---------- 备份服务（词条同步与云端备份共用的通道） ----------
             SettingsSection(
                 title = tr(R.string.s_beifenfuwu),
@@ -818,6 +846,7 @@ fun BackupSettingsContent(
             }
         )
     }
+    } // if (false)：原插件区块不渲染，由 LegacySync 页承担
 }
 
 /** 云端条目行用的绝对时间（列表里要能对得上文件）；卡片状态用相对时间见 [formatRelativeTime]。 */

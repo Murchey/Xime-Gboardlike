@@ -45,6 +45,9 @@ object SettingsRoutes {
     const val Clipboard = "clipboard"
     const val ClipboardSync = "clipboard_sync"
     const val Backup = "backup"
+    const val ObjectStorage = "object_storage"
+    /** 上游 WebDAV 等插件式同步/备份收进此二级页。 */
+    const val LegacySync = "legacy_sync"
     const val SchemaDictBrowser = "schema_dict_browser"
     const val RimeFileBrowser = "rime_file_browser"
 }
