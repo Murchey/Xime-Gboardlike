@@ -108,7 +108,7 @@ Captured on a real device (Android 13) via ADB from this build:
 - **Rime Engine** — Powered by the mature and reliable Rime input method engine for accurate Chinese input
 - **Rich Keyboard Layouts** — QWERTY full keyboard, T9 Pinyin, Stroke 9-key, Handwriting, Numpad (with calculator)
 - **Floating Keyboard** — Floating card style with drag support, semi-transparent rounded design
-- **Voice-to-Text** — Optional speech recognition via built-in offline models and online ASR plugins (FunAsr, Volc, etc.; online providers require network and credentials)
+- **Voice-to-Text** — Built-in offline models plus **plugin-free built-in online recognition** (Alibaba Bailian / MiMo / MiniMax / OpenAI — just add a key, endpoint editable), with online ASR plugins (FunAsr, Volc, etc.) still supported
 - **AI Enhancement** — Optional predictive text for faster input
 - **Contextual Grammar Model (gram)** — a bundled octagram language model re-ranks candidates against the full context; models are user-managed local files
 - **Clean UI** — Material Design 3, light/dark themes with multiple color schemes and independent light/dark selection
