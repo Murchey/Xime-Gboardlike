@@ -199,37 +199,47 @@ object SchemaManifestManager {
         targetFiles: List<String>,
         newFileSha256: Map<String, String> = emptyMap(),
     ): List<FileConflictInfo> = withContext(Dispatchers.IO) {
+        // 只返回**会阻断安装**的冲突（词库等内容差异大的文件）：
+        // 方案包重复携带的公共文件（default.yaml、*.custom.yaml、algebra 等）
+        // 归为可覆盖，安装后按「最后安装者生效 + 留档回滚」处理，
+        // 否则装第二个同系列方案包就会被拒、或者被迫覆盖后把旧包连带弄坏。
+        val analysis = analyzeConflicts(context, schemeId, targetFiles, newFileSha256)
         val registry = loadRegistry(context)
         val files = registry.optJSONObject("files") ?: return@withContext emptyList()
-        val conflicts = mutableListOf<FileConflictInfo>()
-
-        for (fileName in targetFiles) {
-            val entry = files.optJSONObject(fileName) ?: continue
-            val claimants = entry.optJSONArray("claimedBy") ?: continue
-            val claimantList = jsonArrayToList(claimants)
-            // 同一方案重新安装/升级：不视为冲突
-            if (claimantList.any { it == schemeId }) continue
-            // 共享预设（symbols/punctuation 等）由 SHARED 认领：本就允许各包覆盖，
-            // 与 createManifest 的共享文件语义对齐，不作为冲突阻断安装
-            if (claimantList.isNotEmpty() && claimantList.all { it == BuiltinPackages.SHARED }) continue
-
-            val existingSha256 = entry.optString("sha256", "")
-            val newSha256 = newFileSha256[fileName] ?: continue
-            if (existingSha256 != newSha256) {
-                conflicts.add(FileConflictInfo(
-                    fileName = fileName,
-                    existingSha256 = existingSha256,
-                    newSha256 = newSha256,
-                    claimedBy = jsonArrayToList(claimants),
-                ))
-            }
+        analysis.blocking.mapNotNull { fileName ->
+            val entry = files.optJSONObject(fileName) ?: return@mapNotNull null
+            FileConflictInfo(
+                fileName = fileName,
+                existingSha256 = entry.optString("sha256", ""),
+                newSha256 = newFileSha256[fileName].orEmpty(),
+                claimedBy = jsonArrayToList(entry.optJSONArray("claimedBy")),
+            )
         }
-        conflicts
+    }
+
+    /** 完整冲突分类（共享 / 可覆盖 / 阻断），供安装流程按类别处置。 */
+    suspend fun analyzeConflicts(
+        context: Context,
+        schemeId: String,
+        targetFiles: List<String>,
+        newFileSha256: Map<String, String> = emptyMap(),
+    ): SchemaFileOwnership.Analysis = withContext(Dispatchers.IO) {
+        val registry = loadRegistry(context)
+        val files = registry.optJSONObject("files") ?: return@withContext SchemaFileOwnership.Analysis()
+        SchemaFileOwnership.analyze(targetFiles, newFileSha256, files, schemeId)
     }
 
     /**
-     * 覆盖安装前置：释放旧属主对 [fileNames] 的认领（所有权转移给新包）。
-     * 各属主清单同步删去对应条目，注册表条目整条移除（createManifest 认领时会重建）。
+     * 覆盖安装：把盘上内容换成新包的版本，但**不清除旧属主的认领**。
+     *
+     * 历史实现会在这里把注册表条目整条移除、连旧包清单里的那条一起删掉。
+     * 后果是：装 B 覆盖了 A 也在用的文件后，卸载 B 时该文件被判为"只属于 B"
+     * 而直接删除，A 随即失去依赖文件再也打不出字——用户看到的就是
+     * "装了 B 之后 A 就坏了 / 同名方案被顶替"。
+     *
+     * 现在改为只记录"当前生效内容来自本包"，归属关系保留：
+     * [createManifest] 的合并逻辑会把本包追加进 claimedBy，
+     * 卸载任意一方时只要还有别的包声明，文件就不会被删。
      */
     suspend fun releaseClaimedFiles(context: Context, fileNames: List<String>): Unit = withContext(Dispatchers.IO) {
         if (fileNames.isEmpty()) return@withContext
@@ -238,17 +248,9 @@ object SchemaManifestManager {
         for (fileName in fileNames) {
             val entry = files.optJSONObject(fileName) ?: continue
             val claimants = jsonArrayToList(entry.optJSONArray("claimedBy"))
-            for (sid in claimants) {
-                val manifest = loadManifest(context, sid) ?: continue
-                val mf = manifest.optJSONObject("files") ?: continue
-                if (mf.has(fileName)) {
-                    mf.remove(fileName)
-                    saveManifest(context, sid, manifest)
-                }
-            }
-            files.remove(fileName)
-            Log.i(TAG, "releaseClaimedFiles: $fileName released from $claimants")
+            Log.i(TAG, "releaseClaimedFiles: $fileName keeps claims $claimants (overwrite in place)")
         }
+        // 归属保持原样：不再删除条目，也不再改写其它包的清单。
         saveRegistry(context, registry)
     }
 
@@ -299,29 +301,18 @@ object SchemaManifestManager {
             }
             saveManifest(context, schemeId, manifest)
 
-            // 更新全局注册表
+            // 更新全局注册表：归属合并交给 SchemaFileOwnership，
+            // 共享文件保留旧属主只追加本包（卸载时不会连带删掉别人的文件），
+            // 覆盖文件才把归属收敛到本包。
             val registry = loadRegistry(context)
             val allFiles = registry.optJSONObject("files") ?: JSONObject()
-            val keysIt = fileEntries.keys()
-            while (keysIt.hasNext()) {
-                val fn = keysIt.next() as String
-                val fe = fileEntries.getJSONObject(fn)
-                val existing = allFiles.optJSONObject(fn)
-                if (existing != null) {
-                    val claimants = existing.optJSONArray("claimedBy") ?: JSONArray()
-                    if (!jsonArrayToList(claimants).contains(schemeId)) {
-                        claimants.put(schemeId)
-                    }
-                    existing.put("claimedBy", claimants)
-                } else {
-                    allFiles.put(fn, JSONObject().apply {
-                        put("sha256", fe.getString("sha256"))
-                        put("size", fe.getLong("size"))
-                        put("claimedBy", JSONArray(listOf(schemeId)))
-                    })
-                }
-            }
-            registry.put("files", allFiles)
+            val merged = SchemaFileOwnership.mergeClaims(
+                registryFiles = allFiles,
+                packageId = schemeId,
+                fileEntries = fileEntries,
+                isShared = { it in sharedFiles },
+            )
+            registry.put("files", merged)
             saveRegistry(context, registry)
 
             Log.i(TAG, "manifest created for $schemeId: ${fileEntries.length()} files")
@@ -872,6 +863,32 @@ object SchemaManifestManager {
         }
     }
 
+    /**
+     * schemaId → 所属包 的完整映射。
+     *
+     * 以注册表为准（每份方案文件的 claimedBy）；未被任何包认领的方案
+     * （用户直接拷进 rime/ 的）不出现在结果里，界面会归到「未归类」分组。
+     * 同一 schema 被多个包声明时取**第一个**，与卸载逻辑的判定保持一致。
+     */
+    suspend fun schemaPackageMapping(context: Context): Map<String, String> =
+        withContext(Dispatchers.IO) {
+            val registry = loadRegistry(context)
+            val files = registry.optJSONObject("files") ?: return@withContext emptyMap()
+            val result = mutableMapOf<String, String>()
+            val keys = files.keys()
+            while (keys.hasNext()) {
+                val fn = keys.next() as String
+                if (!fn.endsWith(".schema.yaml")) continue
+                val sid = fn.removeSuffix(".schema.yaml")
+                if (sid.contains('/')) continue
+                val entry = files.optJSONObject(fn) ?: continue
+                val claimants = entry.optJSONArray("claimedBy")?.let(::jsonArrayToList).orEmpty()
+                val owner = claimants.firstOrNull() ?: continue
+                result[sid] = owner
+            }
+            result
+        }
+
     /** 从注册表查询指定 schemaId 所属的包 ID。 */
     suspend fun getPackageIdForSchema(context: Context, schemaId: String): String? = withContext(Dispatchers.IO) {
         val registry = loadRegistry(context)
@@ -916,7 +933,8 @@ object SchemaManifestManager {
 
     // ── Utilities ──
 
-    private fun jsonArrayToList(arr: JSONArray): List<String> {
+    internal fun jsonArrayToList(arr: JSONArray?): List<String> {
+        if (arr == null) return emptyList()
         val result = mutableListOf<String>()
         for (i in 0 until arr.length()) {
             result.add(arr.getString(i))

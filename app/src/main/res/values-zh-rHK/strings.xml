@@ -1119,4 +1119,11 @@
     <string name="s_weianzhuangyuyinchajian">未安裝可用的語音識別外掛</string>
     <string name="s_yuyinyinqingbunengyong">語音引擎無法使用，請檢查設定</string>
     <string name="s_fenhao_fenci">分號；長按分詞</string>
+    <string name="s_weiguileifangan">未歸類方案</string>
+    <string name="s_quanbufangan">全部方案</string>
+    <string name="s_laiziyuanbao">來自 %1$s</string>
+    <string name="s_tongmingfangan_jianyi">與其它包中的方案同名，已按來源包分組</string>
+    <string name="s_fanganbaolaiyuan">方案包來源</string>
+    <string name="s_yiqiyong_ge">已啟用 %1$d 個</string>
+    <string name="s_shoudaoru">手動匯入</string>
 </resources>

@@ -1111,6 +1111,13 @@ internal object UiTextFallback {
         R.string.s_weianzhuangyuyinchajian to "未安装可用的语音识别插件",
         R.string.s_yuyinyinqingbunengyong to "语音引擎不可用，请检查设置",
         R.string.s_fenhao_fenci to "分号；长按分词",
+        R.string.s_weiguileifangan to "未归类方案",
+        R.string.s_quanbufangan to "全部方案",
+        R.string.s_laiziyuanbao to "来自 %1\$s",
+        R.string.s_tongmingfangan_jianyi to "与其它包中的方案同名，已按来源包分组",
+        R.string.s_fanganbaolaiyuan to "方案包来源",
+        R.string.s_yiqiyong_ge to "已启用 %1\$d 个",
+        R.string.s_shoudaoru to "手动导入",
         )
     }
 

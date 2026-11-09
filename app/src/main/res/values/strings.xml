@@ -1262,4 +1262,11 @@
     <string name="s_weianzhuangyuyinchajian">未安装可用的语音识别插件</string>
     <string name="s_yuyinyinqingbunengyong">语音引擎不可用，请检查设置</string>
     <string name="s_fenhao_fenci">分号；长按分词</string>
+    <string name="s_weiguileifangan">未归类方案</string>
+    <string name="s_quanbufangan">全部方案</string>
+    <string name="s_laiziyuanbao">来自 %1$s</string>
+    <string name="s_tongmingfangan_jianyi">与其它包中的方案同名，已按来源包分组</string>
+    <string name="s_fanganbaolaiyuan">方案包来源</string>
+    <string name="s_yiqiyong_ge">已启用 %1$d 个</string>
+    <string name="s_shoudaoru">手动导入</string>
 </resources>

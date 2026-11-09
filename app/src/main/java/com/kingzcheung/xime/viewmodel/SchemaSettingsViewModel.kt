@@ -19,6 +19,7 @@ import com.kingzcheung.xime.settings.KeysConfigHelper
 import com.kingzcheung.xime.settings.PersonalDictManager
 import com.kingzcheung.xime.settings.SchemaManifestManager
 import com.kingzcheung.xime.settings.SchemaManager
+import com.kingzcheung.xime.settings.SchemaPackageGroups
 import com.kingzcheung.xime.settings.SchemaPresets
 import com.kingzcheung.xime.settings.StorageStats
 import com.kingzcheung.xime.ui.theme.KeyboardThemes
@@ -44,7 +45,33 @@ data class SchemaUiState(
     val toastMessage: String? = null,
     val marketPackages: List<SchemaManifestManager.MarketPackageInfo> = emptyList(),
     val showUninstallDialog: Boolean = false,
-)
+    /** schemaId → 所属方案包（来自注册表），用于按包分组。 */
+    val schemaToPackage: Map<String, String> = emptyMap(),
+    /** 包 id → 显示名。 */
+    val packageNames: Map<String, String> = emptyMap(),
+    /** 抽屉里当前选中的分组；null 表示「全部方案」。 */
+    val selectedPackage: String? = null,
+) {
+    /** 按来源包分组后的列表（抽屉数据源）。 */
+    val packageGroups: List<SchemaPackageGroups.Group>
+        get() = SchemaPackageGroups.group(
+            allSchemaIds = allSchemas.map { it.schemaId },
+            schemaToPackage = schemaToPackage,
+            packageNames = packageNames,
+            enabledSchemaIds = enabledSchemas,
+            ungroupedName = tr(R.string.s_weiguileifangan),
+        )
+
+    /** 当前分组下应展示的方案。 */
+    val visibleSchemas: List<SchemaMeta>
+        get() = SchemaPackageGroups.filter(
+            allSchemas.map { it.schemaId }, schemaToPackage, selectedPackage,
+        ).let { ids -> allSchemas.filter { it.schemaId in ids } }
+
+    /** 显示名重复的方案 id（界面上必须带来源标签才能区分）。 */
+    val duplicateNameIds: Set<String>
+        get() = SchemaPackageGroups.duplicateNames(allSchemas.associate { it.schemaId to it.name })
+}
 
 class SchemaSettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val context = application.applicationContext
@@ -62,23 +89,50 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
     fun refresh() {
         // 在 IO 线程读盘（discoverSchemas/getEnabledSchemas 扫描文件），避免 ON_RESUME 在主线程卡顿
         viewModelScope.launch {
-            val (allSchemas, enabledSchemas, currentSchema) = withContext(Dispatchers.IO) {
-                Triple(
-                    SchemaManager.discoverSchemas(context),
-                    SchemaManager.getEnabledSchemas(context),
-                    SettingsPreferences.getCurrentSchema(context),
-                )
+            val loaded = withContext(Dispatchers.IO) {
+                val schemas = SchemaManager.discoverSchemas(context)
+                val enabled = SchemaManager.getEnabledSchemas(context)
+                val current = SettingsPreferences.getCurrentSchema(context)
+                val mapping = SchemaManifestManager.schemaPackageMapping(context)
+                val names = mapping.values.toSet().associateWith { pkg ->
+                    SchemaManifestManager.loadManifest(context, pkg)
+                        ?.optString("displayName")
+                        ?.takeIf { it.isNotBlank() } ?: pkg
+                }
+                Loaded(schemas, enabled, current, mapping, names)
             }
+            val allSchemas = loaded.schemas
+            val enabledSchemas = loaded.enabled
+            val currentSchema = loaded.current
+            val mapping = loaded.mapping
+            val names = loaded.names
             val sorted = allSchemas.sortedByDescending { it.schemaId in enabledSchemas }
             _uiState.update {
                 it.copy(
                     allSchemas = sorted,
                     enabledSchemas = enabledSchemas,
-                    currentSchema = currentSchema
+                    currentSchema = currentSchema,
+                    schemaToPackage = mapping,
+                    packageNames = names,
+                    // 分组被卸载后自动回到「全部」
+                    selectedPackage = it.selectedPackage?.takeIf { pkg -> pkg in names },
                 )
             }
         }
     }
+
+    /** 抽屉里切换来源包分组。 */
+    fun selectPackage(packageId: String?) {
+        _uiState.update { it.copy(selectedPackage = packageId) }
+    }
+
+    private class Loaded(
+        val schemas: List<SchemaMeta>,
+        val enabled: List<String>,
+        val current: String,
+        val mapping: Map<String, String>,
+        val names: Map<String, String>,
+    )
 
     /** 该方案在 build/ 里是否已有编译产物（缺了说明还没部署过）。 */
     private fun hasBuildArtifacts(schemaId: String): Boolean {

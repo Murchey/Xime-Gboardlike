@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOpen
@@ -38,6 +39,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,18 +48,24 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,6 +80,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kingzcheung.xime.settings.SchemaManager
 import com.kingzcheung.xime.settings.SchemaMeta
+import com.kingzcheung.xime.settings.SchemaPackageGroups
 import com.kingzcheung.xime.settings.SchemaPresets
 import com.kingzcheung.xime.viewmodel.SchemaSettingsViewModel
 
@@ -212,6 +221,23 @@ fun SchemaSettingsContent(
         }
     }
 
+    val scope = rememberCoroutineScope()
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            PackageGroupDrawer(
+                groups = uiState.packageGroups,
+                totalCount = uiState.allSchemas.size,
+                selectedPackage = uiState.selectedPackage,
+                onSelect = { pkg ->
+                    viewModel.selectPackage(pkg)
+                    scope.launch { drawerState.close() }
+                },
+            )
+        },
+    ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
@@ -354,15 +380,41 @@ fun SchemaSettingsContent(
                 }
 
                 item {
-                    Text(
-                        text = tr(R.string.s_yiqiyong),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
+                    ) {
+                        Text(
+                            text = tr(R.string.s_yiqiyong),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // 分组入口：方案包一多，同名方案会平铺成一大串，必须按来源分组查看
+                        FilterChip(
+                            selected = uiState.selectedPackage != null,
+                            onClick = { scope.launch { drawerState.open() } },
+                            label = {
+                                Text(
+                                    text = uiState.selectedPackage
+                                        ?.let { pkg -> uiState.packageNames[pkg] ?: pkg }
+                                        ?: tr(R.string.s_quanbufangan),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.List,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            },
+                        )
+                    }
                 }
 
-                val enabledSchemas = uiState.allSchemas.filter { it.schemaId in uiState.enabledSchemas }
+                val enabledSchemas = uiState.visibleSchemas.filter { it.schemaId in uiState.enabledSchemas }
 
                 if (enabledSchemas.isEmpty()) {
                     item {
@@ -383,6 +435,14 @@ fun SchemaSettingsContent(
                         isCurrent = schema.schemaId == uiState.currentSchema,
                         onToggle = { viewModel.toggleSchema(schema) },
                         onSelect = { viewModel.selectSchema(schema) },
+                        // 同名方案必须标来源包，否则用户无法区分「谁的微软双拼」
+                        sourcePackage = uiState.selectedPackage?.let {
+                            uiState.packageNames[it] ?: it
+                        } ?: uiState.schemaToPackage[schema.schemaId]?.let {
+                            uiState.packageNames[it] ?: it
+                        },
+                        showSourceHint = schema.schemaId in uiState.duplicateNameIds &&
+                            uiState.selectedPackage == null,
                     )
                 }
 
@@ -396,7 +456,7 @@ fun SchemaSettingsContent(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                val disabledSchemas = uiState.allSchemas.filter { it.schemaId !in uiState.enabledSchemas }
+                val disabledSchemas = uiState.visibleSchemas.filter { it.schemaId !in uiState.enabledSchemas }
 
                 if (disabledSchemas.isEmpty()) {
                     item {
@@ -417,6 +477,13 @@ fun SchemaSettingsContent(
                         isCurrent = false,
                         onToggle = { viewModel.toggleSchema(schema) },
                         onSelect = { viewModel.selectSchema(schema) },
+                        sourcePackage = uiState.selectedPackage?.let {
+                            uiState.packageNames[it] ?: it
+                        } ?: uiState.schemaToPackage[schema.schemaId]?.let {
+                            uiState.packageNames[it] ?: it
+                        },
+                        showSourceHint = schema.schemaId in uiState.duplicateNameIds &&
+                            uiState.selectedPackage == null,
                     )
                 }
             }
@@ -456,6 +523,95 @@ fun SchemaSettingsContent(
                 }
             }
         }
+    }
+    }
+}
+
+/**
+ * 来源包抽屉：按方案包分组，解决「装了几个包之后同名方案分不清」的问题。
+ *
+ * 每行显示包名 + 该包方案数 + 已启用数；顶部「全部方案」回到平铺列表。
+ */
+@Composable
+private fun PackageGroupDrawer(
+    groups: List<SchemaPackageGroups.Group>,
+    totalCount: Int,
+    selectedPackage: String?,
+    onSelect: (String?) -> Unit,
+) {
+    ModalDrawerSheet {
+        Spacer(Modifier.height(24.dp))
+        Text(
+            text = tr(R.string.s_fanganbaolaiyuan),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+        )
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+        )
+        LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+            item {
+                NavigationDrawerItem(
+                    label = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = tr(R.string.s_quanbufangan),
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                text = totalCount.toString(),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                    selected = selectedPackage == null,
+                    onClick = { onSelect(null) },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+            }
+            items(groups, key = { it.packageId }) { group ->
+                NavigationDrawerItem(
+                    label = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = group.displayName,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                if (group.enabledCount > 0) {
+                                    Text(
+                                        text = tr(R.string.s_yiqiyong_ge, group.enabledCount),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            Text(
+                                text = group.schemaIds.size.toString(),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                    selected = selectedPackage == group.packageId,
+                    onClick = { onSelect(group.packageId) },
+                    badge = {
+                        if (group.packageId == SchemaPackageGroups.UNGROUPED) {
+                            Text(
+                                text = tr(R.string.s_shoudaoru),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                        }
+                    },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
     }
 }
 
@@ -517,6 +673,10 @@ private fun SchemaToggleItem(
     isCurrent: Boolean,
     onToggle: () -> Unit,
     onSelect: () -> Unit,
+    /** 所属方案包显示名；null 表示未归类（手拷进目录的方案）。 */
+    sourcePackage: String? = null,
+    /** 与其它包存在同名方案时提示来源，避免用户以为「被顶替」。 */
+    showSourceHint: Boolean = false,
 ) {
     Card(
         modifier = Modifier
@@ -586,6 +746,15 @@ private fun SchemaToggleItem(
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
+                }
+                if (showSourceHint && sourcePackage != null) {
+                    Text(
+                        text = tr(R.string.s_laiziyuanbao, sourcePackage),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
 
