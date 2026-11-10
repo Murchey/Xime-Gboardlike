@@ -1793,10 +1793,8 @@ fun SwipeableIconKeyButton(
                     }
                 )
             }
-            .pointerInput(glideCtxLocal.enabled) {
-                // 滑动输入开启时字母键不挂载拖动手势：整条手势交给父层 glide 采集，
-                // 从根上避免逐键上屏、上滑符号与补点击。
-                if (glideCtxLocal.enabled) return@pointerInput
+            .pointerInput(Unit) {
+                // 图标键（退格等）不受滑动输入影响：上滑清空/下滑撤回等功能手势照常保留
                 detectDragGestures(
                     onDragStart = {
                         dragActivated = true
@@ -2307,7 +2305,8 @@ fun SwipeableKeyButtonLandscape(
                 if (swipeText != null || swipeDownText != null ||
                     onSwipeLeft != null || onSwipeRight != null
                 ) {
-                    Modifier.pointerInput(Unit) {
+                    Modifier.pointerInput(glideCtxLocal.enabled) {
+                        if (glideCtxLocal.enabled) return@pointerInput
                         detectDragGestures(
                             onDragStart = {
                                 dragActivated = true
