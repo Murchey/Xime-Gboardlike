@@ -2,19 +2,13 @@ package com.kingzcheung.xime.glide
 
 import androidx.compose.runtime.compositionLocalOf
 
-/**
- * 阶段B接入骨架：把滑动开关与仲裁器下发到 26 键根容器。
- *
- * 目前只传递状态，不改动任何现有 pointerInput。功能默认关闭时，
- * 所有现有手势（点按、长按、上滑符号、横滑光标）保持原样。
- */
+/** 下发到 26 键根容器的滑动输入状态与编排器。 */
 data class GlideContext(
     val enabled: Boolean = false,
     val showTrail: Boolean = true,
-    val arbiter: GlideGestureArbiter? = null,
     /** 物理键位注册表，由 KeyboardLayout 根容器持有；字母键在布局时上报几何。 */
     val registry: GlideGeometryRegistry? = null,
-    /** 滑动编排器：字母键据此判断"本次手势是否已被 glide 接管"，从而抑制原有动作。 */
+    /** 滑动编排器：字母键据此判断本次手势是否已被 glide 接管。 */
     val controller: GlideKeyboardController? = null,
 )
 
