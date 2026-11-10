@@ -57,6 +57,17 @@ Rime 处于组合态时，新的滑动行为异常；退格可缩短编码（cvg
 `isActive()=false` 的环境现象（glide 关闭时点按同样无响应），
 与本次改动无关，验证时需先确认输入连接可用。
 
+### 4. DOWN 被无条件消费导致整键盘失效（本轮已修）
+`glideTouchModifier` 在 Initial pass 对 DOWN 调用了 `down.consume()`，
+使所有子键（含空格）收不到按下事件。真机现象：glide 开启后点任何键都无字符。
+修复：不再消费 DOWN，只在升级为 Glide 后消费 MOVE/UP。
+（注：该轮真机未能取得截图验证，依据为 Compose 事件分发语义与现象一致性。）
+
+### 环境排查记录
+设备曾出现 `mBoundToMethod=false / mVisibleBound=false`，导致键盘显示但不响应。
+用 `ime disable` → `ime enable` → `ime set` 重置后可恢复为
+`mBoundToMethod=true mVisibleBound=true`。后续真机验证前应先确认这两项。
+
 ## 待办
 1. 滑动与既有组合的追加/新建策略。
 2. 用合法拼音串建立准确率基线。

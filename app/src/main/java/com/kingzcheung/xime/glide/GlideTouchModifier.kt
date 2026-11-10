@@ -34,7 +34,9 @@ fun glideTouchModifier(
         var o = origin()
         controller.onDown(id, down.position.x + o.x, down.position.y + o.y, hostToken, schemaFingerprint, asciiMode)
         onTrailChange(controller.trail)
-        down.consume()
+        // 注意：此处不能消费 DOWN。Initial pass 的消费会让子键的点击/长按
+        // 全部失效（实测 glide 开启后空格与字母都无法上屏）。
+        // 只有真正升级为 Glide 后才消费 MOVE/UP，阻止逐键上屏。
         var upgraded = false
         var finished = false
         try {
