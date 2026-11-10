@@ -63,7 +63,20 @@ Rime 处于组合态时，新的滑动行为异常；退格可缩短编码（cvg
 修复：不再消费 DOWN，只在升级为 Glide 后消费 MOVE/UP。
 （注：该轮真机未能取得截图验证，依据为 Compose 事件分发语义与现象一致性。）
 
-### 环境排查记录
+### 环境排查记录（重要）
+本轮查明前几轮「键盘显示但点任何键无字符」的**真正原因**：
+设备当前输入法被切换成了 **小企鹅输入法（org.fcitx.fcitx5.android）**，
+Xime 只是被「启用」但未被「选中」。`dumpsys input_method` 中 `mCurId` 指向 fcitx5 即为证据。
+
+排查命令：
+```
+adb shell ime list -s                       # 列出可用 IME
+adb shell ime set <Xime IME id>             # 切换回 Xime
+adb shell dumpsys input_method | grep mCurId # 确认 mCurId 与 mBoundToMethod=true
+```
+
+**教训**：真机验证前必须先确认 `mCurId` 是 Xime，否则所有"功能失效"的结论都不可信。
+这也意味着此前几轮里部分「点按无响应」的观察需要重新验证。
 设备曾出现 `mBoundToMethod=false / mVisibleBound=false`，导致键盘显示但不响应。
 用 `ime disable` → `ime enable` → `ime set` 重置后可恢复为
 `mBoundToMethod=true mVisibleBound=true`。后续真机验证前应先确认这两项。
