@@ -19,6 +19,8 @@ fun glideTouchModifier(
     onGlideCode: (String) -> Unit,
     hostToken: String,
     schemaFingerprint: String,
+    /** 当前是否为英文模式：滑动结果随中英文模式变化。 */
+    asciiMode: Boolean = false,
     /** 键盘根容器在屏幕中的原点，用于把 pointer 局部坐标转成与几何快照一致的 root 坐标。 */
     origin: () -> Offset = { Offset.Zero },
     /** 轨迹点变化时通知外部重绘（Compose state 由调用方持有）。 */
@@ -28,7 +30,7 @@ fun glideTouchModifier(
         val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
         val id = down.id.value
         var o = origin()
-        controller.onDown(id, down.position.x + o.x, down.position.y + o.y, hostToken, schemaFingerprint)
+        controller.onDown(id, down.position.x + o.x, down.position.y + o.y, hostToken, schemaFingerprint, asciiMode)
         onTrailChange(controller.trail)
         down.consume()
         var upgraded = false
@@ -43,6 +45,8 @@ fun glideTouchModifier(
                         ch.consume()
                         val up = controller.onUp(id, hostToken)
                         if (up is GlideKeyboardController.UpResult.Candidates) {
+                            // 候选已由 GlideCompositionSession 管理并投影到候选栏；
+                            // 这里不再逐字符送 onKeyPress，避免把整句候选退化成逐键输入。
                             onGlideCode(controller.rawInputForDisplay())
                         }
                     } else {

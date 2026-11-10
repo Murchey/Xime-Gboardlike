@@ -20,6 +20,8 @@ class GlideKeyboardController(
     @Volatile private var activeGeometry: GlideGeometrySnapshot? = null
     private var currentHost: String = ""
     private var currentSchema: String = ""
+    /** 英文模式：轨迹只解出英文字母串，直接作为候选，不查中文词库。 */
+    private var asciiMode: Boolean = false
     private var glideSessionStarted = false
 
     /** 当前用于绘制的轨迹点（键盘局部 px）。 */
@@ -36,7 +38,18 @@ class GlideKeyboardController(
     /** 当前会话的可编辑编码（供阶段B临时送进现有 Rime 输入链路产生候选）。 */
     fun rawInputForDisplay(): String = coordinator.session.state.rawInput
 
-    fun onDown(pointerId: Long, x: Float, y: Float, hostToken: String, schemaFingerprint: String) {
+    /** 当前会话的候选文本（已按分数排序），供服务层投影到候选栏。 */
+    fun candidateTexts(): List<String> = coordinator.session.state.candidates.map { it.text }
+
+    fun onDown(
+        pointerId: Long,
+        x: Float,
+        y: Float,
+        hostToken: String,
+        schemaFingerprint: String,
+        ascii: Boolean = false,
+    ) {
+        asciiMode = ascii
         val geo = registry.snapshot()
         activeGeometry = geo
         currentHost = hostToken
@@ -87,17 +100,66 @@ class GlideKeyboardController(
             GlideGestureArbiter.Decision.DISCARD -> { coordinator.session.cancel(); clearTrail(); UpResult.Discarded }
             GlideGestureArbiter.Decision.EMIT_GLIDE -> {
                 val geo = activeGeometry
-                val raw = if (geo != null) GlideTraceToCode.toRawInput(collected, geo) else ""
+                val points = collected.toList()
                 clearTrail()
-                if (raw.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
-                coordinator.session.appendCode(raw)
-                val outcome = coordinator.onTraceFinished(
-                    hostToken, coordinator.session.state.schemaFingerprint,
-                    coordinator.session.state.layoutFingerprint)
+                if (geo == null || points.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
+                // 阶段C：多假设轨迹解码，而不是单一路径串键
+                val hypotheses = GlideTrajectoryDecoder.decode(points, geo)
+                if (hypotheses.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
+                // 英文模式：轨迹解出的字母串即候选，不查中文词库（随键盘中英文模式变化）
+                val outcome = if (asciiMode) {
+                    GlideCoordinator.Outcome.ShowCandidates
+                } else {
+                    decodeWithHypotheses(hypotheses, hostToken)
+                }
+                if (asciiMode) {
+                    val top = hypotheses.first()
+                    val session = coordinator.session
+                    session.beginGlide(hostToken, session.state.schemaFingerprint, session.state.layoutFingerprint)
+                    session.appendCode(top.code)
+                    session.deliverCandidates(
+                        session.state.traceId, session.state.revision, hostToken, top.code,
+                        hypotheses.mapIndexed { i, h -> GlideCandidate("en-" + i, h.code, h.code, score = h.score) },
+                    )
+                }
                 UpResult.Candidates(outcome)
             }
             else -> { clearTrail(); UpResult.Idle }
         }
+    }
+
+    /** 多假设：逐条查 Rime 并按假设分数合并候选，交给会话做待确认。 */
+    private fun decodeWithHypotheses(
+        hypotheses: List<GlideTrajectoryDecoder.Hypothesis>,
+        hostToken: String,
+    ): GlideCoordinator.Outcome {
+        val merged = mutableListOf<GlideCandidate>()
+        val seen = mutableSetOf<String>()
+        for (h in hypotheses) {
+            when (val r = coordinator.lookup.lookup(h.code)) {
+                is GlideLookupResult.Candidates -> {
+                    for ((i, c) in r.list.withIndex()) {
+                        if (!seen.add(c.text)) continue
+                        merged += c.copy(
+                            id = "glide-" + hypotheses.indexOf(h) + "-" + i + "-" + c.text,
+                            score = h.score - i * 0.1,
+                        )
+                    }
+                }
+                else -> Unit
+            }
+            if (merged.size >= 12) break
+        }
+        if (merged.isEmpty()) return GlideCoordinator.Outcome.NoCandidate
+        val sorted = merged.sortedByDescending { it.score }
+        val top = sorted.first()
+        val session = coordinator.session
+        session.beginGlide(hostToken, session.state.schemaFingerprint, session.state.layoutFingerprint)
+        session.appendCode(top.rawInput)
+        session.deliverCandidates(
+            session.state.traceId, session.state.revision, hostToken, top.rawInput, sorted,
+        )
+        return GlideCoordinator.Outcome.ShowCandidates
     }
 
     fun onCancel() {

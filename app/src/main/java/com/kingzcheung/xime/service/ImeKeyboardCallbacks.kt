@@ -255,6 +255,10 @@ internal fun rememberImeKeyboardCallbacks(
                     service.moveCursor(direction)
                 }
             },
+            onGlideCandidates = { rawInput, texts ->
+                // 滑动输入：整句候选投影到候选栏（未确认，不提交）
+                service.applyGlideCandidates(rawInput, texts)
+            },
             onGestureAction = { action, value ->
                 KeyActionRegistry.execute(action, KeyActionContext(service), value)
             },

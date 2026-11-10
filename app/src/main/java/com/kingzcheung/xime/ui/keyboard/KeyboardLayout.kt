@@ -395,6 +395,8 @@ fun KeyboardLayout(
         LocalGlideContext provides GlideContext(
             enabled = glideTypingEnabled, showTrail = glideTrailVisible,
             registry = glideRegistry, controller = glideController),
+        // 全键盘统一按下色：字母/数字/功能/空格都取键盘背景色（与 Gboard 一致）
+        LocalKeyPressedBackgroundColor provides keyboardBackgroundColor,
         LocalKeyVisualPadding provides PaddingValues(
             horizontal = if (tabletParams) 4.dp else (kbKey.spacingFor("qwerty").first?.dp ?: 2.dp),
             // 手机横屏：只认 qwerty 专属覆盖（keyboard.key.qwerty.spacing_y），回退 2.5dp；
@@ -433,9 +435,14 @@ fun KeyboardLayout(
             .then(
                 if (glideTypingEnabled) com.kingzcheung.xime.glide.glideTouchModifier(
                     controller = glideController,
-                    onGlideCode = { code -> code.forEach { onKeyPress(it.toString()) } },
+                    onGlideCode = { _ ->
+                        // 整句候选由 glide 会话产出，投影到候选栏；不再逐键送编码
+                        val texts = glideController.candidateTexts()
+                        if (texts.isNotEmpty()) callbacks.onGlideCandidates?.invoke(glideController.rawInputForDisplay(), texts)
+                    },
                     hostToken = uiState.toString(),
                     schemaFingerprint = currentSchemaId,
+                    asciiMode = isAsciiMode,
                     origin = { androidx.compose.ui.geometry.Offset(keyboardBounds.left, keyboardBounds.top) },
                     onTrailChange = { glideTrail = it },
                 ) else Modifier
@@ -2320,9 +2327,10 @@ private fun ShiftCapsKeyButton(
     val currentOnSwipe by rememberUpdatedState(onSwipe)
     val density = LocalDensity.current
 
-    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, backgroundColor) {
+    // 功能键与字母键一致：不描边
+    val shadowModifier = remember(shadowShapeRadius, backgroundColor) {
         Modifier.keyOutline(
-            enabled = shadowEnabled,
+            enabled = false,
             cornerRadius = shadowShapeRadius,
             color = keyOutlineColor(backgroundColor),
         )
@@ -2375,8 +2383,8 @@ private fun ShiftCapsKeyButton(
             .then(shadowModifier)
             .clip(keyClipShape)
             .background(
-                // 功能键按下统一样式：深色键面提亮（与退格/回车一致）
-                if (isPressed) pressOverlay(backgroundColor)
+                // 按下统一为键盘背景色（与字母键一致），不再提亮
+                if (isPressed) LocalKeyPressedBackgroundColor.current ?: pressOverlay(backgroundColor)
                 // 激活态提亮（Gboard：shift 开启后键帽变亮），CAPS 靠右上角圆点区分
                 else if (shiftMode == ShiftMode.CAPS) pressOverlay(backgroundColor)
                 else if (shiftMode == ShiftMode.SINGLE) pressOverlay(backgroundColor)
@@ -2611,9 +2619,10 @@ private fun SpaceKey(
     val longPressBubbleDelayMs = SettingsPreferences.getLongPressBubbleDelayMs(context)
 
     val density = LocalDensity.current
-    val shadowModifier = remember(shadowEnabled, shadowShapeRadius, keyBackgroundColor) {
+    // 空格/功能键与字母键一致：Gboard 键面扁平，不描边
+    val shadowModifier = remember(shadowShapeRadius, keyBackgroundColor) {
         Modifier.keyOutline(
-            enabled = shadowEnabled,
+            enabled = false,
             cornerRadius = shadowShapeRadius,
             color = keyOutlineColor(keyBackgroundColor),
         )

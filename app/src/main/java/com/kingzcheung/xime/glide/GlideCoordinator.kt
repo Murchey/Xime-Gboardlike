@@ -7,7 +7,7 @@ package com.kingzcheung.xime.glide
  * 本类负责保证提交契约：不提前上屏、确认只调用一次提交、过期结果不覆盖。
  */
 class GlideCoordinator(
-    private val lookup: GlideSentenceLookup,
+    val lookup: GlideSentenceLookup,
     private val committer: GlideCommitter,
 ) {
     val session = GlideCompositionSession()

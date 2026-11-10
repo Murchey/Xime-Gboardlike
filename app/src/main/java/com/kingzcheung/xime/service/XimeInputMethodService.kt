@@ -95,6 +95,7 @@ import com.kingzcheung.xime.association.AssociationService
 import com.kingzcheung.xime.clipboard.ClipboardManager
 import com.kingzcheung.xime.clipboard.sync.ClipboardSyncBridge
 import com.kingzcheung.xime.clipboard.sync.objstore.ClipboardObjectStoreSync
+import com.kingzcheung.xime.service.CandidateAction
 import com.kingzcheung.xime.clipboard.sync.objstore.ObjectStorageSyncCoordinator
 import com.kingzcheung.xime.plugin.ActivePluginSelection
 import com.kingzcheung.xime.plugin.ExtensionManager
@@ -438,6 +439,25 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     /** 刷新展开页的跨页全量候选；非展开态清空以省内存。编码变化与展开动作时调用 */
+    /**
+     * 滑动输入整句候选投影：写入候选栏但**不提交**，等待用户确认。
+     * 编码区显示首选候选对应的原码，便于用户看到并编辑。
+     */
+    internal fun applyGlideCandidates(rawInput: String, texts: List<String>) {
+        if (texts.isEmpty()) return
+        candidateState.value = candidateState.value.copy(
+            candidates = texts,
+            candidateComments = List(texts.size) { "" },
+            inputText = rawInput,
+            preeditText = rawInput,
+            isComposing = true,
+            hasNextPage = false,
+            hasPrevPage = false,
+            associationCandidates = emptyList(),
+            candidateActions = texts.map { CandidateAction.plugin(it) },
+        )
+    }
+
     internal fun refreshExpandedCandidates() {
         if (!keyboardViewModel.candidatePageExpanded.value) {
             if (candidateState.value.expandedCandidates.isNotEmpty()) {

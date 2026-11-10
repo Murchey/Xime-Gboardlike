@@ -48,6 +48,11 @@ data class KeyboardCallbacks(
     val onPageDown: (() -> Unit)? = null,
     val onPageUp: (() -> Unit)? = null,
     val onCursorMove: ((Int) -> Unit)? = null,
+    /**
+     * 滑动输入解码完成：把整句候选送进服务层投影到候选栏。
+     * texts 已按优先级排序；rawInput 是首选候选对应的可编辑编码。
+     */
+    val onGlideCandidates: ((rawInput: String, texts: List<String>) -> Unit)? = null,
     val onGestureAction: ((GestureAction, String) -> Unit)? = null,
     val onUpdateToolbarButtons: ((List<String>) -> Unit)? = null,
     /**

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.twotone.Description
+import androidx.compose.material.icons.twotone.Keyboard
 import androidx.compose.material.icons.twotone.Storefront
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -81,6 +82,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kingzcheung.xime.settings.DeployStage
+import com.kingzcheung.xime.settings.SettingsPreferences
+import com.kingzcheung.xime.settings.WubiSchemas
 import com.kingzcheung.xime.settings.SchemaManager
 import com.kingzcheung.xime.settings.SchemaMeta
 import com.kingzcheung.xime.settings.SchemaPackageGroups
@@ -377,6 +380,32 @@ fun SchemaSettingsContent(
                         onClick = onNavigateToImported,
                         modifier = Modifier.padding(top = 12.dp),
                     )
+                }
+
+                // 五笔连打：放在方案列表上方，仅五笔族方案下显示
+                if (WubiSchemas.isWubi(uiState.currentSchema)) {
+                    item {
+                        var chained by androidx.compose.runtime.remember {
+                            androidx.compose.runtime.mutableStateOf(
+                                SettingsPreferences.isWubiChainedInput(context)
+                            )
+                        }
+                        SettingsSection(
+                            title = tr(R.string.s_wubi_lianda),
+                            modifier = Modifier.padding(top = 4.dp),
+                        ) {
+                            SettingsToggleItem(
+                                icon = Icons.TwoTone.Keyboard,
+                                title = tr(R.string.s_wubi_lianda),
+                                subtitle = tr(R.string.s_wubi_lianda_fu),
+                                checked = chained,
+                                onCheckedChange = { checked ->
+                                    chained = checked
+                                    SettingsPreferences.setWubiChainedInput(context, checked)
+                                },
+                            )
+                        }
+                    }
                 }
 
                 item {
