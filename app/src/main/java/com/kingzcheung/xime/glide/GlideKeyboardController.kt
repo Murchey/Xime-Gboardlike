@@ -56,6 +56,7 @@ class GlideKeyboardController(
         hostToken: String,
         schemaFingerprint: String,
         ascii: Boolean = false,
+        timeMs: Long = System.currentTimeMillis(),
     ) {
         asciiMode = ascii
         val geo = registry.snapshot()
@@ -65,14 +66,14 @@ class GlideKeyboardController(
         activeSpellings = if (ascii) null else schemaSpellings?.invoke(schemaFingerprint)?.toList()
         glideSessionStarted = false
         collected.clear()
-        collected += GlidePoint(x, y, System.currentTimeMillis(), pointerId.toInt())
+        collected += GlidePoint(x, y, timeMs, pointerId.toInt())
         val startKey = geo.keyAt(x, y)?.id
         arbiter.onDown(pointerId, x, y, startKey)
         // 不在此创建会话：普通点按(PENDING→TAP)不该清空已有未确认组合；
         // 只有 onMove 真正升级为 Glide 时才 beginGlide。
     }
 
-    fun onMove(pointerId: Long, x: Float, y: Float, secondPointer: Boolean) {
+    fun onMove(pointerId: Long, x: Float, y: Float, secondPointer: Boolean, timeMs: Long = System.currentTimeMillis()) {
         val geo = activeGeometry ?: return
         val keyId = geo.keyAt(x, y)?.id
         val decision = arbiter.onMove(pointerId, x, y, keyId, secondPointer)
@@ -88,7 +89,7 @@ class GlideKeyboardController(
                 coordinator.session.beginGlide(currentHost, currentSchema, geo.version)
                 glideSessionStarted = true
             }
-            collected += GlidePoint(x, y, System.currentTimeMillis(), pointerId.toInt())
+            collected += GlidePoint(x, y, timeMs, pointerId.toInt())
         }
     }
 

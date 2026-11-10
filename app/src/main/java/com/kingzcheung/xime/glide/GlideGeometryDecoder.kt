@@ -87,7 +87,9 @@ object GlideGeometryDecoder {
         val samples = resample(normalized)
         if (samples.size < 2) return emptyList()
 
-        return Decoder(centers, keyWidth, keyHeight, samples, spellings?.let { GlideSpellingTrie(it) }).run(limit)
+        val repeats = GlideRepeatGesture.detect(normalized, centers.map { (x, y) -> x / keyWidth to y / keyHeight })
+        return Decoder(centers, keyWidth, keyHeight, samples, spellings?.let { GlideSpellingTrie(it) }, repeats,
+            normalized.zipWithNext().sumOf { (a, b) -> distance(a, b).toDouble() }.toFloat()).run(limit)
     }
 
     /** 分号键（双拼 ing 韵母）的字母索引，输出时展开为 "ing"。 */
@@ -174,7 +176,15 @@ object GlideGeometryDecoder {
         keyHeight: Float,
         private val samples: List<Sample>,
         private val schemaTrie: GlideSpellingConstraint?,
+        repeatCues: List<GlideRepeatGesture.Cue>,
+        traceLength: Float,
     ) {
+        private data class Repeat(val key: Int, val start: Int, val end: Int)
+        private val repeats = repeatCues.map { cue ->
+            val start = if (traceLength > 0f) (cue.startArc / traceLength * samples.lastIndex).toInt() else 0
+            val end = if (traceLength > 0f) ceil(cue.endArc / traceLength * samples.lastIndex).toInt() else 0
+            Repeat(cue.key, start.coerceIn(0, samples.lastIndex), end.coerceIn(0, samples.lastIndex))
+        }.filter { it.end > it.start }
         private val letterCount = centers.size
         /** 把字母 l 对齐到采样点 j 的代价。 */
         private val align = arrayOfNulls<FloatArray>(letterCount)
@@ -286,7 +296,16 @@ object GlideGeometryDecoder {
                                 taken++
                             }
                             if (!best.isFinite()) continue
-                            val cost = best + line[j - 1] + al[j] + step
+                            var cost = best + line[j - 1] + al[j] + step
+                            if (letter == from) {
+                                for (repeat in repeats) {
+                                    if (repeat.key != letter || j < repeat.end) continue
+                                    val before = prefix.costs.filter { it.first <= repeat.start }
+                                        .minOfOrNull { (i, c) -> c - line[i] } ?: continue
+                                    // 只有横跨一次完整折返的同键转移才获得奖励，不能重复消费同一折返。
+                                    cost = min(cost, before + line[j - 1] + al[j] + LETTER_COST - 2.4f)
+                                }
+                            }
                             if (cost <= floors[j] + BEAM) {
                                 floors[j] = min(floors[j], cost)
                                 candidateCosts += j to cost

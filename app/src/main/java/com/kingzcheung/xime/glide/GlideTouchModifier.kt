@@ -32,7 +32,7 @@ fun glideTouchModifier(
         val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
         val id = down.id.value
         var o = origin()
-        controller.onDown(id, down.position.x + o.x, down.position.y + o.y, hostToken, schemaFingerprint, asciiMode)
+        controller.onDown(id, down.position.x + o.x, down.position.y + o.y, hostToken, schemaFingerprint, asciiMode, down.uptimeMillis)
         onTrailChange(controller.trail)
         // 注意：此处不能消费 DOWN。Initial pass 的消费会让子键的点击/长按
         // 全部失效（实测 glide 开启后空格与字母都无法上屏）。
@@ -44,6 +44,14 @@ fun glideTouchModifier(
                 val ev = awaitPointerEvent(PointerEventPass.Initial)
                 val ch = ev.changes.firstOrNull { it.id.value == id } ?: break
                 val second = ev.changes.count { it.pressed } > 1
+                o = origin()
+                // Android 可能合并高速触摸帧，保留历史点与真实时间，避免短折返被拉成直线。
+                for (sample in ch.historical) {
+                    controller.onMove(id, sample.position.x + o.x, sample.position.y + o.y, second, sample.uptimeMillis)
+                }
+                controller.onMove(id, ch.position.x + o.x, ch.position.y + o.y, second, ch.uptimeMillis)
+                if (controller.isGliding) upgraded = true
+                onTrailChange(controller.trail)
                 if (!ch.pressed) {
                     if (upgraded) {
                         ch.consume()
@@ -61,10 +69,6 @@ fun glideTouchModifier(
                     finished = true
                     break
                 }
-                o = origin()
-                controller.onMove(id, ch.position.x + o.x, ch.position.y + o.y, second)
-                onTrailChange(controller.trail)
-                if (controller.isGliding) upgraded = true
                 if (upgraded) ev.changes.forEach { it.consume() }
             } while (true)
         } finally {

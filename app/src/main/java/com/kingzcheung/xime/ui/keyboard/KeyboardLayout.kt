@@ -262,7 +262,8 @@ fun KeyboardLayout(
         mutableStateOf(SettingsPreferences.isGlideTrailVisible(context))
     }
     // 阶段B：轨迹镜像（Compose 可观察），由 GlideTouchModifier 在采样时更新
-    var glideTrail by remember { mutableStateOf(emptyList<com.kingzcheung.xime.glide.GlidePoint>()) }
+    val glideTrail = rememberGlideTrail(glideTypingEnabled && glideTrailVisible)
+    val glideTrailColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
     var letterCaseSetting by remember {
         mutableStateOf(
             LetterCaseSetting(
@@ -433,15 +434,7 @@ fun KeyboardLayout(
                 drawLongPressScrim(swipeBubble.state.isLongPress)
                 bubbleData?.let { drawSwipeBubble(it) }
                 if (glideTypingEnabled && glideTrailVisible) {
-                    val pts = glideTrail
-                    if (pts.size >= 2) {
-                        val path = androidx.compose.ui.graphics.Path().apply {
-                            moveTo(pts.first().x, pts.first().y)
-                            for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
-                        }
-                        drawPath(path, color = androidx.compose.ui.graphics.Color(0xFF64B5F6),
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp.toPx()))
-                    }
+                    drawGlideTrail(glideTrail, glideTrailColor)
                 }
             }
             .then(
@@ -457,7 +450,7 @@ fun KeyboardLayout(
                     // down.position 已是相对键盘根容器的局部坐标，与几何注册使用的
                     // boundsInRoot 减去同一 keyboardBounds 后的坐标系一致，故不再叠加 origin。
                     origin = { androidx.compose.ui.geometry.Offset.Zero },
-                    onTrailChange = { glideTrail = it },
+                    onTrailChange = { glideTrail.update(it, android.os.SystemClock.uptimeMillis()) },
                     onGestureFinished = {
                         swipeBubble.update(
                             SwipeState(false, null, false, emptyList(), false, null),

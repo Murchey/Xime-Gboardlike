@@ -69,6 +69,53 @@ class GlideSchemaProjectionDeviceTest {
         }
     }
 
+    @Test fun 滑动输入的双u局部折返能保留整句编码() {
+        val e = engine()
+        val schema = "double_pinyin_flypy"
+        val spellings = e.getGlideSpellings(schema, GlideSyllableTrie.syllables())
+        val rows = listOf("qwertyuiop", "asdfghjkl", "zxcvbnm")
+        val keys = rows.flatMapIndexed { r, row -> row.mapIndexed { c, ch ->
+            val x = c * 100f + listOf(0f, 50f, 150f)[r]
+            GlideKey(ch.toString(), ch.toString(), GlideKeyRect(x, r * 140f, x + 100f, r * 140f + 140f))
+        } }
+        val geometry = GlideGeometrySnapshot("device", keys, 1000f, 420f)
+        val code = "hxdsuuru"
+        assertTrue("设备方案必须支持用户给出的编码", spellings.containsAll(listOf("hx", "ds", "uu", "ru")))
+        val points = mutableListOf<GlidePoint>()
+        var time = 0L
+        var previous: Char? = null
+        for (ch in code) {
+            val key = keys.first { it.code == ch.toString() }
+            if (previous == ch) {
+                for (dy in listOf(-21f, -42f, -21f, 0f)) {
+                    time += 24
+                    points += GlidePoint(key.rect.centerX, key.rect.centerY + dy, time, 1)
+                }
+            } else {
+                points.lastOrNull()?.let { prev -> for (step in 1..8) {
+                    time += 16
+                    val f = step / 9f
+                    points += GlidePoint(prev.x + (key.rect.centerX - prev.x) * f,
+                        prev.y + (key.rect.centerY - prev.y) * f, time, 1)
+                } }
+                time += 16
+                points += GlidePoint(key.rect.centerX, key.rect.centerY, time, 1)
+            }
+            previous = ch
+        }
+        val result = GlideGeometryDecoder.decode(points, geometry, 16, spellings)
+        assertTrue("完整编码未进入候选: " + result, result.any { it.letters == code })
+        val original = e.getCurrentSchema()
+        try {
+            assertTrue(e.switchSchema(schema))
+            val candidates = e.bypassLookup(code, 16)
+            assertTrue("未查到滑动输入: " + candidates.map { it.text }, candidates.any { it.text == "滑动输入" })
+        } finally {
+            e.clearComposition()
+            if (original.isNotEmpty()) e.switchSchema(original)
+        }
+    }
+
     @Test fun 微软搜狗已部署方案都能查询你好() {
         val e = engine()
         val original = e.getCurrentSchema()
