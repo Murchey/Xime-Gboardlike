@@ -218,6 +218,42 @@ class GlideSchemaProjectionDeviceTest {
         }
     }
 
+    @Test fun 慢速连续滑动不因途经键产生长串编码() {
+        val e = engine()
+        val spellings = e.getGlideSpellings("double_pinyin_flypy", GlideSyllableTrie.syllables())
+        val rows = listOf("qwertyuiop", "asdfghjkl", "zxcvbnm")
+        val keys = rows.flatMapIndexed { r, row -> row.mapIndexed { c, ch ->
+            val x = c * 100f + listOf(0f, 50f, 150f)[r]
+            GlideKey(ch.toString(), ch.toString(), GlideKeyRect(x, r * 140f, x + 100f, r * 140f + 140f))
+        } }
+        val geometry = GlideGeometrySnapshot("slow-device", keys, 1000f, 420f)
+        // hxdsuuru 各键间慢速移动，每点60ms；不在键中心留下静止空洞。
+        val points = mutableListOf<GlidePoint>()
+        var time = 1000L
+        var prev: GlideKey? = null
+        for (ch in "hxdsuuru") {
+            val key = keys.first { it.code == ch.toString() }
+            if (prev != null) {
+                val px = prev!!.rect.centerX; val py = prev!!.rect.centerY
+                for (step in 1..40) {
+                    time += 60
+                    val f = step / 41f
+                    points += GlidePoint(px + (key.rect.centerX - px) * f,
+                        py + (key.rect.centerY - py) * f, time, 1)
+                }
+            } else {
+                points += GlidePoint(key.rect.centerX, key.rect.centerY, time, 1)
+                time += 60
+            }
+            prev = key
+        }
+        val result = GlideGeometryDecoder.decode(points, geometry, 16, spellings, densityDpi = deviceDpi())
+        assertTrue("慢速双拼假设=" + result.map { it.letters },
+            result.none { it.letters.length >= 12 })
+        assertTrue("慢速不应产生途经键长串: " + result.map { it.letters },
+            result.none { it.letters.contains("ertyu") || it.letters.contains("asdf") })
+    }
+
     @Test fun 微软搜狗已部署方案都能查询你好() {
         val e = engine()
         val original = e.getCurrentSchema()

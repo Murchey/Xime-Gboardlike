@@ -147,7 +147,13 @@ object GlideGeometryDecoder {
             while (end + 1 < points.size && distance(points[start], points[end + 1]) <= DWELL_RADIUS) {
                 end++
             }
-            val rested = (points[end].timeMs - points[start].timeMs) >= DWELL_MS
+            // 停留须由一次时间空洞证明（手指实际没动）；慢速连续经过会由多个
+            // 短间隔累积出同样长的时间跨度，不能判成停留，否则途经键被逐点计入编码。
+            var hasPause = false
+            for (i in start until end) {
+                if (points[i + 1].timeMs - points[i].timeMs >= DWELL_MS) { hasPause = true; break }
+            }
+            val rested = hasPause && (points[end].timeMs - points[start].timeMs) >= DWELL_MS
             if (rested) {
                 dwells += (arc[start] + arc[end]) / 2f
                 start = end + 1
