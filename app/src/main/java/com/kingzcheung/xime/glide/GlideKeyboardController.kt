@@ -112,26 +112,24 @@ class GlideKeyboardController(
                 if (geo == null || points.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
                 // 采集真实轨迹（仅在显式开启时写入），供准确率评估与离线训练
                 GlideTraceRecorder.onTraceFinished(points, geo, currentSchema)
-                // 阶段C：多假设轨迹解码，而不是单一路径串键
-                val hypotheses = GlideTrajectoryDecoder.decode(points, geo)
+                // 几何解码：按对齐/连线/回溯/停留代价枚举完整音节串（代价低的在前）
+                val hypotheses = GlideGeometryDecoder.decode(points, geo, GLIDE_HYPOTHESES)
                 if (hypotheses.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
                 // 英文模式：轨迹解出的字母串即候选，不查中文词库（随键盘中英文模式变化）
-                val outcome = if (asciiMode) {
-                    GlideCoordinator.Outcome.ShowCandidates
-                } else {
-                    decodeWithHypotheses(hypotheses, hostToken)
-                }
                 if (asciiMode) {
                     val top = hypotheses.first()
                     val session = coordinator.session
                     session.beginGlide(hostToken, session.state.schemaFingerprint, session.state.layoutFingerprint)
-                    session.appendCode(top.code)
+                    session.appendCode(top.letters)
                     session.deliverCandidates(
-                        session.state.traceId, session.state.revision, hostToken, top.code,
-                        hypotheses.mapIndexed { i, h -> GlideCandidate("en-" + i, h.code, h.code, score = h.score) },
+                        session.state.traceId, session.state.revision, hostToken, top.letters,
+                        hypotheses.mapIndexed { i, h ->
+                            GlideCandidate("en-" + i, h.letters, h.letters, score = -h.cost.toDouble())
+                        },
                     )
+                    return UpResult.Candidates(GlideCoordinator.Outcome.ShowCandidates)
                 }
-                UpResult.Candidates(outcome)
+                UpResult.Candidates(decodeWithHypotheses(hypotheses, hostToken))
             }
             else -> { clearTrail(); UpResult.Idle }
         }
@@ -146,22 +144,26 @@ class GlideKeyboardController(
      * - 首选假设的第 0 位候选优先于次选假设的第 0 位候选。
      */
     private fun decodeWithHypotheses(
-        hypotheses: List<GlideTrajectoryDecoder.Hypothesis>,
+        hypotheses: List<GlideGeometryDecoder.Hypothesis>,
         hostToken: String,
     ): GlideCoordinator.Outcome {
         val merged = mutableListOf<GlideCandidate>()
         val seen = mutableSetOf<String>()
+        // 几何代价：越小越好；转成分数要取负
+        val best = hypotheses.minOfOrNull { it.cost } ?: 0f
         for ((hIdx, h) in hypotheses.withIndex()) {
-            when (val r = coordinator.lookup.lookup(h.code)) {
+            when (val r = coordinator.lookup.lookup(h.letters)) {
                 is GlideLookupResult.Candidates -> {
                     for ((i, c) in r.list.withIndex()) {
                         if (!seen.add(c.text)) continue
                         // 位次惩罚（语言模型信号）> 假设间空间分差（通常 < 0.5）
                         val rankPenalty = i * RANK_PENALTY_WEIGHT
                         val hypPenalty = hIdx * HYPOTHESIS_PENALTY_WEIGHT
+                        // 几何分：以最优假设为基准，代价差越大分越低
+                        val geometryScore = -(h.cost - best)
                         merged += c.copy(
                             id = "glide-" + hIdx + "-" + i + "-" + c.text,
-                            score = h.score - rankPenalty - hypPenalty,
+                            score = geometryScore - rankPenalty - hypPenalty,
                         )
                     }
                 }
@@ -190,6 +192,9 @@ class GlideKeyboardController(
     fun allowFallbackClick(): Boolean = arbiter.allowFallbackClick()
 
     private companion object {
+        /** 交给词典排序的候选串数（共线键如 zhong/zong 需要前几名都在）。 */
+        const val GLIDE_HYPOTHESES = 16
+
         /** Rime 候选位次惩罚：体现语言模型信号，需大于假设间空间分差。 */
         const val RANK_PENALTY_WEIGHT = 0.45
         /** 假设之间的惩罚：空间分已含此信息，这里只需弱化次选假设。 */

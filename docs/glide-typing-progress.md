@@ -257,6 +257,23 @@ glide 单测 79 项全绿（新增 `GlideAccuracyReportTest`，断言首字符�
 **尚未接入**：新解码器还没有替换 `GlideKeyboardController` 里的旧解码路径，
 也还没接 Rime 词典重排（`rank_by_dictionary` 的对应实现）。下一轮接入。
 
+### 13. 替换解码路径 + 登记开源参考（本轮）
+- `GlideKeyboardController.onUp` 改为调用 `GlideGeometryDecoder.decode`（16 条假设），
+  英文模式直接用其字母串，中文模式经 `decodeWithHypotheses` 按
+  「几何代价 + Rime 候选位次 + 假设序位」合并后投影到候选栏。
+- 删除已无引用的旧解码器 `GlideTrajectoryDecoder`、`GlideTraceToCode` 及其 4 个旧测试，
+  避免死代码与两套准确率基线并存。
+- 新增 `GlideGeometryIntegrationTest`：验证控制器查询到的是几何解码器给出的完整拼音串、
+  候选含对应词、查询串均为小写字母串。
+- 更新 `GlideKeyboardControllerTest` 的 26 键几何与合法拼音轨迹（旧测试只注册 3 键，
+  新解码器的音节前缀树要求 a..z 齐全）。
+- `AppInfo.dependencies` 新增「水杉输入法 (msime) — 滑行解码算法与音节表」，
+  GPL-3.0，链接 https://github.com/metasequoiaime/msime —— 显示在「关于 → 开源许可证」。
+- glide 单测 73 项全绿；全量 1638 项 5 失败仍为既有基线。
+- 真机：日志确认新解码器被调用（`points=14 hyps=[axv, xv, axvxv, xvxv]`），
+  产出均为完整音节串。adb swipe 点数过少（14 点）导致候选为空，
+  属测试输入工具局限（此前已记录），非解码缺陷。
+
 ## 待办
 1. 滑动与既有组合的追加/新建策略。
 2. 用合法拼音串建立准确率基线。

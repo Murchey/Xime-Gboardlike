@@ -17,13 +17,46 @@ class GlideKeyboardControllerTest {
         override fun installRawInput(rawInput: String): Boolean { installs++; return true }
         override fun selectCandidate(rawInput: String, text: String): Boolean = true
     }
+    /** 新解码器要求 26 键齐全（音节前缀树按 a..z 索引）。 */
     private fun registry(): GlideGeometryRegistry {
         val r = GlideGeometryRegistry()
-        r.beginFrame(300f, 100f)
-        listOf("q","w","e").forEachIndexed { i, c ->
-            r.register(GlideKey("k"+i, c, GlideKeyRect(i*100f, 0f, i*100f+100f, 100f)))
+        r.beginFrame(1000f, 300f)
+        val rows = listOf("qwertyuiop", "asdfghjkl", "zxcvbnm")
+        rows.forEachIndexed { row, letters ->
+            letters.forEachIndexed { col, c ->
+                val left = col * 100f
+                val top = row * 100f
+                r.register(GlideKey("k" + row + "_" + col, c.toString(),
+                    GlideKeyRect(left, top, left + 100f, top + 100f)))
+            }
         }
         return r
+    }
+
+    /** 依次经过每个字母键中心，键上停留（新解码器靠停留判定确认按键）。 */
+    private fun swipe(ctl: GlideKeyboardController, code: String) {
+        var t = 0L
+        var prev: Pair<Float, Float>? = null
+        var first = true
+        for (ch in code) {
+            val idx = "qwertyuiopasdfghjklzxcvbnm".indexOf(ch)
+            val col = idx % 10
+            val row = idx / 10
+            val cx = col * 100f + 50f
+            val cy = row * 100f + 50f
+            prev?.let { p ->
+                for (k in 1..5) {
+                    val f = k / 6f
+                    if (first) { first = false }
+                    ctl.onMove(1, p.first + (cx - p.first) * f, p.second + (cy - p.second) * f, false)
+                    t += 16
+                }
+            }
+            if (first) { ctl.onDown(1, cx, cy, host, schema); first = false }
+            else ctl.onMove(1, cx, cy, false)
+            t += 150
+            prev = cx to cy
+        }
     }
     private fun setup(l: L): GlideKeyboardController {
         val c = C()
@@ -42,17 +75,14 @@ class GlideKeyboardControllerTest {
 
     @Test fun `跨键滑动收集轨迹 抬手触发整句查询但不提交`() {
         val l = L(GlideLookupResult.Candidates(listOf(
-            GlideCandidate("c0", "去我额", "qwe"))))
+            GlideCandidate("c0", "你好", "nihao"))))
         val ctl = setup(l)
-        ctl.onDown(1, 50f, 50f, host, schema)  // q
-        ctl.onMove(1, 150f, 50f, false)          // w -> upgrade glide
-        ctl.onMove(1, 250f, 50f, false)          // e
+        swipe(ctl, "nihao")
         assertTrue(ctl.isGliding)
         val up = ctl.onUp(1, host)
         assertTrue(up is GlideKeyboardController.UpResult.Candidates)
         assertTrue((up as GlideKeyboardController.UpResult.Candidates).outcome
             is GlideCoordinator.Outcome.ShowCandidates)
-        // 阶段C：多假设解码，查询串由解码器首选决定（仍是 q-w-e 路径）
         assertNotNull("应至少查询一次", l.input)
         assertTrue(l.input!!.isNotEmpty())
         assertTrue(ctl.coordinator().session.state.isComposing)

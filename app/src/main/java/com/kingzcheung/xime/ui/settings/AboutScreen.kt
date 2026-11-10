@@ -141,6 +141,11 @@ object AppInfo {
             name = "OpenCC (Open Chinese Convert)",
             license = "Apache-2.0",
             url = "https://github.com/BYVoid/OpenCC"
+        ),
+        LicenseItem(
+            name = "水杉输入法 (msime) — 滑行解码算法与音节表",
+            license = "GPL-3.0",
+            url = "https://github.com/metasequoiaime/msime"
         )
     )
 }
