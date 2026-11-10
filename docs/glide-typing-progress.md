@@ -81,6 +81,21 @@ adb shell dumpsys input_method | grep mCurId # 确认 mCurId 与 mBoundToMethod=
 用 `ime disable` → `ime enable` → `ime set` 重置后可恢复为
 `mBoundToMethod=true mVisibleBound=true`。后续真机验证前应先确认这两项。
 
+### 5. 真机端到端已打通（本轮，在正确前提下）
+前提：`adb shell dumpsys input_method | grep mCurId` 必须指向 Xime。
+
+在小米备忘录 + 万象全拼、确认 `mCurId` 正确后实测：
+- 点按字母：能上屏并出候选（验证了移除 `down.consume()` 的修复）；
+- 连续滑动两次：均正常产生中文候选（`szxdfgv` → 实质性的风格 / 实质性的 / 市中），
+  第二次滑动还追加了编码 —— 说明**连续滑动可用**。
+
+### 6. 触摸坐标存在偏移（待修）
+实测 `GlideTouch: pos=174,461` 对应屏幕 (180,2135)，即 `down.position` 是相对键盘根容器的
+局部坐标，比屏幕坐标少了约 1674px 的垂直偏移；而几何注册用的是 `boundsInRoot` 的 root 坐标。
+两者坐标系不一致，导致滑动命中的键与视觉位置有偏差（滑 Z 行实际命中 S 行）。
+需要统一坐标系：几何注册改用键盘局部坐标，或触摸坐标加上键盘 root 原点。
+（本轮已把 origin 置零以暴露真实偏移，修复留待下一轮。）
+
 ## 待办
 1. 滑动与既有组合的追加/新建策略。
 2. 用合法拼音串建立准确率基线。

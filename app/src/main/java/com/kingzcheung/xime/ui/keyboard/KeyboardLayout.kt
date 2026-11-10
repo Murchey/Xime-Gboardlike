@@ -445,7 +445,9 @@ fun KeyboardLayout(
                     hostToken = uiState.toString(),
                     schemaFingerprint = currentSchemaId,
                     asciiMode = isAsciiMode,
-                    origin = { androidx.compose.ui.geometry.Offset(keyboardBounds.left, keyboardBounds.top) },
+                    // down.position 已是相对键盘根容器的局部坐标，与几何注册使用的
+                    // boundsInRoot 减去同一 keyboardBounds 后的坐标系一致，故不再叠加 origin。
+                    origin = { androidx.compose.ui.geometry.Offset.Zero },
                     onTrailChange = { glideTrail = it },
                     onGestureFinished = {
                         swipeBubble.update(
