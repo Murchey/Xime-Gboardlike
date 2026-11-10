@@ -101,6 +101,19 @@ root 原点，`snapshot()` 输出时把键矩形减去该原点，统一为键�
 **真机验证（修正后）**：滑屏幕 Z 行 (180→560, y=2135) 得到 `zxcv`（此前为 `szxdfgv`），
 精确命中 Z-X-C-V，候选为 自行车/展现出/周星驰/在现 —— 坐标系已对齐。
 
+### 7. 候选栏在 IME 触摸区之外（新发现，阻塞阶段D）
+`dumpsys window` 显示 IME 窗口 frame 为 `[0,96][1080,2400]`，但
+`touchable region=SkRegion((0,1542,1080,2400))` —— 从 y=1542 开始。
+而候选栏渲染在 y≈1287 附近，**落在触摸区之外，点不到**。
+`onComputeInsets` 非浮动分支用 `keyboardContainer.getLocationInWindow` 的 top 作为
+`contentTopInsets` 并设 `TOUCHABLE_INSETS_VISIBLE`，说明候选栏位于 keyboardContainer 之上
+（在容器外绘制），导致触摸区不含候选栏。
+
+影响：抬手后的候选**无法点选确认**，只能靠空格/回车等键确认（用户认可的备选路径）。
+
+这属既有布局问题，非 glide 引入；但阻塞阶段D「候选点击确认」的端到端验证。
+下一轮需让候选栏进入可触摸区域（或把 touchableInsets 改为覆盖候选栏）。
+
 ## 待办
 1. 滑动与既有组合的追加/新建策略。
 2. 用合法拼音串建立准确率基线。
