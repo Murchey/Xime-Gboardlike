@@ -445,6 +445,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
      */
     internal fun applyGlideCandidates(rawInput: String, texts: List<String>) {
         if (texts.isEmpty()) return
+        // 把首选编码装进主组合，使引擎有真实组合态：
+        // 这样点选候选会走正常 Rime 选词/学习路径，而不是我们的假 isComposing。
+        runCatching { rimeEngine.setInput(rawInput) }
         candidateState.value = candidateState.value.copy(
             candidates = texts,
             candidateComments = List(texts.size) { "" },

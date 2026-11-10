@@ -445,6 +445,13 @@ fun KeyboardLayout(
                     asciiMode = isAsciiMode,
                     origin = { androidx.compose.ui.geometry.Offset(keyboardBounds.left, keyboardBounds.top) },
                     onTrailChange = { glideTrail = it },
+                    onGestureFinished = {
+                        // 抬手/取消后清空按压气泡，避免上一次滑动的提示悬挂
+                        swipeBubble.update(
+                            com.kingzcheung.xime.ui.keyboard.SwipeState(false, null, false, emptyList(), false, null),
+                            androidx.compose.ui.geometry.Rect.Zero,
+                        )
+                    },
                 ) else Modifier
             )
     ) {

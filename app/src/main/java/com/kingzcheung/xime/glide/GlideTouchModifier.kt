@@ -25,6 +25,8 @@ fun glideTouchModifier(
     origin: () -> Offset = { Offset.Zero },
     /** 轨迹点变化时通知外部重绘（Compose state 由调用方持有）。 */
     onTrailChange: (List<GlidePoint>) -> Unit = {},
+    /** 手势结束（抬手或取消）：供调用方清理按压气泡等临时 UI。 */
+    onGestureFinished: () -> Unit = {},
 ): Modifier = Modifier.pointerInput(controller) {
     awaitEachGesture {
         val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
@@ -53,6 +55,7 @@ fun glideTouchModifier(
                         controller.onUp(id, hostToken)
                     }
                     onTrailChange(emptyList())
+                    onGestureFinished()
                     finished = true
                     break
                 }
@@ -63,7 +66,11 @@ fun glideTouchModifier(
                 if (upgraded) ev.changes.forEach { it.consume() }
             } while (true)
         } finally {
-            if (!finished) controller.onCancel()
+            if (!finished) {
+                controller.onCancel()
+                onTrailChange(emptyList())
+                onGestureFinished()
+            }
         }
     }
 }
