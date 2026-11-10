@@ -6,7 +6,8 @@ package com.kingzcheung.xime.glide
  * 音节表（421 个完整拼音音节）与结构移植自水杉输入法（msime，GPL-3.0）
  * 的 `crates/engine/src/pinyin/syllables.rs` 与 `glide.rs` 的 `SyllableTrie`。
  */
-object GlideSyllableTrie {
+object GlideSyllableTrie : GlideSpellingConstraint {
+    fun syllables(): List<String> = SYLLABLES.toList()
 
     private val SYLLABLES: Array<String> = arrayOf(
         "a", "ai", "an", "ang", "ao", "ba", "bai", "ban", "bang", "bao", "bei", "ben",
@@ -77,7 +78,7 @@ object GlideSyllableTrie {
     fun get(): GlideSyllableTrie = this
 
     /** states 里某种切分后面可以接的字母（位掩码）。 */
-    fun followers(states: List<Int>): Int {
+    override fun followers(states: List<Int>): Int {
         var mask = 0
         for (s in states) mask = mask or masks[s]
         return mask
@@ -87,7 +88,7 @@ object GlideSyllableTrie {
      * 把 letter 接在 states 所示切分之后，每种合法切分的状态写入 next：
      * 音节还能长时是长出来的那个节点，音节完整时是根 0。无合法切分时 next 为空。
      */
-    fun extend(states: List<Int>, letter: Int, next: MutableList<Int>) {
+    override fun extend(states: List<Int>, letter: Int, next: MutableList<Int>) {
         next.clear()
         for (state in states) {
             val child = children[state][letter]

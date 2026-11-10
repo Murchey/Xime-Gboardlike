@@ -378,7 +378,11 @@ fun KeyboardLayout(
     val glideController = remember(glideRegistry, glideCoordinator) {
         com.kingzcheung.xime.glide.GlideKeyboardController(glideRegistry, glideCoordinator,
             glideEnabled = { glideTypingEnabled },
-            semicolonFinal = { semicolonFinal },
+            schemaSpellings = { schema ->
+                com.kingzcheung.xime.rime.RimeEngine.getInstance().getGlideSpellings(
+                    schema, com.kingzcheung.xime.glide.GlideSyllableTrie.syllables(),
+                )
+            },
         )
     }
     // 滑动开始即清空既有组合（新建语义），避免新编码拼在旧编码后面

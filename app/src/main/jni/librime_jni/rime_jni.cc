@@ -6,6 +6,8 @@
 #include <rime/dict/reverse_lookup_dictionary.h>
 #include <rime/service.h>
 #include <rime/schema.h>
+#include <rime/algo/algebra.h>
+#include <algorithm>
 #include <rime/dict/db_utils.h>
 #include <rime/dict/table_db.h>
 #include <rime/dict/user_db.h>
@@ -2558,6 +2560,53 @@ extern "C"
             jstring str = env->NewStringUTF(items[i].c_str());
             env->SetObjectArrayElement(result, i, str);
             env->DeleteLocalRef(str);
+        }
+        return result;
+    }
+
+    // 由 librime 原生 algebra 投影完整音节，只保留正常拼写，排除简拼/纠错派生。
+    JNIEXPORT jobjectArray JNICALL
+    Java_com_kingzcheung_xime_rime_RimeEngine_nativeGetGlideSpellings(
+        JNIEnv* env, jobject, jstring schema_id, jobjectArray syllables) {
+        const char* schema = env->GetStringUTFChars(schema_id, nullptr);
+        if (!schema) return nullptr;
+        const auto rules = Rime::Instance().getSchemaList(schema, "speller/algebra");
+        const auto alphabet = Rime::Instance().getSchemaString(schema, "speller/alphabet");
+        env->ReleaseStringUTFChars(schema_id, schema);
+        if (alphabet.empty()) return nullptr;
+        auto settings = rime::New<rime::ConfigList>();
+        for (const auto& rule : rules) settings->Append(rime::New<rime::ConfigValue>(rule));
+        rime::Projection projection;
+        if (!projection.Load(settings)) return nullptr;
+        rime::Script script;
+        for (jsize i = 0; i < env->GetArrayLength(syllables); ++i) {
+            auto value = static_cast<jstring>(env->GetObjectArrayElement(syllables, i));
+            const char* chars = env->GetStringUTFChars(value, nullptr);
+            if (!chars) { env->DeleteLocalRef(value); return nullptr; }
+            script.AddSyllable(chars);
+            env->ReleaseStringUTFChars(value, chars);
+            env->DeleteLocalRef(value);
+        }
+        projection.Apply(&script);
+        std::vector<std::string> spellings;
+        for (const auto& entry : script) {
+            const auto& code = entry.first;
+            if (code.empty() || code.size() > 8) continue;
+            if (!std::all_of(code.begin(), code.end(), [&](char c) {
+                return ((c >= 'a' && c <= 'z') || c == ';') && alphabet.find(c) != std::string::npos;
+            })) continue;
+            if (std::any_of(entry.second.begin(), entry.second.end(), [](const rime::Spelling& s) {
+                return s.properties.type == rime::kNormalSpelling && !s.properties.is_correction;
+            })) spellings.push_back(code);
+        }
+        jclass cls = env->FindClass("java/lang/String");
+        if (!cls) return nullptr;
+        auto result = env->NewObjectArray(spellings.size(), cls, nullptr);
+        if (!result) return nullptr;
+        for (size_t i = 0; i < spellings.size(); ++i) {
+            auto text = env->NewStringUTF(spellings[i].c_str());
+            env->SetObjectArrayElement(result, i, text);
+            env->DeleteLocalRef(text);
         }
         return result;
     }

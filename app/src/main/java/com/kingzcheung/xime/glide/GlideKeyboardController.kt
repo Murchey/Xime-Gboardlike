@@ -11,8 +11,7 @@ class GlideKeyboardController(
     private val registry: GlideGeometryRegistry,
     private val coordinator: GlideCoordinator,
     glideEnabled: () -> Boolean,
-    /** 当前方案是否用分号输入 ing（紫光/搜狗/微软双拼）：决定编码送 Rime 前是否把 ing 转为 ;。 */
-    private val semicolonFinal: () -> Boolean = { false },
+    private val schemaSpellings: ((String) -> Collection<String>)? = null,
 ) {
     private val arbiter = GlideGestureArbiter(
         eligibleStart = { true },
@@ -22,6 +21,7 @@ class GlideKeyboardController(
     @Volatile private var activeGeometry: GlideGeometrySnapshot? = null
     private var currentHost: String = ""
     private var currentSchema: String = ""
+    private var activeSpellings: Collection<String>? = null
     /** 英文模式：轨迹只解出英文字母串，直接作为候选，不查中文词库。 */
     private var asciiMode: Boolean = false
     private var glideSessionStarted = false
@@ -62,6 +62,7 @@ class GlideKeyboardController(
         activeGeometry = geo
         currentHost = hostToken
         currentSchema = schemaFingerprint
+        activeSpellings = if (ascii) null else schemaSpellings?.invoke(schemaFingerprint)?.toList()
         glideSessionStarted = false
         collected.clear()
         collected += GlidePoint(x, y, System.currentTimeMillis(), pointerId.toInt())
@@ -115,7 +116,7 @@ class GlideKeyboardController(
                 // 采集真实轨迹（仅在显式开启时写入），供准确率评估与离线训练
                 GlideTraceRecorder.onTraceFinished(points, geo, currentSchema)
                 // 几何解码：按对齐/连线/回溯/停留代价枚举完整音节串（代价低的在前）
-                val hypotheses = GlideGeometryDecoder.decode(points, geo, GLIDE_HYPOTHESES)
+                val hypotheses = GlideGeometryDecoder.decode(points, geo, GLIDE_HYPOTHESES, activeSpellings)
                 if (hypotheses.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
                 // 英文模式：轨迹解出的字母串即候选，不查中文词库（随键盘中英文模式变化）
                 if (asciiMode) {
@@ -154,7 +155,8 @@ class GlideKeyboardController(
         // 几何代价：越小越好；转成分数要取负
         val best = hypotheses.minOfOrNull { it.cost } ?: 0f
         for ((hIdx, h) in hypotheses.withIndex()) {
-            val query = if (semicolonFinal()) h.letters.replace("ing", ";") else h.letters
+            // 已是当前方案的真实编码（含 ;），不得再做全拼字符串替换。
+            val query = h.letters
             when (val r = coordinator.lookup.lookup(query)) {
                 is GlideLookupResult.Candidates -> {
                     for ((i, c) in r.list.withIndex()) {

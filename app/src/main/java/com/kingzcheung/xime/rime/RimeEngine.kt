@@ -724,6 +724,13 @@ class RimeEngine {
         return nativeGetSchemaList(schemaId, key)?.toList() ?: emptyList()
     }
 
+    /** 当前部署方案的正常音节编码；锁忙或规则不可用时返回空，不能回退套用全拼规则。 */
+    fun getGlideSpellings(schemaId: String, syllables: List<String>): List<String> =
+        tryLocked(emptyList()) {
+            if (!isInitialized) emptyList()
+            else nativeGetGlideSpellings(schemaId, syllables.toTypedArray())?.toList().orEmpty()
+        }
+
     /** 读取方案自带 translator.packs 中声明的个人词库名。 */
     fun getSchemaPacks(schemaId: String): List<String> =
         getSchemaList(schemaId, "translator/packs")
@@ -904,6 +911,7 @@ class RimeEngine {
     private external fun nativeGetAvailableSchemas(): Array<String>?
     private external fun nativeGetSchemaList(schemaId: String, key: String): Array<String>?
     private external fun nativeGetSchemaString(schemaId: String, key: String): String?
+    private external fun nativeGetGlideSpellings(schemaId: String, syllables: Array<String>): Array<String>?
     private external fun nativeGetUserConfigString(key: String): String?
     private external fun nativeGetUserConfigBool(key: String): Boolean
     private external fun nativeSetUserConfigString(key: String, value: String): Boolean

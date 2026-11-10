@@ -74,6 +74,7 @@ object GlideGeometryDecoder {
         points: List<GlidePoint>,
         geometry: GlideGeometrySnapshot,
         limit: Int = 8,
+        spellings: Collection<String>? = null,
     ): List<Hypothesis> {
         if (limit <= 0 || points.size < 2 || !geometry.isValid) return emptyList()
 
@@ -86,7 +87,7 @@ object GlideGeometryDecoder {
         val samples = resample(normalized)
         if (samples.size < 2) return emptyList()
 
-        return Decoder(centers, keyWidth, keyHeight, samples).run(limit)
+        return Decoder(centers, keyWidth, keyHeight, samples, spellings?.let { GlideSpellingTrie(it) }).run(limit)
     }
 
     /** 分号键（双拼 ing 韵母）的字母索引，输出时展开为 "ing"。 */
@@ -172,6 +173,7 @@ object GlideGeometryDecoder {
         keyWidth: Float,
         keyHeight: Float,
         private val samples: List<Sample>,
+        private val schemaTrie: GlideSpellingConstraint?,
     ) {
         private val letterCount = centers.size
         /** 把字母 l 对齐到采样点 j 的代价。 */
@@ -239,7 +241,7 @@ object GlideGeometryDecoder {
         }
 
         fun run(limit: Int): List<Hypothesis> {
-            val trie = GlideSyllableTrie.get()
+            val trie = schemaTrie ?: GlideSyllableTrie.get()
             val last = count - 1
             val near = (0 until letterCount).filter { align[it] != null }
             val states = mutableListOf<Int>()
@@ -247,7 +249,8 @@ object GlideGeometryDecoder {
 
             for (letter in near) {
                 if (reach[letter].firstOrNull() != 0) continue
-                extendLetter(trie, listOf(0), letter, states)
+                if (schemaTrie != null) trie.extend(listOf(0), letter, states)
+                else extendLetter(trie, listOf(0), letter, states)
                 if (states.isEmpty()) continue
                 val cost = align[letter]!![0] + LETTER_COST
                 level += Prefix(mutableListOf(letter), states.toMutableList(), mutableListOf(0 to cost))
@@ -264,10 +267,11 @@ object GlideGeometryDecoder {
                     val earliest = prefix.costs.first().first
                     for (letter in near) {
                         // ; 的可接性按 ing 首字母 i 判定
-                        val probe = if (letter == SEMICOLON_INDEX) ('i' - 'a') else letter
+                        val probe = if (schemaTrie == null && letter == SEMICOLON_INDEX) ('i' - 'a') else letter
                         if (followers and (1 shl probe) == 0) continue
                         if ((reach[letter].lastOrNull() ?: -1) <= earliest) continue
-                        extendLetter(trie, prefix.states, letter, states)
+                        if (schemaTrie != null) trie.extend(prefix.states, letter, states)
+                        else extendLetter(trie, prefix.states, letter, states)
                         if (states.isEmpty()) continue
                         val line = lines[from * letterCount + letter] ?: continue
                         val al = align[letter]!!
@@ -301,7 +305,7 @@ object GlideGeometryDecoder {
                     val lastCost = prefix.costs.lastOrNull() ?: continue
                     if (lastCost.first == last && prefix.states.contains(0)) {
                         finals += Hypothesis(
-                            prefix.letters.map { if (it == SEMICOLON_INDEX) "ing" else ('a' + it).toString() }.joinToString(""),
+                            prefix.letters.map { if (it == SEMICOLON_INDEX) (if (schemaTrie != null) ";" else "ing") else ('a' + it).toString() }.joinToString(""),
                             lastCost.second,
                         )
                     }
@@ -330,7 +334,7 @@ object GlideGeometryDecoder {
      * 把一个"字母"接入音节树状态。分号键展开为 ing 三个字母，
      * 其余按单字母扩展；任一字母无法接入时清空 next。
      */
-    private fun extendLetter(trie: GlideSyllableTrie, states: List<Int>, letter: Int, next: MutableList<Int>) {
+    private fun extendLetter(trie: GlideSpellingConstraint, states: List<Int>, letter: Int, next: MutableList<Int>) {
         if (letter != SEMICOLON_INDEX) {
             trie.extend(states, letter, next)
             return
