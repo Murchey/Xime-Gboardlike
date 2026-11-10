@@ -447,7 +447,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
      * 滑动开始：清空既有组合，使新编码从零开始。
      * 只清组合与候选，不动已上屏文本。
      */
+    internal var glidePreviewActive = false
+        private set
+
     internal fun beginGlideComposition() {
+        glidePreviewActive = true
         runCatching { rimeEngine.clearComposition() }
         candidateState.value = candidateState.value.copy(
             inputText = "",
@@ -462,7 +466,24 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         )
     }
 
+    /** 滑动中只投影组合预览，抬手后才安装主组合与可确认候选。 */
+    internal fun previewGlideCandidates(rawInput: String, texts: List<String>) {
+        glidePreviewActive = rawInput.isNotEmpty() || texts.isNotEmpty()
+        candidateState.value = candidateState.value.copy(
+            inputText = rawInput,
+            preeditText = rawInput,
+            candidates = texts,
+            candidateComments = List(texts.size) { "" },
+            candidateActions = texts.map { CandidateAction.plugin(it) },
+            associationCandidates = emptyList(),
+            isComposing = rawInput.isNotEmpty(),
+            hasNextPage = false,
+            hasPrevPage = false,
+        )
+    }
+
     internal fun applyGlideCandidates(rawInput: String, texts: List<String>) {
+        glidePreviewActive = false
         if (texts.isEmpty()) return
         // 把首选编码装进主组合，使引擎有真实组合态：
         // 这样点选候选会走正常 Rime 选词/学习路径，而不是我们的假 isComposing。

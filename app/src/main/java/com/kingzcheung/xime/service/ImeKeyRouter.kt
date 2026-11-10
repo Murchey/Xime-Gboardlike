@@ -1220,6 +1220,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
     }
 
     suspend fun selectCandidateAsync(index: Int, expandedCandidate: RimeCandidate? = null) {
+        if (service.glidePreviewActive) return // 抬手后的正式候选才能确认上屏。
         // 展开页点选（expandedCandidate 非空）：取词/注释以展开页显示的同一份
         // 全量列表为准（所见即所得）。index 是全量索引，不得用于索引引擎当前页的
         // candidates/candidateComments——部分选拼音（SELECTION 态）或候选超页时

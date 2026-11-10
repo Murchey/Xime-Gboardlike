@@ -262,6 +262,7 @@ fun KeyboardLayout(
         mutableStateOf(SettingsPreferences.isGlideTrailVisible(context))
     }
     // 阶段B：轨迹镜像（Compose 可观察），由 GlideTouchModifier 在采样时更新
+    var glideBubbleSuppressed by remember { mutableStateOf(false) }
     val glideTrail = rememberGlideTrail(glideTypingEnabled && glideTrailVisible)
     val glideTrailColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
     var letterCaseSetting by remember {
@@ -332,6 +333,11 @@ fun KeyboardLayout(
             state.copy(charInfos = SubcharHelper.parseSwipeDownText(state.swipeText))
         } else {
             state
+        }
+        if (glideBubbleSuppressed) return
+        if (hideGlidePressBubble(glideTypingEnabled, newState)) {
+            swipeBubble.update(SwipeState(), Rect.Zero)
+            return
         }
         swipeBubble.update(
             newState,
@@ -432,7 +438,7 @@ fun KeyboardLayout(
             .drawWithContent {
                 drawContent()
                 drawLongPressScrim(swipeBubble.state.isLongPress)
-                bubbleData?.let { drawSwipeBubble(it) }
+                if (!glideBubbleSuppressed) bubbleData?.let { drawSwipeBubble(it) }
                 if (glideTypingEnabled && glideTrailVisible) {
                     drawGlideTrail(glideTrail, glideTrailColor)
                 }
@@ -451,7 +457,13 @@ fun KeyboardLayout(
                     // boundsInRoot 减去同一 keyboardBounds 后的坐标系一致，故不再叠加 origin。
                     origin = { androidx.compose.ui.geometry.Offset.Zero },
                     onTrailChange = { glideTrail.update(it, android.os.SystemClock.uptimeMillis()) },
+                    onPreview = { raw, texts -> callbacks.onGlidePreview?.invoke(raw, texts) },
+                    onGlideCaptured = {
+                        glideBubbleSuppressed = true
+                        swipeBubble.update(SwipeState(), androidx.compose.ui.geometry.Rect.Zero)
+                    },
                     onGestureFinished = {
+                        glideBubbleSuppressed = false
                         swipeBubble.update(
                             SwipeState(false, null, false, emptyList(), false, null),
                             androidx.compose.ui.geometry.Rect.Zero,

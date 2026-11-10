@@ -116,6 +116,67 @@ class GlideSchemaProjectionDeviceTest {
         }
     }
 
+    @Test fun 小鹤滑动中先预览你再组词你好而不提交主组合() {
+        val e = engine()
+        val original = e.getCurrentSchema()
+        val registry = GlideGeometryRegistry()
+        registry.beginFrame(1000f, 420f)
+        listOf("qwertyuiop", "asdfghjkl", "zxcvbnm").forEachIndexed { r, row -> row.forEachIndexed { c, ch ->
+            val x = c * 100f + listOf(0f, 50f, 150f)[r]
+            registry.register(GlideKey(ch.toString(), ch.toString(), GlideKeyRect(x, r * 140f, x + 100f, r * 140f + 140f)))
+        } }
+        try {
+            assertTrue(e.switchSchema("double_pinyin_flypy"))
+            e.clearComposition()
+            val controller = GlideKeyboardController(registry, GlideCoordinator(
+                RimeGlideSentenceLookup(), object : GlideCommitter {
+                    override fun installRawInput(rawInput: String): Boolean = error("预览不应提交")
+                    override fun selectCandidate(rawInput: String, text: String): Boolean = error("预览不应提交")
+                }), glideEnabled = { true }, schemaSpellings = {
+                    e.getGlideSpellings(it, GlideSyllableTrie.syllables())
+                })
+            var time = 1000L
+            var prev: Pair<Float, Float>? = null
+            fun move(code: String) {
+                for (ch in code) {
+                    val k = registry.snapshot().keys.first { it.code == ch.toString() }
+                    val xy = k.rect.centerX to k.rect.centerY
+                    if (prev == null) controller.onDown(1, xy.first, xy.second, "host", "double_pinyin_flypy", timeMs = time)
+                    else {
+                        val p = prev!!
+                        for (step in 1..8) {
+                            time += 16
+                            val f = step / 9f
+                            controller.onMove(1, p.first + (xy.first - p.first) * f, p.second + (xy.second - p.second) * f, false, time)
+                        }
+                        time += 16
+                        controller.onMove(1, xy.first, xy.second, false, time)
+                    }
+                    time += 150
+                    prev = xy
+                }
+            }
+            move("ni")
+            val first = controller.decode(controller.previewRequest()!!)
+            assertTrue("预览缺少你: " + first.candidates.map { it.text }, first.candidates.any { it.text == "你" })
+            assertTrue(controller.accept(first))
+            assertEquals("预览不应安装 Rime 主组合", "", e.getInput())
+            assertTrue(controller.isGliding)
+            move("hc")
+            val phrase = controller.decode(controller.previewRequest()!!)
+            assertTrue("预览缺少你好: " + phrase.candidates.map { it.text }, phrase.candidates.any { it.text == "你好" })
+            assertTrue(controller.accept(phrase))
+            assertEquals("组词预览不应安装 Rime 主组合", "", e.getInput())
+            val request = controller.finishRequest(1, "host")!!
+            assertFalse(controller.accept(first))
+            assertTrue(controller.accept(controller.decode(request)))
+            assertTrue(controller.candidateTexts().contains("你好"))
+        } finally {
+            e.clearComposition()
+            if (original.isNotEmpty()) e.switchSchema(original)
+        }
+    }
+
     @Test fun 微软搜狗已部署方案都能查询你好() {
         val e = engine()
         val original = e.getCurrentSchema()

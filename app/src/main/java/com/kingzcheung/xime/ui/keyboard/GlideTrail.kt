@@ -84,7 +84,7 @@ internal fun DrawScope.drawGlideTrail(trail: GlideTrailState, color: Color) {
         drawLine(
             brush = Brush.linearGradient(listOf(color.copy(alpha = alphaA), color.copy(alpha = alphaB)), from, to),
             start = from, end = to,
-            strokeWidth = (0.6f + 3.4f * (alphaA + alphaB) / 2f).dp.toPx(),
+            strokeWidth = (1f + 7f * (alphaA + alphaB) / 2f).dp.toPx(),
             cap = StrokeCap.Round,
         )
     }

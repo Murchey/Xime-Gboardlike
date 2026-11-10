@@ -25,6 +25,7 @@ class GlideKeyboardController(
     /** 英文模式：轨迹只解出英文字母串，直接作为候选，不查中文词库。 */
     private var asciiMode: Boolean = false
     private var glideSessionStarted = false
+    private var gestureId = 0L
     /**
      * 滑动真正开始（升级为 Glide）时回调：用于清空引擎既有组合。
      * 语义选「新建」而非「追加」——一次滑动代表一次独立的输入意图；
@@ -58,6 +59,7 @@ class GlideKeyboardController(
         ascii: Boolean = false,
         timeMs: Long = System.currentTimeMillis(),
     ) {
+        gestureId++
         asciiMode = ascii
         val geo = registry.snapshot()
         activeGeometry = geo
@@ -151,6 +153,13 @@ class GlideKeyboardController(
         hypotheses: List<GlideGeometryDecoder.Hypothesis>,
         hostToken: String,
     ): GlideCoordinator.Outcome {
+        val sorted = lookupHypotheses(hypotheses)
+        if (sorted.isEmpty()) return GlideCoordinator.Outcome.NoCandidate
+        installCandidates(sorted, hostToken)
+        return GlideCoordinator.Outcome.ShowCandidates
+    }
+
+    private fun lookupHypotheses(hypotheses: List<GlideGeometryDecoder.Hypothesis>): List<GlideCandidate> {
         val merged = mutableListOf<GlideCandidate>()
         val seen = mutableSetOf<String>()
         // 几何代价：越小越好；转成分数要取负
@@ -177,8 +186,10 @@ class GlideKeyboardController(
             }
             if (merged.size >= 12) break
         }
-        if (merged.isEmpty()) return GlideCoordinator.Outcome.NoCandidate
-        val sorted = merged.sortedByDescending { it.score }
+        return merged.sortedByDescending { it.score }
+    }
+
+    private fun installCandidates(sorted: List<GlideCandidate>, hostToken: String) {
         val top = sorted.first()
         val session = coordinator.session
         session.beginGlide(hostToken, session.state.schemaFingerprint, session.state.layoutFingerprint)
@@ -186,10 +197,58 @@ class GlideKeyboardController(
         session.deliverCandidates(
             session.state.traceId, session.state.revision, hostToken, top.rawInput, sorted,
         )
-        return GlideCoordinator.Outcome.ShowCandidates
+    }
+
+    internal data class DecodeRequest(
+        val gestureId: Long, val hostToken: String, val schema: String,
+        val geometry: GlideGeometrySnapshot, val points: List<GlidePoint>,
+        val spellings: Collection<String>?, val ascii: Boolean, val final: Boolean,
+    )
+
+    internal data class DecodeResult(val request: DecodeRequest, val rawInput: String, val candidates: List<GlideCandidate>)
+
+    /** 主线程固定快照，后台解码不读写正在采集的轨迹或会话。 */
+    internal fun previewRequest(): DecodeRequest? {
+        if (!isGliding) return null
+        val geo = activeGeometry ?: return null
+        return DecodeRequest(gestureId, currentHost, currentSchema, geo, collected.toList(), activeSpellings, asciiMode, false)
+    }
+
+    internal fun finishRequest(pointerId: Long, hostToken: String): DecodeRequest? {
+        if (!isGliding) { onUp(pointerId, hostToken); return null }
+        if (arbiter.onUp(pointerId) != GlideGestureArbiter.Decision.EMIT_GLIDE) return null
+        val geo = activeGeometry ?: return null
+        val request = DecodeRequest(gestureId, hostToken, currentSchema, geo, collected.toList(), activeSpellings, asciiMode, true)
+        clearTrail()
+        return request
+    }
+
+    /** 仅在后台线程执行；预览只使用独立查询，不往 Rime 主组合写编码。 */
+    internal fun decode(request: DecodeRequest): DecodeResult {
+        if (request.final) GlideTraceRecorder.onTraceFinished(request.points, request.geometry, request.schema)
+        val hypotheses = GlideGeometryDecoder.decode(request.points, request.geometry, GLIDE_HYPOTHESES, request.spellings)
+        val candidates = if (request.ascii) hypotheses.mapIndexed { i, h ->
+            GlideCandidate("en-$" + i, h.letters, h.letters, score = -h.cost.toDouble())
+        } else lookupHypotheses(hypotheses)
+        return DecodeResult(request, candidates.firstOrNull()?.rawInput ?: hypotheses.firstOrNull()?.letters.orEmpty(), candidates)
+    }
+
+    internal fun isCurrent(request: DecodeRequest): Boolean =
+        request.gestureId == gestureId && request.hostToken == currentHost
+
+    /** 主线程应用；抬手、新一笔、取消后，旧后台结果不得覆盖。 */
+    internal fun accept(result: DecodeResult): Boolean {
+        val request = result.request
+        if (!isCurrent(request)) return false
+        if (!request.final) return isGliding
+        if (isGliding) return false
+        if (result.candidates.isEmpty()) coordinator.session.cancel()
+        else installCandidates(result.candidates, request.hostToken)
+        return true
     }
 
     fun onCancel() {
+        gestureId++
         arbiter.onCancel()
         coordinator.session.cancel()
         clearTrail()

@@ -6,75 +6,119 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-/**
- * 阶段B：把 [GlideKeyboardController] 接到 Compose 的 pointer 事件的 Modifier。
- *
- * 用 PointerEventPass.Initial 先于子键读取；Glide 升级后消费全部 MOVE/UP，
- * 从根上避免 KeyButton 的幽灵点击、上滑符号与补点击；未升级的点按不消费 UP，
- * 交还原点击链路。绘轨迹由调用方在 drawWithContent 完成。
- */
+private val glideDecodeDispatcher = Dispatchers.Default.limitedParallelism(1)
+
+/** Initial pass 采集整条轨迹；预览与最终解码串行在后台执行。 */
 fun glideTouchModifier(
     controller: GlideKeyboardController,
     onGlideCode: (String) -> Unit,
     hostToken: String,
     schemaFingerprint: String,
-    /** 当前是否为英文模式：滑动结果随中英文模式变化。 */
     asciiMode: Boolean = false,
-    /** 预留偏移；几何快照已是键盘局部坐标，默认不需要叠加。 */
     origin: () -> Offset = { Offset.Zero },
-    /** 轨迹点变化时通知外部重绘（Compose state 由调用方持有）。 */
     onTrailChange: (List<GlidePoint>) -> Unit = {},
-    /** 手势结束（抬手或取消）：供调用方清理按压气泡等临时 UI。 */
     onGestureFinished: () -> Unit = {},
+    onGlideCaptured: () -> Unit = {},
+    onPreview: (String, List<String>) -> Unit = { _, _ -> },
 ): Modifier = Modifier.pointerInput(controller, schemaFingerprint, asciiMode) {
-    awaitEachGesture {
-        val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
-        val id = down.id.value
-        var o = origin()
-        controller.onDown(id, down.position.x + o.x, down.position.y + o.y, hostToken, schemaFingerprint, asciiMode, down.uptimeMillis)
-        onTrailChange(controller.trail)
-        // 注意：此处不能消费 DOWN。Initial pass 的消费会让子键的点击/长按
-        // 全部失效（实测 glide 开启后空格与字母都无法上屏）。
-        // 只有真正升级为 Glide 后才消费 MOVE/UP，阻止逐键上屏。
-        var upgraded = false
-        var finished = false
+    coroutineScope {
+        val scope = this
+        var finalJob: Job? = null
         try {
-            do {
-                val ev = awaitPointerEvent(PointerEventPass.Initial)
-                val ch = ev.changes.firstOrNull { it.id.value == id } ?: break
-                val second = ev.changes.count { it.pressed } > 1
-                o = origin()
-                // Android 可能合并高速触摸帧，保留历史点与真实时间，避免短折返被拉成直线。
-                for (sample in ch.historical) {
-                    controller.onMove(id, sample.position.x + o.x, sample.position.y + o.y, second, sample.uptimeMillis)
+            awaitEachGesture {
+                val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
+                if (finalJob?.isActive == true) {
+                    finalJob?.cancel()
+                    onPreview("", emptyList())
                 }
-                controller.onMove(id, ch.position.x + o.x, ch.position.y + o.y, second, ch.uptimeMillis)
-                if (controller.isGliding) upgraded = true
+                var previewJob: Job? = null
+                var lastPreviewTime = Long.MIN_VALUE
+                val id = down.id.value
+                var offset = origin()
+                controller.onDown(id, down.position.x + offset.x, down.position.y + offset.y,
+                    hostToken, schemaFingerprint, asciiMode, down.uptimeMillis)
                 onTrailChange(controller.trail)
-                if (!ch.pressed) {
-                    if (upgraded) {
-                        ch.consume()
-                        val up = controller.onUp(id, hostToken)
-                        if (up is GlideKeyboardController.UpResult.Candidates) {
-                            // 候选已由 GlideCompositionSession 管理并投影到候选栏；
-                            // 这里不再逐字符送 onKeyPress，避免把整句候选退化成逐键输入。
-                            onGlideCode(controller.rawInputForDisplay())
+                // 不消费 DOWN，保留普通点按与原地长按。
+                var upgraded = false
+                var finished = false
+                try {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull { it.id.value == id } ?: break
+                        val second = event.changes.count { it.pressed } > 1
+                        offset = origin()
+                        for (sample in change.historical) {
+                            controller.onMove(id, sample.position.x + offset.x, sample.position.y + offset.y, second, sample.uptimeMillis)
                         }
-                    } else {
-                        controller.onUp(id, hostToken)
+                        controller.onMove(id, change.position.x + offset.x, change.position.y + offset.y, second, change.uptimeMillis)
+                        if (controller.isGliding && !upgraded) {
+                            upgraded = true
+                            onGlideCaptured()
+                        }
+                        onTrailChange(controller.trail)
+                        if (!change.pressed) {
+                            previewJob?.cancel()
+                            if (upgraded) {
+                                change.consume()
+                                val request = controller.finishRequest(id, hostToken)
+                                if (request != null) finalJob = scope.launch {
+                                    var applied = false
+                                    try {
+                                        val result = withContext(glideDecodeDispatcher) { controller.decode(request) }
+                                        if (controller.accept(result)) {
+                                            if (result.candidates.isNotEmpty()) onGlideCode(result.rawInput)
+                                            else onPreview("", emptyList())
+                                            applied = true
+                                        }
+                                    } finally {
+                                        if (!applied && controller.isCurrent(request)) {
+                                            controller.onCancel()
+                                            onPreview("", emptyList())
+                                        }
+                                    }
+                                } else onPreview("", emptyList())
+                            } else controller.onUp(id, hostToken)
+                            onTrailChange(emptyList())
+                            onGestureFinished()
+                            finished = true
+                            break
+                        }
+                        if (upgraded) {
+                            event.changes.forEach { it.consume() }
+                            if (previewJob?.isActive != true &&
+                                (lastPreviewTime == Long.MIN_VALUE || change.uptimeMillis - lastPreviewTime >= 100L)) {
+                                lastPreviewTime = change.uptimeMillis
+                                previewJob = scope.launch {
+                                    delay(60L)
+                                    val request = controller.previewRequest() ?: return@launch
+                                    val result = withContext(glideDecodeDispatcher) { controller.decode(request) }
+                                    if (controller.accept(result)) onPreview(result.rawInput, result.candidates.map { it.text })
+                                }
+                            }
+                        }
                     }
-                    onTrailChange(emptyList())
-                    onGestureFinished()
-                    finished = true
-                    break
+                } finally {
+                    previewJob?.cancel()
+                    if (!finished) {
+                        controller.onCancel()
+                        onPreview("", emptyList())
+                        onTrailChange(emptyList())
+                        onGestureFinished()
+                    }
                 }
-                if (upgraded) ev.changes.forEach { it.consume() }
-            } while (true)
+            }
         } finally {
-            if (!finished) {
+            if (controller.isGliding || finalJob?.isActive == true) {
+                finalJob?.cancel()
                 controller.onCancel()
-                onTrailChange(emptyList())
+                onPreview("", emptyList())
                 onGestureFinished()
             }
         }
