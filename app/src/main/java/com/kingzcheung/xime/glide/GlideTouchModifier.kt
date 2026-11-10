@@ -27,7 +27,9 @@ fun glideTouchModifier(
     onTrailChange: (List<GlidePoint>) -> Unit = {},
     /** 手势结束（抬手或取消）：供调用方清理按压气泡等临时 UI。 */
     onGestureFinished: () -> Unit = {},
-): Modifier = Modifier.pointerInput(controller) {
+    /** 手势代际：变化时重建手势循环，避免上一次手势的挂起状态影响后续滑动。 */
+    epoch: Int = 0,
+): Modifier = Modifier.pointerInput(controller, asciiMode, epoch) {
     awaitEachGesture {
         val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
         val id = down.id.value

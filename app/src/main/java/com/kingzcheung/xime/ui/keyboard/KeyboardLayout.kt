@@ -380,6 +380,8 @@ fun KeyboardLayout(
             glideTypingEnabled
         }
     }
+    // 手势代际：每次手势结束递增，作为 pointerInput key 强制重建手势循环
+    val glideEpoch by glideController.epoch.collectAsStateWithLifecycle()
 
     CompositionLocalProvider(
         LocalShowLetterHintSymbols provides showLetterHintSymbols,
@@ -445,6 +447,7 @@ fun KeyboardLayout(
                     asciiMode = isAsciiMode,
                     origin = { androidx.compose.ui.geometry.Offset(keyboardBounds.left, keyboardBounds.top) },
                     onTrailChange = { glideTrail = it },
+                    epoch = glideEpoch,
                     onGestureFinished = {
                         // 抬手/取消后清空按压气泡，避免上一次滑动的提示悬挂
                         swipeBubble.update(

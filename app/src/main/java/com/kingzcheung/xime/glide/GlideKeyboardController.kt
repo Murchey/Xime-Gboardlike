@@ -16,6 +16,10 @@ class GlideKeyboardController(
         eligibleStart = { true },
         glideEnabled = glideEnabled,
     )
+    /** 手势代际：每次手势结束递增，供 pointerInput 作为 key 强制重建手势循环。 */
+    private val gestureEpoch = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val epoch: kotlinx.coroutines.flow.StateFlow<Int> get() = gestureEpoch
+
     private val collected = mutableListOf<GlidePoint>()
     @Volatile private var activeGeometry: GlideGeometrySnapshot? = null
     private var currentHost: String = ""
@@ -174,5 +178,7 @@ class GlideKeyboardController(
         collected.clear()
         activeGeometry = null
         glideSessionStarted = false
+        // 递增代际：让父层 pointerInput 重建，避免手势循环停在上一次的状态
+        gestureEpoch.value = gestureEpoch.value + 1
     }
 }
