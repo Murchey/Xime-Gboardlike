@@ -67,9 +67,8 @@ object SpatialTapModel {
             val varY = 0.0108f * (1.5f * hMm) * (1.5f * hMm) + 1.33f
             if (varX <= 0f || varY <= 0f) continue
 
-            val dxMm = dxPx / pxPerMm
-            val dyMm = dyPx / pxPerMm
-            val logP = -0.5f * (dxMm * dxMm / varX + dyMm * dyMm / varY) -
+            val cost = alignmentCost(touchX, touchY, geo, densityDpi) ?: continue
+            val logP = -cost -
                 0.5f * ln(2f * Math.PI.toFloat() * sqrt(varX * varY))
 
             scored.add(SpatialCandidate(letter, logP))
@@ -85,6 +84,21 @@ object SpatialTapModel {
         return scored.take(MAX_CANDIDATES).mapIndexed { i, c ->
             SpatialCandidate(c.letter, if (sum > 0f) weights[i] / sum else 0f)
         }
+    }
+
+    /** 高斯中心相对负对数概率；不截断邻键，供连续轨迹解码比较候选键。 */
+    fun alignmentCost(touchX: Float, touchY: Float, geo: KeyGeometry, densityDpi: Float): Float? {
+        if (!touchX.isFinite() || !touchY.isFinite() || !densityDpi.isFinite() || densityDpi <= 0f ||
+            !geo.centerXPx.isFinite() || !geo.centerYPx.isFinite() ||
+            !geo.widthPx.isFinite() || !geo.heightPx.isFinite() || geo.widthPx <= 0f || geo.heightPx <= 0f) return null
+        val pxPerMm = densityDpi / 25.4f
+        val wMm = geo.widthPx / pxPerMm
+        val hMm = geo.heightPx / pxPerMm
+        val varX = 0.0075f * (1.5f * wMm) * (1.5f * wMm) + 1.68f
+        val varY = 0.0108f * (1.5f * hMm) * (1.5f * hMm) + 1.33f
+        val dxMm = (touchX - geo.centerXPx) / pxPerMm
+        val dyMm = (touchY - geo.centerYPx) / pxPerMm
+        return (0.5f * (dxMm * dxMm / varX + dyMm * dyMm / varY)).takeIf { it.isFinite() }
     }
 
     /** 键的几何信息（px，键盘局部坐标）。 */

@@ -10,10 +10,16 @@ import org.junit.runner.RunWith
 /** 使用设备已部署方案，验证 native algebra 与 Kotlin 搜索间的编码一致性。 */
 @RunWith(AndroidJUnit4::class)
 class GlideSchemaProjectionDeviceTest {
+    private fun deviceDpi(): Float = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        .targetContext.resources.displayMetrics.densityDpi.toFloat()
+
     private fun engine(): RimeEngine {
         val end = SystemClock.uptimeMillis() + 30000
         while (!RimeEngine.isInitialized() && SystemClock.uptimeMillis() < end) SystemClock.sleep(100)
         assertTrue("Rime 未就绪", RimeEngine.isInitialized())
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        // 首次补齐模型配置会触发后台维护，等统一部署入口完成再断言会话。
+        assertTrue("Rime 部署未就绪", com.kingzcheung.xime.rime.RimeConfigHelper.ensureDeployment(context))
         val engine = RimeEngine.getInstance()
         assertTrue("Rime 会话未就绪", engine.ensureSession())
         return engine
@@ -57,7 +63,7 @@ class GlideSchemaProjectionDeviceTest {
                     points += GlidePoint(key.rect.centerX, key.rect.centerY, time, 1)
                     time += 150
                 }
-                val hypotheses = GlideGeometryDecoder.decode(points, geometry, 16, spellings)
+                val hypotheses = GlideGeometryDecoder.decode(points, geometry, 16, spellings, densityDpi = deviceDpi())
                 assertTrue(schema + " 正确编码未进前16: " + hypotheses,
                     hypotheses.any { it.letters == code })
                 assertTrue(e.switchSchema(schema))
@@ -103,7 +109,7 @@ class GlideSchemaProjectionDeviceTest {
             }
             previous = ch
         }
-        val result = GlideGeometryDecoder.decode(points, geometry, 16, spellings)
+        val result = GlideGeometryDecoder.decode(points, geometry, 16, spellings, densityDpi = deviceDpi())
         assertTrue("完整编码未进入候选: " + result, result.any { it.letters == code })
         val original = e.getCurrentSchema()
         try {
@@ -132,7 +138,7 @@ class GlideSchemaProjectionDeviceTest {
                 RimeGlideSentenceLookup(), object : GlideCommitter {
                     override fun installRawInput(rawInput: String): Boolean = error("预览不应提交")
                     override fun selectCandidate(rawInput: String, text: String): Boolean = error("预览不应提交")
-                }), glideEnabled = { true }, schemaSpellings = {
+                }), glideEnabled = { true }, densityDpi = { deviceDpi() }, schemaSpellings = {
                     e.getGlideSpellings(it, GlideSyllableTrie.syllables())
                 })
             var time = 1000L
@@ -171,6 +177,41 @@ class GlideSchemaProjectionDeviceTest {
             assertFalse(controller.accept(first))
             assertTrue(controller.accept(controller.decode(request)))
             assertTrue(controller.candidateTexts().contains("你好"))
+        } finally {
+            e.clearComposition()
+            if (original.isNotEmpty()) e.switchSchema(original)
+        }
+    }
+
+    @Test fun 滑动独立查询继承已启用的gram模型配置() {
+        val e = engine()
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val language = com.kingzcheung.xime.settings.GramPreferences.activeLanguage(context)
+        val tapEnabled = com.kingzcheung.xime.settings.SettingsPreferences.isCorrectorEnabled(context)
+        val tapEngine = com.kingzcheung.xime.settings.SettingsPreferences.getCorrectionEngine(context)
+        org.junit.Assume.assumeTrue("用户未启用gram模型，不能擅自启用", language.isNotBlank())
+        assertTrue("grammar模块未加载", RimeEngine.isModuleRegistered("grammar"))
+        val model = java.io.File(com.kingzcheung.xime.settings.SchemaManager.getRimeDir(context), language + ".gram")
+        assertTrue("配置的gram文件不存在", model.isFile && model.length() > 0L)
+        assertTrue("部署同步失败", com.kingzcheung.xime.rime.RimeConfigHelper.ensureDeployment(context))
+        assertTrue(e.ensureSession())
+        val original = e.getCurrentSchema()
+        try {
+            for (schema in listOf("double_pinyin_flypy", "double_pinyin_mspy")) {
+                assertEquals(schema + " 未继承全局gram", language, e.getSchemaString(schema, "grammar/language"))
+                assertTrue(e.switchSchema(schema))
+                e.clearComposition()
+                val code = e.getGlideSpellings(schema, listOf("ni")).first() + e.getGlideSpellings(schema, listOf("hao")).first()
+                assertTrue(e.bypassLookup(code, 16).any { it.text == "你好" })
+                assertEquals("独立查询不能污染主组合", "", e.getInput())
+            }
+            val patch = com.kingzcheung.xime.settings.GramActivation.customFile(context, "double_pinyin_flypy")
+            val timestamp = patch.lastModified()
+            assertEquals(0, com.kingzcheung.xime.settings.GramActivation.syncConfigured(context))
+            assertEquals("模型未变化不应重写补丁触发部署", timestamp, patch.lastModified())
+            assertEquals(tapEnabled, com.kingzcheung.xime.settings.SettingsPreferences.isCorrectorEnabled(context))
+            assertEquals(tapEngine, com.kingzcheung.xime.settings.SettingsPreferences.getCorrectionEngine(context))
+            android.util.Log.i("GlideModelTest", "gram=" + language + " bytes=" + model.length() + "; gaussian=default")
         } finally {
             e.clearComposition()
             if (original.isNotEmpty()) e.switchSchema(original)

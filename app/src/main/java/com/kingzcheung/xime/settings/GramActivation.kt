@@ -240,6 +240,15 @@ object GramActivation {
         return true
     }
 
+    /** 部署前补齐后来启用的方案；尊重已停用或模型文件缺失的状态。 */
+    fun syncConfigured(context: Context): Int {
+        if (!GramPreferences.isConfigured(context)) return 0
+        val language = GramPreferences.activeLanguage(context)
+        if (language.isBlank()) return 0
+        if (!File(SchemaManager.getRimeDir(context), language + ".gram").isFile) return 0
+        return applyGlobal(context)
+    }
+
     fun customFile(context: Context, schemaId: String): File =
         File(SchemaManager.getRimeDir(context), "$schemaId.custom.yaml")
 
@@ -261,7 +270,7 @@ object GramActivation {
                 val updated = GramPatch.apply(existing, language, profile)
                 if (updated == null) {
                     if (file.exists()) file.delete()
-                } else {
+                } else if (updated != existing) {
                     file.parentFile?.mkdirs()
                     file.writeText(updated)
                 }

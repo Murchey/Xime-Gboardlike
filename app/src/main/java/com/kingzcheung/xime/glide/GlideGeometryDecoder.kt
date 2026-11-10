@@ -1,5 +1,6 @@
 package com.kingzcheung.xime.glide
 
+import com.kingzcheung.xime.correction.SpatialTapModel
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
@@ -32,6 +33,7 @@ object GlideGeometryDecoder {
     private const val SAMPLE_STEP = 0.25f
     /** 一个字母对齐代价为 1 所对应的距离平方（约半个键）。 */
     private const val ALIGN_SCALE = 0.3f
+    private const val GAUSSIAN_WEIGHT = 0.5f
     /** 偏离两键连线多远（距离平方）时，每单位笔画长度代价为 1。 */
     private const val LINE_SCALE = 0.25f
     /** 每个字母的固定价。小值：让词典而不是几何去分 zhong / zong。 */
@@ -75,6 +77,8 @@ object GlideGeometryDecoder {
         geometry: GlideGeometrySnapshot,
         limit: Int = 8,
         spellings: Collection<String>? = null,
+        densityDpi: Float = 160f,
+        gaussianCorrection: Boolean = true,
     ): List<Hypothesis> {
         if (limit <= 0 || points.size < 2 || !geometry.isValid) return emptyList()
 
@@ -87,9 +91,24 @@ object GlideGeometryDecoder {
         val samples = resample(normalized)
         if (samples.size < 2) return emptyList()
 
+        val keyRects = geometry.eligibleKeys.filter { it.code.length == 1 }.associate { it.code[0].lowercaseChar() to it.rect }
+        val gaussianCosts = if (gaussianCorrection && densityDpi.isFinite() && densityDpi > 0f) {
+            Array(centers.size) { letter ->
+                val ch = if (letter == SEMICOLON_INDEX) ';' else 'a' + letter
+                val rect = keyRects.getValue(ch)
+                val geo = SpatialTapModel.KeyGeometry(rect.centerX, rect.centerY, rect.width, rect.height)
+                FloatArray(samples.size) { j ->
+                    // 与连线/回溯代价融合的空间项，固定权重避免双重累加旧距离项。
+                    SpatialTapModel.alignmentCost(samples[j].x * keyWidth, samples[j].y * keyHeight, geo, densityDpi)
+                        ?.times(GAUSSIAN_WEIGHT)
+                        ?: ((samples[j].x - rect.centerX / keyWidth).pow(2) +
+                            (samples[j].y - rect.centerY / keyHeight).pow(2)) / ALIGN_SCALE
+                }
+            }
+        } else null
         val repeats = GlideRepeatGesture.detect(normalized, centers.map { (x, y) -> x / keyWidth to y / keyHeight })
         return Decoder(centers, keyWidth, keyHeight, samples, spellings?.let { GlideSpellingTrie(it) }, repeats,
-            normalized.zipWithNext().sumOf { (a, b) -> distance(a, b).toDouble() }.toFloat()).run(limit)
+            normalized.zipWithNext().sumOf { (a, b) -> distance(a, b).toDouble() }.toFloat(), gaussianCosts).run(limit)
     }
 
     /** 分号键（双拼 ing 韵母）的字母索引，输出时展开为 "ing"。 */
@@ -178,6 +197,7 @@ object GlideGeometryDecoder {
         private val schemaTrie: GlideSpellingConstraint?,
         repeatCues: List<GlideRepeatGesture.Cue>,
         traceLength: Float,
+        private val gaussianCosts: Array<FloatArray>?,
     ) {
         private data class Repeat(val key: Int, val start: Int, val end: Int)
         private val repeats = repeatCues.map { cue ->
@@ -214,7 +234,7 @@ object GlideGeometryDecoder {
                     if (squared[l][j] <= near) reach[l].add(j)
                 }
                 if (reach[l].isNotEmpty()) {
-                    align[l] = FloatArray(count) { j -> squared[l][j] / ALIGN_SCALE }
+                    align[l] = gaussianCosts?.get(l) ?: FloatArray(count) { j -> squared[l][j] / ALIGN_SCALE }
                 }
             }
             for (from in 0 until letterCount) {

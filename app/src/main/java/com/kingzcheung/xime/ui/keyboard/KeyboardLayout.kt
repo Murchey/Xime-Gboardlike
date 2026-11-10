@@ -385,6 +385,7 @@ fun KeyboardLayout(
     val glideController = remember(glideRegistry, glideCoordinator) {
         com.kingzcheung.xime.glide.GlideKeyboardController(glideRegistry, glideCoordinator,
             glideEnabled = { glideTypingEnabled },
+            densityDpi = { context.resources.displayMetrics.densityDpi.toFloat() },
             schemaSpellings = { schema ->
                 com.kingzcheung.xime.rime.RimeEngine.getInstance().getGlideSpellings(
                     schema, com.kingzcheung.xime.glide.GlideSyllableTrie.syllables(),

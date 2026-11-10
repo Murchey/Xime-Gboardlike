@@ -91,6 +91,12 @@ fun CorrectionSettingsContent(onBack: () -> Unit) {
                             CorrectionPriors.enabled = it
                         }
                     )
+                    Text(
+                        text = "滑动输入默认使用高斯热区纠错；此处的开关和引擎选择用于普通点按。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
                 })
             }
 

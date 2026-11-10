@@ -110,6 +110,9 @@ object RimeConfigHelper {
             // assets 补建可能把用户 schema 覆盖回内置版本，这里再自愈一次才算真正生效
             val healed = neutraliseMissingGrammars(context)
             if (healed > 0) SettingsPreferences.setDeploymentHash(context, "")
+            // 全局模型可能早于这些方案启用；补齐配置后再计算 hash，不能因旧版本标记跳过。
+            val gramFailures = com.kingzcheung.xime.settings.GramActivation.syncConfigured(context)
+            if (gramFailures > 0) FileLogger.w(TAG, "Grammar patch sync failed for $gramFailures schema(s)")
             val currentHash = computeDeploymentHash(context)
             // 产物也要齐全才算部署完成：只看 hash 会把「部分方案没编译出来」当成已部署永久跳过
             val missingBefore = missingCompiledSchemas(context)

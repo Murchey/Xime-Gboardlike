@@ -12,6 +12,7 @@ class GlideKeyboardController(
     private val coordinator: GlideCoordinator,
     glideEnabled: () -> Boolean,
     private val schemaSpellings: ((String) -> Collection<String>)? = null,
+    private val densityDpi: () -> Float = { 160f },
 ) {
     private val arbiter = GlideGestureArbiter(
         eligibleStart = { true },
@@ -22,6 +23,7 @@ class GlideKeyboardController(
     private var currentHost: String = ""
     private var currentSchema: String = ""
     private var activeSpellings: Collection<String>? = null
+    private var activeDensityDpi = 160f
     /** 英文模式：轨迹只解出英文字母串，直接作为候选，不查中文词库。 */
     private var asciiMode: Boolean = false
     private var glideSessionStarted = false
@@ -61,6 +63,7 @@ class GlideKeyboardController(
     ) {
         gestureId++
         asciiMode = ascii
+        activeDensityDpi = densityDpi().takeIf { it.isFinite() && it > 0f } ?: 160f
         val geo = registry.snapshot()
         activeGeometry = geo
         currentHost = hostToken
@@ -119,7 +122,7 @@ class GlideKeyboardController(
                 // 采集真实轨迹（仅在显式开启时写入），供准确率评估与离线训练
                 GlideTraceRecorder.onTraceFinished(points, geo, currentSchema)
                 // 几何解码：按对齐/连线/回溯/停留代价枚举完整音节串（代价低的在前）
-                val hypotheses = GlideGeometryDecoder.decode(points, geo, GLIDE_HYPOTHESES, activeSpellings)
+                val hypotheses = GlideGeometryDecoder.decode(points, geo, GLIDE_HYPOTHESES, activeSpellings, activeDensityDpi)
                 if (hypotheses.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
                 // 英文模式：轨迹解出的字母串即候选，不查中文词库（随键盘中英文模式变化）
                 if (asciiMode) {
@@ -202,7 +205,7 @@ class GlideKeyboardController(
     internal data class DecodeRequest(
         val gestureId: Long, val hostToken: String, val schema: String,
         val geometry: GlideGeometrySnapshot, val points: List<GlidePoint>,
-        val spellings: Collection<String>?, val ascii: Boolean, val final: Boolean,
+        val spellings: Collection<String>?, val ascii: Boolean, val densityDpi: Float, val final: Boolean,
     )
 
     internal data class DecodeResult(val request: DecodeRequest, val rawInput: String, val candidates: List<GlideCandidate>)
@@ -211,14 +214,14 @@ class GlideKeyboardController(
     internal fun previewRequest(): DecodeRequest? {
         if (!isGliding) return null
         val geo = activeGeometry ?: return null
-        return DecodeRequest(gestureId, currentHost, currentSchema, geo, collected.toList(), activeSpellings, asciiMode, false)
+        return DecodeRequest(gestureId, currentHost, currentSchema, geo, collected.toList(), activeSpellings, asciiMode, activeDensityDpi, false)
     }
 
     internal fun finishRequest(pointerId: Long, hostToken: String): DecodeRequest? {
         if (!isGliding) { onUp(pointerId, hostToken); return null }
         if (arbiter.onUp(pointerId) != GlideGestureArbiter.Decision.EMIT_GLIDE) return null
         val geo = activeGeometry ?: return null
-        val request = DecodeRequest(gestureId, hostToken, currentSchema, geo, collected.toList(), activeSpellings, asciiMode, true)
+        val request = DecodeRequest(gestureId, hostToken, currentSchema, geo, collected.toList(), activeSpellings, asciiMode, activeDensityDpi, true)
         clearTrail()
         return request
     }
@@ -226,7 +229,7 @@ class GlideKeyboardController(
     /** 仅在后台线程执行；预览只使用独立查询，不往 Rime 主组合写编码。 */
     internal fun decode(request: DecodeRequest): DecodeResult {
         if (request.final) GlideTraceRecorder.onTraceFinished(request.points, request.geometry, request.schema)
-        val hypotheses = GlideGeometryDecoder.decode(request.points, request.geometry, GLIDE_HYPOTHESES, request.spellings)
+        val hypotheses = GlideGeometryDecoder.decode(request.points, request.geometry, GLIDE_HYPOTHESES, request.spellings, request.densityDpi)
         val candidates = if (request.ascii) hypotheses.mapIndexed { i, h ->
             GlideCandidate("en-$" + i, h.letters, h.letters, score = -h.cost.toDouble())
         } else lookupHypotheses(hypotheses)
