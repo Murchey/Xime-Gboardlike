@@ -96,6 +96,70 @@ object GlideTraceSampler {
     }
 
     /**
+     * 按键行程重采样：按轨迹**先后穿过键的顺序**，每个键取轨迹落在该键内、
+     * 且最接近键中心的点作为代表点。
+     *
+     * 相比 [resampleByArc] 的等弧长采样，它从根上保证**每个被穿过的键都留下一个点**，
+     * 不会因为固定步长把整键落在两个采样点之间而丢键
+     * （实测等弧长步长 0.6×键宽时 q→w→e 会解成 qe）。
+     *
+     * 同一键的连续行程只保留一个代表点；若轨迹离开该键后又回来（回摆），
+     * 会作为新的行程再次保留，交由解码器的回摆去重逻辑处理。
+     */
+    /** 最近一次 [resampleByKeyRun] 各行程的采样点数，供解码器判定"停留"与"掠过"。 */
+    @Volatile var lastRunCounts: List<Int> = emptyList()
+        private set
+
+    fun resampleByKeyRun(
+        points: List<GlidePoint>,
+        geometry: GlideGeometrySnapshot,
+    ): List<GlidePoint> {
+        if (points.size < 2 || !geometry.isValid) return points
+        val out = mutableListOf<GlidePoint>()
+        var currentKeyId: String? = null
+        var best: GlidePoint? = null
+        var bestDist = Float.MAX_VALUE
+
+        // 记录每个行程的采样点数（作为驻留时长的代理指标）
+        val runCounts = mutableListOf<Int>()
+        var runCount = 0
+
+        fun flush() {
+            best?.let {
+                out += it
+                runCounts += runCount
+            }
+            best = null
+            bestDist = Float.MAX_VALUE
+            currentKeyId = null
+            runCount = 0
+        }
+
+        for (p in points) {
+            val key = geometry.keyAt(p.x, p.y) ?: geometry.nearestKey(p.x, p.y, Float.MAX_VALUE)
+            if (key == null) continue
+            if (key.id != currentKeyId) {
+                flush()
+                currentKeyId = key.id
+            }
+            runCount++
+            val d = key.rect.distanceTo(p.x, p.y)
+            if (d < bestDist) {
+                bestDist = d
+                best = p
+            }
+        }
+        flush()
+        lastRunCounts = runCounts
+
+        // 至少保留首尾，保证起止点不丢
+        if (out.isEmpty()) return listOf(points.first(), points.last())
+        if (out.first() !== points.first()) out.add(0, points.first())
+        if (out.last() !== points.last()) out += points.last()
+        return out
+    }
+
+    /**
      * 从重采样点提取特征：最近键、累计弧长、转角和驻留估计。
      * 不在此做解码，也不把连续相同键折叠。
      */

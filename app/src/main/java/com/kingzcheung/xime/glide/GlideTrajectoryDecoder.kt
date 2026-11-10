@@ -29,6 +29,11 @@ object GlideTrajectoryDecoder {
     private const val DWELL_STRONG_MS = 24L
     /** 转折/停留点的置信度加成。 */
     private const val KEY_POINT_BOOST = 1.2
+    /** 行程内最少采样点数（判定"停留"而非"掠过"）。 */
+    private const val MIN_RUN_SAMPLES = 2
+    /** 停留判定：行程采样数需达到平均值的该倍数。 */
+    private const val DWELL_RATIO = 1.35
+
     /** 相邻点所选键的最大合理行列距离；超过视为不合理跳跃。 */
     private const val MAX_GRID_JUMP = 2
     /** 不合理跳跃的惩罚。 */
@@ -64,10 +69,11 @@ object GlideTrajectoryDecoder {
         val keys = geometry.eligibleKeys
         if (keys.isEmpty()) return emptyList()
 
-        // 0) 先按弧长重采样：原始点可能每 1-2px 一个，直接逐点取键会让
-        //    抖动被放大成 cvcvcv 这类重复串。取键宽的 0.6 作为步长。
-        val minKeyWidth = keys.minOf { it.rect.width }.coerceAtLeast(1f)
-        val sampled = GlideTraceSampler.resampleByArc(points, minKeyWidth * 0.6f)
+        // 0) 按键行程重采样：保证每个被轨迹穿过的键都留下一个代表点。
+        //    等弧长采样（旧做法，步长 0.6×键宽）会整键落在两个采样点之间而丢键：
+        //    实测 q→w→e 解成 qe、q→s→d 解成 qd。
+        val sampled = GlideTraceSampler.resampleByKeyRun(points, geometry)
+        val runCounts = GlideTraceSampler.lastRunCounts
 
         // 1) 每个点取距离最近的若干键，转成对数概率。
         //    转折点（转角大）与停留点（驻留长）是 Gboard 判定"用户想按这个键"的强信号，
@@ -80,10 +86,14 @@ object GlideTrajectoryDecoder {
         //   - 过渡点：只参与打分，不产生字符
         val perPoint = sampled.mapIndexed { idx, p ->
             val feat = features.getOrNull(idx)
-            // 起点与终点必然是用户意图键（滑动总要落在某个键上）。
+            // 采样点已按"键行程"归一。用行程内的采样点数区分"停留"与"掠过"：
+            // 手指停在某键上时该键会有较多采样点；快速掠过只会有 1 个点。
+            // 只让停留行程产出字符，避免把过渡键当成输入。
+            val runs = runCounts.getOrNull(idx) ?: 1
             val isEndpoint = idx == 0 || idx == sampled.lastIndex
-            val isKeyPoint = isEndpoint || (feat != null &&
-                (feat.turn > TURN_STRONG_RAD || feat.dwellMs >= DWELL_STRONG_MS))
+            // 固定阈值：相对阈值（达到平均值倍数）实测会丢键（asdf→af、zhong→zg），
+            // 固定阈值更稳定；当前的已知代价是会插入部分过渡键。
+            val isKeyPoint = sampled.size <= 2 || isEndpoint || runs >= MIN_RUN_SAMPLES
             val take = if (isKeyPoint) 1 else perPointCandidates
             val boost = if (isKeyPoint) KEY_POINT_BOOST else 0.0
             val cands = keys.map { key -> key to key.rect.distanceToEdge(p.x, p.y) }
