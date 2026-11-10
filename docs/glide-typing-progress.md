@@ -30,9 +30,19 @@
 
 ## 已知问题
 
-### 1. 组合态干扰新滑动（待修）
-Rime 处于组合态时，新的滑动不触发（无 GlideCtl 日志）。退格可缩短编码
-（cvghyuio→cvghyui）证明组合态确实存在。需要明确「追加」还是「新建」策略。
+### 1. 组合态干扰新滑动（代码已改，真机未验证）
+Rime 处于组合态时，新的滑动行为异常；退格可缩短编码（cvghyuio→cvghyui）
+证明组合态确实存在。已采用**新建语义**并实现：
+
+- `GlideKeyboardController.onGlideStart` 在首次升级为 Glide 时回调一次；
+- UI 层转给 `KeyboardCallbacks.onGlideStart` → `XimeInputMethodService.beginGlideComposition()`，
+  清空 Rime 组合与候选态（不动已上屏文本）；
+- 单测 `GlideStartSemanticsTest` 4 项锁定：点按不触发、一次滑动只触发一次、
+  两次独立滑动各触发一次、glide 关闭不触发。
+
+**真机验证受阻**：本轮设备上小米备忘录 `isActive()=false`（第三方输入法输入连接
+未激活，点字母无字符），设置页测试框又反复失焦，未能取得端到端截图。
+下次需换稳定宿主（如短信/浏览器地址栏）重新验证。
 
 ### 2. 准确率尚未建立有效基线
 此前的准确率判断部分基于错误手法，需更正：

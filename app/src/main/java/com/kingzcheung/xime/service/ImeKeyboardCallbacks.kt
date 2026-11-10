@@ -259,6 +259,10 @@ internal fun rememberImeKeyboardCallbacks(
                 // 滑动输入：整句候选投影到候选栏（未确认，不提交）
                 service.applyGlideCandidates(rawInput, texts)
             },
+            onGlideStart = {
+                // 新建语义：清空既有组合，滑动从零开始编码
+                service.beginGlideComposition()
+            },
             onGestureAction = { action, value ->
                 KeyActionRegistry.execute(action, KeyActionContext(service), value)
             },

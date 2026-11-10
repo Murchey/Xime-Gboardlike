@@ -443,6 +443,25 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
      * 滑动输入整句候选投影：写入候选栏但**不提交**，等待用户确认。
      * 编码区显示首选候选对应的原码，便于用户看到并编辑。
      */
+    /**
+     * 滑动开始：清空既有组合，使新编码从零开始。
+     * 只清组合与候选，不动已上屏文本。
+     */
+    internal fun beginGlideComposition() {
+        runCatching { rimeEngine.clearComposition() }
+        candidateState.value = candidateState.value.copy(
+            inputText = "",
+            preeditText = "",
+            candidates = emptyList(),
+            candidateComments = emptyList(),
+            candidateActions = emptyList(),
+            associationCandidates = emptyList(),
+            isComposing = false,
+            hasNextPage = false,
+            hasPrevPage = false,
+        )
+    }
+
     internal fun applyGlideCandidates(rawInput: String, texts: List<String>) {
         if (texts.isEmpty()) return
         // 把首选编码装进主组合，使引擎有真实组合态：

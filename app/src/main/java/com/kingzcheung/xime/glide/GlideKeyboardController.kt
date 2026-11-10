@@ -23,6 +23,12 @@ class GlideKeyboardController(
     /** 英文模式：轨迹只解出英文字母串，直接作为候选，不查中文词库。 */
     private var asciiMode: Boolean = false
     private var glideSessionStarted = false
+    /**
+     * 滑动真正开始（升级为 Glide）时回调：用于清空引擎既有组合。
+     * 语义选「新建」而非「追加」——一次滑动代表一次独立的输入意图；
+     * 若保留旧组合，Rime 会把新编码拼在旧编码后面，候选完全错乱。
+     */
+    var onGlideStart: (() -> Unit)? = null
 
     /** 当前用于绘制的轨迹点（键盘局部 px）。 */
     val trail: List<GlidePoint> get() = collected.toList()
@@ -73,8 +79,9 @@ class GlideKeyboardController(
             return
         }
         if (arbiter.state.isGlide) {
-            // 首次升级：以当前几何/方案为基线开启会话（此时才清空旧组合）
+            // 首次升级：清空既有组合并新建会话
             if (!glideSessionStarted) {
+                runCatching { onGlideStart?.invoke() }
                 coordinator.session.beginGlide(currentHost, currentSchema, geo.version)
                 glideSessionStarted = true
             }

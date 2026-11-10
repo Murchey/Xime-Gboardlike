@@ -53,6 +53,8 @@ data class KeyboardCallbacks(
      * texts 已按优先级排序；rawInput 是首选候选对应的可编辑编码。
      */
     val onGlideCandidates: ((rawInput: String, texts: List<String>) -> Unit)? = null,
+    /** 滑动真正开始：清空引擎既有组合，避免新编码拼在旧编码后面。 */
+    val onGlideStart: (() -> Unit)? = null,
     val onGestureAction: ((GestureAction, String) -> Unit)? = null,
     val onUpdateToolbarButtons: ((List<String>) -> Unit)? = null,
     /**
