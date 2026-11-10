@@ -90,7 +90,7 @@ data class BubbleDrawData(
 )
 
 /** 圆角气泡的半径修正（px）：较基础圆角减 2px，气泡更紧凑精致。 */
-private const val BUBBLE_RADIUS_DELTA_PX = 2f
+private const val BUBBLE_RADIUS_DELTA_PX = 3f
 
 /** 按压气泡抬起后的滞留时长：随抬起瞬间消失看不清键位提示（主流输入法约 50~80ms），取中值。 */
 private const val PRESS_BUBBLE_RELEASE_DELAY_MS = 60L
@@ -402,13 +402,8 @@ fun rememberSwipeBubbleDrawData(
     // 宽体（显示文字的主体）底部对齐按键顶部，悬在按键正上方不被手指遮挡；
     // 尖端从宽体底部向下延伸 pointerHeightPx（≈按键上半部）指示归属键。
     // 单项圆形气泡没有尖角，额外留 4dp 间隙。
-    val boxTop = if (circularPress) {
-        keyBounds.top - bodyHeightPx - with(density) { 10.dp.toPx() }
-    } else if (isLongPressMode) {
-        keyBounds.top - bodyHeightPx - with(density) { 4.dp.toPx() }
-    } else {
-        keyBounds.top - bodyHeightPx
-    }
+    // 长按与短按气泡共用同一垂直位置，消除两类气泡的错位（原先 10dp/4dp/0dp 三档间隙）
+    val boxTop = keyBounds.top - bodyHeightPx - with(density) { 4.dp.toPx() }
     val boxRight = maxOf(bodyRight, pointerRight)
 
     // 下方块与主体同宽后不再有"尖角贴边"的差异，左右缘恒等——flush 分支自然消失。

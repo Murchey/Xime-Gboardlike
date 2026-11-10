@@ -1034,6 +1034,8 @@ fun SwipeableKeyButton(
                 
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
+                    // 滑动已接管本次手势时不触发长按（保留纯长按功能）
+                    if (glideCtxLocal.enabled && glideCtxLocal.controller?.isGliding == true) return@awaitEachGesture
                     isPressed = true
                     // 新手势：重置出口与横向峰值
                     clickEmitted = false
@@ -1082,6 +1084,8 @@ fun SwipeableKeyButton(
                     
                     val longPressJob = scope.launch {
                         delay(longPressBubbleDelayMs.toLong())
+                        // 滑动已升级时跳过长按气泡：保留纯长按（手指静止），只抑制滑动过程中的误触发
+                        if (glideCtxLocal.enabled && glideCtxLocal.controller?.isGliding == true) return@launch
                         localLongPressTriggered = true
                         view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                         currentOnSwipeStateChange?.invoke(
@@ -2022,6 +2026,8 @@ fun SwipeableIconKeyButton(
 
                     val longPressJob = scope.launch {
                         delay(longPressBubbleDelayMs.toLong())
+                        // 滑动已升级时跳过长按气泡：保留纯长按（手指静止），只抑制滑动过程中的误触发
+                        if (glideCtxLocal.enabled && glideCtxLocal.controller?.isGliding == true) return@launch
                         localLongPressTriggered = true
                         view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                         onSwipeStateChange?.invoke(
@@ -2475,6 +2481,8 @@ fun SwipeableKeyButtonLandscape(
 
                         val longPressJob = scope.launch {
                             delay(longPressBubbleDelayMs.toLong())
+                            // 滑动已升级时跳过长按气泡：保留纯长按（手指静止），只抑制滑动过程中的误触发
+                            if (glideCtxLocal.enabled && glideCtxLocal.controller?.isGliding == true) return@launch
                             localLongPressTriggered = true
                             view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                             currentOnSwipeStateChange?.invoke(
