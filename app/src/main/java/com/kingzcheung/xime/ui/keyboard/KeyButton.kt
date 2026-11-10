@@ -990,8 +990,7 @@ fun SwipeableKeyButton(
                     }
                 )
             }
-            .pointerInput(text, currentLongPressItems.isNullOrEmpty(), glideCtxLocal.enabled) {
-                if (glideCtxLocal.enabled) return@pointerInput
+            .pointerInput(text, currentLongPressItems.isNullOrEmpty()) {
                 if (currentLongPressItems.isNullOrEmpty()) {
                     // 容差点击：不因指针漂出键格（isOutOfBounds）而取消，见 detectTolerantTapGestures
                     detectTolerantTapGestures(
@@ -1973,8 +1972,7 @@ fun SwipeableIconKeyButton(
             // 长按气泡滑动选择（配置了 longPressItems 时生效）。必须放在拖拽手势之后（更内层）：
             // Main pass 内层先收，长按期间消费掉位移，滑动/点击不会再被激活。
             // 短按不消费事件，仍由点击/拖拽块处理，避免重复触发。
-            .pointerInput(currentLongPressItems.isNullOrEmpty(), glideCtxLocal.enabled) {
-                if (glideCtxLocal.enabled) return@pointerInput
+            .pointerInput(currentLongPressItems.isNullOrEmpty()) {
                 if (currentLongPressItems.isNullOrEmpty()) return@pointerInput
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -2431,8 +2429,7 @@ fun SwipeableKeyButtonLandscape(
                     }
                 } else Modifier
             )
-            .pointerInput(currentText, currentLongPressItems.isNullOrEmpty(), currentOnLongPressSelect != null, glideCtxLocal.enabled) {
-                if (glideCtxLocal.enabled) return@pointerInput
+            .pointerInput(currentText, currentLongPressItems.isNullOrEmpty(), currentOnLongPressSelect != null) {
                 if (currentLongPressItems.isNullOrEmpty() || currentOnLongPressSelect == null) {
                     // 容差点击：不因指针漂出键格（isOutOfBounds）而取消，见 detectTolerantTapGestures
                     detectTolerantTapGestures(
