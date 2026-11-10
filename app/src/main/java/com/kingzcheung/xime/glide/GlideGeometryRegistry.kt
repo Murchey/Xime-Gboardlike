@@ -14,14 +14,23 @@ class GlideGeometryRegistry {
     @Volatile private var generation = 0L
     @Volatile private var widthPx = 0f
     @Volatile private var heightPx = 0f
+    /**
+     * 键盘根容器在屏幕中的原点。键用 boundsInRoot 上报（root 坐标），
+     * 而父层 pointerInput 收到的 down.position 是键盘局部坐标；
+     * snapshot 输出时统一减去该原点，保证两侧同一坐标系。
+     */
+    @Volatile private var originX = 0f
+    @Volatile private var originY = 0f
 
     /** 布局开始重建：清空并开启新代际；旧快照立即失效。 */
     @Synchronized
-    fun beginFrame(width: Float, height: Float) {
+    fun beginFrame(width: Float, height: Float, originX: Float = 0f, originY: Float = 0f) {
         generation++
         keys.clear()
         widthPx = width
         heightPx = height
+        this.originX = originX
+        this.originY = originY
     }
 
     /** 上报一个物理键；id 必须稳定（行/列/分区组合），不能用会变化的显示文字。 */
@@ -63,7 +72,15 @@ class GlideGeometryRegistry {
         val rowCenters = cluster(raw.map { it.rect.top })
         val colCenters = cluster(raw.map { it.rect.left })
         val withGrid = raw.map { k ->
+            // 转成键盘局部坐标：与父层 pointerInput 的 down.position 对齐
+            val local = k.rect.copy(
+                left = k.rect.left - originX,
+                top = k.rect.top - originY,
+                right = k.rect.right - originX,
+                bottom = k.rect.bottom - originY,
+            )
             k.copy(
+                rect = local,
                 row = indexOf(rowCenters, k.rect.top),
                 col = indexOf(colCenters, k.rect.left),
             )

@@ -417,7 +417,11 @@ fun KeyboardLayout(
                 keyboardBounds = coordinates.boundsInRoot()
                 // 按键坐标日志需要键盘矩形做跨设备归一化
                 KeyTapLogger.keyboardBounds = keyboardBounds
-                glideRegistry.beginFrame(keyboardBounds.width, keyboardBounds.height)
+                // 传入键盘 root 原点：registry 用 root 坐标收集，快照输出转成局部坐标
+                glideRegistry.beginFrame(
+                    keyboardBounds.width, keyboardBounds.height,
+                    keyboardBounds.left, keyboardBounds.top,
+                )
             }
             .drawWithContent {
                 drawContent()

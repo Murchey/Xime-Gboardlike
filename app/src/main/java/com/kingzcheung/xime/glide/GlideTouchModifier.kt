@@ -21,7 +21,7 @@ fun glideTouchModifier(
     schemaFingerprint: String,
     /** 当前是否为英文模式：滑动结果随中英文模式变化。 */
     asciiMode: Boolean = false,
-    /** 键盘根容器在屏幕中的原点，用于把 pointer 局部坐标转成与几何快照一致的 root 坐标。 */
+    /** 预留偏移；几何快照已是键盘局部坐标，默认不需要叠加。 */
     origin: () -> Offset = { Offset.Zero },
     /** 轨迹点变化时通知外部重绘（Compose state 由调用方持有）。 */
     onTrailChange: (List<GlidePoint>) -> Unit = {},

@@ -89,12 +89,17 @@ adb shell dumpsys input_method | grep mCurId # 确认 mCurId 与 mBoundToMethod=
 - 连续滑动两次：均正常产生中文候选（`szxdfgv` → 实质性的风格 / 实质性的 / 市中），
   第二次滑动还追加了编码 —— 说明**连续滑动可用**。
 
-### 6. 触摸坐标存在偏移（待修）
+### 6. 触摸坐标偏移（本轮已修）
 实测 `GlideTouch: pos=174,461` 对应屏幕 (180,2135)，即 `down.position` 是相对键盘根容器的
 局部坐标，比屏幕坐标少了约 1674px 的垂直偏移；而几何注册用的是 `boundsInRoot` 的 root 坐标。
-两者坐标系不一致，导致滑动命中的键与视觉位置有偏差（滑 Z 行实际命中 S 行）。
-需要统一坐标系：几何注册改用键盘局部坐标，或触摸坐标加上键盘 root 原点。
-（本轮已把 origin 置零以暴露真实偏移，修复留待下一轮。）
+两者坐标系不一致，导致滑动命中的键与视觉位置有偏差。
+
+**修复**：`GlideGeometryRegistry` 增加 originX/originY 字段，`beginFrame` 接收键盘
+root 原点，`snapshot()` 输出时把键矩形减去该原点，统一为键盘局部坐标，
+与 `down.position` 一致。新增 `GlideOriginTest` 4 项锁定。
+
+**真机验证（修正后）**：滑屏幕 Z 行 (180→560, y=2135) 得到 `zxcv`（此前为 `szxdfgv`），
+精确命中 Z-X-C-V，候选为 自行车/展现出/周星驰/在现 —— 坐标系已对齐。
 
 ## 待办
 1. 滑动与既有组合的追加/新建策略。
