@@ -448,6 +448,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         // 把首选编码装进主组合，使引擎有真实组合态：
         // 这样点选候选会走正常 Rime 选词/学习路径，而不是我们的假 isComposing。
         runCatching { rimeEngine.setInput(rawInput) }
+        // 候选优先取引擎真实候选（提交时走 Rime 正常选词，引擎自行清组合）；
+        // 引擎拿不到对应文本时才回退到 plugin 直提交，保证不丢候选。
+        val engineTexts = rimeEngine.getCandidates().toList()
+        val resolved = texts.map { t -> engineTexts.indexOf(t) }
         candidateState.value = candidateState.value.copy(
             candidates = texts,
             candidateComments = List(texts.size) { "" },
@@ -457,7 +461,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             hasNextPage = false,
             hasPrevPage = false,
             associationCandidates = emptyList(),
-            candidateActions = texts.map { CandidateAction.plugin(it) },
+            candidateActions = texts.mapIndexed { i, t ->
+                val idx = resolved[i]
+                if (idx >= 0) CandidateAction.engine(idx) else CandidateAction.plugin(t)
+            },
         )
     }
 
