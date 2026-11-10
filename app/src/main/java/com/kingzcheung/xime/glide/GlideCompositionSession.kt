@@ -33,8 +33,12 @@ class GlideCompositionSession {
     private var _state = State()
     val state: State get() = _state
 
-    /** 开始一次新滑动。返回本次 traceId；已有 PENDING_CONFIRM 时追加编码而非新建。 */
-    fun beginGlide(hostToken: String, schemaFingerprint: String, layoutFingerprint: String): Long {
+    /**
+     * 开始一次新滑动。keepCandidates=true 表示在已有未确认候选后继续输入：
+     * 本次轨迹暂无结果时应保留旧编码与候选，直到新完整串解码成功。
+     */
+    fun beginGlide(hostToken: String, schemaFingerprint: String, layoutFingerprint: String,
+        keepCandidates: Boolean = false): Long {
         val cur = _state
         val traceId = cur.traceId + 1
         _state = cur.copy(
@@ -44,7 +48,7 @@ class GlideCompositionSession {
             hostToken = hostToken,
             schemaFingerprint = schemaFingerprint,
             layoutFingerprint = layoutFingerprint,
-            candidates = emptyList(),
+            candidates = if (keepCandidates) cur.candidates else emptyList(),
             confirmedCandidateId = null,
         )
         return traceId

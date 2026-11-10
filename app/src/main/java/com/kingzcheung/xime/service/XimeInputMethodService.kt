@@ -443,27 +443,42 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
      * 滑动输入整句候选投影：写入候选栏但**不提交**，等待用户确认。
      * 编码区显示首选候选对应的原码，便于用户看到并编辑。
      */
-    /**
-     * 滑动开始：清空既有组合，使新编码从零开始。
-     * 只清组合与候选，不动已上屏文本。
-     */
     internal var glidePreviewActive = false
         private set
 
-    internal fun beginGlideComposition() {
+    /** 由键盘层创建 controller 后注入。 */
+    internal var glideSessionReset: () -> Unit = {}
+
+    /** 候选确认或放弃后，清理候选预览锁并通知 controller 丢弃旧会话。 */
+    internal fun clearGlideSession() {
+        glidePreviewActive = false
+        glideSessionReset()
+    }
+
+    /**
+     * 滑动开始：已有未确认候选时保留组合，返回其编码作为追加前缀；
+     * 无候选时清空从零开始。只清组合与候选，不动已上屏文本。
+     * @return 本次滑动要追加到的编码前缀；无前缀返回空串。
+     */
+    internal fun beginGlideComposition(): String {
         glidePreviewActive = true
-        runCatching { rimeEngine.clearComposition() }
-        candidateState.value = candidateState.value.copy(
-            inputText = "",
-            preeditText = "",
-            candidates = emptyList(),
-            candidateComments = emptyList(),
-            candidateActions = emptyList(),
-            associationCandidates = emptyList(),
-            isComposing = false,
-            hasNextPage = false,
-            hasPrevPage = false,
-        )
+        val state = candidateState.value
+        val prefix = if (state.isComposing && state.inputText.isNotEmpty()) state.inputText else ""
+        if (prefix.isEmpty()) {
+            runCatching { rimeEngine.clearComposition() }
+            candidateState.value = state.copy(
+                inputText = "",
+                preeditText = "",
+                candidates = emptyList(),
+                candidateComments = emptyList(),
+                candidateActions = emptyList(),
+                associationCandidates = emptyList(),
+                isComposing = false,
+                hasNextPage = false,
+                hasPrevPage = false,
+            )
+        }
+        return prefix
     }
 
     /** 滑动中只投影组合预览，抬手后才安装主组合与可确认候选。 */

@@ -28,12 +28,11 @@ class GlideKeyboardController(
     private var asciiMode: Boolean = false
     private var glideSessionStarted = false
     private var gestureId = 0L
-    /**
-     * 滑动真正开始（升级为 Glide）时回调：用于清空引擎既有组合。
-     * 语义选「新建」而非「追加」——一次滑动代表一次独立的输入意图；
-     * 若保留旧组合，Rime 会把新编码拼在旧编码后面，候选完全错乱。
-     */
-    var onGlideStart: (() -> Unit)? = null
+    private var activePrefix = ""
+    /** 滑动升级时返回当前未确认编码，作为本次轨迹的追加前缀；无可追加内容时返回空串。 */
+    var onGlideStart: (() -> String)? = null
+    /** 外部确认或清空候选：丢弃内部会话的旧编码。 */
+    var onGlideReset: (() -> Unit)? = null
 
     /** 当前用于绘制的轨迹点（键盘局部 px）。 */
     val trail: List<GlidePoint> get() = collected.toList()
@@ -52,6 +51,13 @@ class GlideKeyboardController(
     /** 当前会话的候选文本（已按分数排序），供服务层投影到候选栏。 */
     fun candidateTexts(): List<String> = coordinator.session.state.candidates.map { it.text }
 
+    fun resetCompositionSession() {
+        gestureId++
+        activePrefix = ""
+        coordinator.session.onHostChanged()
+        clearTrail()
+    }
+
     fun onDown(
         pointerId: Long,
         x: Float,
@@ -62,6 +68,7 @@ class GlideKeyboardController(
         timeMs: Long = System.currentTimeMillis(),
     ) {
         gestureId++
+        activePrefix = ""
         asciiMode = ascii
         activeDensityDpi = densityDpi().takeIf { it.isFinite() && it > 0f } ?: 160f
         val geo = registry.snapshot()
@@ -88,10 +95,11 @@ class GlideKeyboardController(
             return
         }
         if (arbiter.state.isGlide) {
-            // 首次升级：清空既有组合并新建会话
+            // 首次升级：已有候选时保留其编码作前缀，新建本次手势会话。
             if (!glideSessionStarted) {
-                runCatching { onGlideStart?.invoke() }
-                coordinator.session.beginGlide(currentHost, currentSchema, geo.version)
+                activePrefix = if (asciiMode) "" else runCatching { onGlideStart?.invoke().orEmpty() }.getOrDefault("")
+                coordinator.session.beginGlide(currentHost, currentSchema, geo.version,
+                    keepCandidates = activePrefix.isNotEmpty())
                 glideSessionStarted = true
             }
             collected += GlidePoint(x, y, timeMs, pointerId.toInt())
@@ -156,20 +164,20 @@ class GlideKeyboardController(
         hypotheses: List<GlideGeometryDecoder.Hypothesis>,
         hostToken: String,
     ): GlideCoordinator.Outcome {
-        val sorted = lookupHypotheses(hypotheses)
+        val sorted = lookupHypotheses(hypotheses, activePrefix)
         if (sorted.isEmpty()) return GlideCoordinator.Outcome.NoCandidate
         installCandidates(sorted, hostToken)
         return GlideCoordinator.Outcome.ShowCandidates
     }
 
-    private fun lookupHypotheses(hypotheses: List<GlideGeometryDecoder.Hypothesis>): List<GlideCandidate> {
+    private fun lookupHypotheses(hypotheses: List<GlideGeometryDecoder.Hypothesis>, prefix: String = ""): List<GlideCandidate> {
         val merged = mutableListOf<GlideCandidate>()
         val seen = mutableSetOf<String>()
         // 几何代价：越小越好；转成分数要取负
         val best = hypotheses.minOfOrNull { it.cost } ?: 0f
         for ((hIdx, h) in hypotheses.withIndex()) {
-            // 已是当前方案的真实编码（含 ;），不得再做全拼字符串替换。
-            val query = h.letters
+            // 已有未确认候选时把当前编码作前缀，用完整串整句查词。
+            val query = prefix + h.letters
             when (val r = coordinator.lookup.lookup(query)) {
                 is GlideLookupResult.Candidates -> {
                     for ((i, c) in r.list.withIndex()) {
@@ -195,8 +203,8 @@ class GlideKeyboardController(
     private fun installCandidates(sorted: List<GlideCandidate>, hostToken: String) {
         val top = sorted.first()
         val session = coordinator.session
-        session.beginGlide(hostToken, session.state.schemaFingerprint, session.state.layoutFingerprint)
-        session.appendCode(top.rawInput)
+        session.beginGlide(hostToken, session.state.schemaFingerprint, session.state.layoutFingerprint,
+            keepCandidates = session.state.rawInput.isNotEmpty())
         session.deliverCandidates(
             session.state.traceId, session.state.revision, hostToken, top.rawInput, sorted,
         )
@@ -205,7 +213,8 @@ class GlideKeyboardController(
     internal data class DecodeRequest(
         val gestureId: Long, val hostToken: String, val schema: String,
         val geometry: GlideGeometrySnapshot, val points: List<GlidePoint>,
-        val spellings: Collection<String>?, val ascii: Boolean, val densityDpi: Float, val final: Boolean,
+        val spellings: Collection<String>?, val ascii: Boolean, val densityDpi: Float,
+        val final: Boolean, val prefix: String = "",
     )
 
     internal data class DecodeResult(val request: DecodeRequest, val rawInput: String, val candidates: List<GlideCandidate>)
@@ -214,14 +223,14 @@ class GlideKeyboardController(
     internal fun previewRequest(): DecodeRequest? {
         if (!isGliding) return null
         val geo = activeGeometry ?: return null
-        return DecodeRequest(gestureId, currentHost, currentSchema, geo, collected.toList(), activeSpellings, asciiMode, activeDensityDpi, false)
+        return DecodeRequest(gestureId, currentHost, currentSchema, geo, collected.toList(), activeSpellings, asciiMode, activeDensityDpi, false, activePrefix)
     }
 
     internal fun finishRequest(pointerId: Long, hostToken: String): DecodeRequest? {
         if (!isGliding) { onUp(pointerId, hostToken); return null }
         if (arbiter.onUp(pointerId) != GlideGestureArbiter.Decision.EMIT_GLIDE) return null
         val geo = activeGeometry ?: return null
-        val request = DecodeRequest(gestureId, hostToken, currentSchema, geo, collected.toList(), activeSpellings, asciiMode, activeDensityDpi, true)
+        val request = DecodeRequest(gestureId, hostToken, currentSchema, geo, collected.toList(), activeSpellings, asciiMode, activeDensityDpi, true, activePrefix)
         clearTrail()
         return request
     }
@@ -232,8 +241,12 @@ class GlideKeyboardController(
         val hypotheses = GlideGeometryDecoder.decode(request.points, request.geometry, GLIDE_HYPOTHESES, request.spellings, request.densityDpi)
         val candidates = if (request.ascii) hypotheses.mapIndexed { i, h ->
             GlideCandidate("en-$" + i, h.letters, h.letters, score = -h.cost.toDouble())
-        } else lookupHypotheses(hypotheses)
-        return DecodeResult(request, candidates.firstOrNull()?.rawInput ?: hypotheses.firstOrNull()?.letters.orEmpty(), candidates)
+        } else lookupHypotheses(hypotheses, request.prefix)
+        // 预览尚未解出字母时，编码至少仍是已有前缀，避免显示短于当前组合的旧串。
+        val rawInput = candidates.firstOrNull()?.rawInput
+            ?: (request.prefix + hypotheses.firstOrNull()?.letters.orEmpty()).takeIf { it.isNotEmpty() }
+            ?: request.prefix
+        return DecodeResult(request, rawInput, candidates)
     }
 
     internal fun isCurrent(request: DecodeRequest): Boolean =
@@ -245,8 +258,10 @@ class GlideKeyboardController(
         if (!isCurrent(request)) return false
         if (!request.final) return isGliding
         if (isGliding) return false
-        if (result.candidates.isEmpty()) coordinator.session.cancel()
-        else installCandidates(result.candidates, request.hostToken)
+        if (result.candidates.isEmpty()) {
+            // 有可追加前缀但本次未解出新候选：保留既有组合与候选，不清空。
+            if (request.prefix.isEmpty()) coordinator.session.cancel()
+        } else installCandidates(result.candidates, request.hostToken)
         return true
     }
 

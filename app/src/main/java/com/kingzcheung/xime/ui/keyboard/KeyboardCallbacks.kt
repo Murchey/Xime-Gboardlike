@@ -53,8 +53,8 @@ data class KeyboardCallbacks(
      * texts 已按优先级排序；rawInput 是首选候选对应的可编辑编码。
      */
     val onGlideCandidates: ((rawInput: String, texts: List<String>) -> Unit)? = null,
-    /** 滑动真正开始：清空引擎既有组合，避免新编码拼在旧编码后面。 */
-    val onGlideStart: (() -> Unit)? = null,
+    /** 滑动真正开始：返回已有未确认编码作为追加前缀；无前缀返回空串。 */
+    val onGlideStart: (() -> String)? = null,
     /** 手指未抬起时的组词预览，不提交、不写入 Rime 主组合。 */
     val onGlidePreview: ((rawInput: String, texts: List<String>) -> Unit)? = null,
     val onGestureAction: ((GestureAction, String) -> Unit)? = null,

@@ -99,7 +99,10 @@ fun glideTouchModifier(
                                     delay(60L)
                                     val request = controller.previewRequest() ?: return@launch
                                     val result = withContext(glideDecodeDispatcher) { controller.decode(request) }
-                                    if (controller.accept(result)) onPreview(result.rawInput, result.candidates.map { it.text })
+                                    if (controller.accept(result)) {
+                                    if (result.candidates.isNotEmpty()) onPreview(result.rawInput, result.candidates.map { it.text })
+                                    else if (result.request.prefix.isNotEmpty()) onPreview(result.rawInput, emptyList())
+                                }
                                 }
                             }
                         }

@@ -261,7 +261,7 @@ internal fun rememberImeKeyboardCallbacks(
             },
             onGlidePreview = { raw, texts -> service.previewGlideCandidates(raw, texts) },
             onGlideStart = {
-                // 新建语义：清空既有组合，滑动从零开始编码
+                // 已有候选时返回其编码作前缀继续累积；否则清空从零开始
                 service.beginGlideComposition()
             },
             onGestureAction = { action, value ->

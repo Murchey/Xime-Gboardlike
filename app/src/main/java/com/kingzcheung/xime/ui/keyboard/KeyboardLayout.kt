@@ -395,7 +395,12 @@ fun KeyboardLayout(
     }
     // 滑动开始即清空既有组合（新建语义），避免新编码拼在旧编码后面
     val currentOnGlideStart by rememberUpdatedState(callbacks.onGlideStart)
-    remember(glideController) { glideController.onGlideStart = { currentOnGlideStart?.invoke() } }
+    remember(glideController) {
+        glideController.onGlideStart = { currentOnGlideStart?.invoke() ?: "" }
+        glideController.onGlideReset = { glideController.resetCompositionSession() }
+        (context as? com.kingzcheung.xime.service.XimeInputMethodService)?.glideSessionReset =
+            { glideController.resetCompositionSession() }
+    }
 
     CompositionLocalProvider(
         LocalShowLetterHintSymbols provides showLetterHintSymbols,

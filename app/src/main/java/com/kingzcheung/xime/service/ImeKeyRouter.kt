@@ -1367,6 +1367,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                     hasPrevPage = false,
                     isShowingRecentClipboard = false
                 )
+                service.clearGlideSession()
                 service.uiState.value = service.uiState.value.copy(
                     t9ResetSignal = service.uiState.value.t9ResetSignal + 1,
                     t9RightCandidateSelectedCount = 0,
@@ -1417,6 +1418,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
             // 采集：用户确认了文本，把它作为该次滑动的期望结果落盘
             com.kingzcheung.xime.glide.GlideTraceRecorder.attachExpected(text)
             service.commitText(text)
+            service.clearGlideSession()
             service.candidateState.value = service.candidateState.value.copy(
                 inputText = "",
                 preeditText = "",

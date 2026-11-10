@@ -24,7 +24,7 @@ class GlideStartSemanticsTest {
         }
         val starts = mutableListOf<Int>()
         val ctl = GlideKeyboardController(r, GlideCoordinator(L(), C()), glideEnabled = { glideOn })
-        ctl.onGlideStart = { starts += 1 }
+        ctl.onGlideStart = { starts += 1; "" }
         return ctl to starts
     }
 
