@@ -14,6 +14,8 @@ data class GlideContext(
     val arbiter: GlideGestureArbiter? = null,
     /** 物理键位注册表，由 KeyboardLayout 根容器持有；字母键在布局时上报几何。 */
     val registry: GlideGeometryRegistry? = null,
+    /** 滑动编排器：字母键据此判断"本次手势是否已被 glide 接管"，从而抑制原有动作。 */
+    val controller: GlideKeyboardController? = null,
 )
 
 val LocalGlideContext = compositionLocalOf { GlideContext() }

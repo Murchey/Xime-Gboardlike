@@ -393,7 +393,8 @@ fun KeyboardLayout(
         LocalHintExtraScale provides hintExtraScaleFor(tabletParams),
         // 阶段B：仅把滑动开关状态下发到 26 键树，尚未接管任何 pointerInput
         LocalGlideContext provides GlideContext(
-            enabled = glideTypingEnabled, showTrail = glideTrailVisible, registry = glideRegistry),
+            enabled = glideTypingEnabled, showTrail = glideTrailVisible,
+            registry = glideRegistry, controller = glideController),
         LocalKeyVisualPadding provides PaddingValues(
             horizontal = if (tabletParams) 4.dp else (kbKey.spacingFor("qwerty").first?.dp ?: 2.dp),
             // 手机横屏：只认 qwerty 专属覆盖（keyboard.key.qwerty.spacing_y），回退 2.5dp；

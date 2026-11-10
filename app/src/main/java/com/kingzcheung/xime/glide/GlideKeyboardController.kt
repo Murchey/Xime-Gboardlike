@@ -25,6 +25,14 @@ class GlideKeyboardController(
     /** 当前用于绘制的轨迹点（键盘局部 px）。 */
     val trail: List<GlidePoint> get() = collected.toList()
     val isGliding: Boolean get() = arbiter.state.isGlide
+
+    /**
+     * 本次手势是否已被滑动输入接管（含 DOWN 后的 Pending 阶段）。
+     * KeyButton 用它抑制点击与方向动作：Pending 期间若放行，会先打出一个字符，
+     * 之后即便升级为 Glide 也已产生污染。
+     */
+    val isCapturing: Boolean
+        get() = arbiter.state.owner == GlideGestureArbiter.Owner.PENDING || arbiter.state.isGlide
     /** 当前会话的可编辑编码（供阶段B临时送进现有 Rime 输入链路产生候选）。 */
     fun rawInputForDisplay(): String = coordinator.session.state.rawInput
 

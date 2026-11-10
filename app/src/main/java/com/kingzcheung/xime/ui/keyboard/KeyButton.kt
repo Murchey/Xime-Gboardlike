@@ -841,6 +841,8 @@ fun SwipeableKeyButton(
      */
     fun emitClick(atX: Float, atY: Float) {
         if (clickEmitted) return
+        // 已升级为滑动的本次手势不得补点击；普通点按（未升级）照常上屏
+        if (glideCtxLocal.enabled && glideCtxLocal.controller?.isGliding == true) return
         // 被判成滑动（含 action: none）或横向光标手势时本就不该上屏
         val swiped = hasTriggeredSwipeUp || hasTriggeredSwipeDown ||
             hasTriggeredSwipeLeft || hasTriggeredSwipeRight
@@ -867,7 +869,10 @@ fun SwipeableKeyButton(
         modifier = modifier
             .fillMaxHeight()
             .fillMaxWidth()
-            .pointerInput(Unit) {
+            .pointerInput(glideCtxLocal.enabled) {
+                // 滑动输入开启时字母键不挂载拖动手势：整条手势交给父层 glide 采集，
+                // 从根上避免逐键上屏、上滑符号与补点击。
+                if (glideCtxLocal.enabled) return@pointerInput
                 detectDragGestures(
                     onDragStart = {
                         dragActivated = true
@@ -917,6 +922,8 @@ fun SwipeableKeyButton(
                         currentOnSwipeStateChange?.invoke(SwipeState(false, null, false, emptyList(), false, null), buttonBounds)
                     },
                     onDrag = { change, dragAmount ->
+                        // 滑动输入期间不执行方向动作/气泡/长按，也不累积点击判定
+                        if (glideCtxLocal.enabled && glideCtxLocal.controller?.isCapturing == true) return@detectDragGestures
                         dragOffsetX += dragAmount.x
                         dragOffsetY += dragAmount.y
                         // 横向净位移峰值（横向分量占优时），与父层光标手势同口径
@@ -983,7 +990,8 @@ fun SwipeableKeyButton(
                     }
                 )
             }
-            .pointerInput(text, currentLongPressItems.isNullOrEmpty()) {
+            .pointerInput(text, currentLongPressItems.isNullOrEmpty(), glideCtxLocal.enabled) {
+                if (glideCtxLocal.enabled) return@pointerInput
                 if (currentLongPressItems.isNullOrEmpty()) {
                     // 容差点击：不因指针漂出键格（isOutOfBounds）而取消，见 detectTolerantTapGestures
                     detectTolerantTapGestures(
@@ -1786,7 +1794,10 @@ fun SwipeableIconKeyButton(
                     }
                 )
             }
-            .pointerInput(Unit) {
+            .pointerInput(glideCtxLocal.enabled) {
+                // 滑动输入开启时字母键不挂载拖动手势：整条手势交给父层 glide 采集，
+                // 从根上避免逐键上屏、上滑符号与补点击。
+                if (glideCtxLocal.enabled) return@pointerInput
                 detectDragGestures(
                     onDragStart = {
                         dragActivated = true
@@ -1962,7 +1973,8 @@ fun SwipeableIconKeyButton(
             // 长按气泡滑动选择（配置了 longPressItems 时生效）。必须放在拖拽手势之后（更内层）：
             // Main pass 内层先收，长按期间消费掉位移，滑动/点击不会再被激活。
             // 短按不消费事件，仍由点击/拖拽块处理，避免重复触发。
-            .pointerInput(currentLongPressItems.isNullOrEmpty()) {
+            .pointerInput(currentLongPressItems.isNullOrEmpty(), glideCtxLocal.enabled) {
+                if (glideCtxLocal.enabled) return@pointerInput
                 if (currentLongPressItems.isNullOrEmpty()) return@pointerInput
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -2419,7 +2431,8 @@ fun SwipeableKeyButtonLandscape(
                     }
                 } else Modifier
             )
-            .pointerInput(currentText, currentLongPressItems.isNullOrEmpty(), currentOnLongPressSelect != null) {
+            .pointerInput(currentText, currentLongPressItems.isNullOrEmpty(), currentOnLongPressSelect != null, glideCtxLocal.enabled) {
+                if (glideCtxLocal.enabled) return@pointerInput
                 if (currentLongPressItems.isNullOrEmpty() || currentOnLongPressSelect == null) {
                     // 容差点击：不因指针漂出键格（isOutOfBounds）而取消，见 detectTolerantTapGestures
                     detectTolerantTapGestures(
