@@ -135,21 +135,31 @@ class GlideKeyboardController(
         }
     }
 
-    /** 多假设：逐条查 Rime 并按假设分数合并候选，交给会话做待确认。 */
+    /**
+     * 多假设：逐条查 Rime 并按「空间分 + 语言模型序位」合并候选。
+     *
+     * 排序权重说明：Rime 的候选顺序本身来自词频/语言模型，是消解相邻键歧义
+     * （a/s、z/h 这类空间分几乎相同的情况）最可靠的依据。因此：
+     * - 假设内部位次 (i) 的惩罚要明显大于假设之间的空间分差；
+     * - 首选假设的第 0 位候选优先于次选假设的第 0 位候选。
+     */
     private fun decodeWithHypotheses(
         hypotheses: List<GlideTrajectoryDecoder.Hypothesis>,
         hostToken: String,
     ): GlideCoordinator.Outcome {
         val merged = mutableListOf<GlideCandidate>()
         val seen = mutableSetOf<String>()
-        for (h in hypotheses) {
+        for ((hIdx, h) in hypotheses.withIndex()) {
             when (val r = coordinator.lookup.lookup(h.code)) {
                 is GlideLookupResult.Candidates -> {
                     for ((i, c) in r.list.withIndex()) {
                         if (!seen.add(c.text)) continue
+                        // 位次惩罚（语言模型信号）> 假设间空间分差（通常 < 0.5）
+                        val rankPenalty = i * RANK_PENALTY_WEIGHT
+                        val hypPenalty = hIdx * HYPOTHESIS_PENALTY_WEIGHT
                         merged += c.copy(
-                            id = "glide-" + hypotheses.indexOf(h) + "-" + i + "-" + c.text,
-                            score = h.score - i * 0.1,
+                            id = "glide-" + hIdx + "-" + i + "-" + c.text,
+                            score = h.score - rankPenalty - hypPenalty,
                         )
                     }
                 }
@@ -176,6 +186,13 @@ class GlideKeyboardController(
     }
 
     fun allowFallbackClick(): Boolean = arbiter.allowFallbackClick()
+
+    private companion object {
+        /** Rime 候选位次惩罚：体现语言模型信号，需大于假设间空间分差。 */
+        const val RANK_PENALTY_WEIGHT = 0.45
+        /** 假设之间的惩罚：空间分已含此信息，这里只需弱化次选假设。 */
+        const val HYPOTHESIS_PENALTY_WEIGHT = 0.15
+    }
 
     private fun clearTrail() {
         collected.clear()
