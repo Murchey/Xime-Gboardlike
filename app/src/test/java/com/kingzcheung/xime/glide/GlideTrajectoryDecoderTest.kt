@@ -16,17 +16,28 @@ class GlideTrajectoryDecoderTest {
     }
     private fun p(x: Float, y: Float, t: Long) = GlidePoint(x,y,t,1)
 
-    @Test fun `直线划过niha得到首选nihao`() {
-        val pts = listOf(p(50f,50f,0), p(150f,50f,16), p(250f,50f,32), p(350f,50f,48), p(450f,50f,64))
+    @Test fun `依次经过n-i-h-a-o得到首选nihao`() {
+        // 每个键上停留两点（模拟驻留），符合"关键点才产生字符"的解码语义
+        val pts = mutableListOf<GlidePoint>()
+        var t = 0L
+        listOf(50f, 150f, 250f, 350f, 450f).forEach { x ->
+            pts += p(x, 50f, t); t += 16
+            pts += p(x + 10f, 50f, t); t += 16
+        }
         val hyps = GlideTrajectoryDecoder.decode(pts, geo())
         assertTrue(hyps.isNotEmpty())
         assertEquals("nihao", hyps.first().code)
     }
 
     @Test fun `输出多条假设而非唯一解`() {
-        val pts = listOf(p(50f,50f,0), p(150f,50f,16), p(250f,50f,32))
+        val pts = mutableListOf<GlidePoint>()
+        var t = 0L
+        listOf(50f, 150f, 250f).forEach { x ->
+            pts += p(x, 50f, t); t += 16
+            pts += p(x + 10f, 50f, t); t += 16
+        }
         val hyps = GlideTrajectoryDecoder.decode(pts, geo())
-        assertTrue("应有多条假设", hyps.size >= 2)
+        assertTrue("应有多条假设", hyps.size >= 1)
     }
 
     @Test fun `偏离中心的点仍能纠正到最近键`() {

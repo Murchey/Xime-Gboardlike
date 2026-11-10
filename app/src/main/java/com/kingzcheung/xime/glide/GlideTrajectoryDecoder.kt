@@ -20,16 +20,22 @@ object GlideTrajectoryDecoder {
     /** 回摆去重窗口：最近几个键内重复出现视为抖动，不再追加字符。 */
     private const val DISTINCT_WINDOW = 3
 
-    /** 转角超过该值（弧度）视为转折点，是明确的按键意图信号。 */
-    private const val TURN_STRONG_RAD = 0.9f
+    /**
+     * 转角超过该值（弧度）视为转折点。真实键盘滑动在键与键之间会有明显转向
+     * （同一行内约为 0，跨行可达 π/2 以上），阈值取 0.55 可覆盖跨行转移。
+     */
+    private const val TURN_STRONG_RAD = 0.55f
     /** 驻留超过该时长（ms）视为停留点。 */
-    private const val DWELL_STRONG_MS = 80L
+    private const val DWELL_STRONG_MS = 24L
     /** 转折/停留点的置信度加成。 */
     private const val KEY_POINT_BOOST = 1.2
     /** 相邻点所选键的最大合理行列距离；超过视为不合理跳跃。 */
     private const val MAX_GRID_JUMP = 2
     /** 不合理跳跃的惩罚。 */
     private const val JUMP_PENALTY = 1.5
+
+    /** 某采样点上的候选键：key 键、对数概率、是否为关键点（产生字符）。 */
+    private data class PointCand(val key: GlideKey, val logP: Double, val isKeyPoint: Boolean)
 
     /** 一个解码假设。 */
     data class Hypothesis(
@@ -67,15 +73,24 @@ object GlideTrajectoryDecoder {
         //    转折点（转角大）与停留点（驻留长）是 Gboard 判定"用户想按这个键"的强信号，
         //    这里给这类点更高的置信度，并在其附近限制候选键数（减少歧义）。
         val features = GlideTraceSampler.extractFeatures(sampled, geometry, Float.MAX_VALUE)
+        // 关键修正：真实滑动中，手指从 A 键划到 B 键会经过中间键，
+        // 但这些中间键**不是**用户想输入的字符（Gboard 用 HMM 区分"经过"与"停留"）。
+        // 这里把点分成两类：
+        //   - key point（方向有转折、或驻留明显）：产生字符
+        //   - 过渡点：只参与打分，不产生字符
         val perPoint = sampled.mapIndexed { idx, p ->
             val feat = features.getOrNull(idx)
-            val isKeyPoint = feat != null && (feat.turn > TURN_STRONG_RAD || feat.dwellMs >= DWELL_STRONG_MS)
+            // 起点与终点必然是用户意图键（滑动总要落在某个键上）。
+            val isEndpoint = idx == 0 || idx == sampled.lastIndex
+            val isKeyPoint = isEndpoint || (feat != null &&
+                (feat.turn > TURN_STRONG_RAD || feat.dwellMs >= DWELL_STRONG_MS))
             val take = if (isKeyPoint) 1 else perPointCandidates
             val boost = if (isKeyPoint) KEY_POINT_BOOST else 0.0
-            keys.map { key -> key to key.rect.distanceToEdge(p.x, p.y) }
+            val cands = keys.map { key -> key to key.rect.distanceToEdge(p.x, p.y) }
                 .sortedBy { it.second }
                 .take(take)
                 .map { (key, dist) -> key to (spatialLogProb(dist, key) + boost) }
+            cands.map { c -> PointCand(c.first, c.second, isKeyPoint) }
         }
 
         // 2) beam search：状态为"编码 + 最后键 + 累计分"
@@ -85,25 +100,27 @@ object GlideTrajectoryDecoder {
         for ((i, cands) in perPoint.withIndex()) {
             val next = mutableListOf<Node>()
             for (node in beam) {
-                for ((key, logP) in cands) {
+                for (c in cands) {
+                    val key = c.key
+                    val logP = c.logP
+                    val isKeyPoint = c.isKeyPoint
                     // 路径合理性：真实滑动不会从 q 直接跳到 m。
-                    // 与上一个键的行列距离过大时给显著惩罚（不直接禁止，保留容错）。
                     val lastKey = node.keyIds.lastOrNull()?.let { id -> keys.firstOrNull { it.id == id } }
                     val jumpPenalty = if (lastKey != null) {
                         val d = lastKey.gridDistance(key)
                         if (d > MAX_GRID_JUMP) JUMP_PENALTY else 0.0
                     } else 0.0
-                    // 回摆去重：轨迹在相邻两键间抖动时（h→i→h→i），只应记一次转移。
-                    // 看最近 DISTINCT_WINDOW 个键里是否已出现过该键。
                     val recent = node.keyIds.takeLast(DISTINCT_WINDOW)
                     val repeated = recent.contains(key.id)
-                    val newCode = if (repeated) node.code else node.code + key.code
+                    // 只有 key point 才产生字符；过渡点仅累计分数。
+                    val emits = isKeyPoint && !repeated
+                    val newCode = if (emits) node.code + key.code else node.code
                     val penalized = if (repeated) logP - 0.6 else logP - jumpPenalty
                     next += Node(
                         code = newCode,
                         lastKeyId = key.id,
                         score = node.score + penalized,
-                        keyIds = node.keyIds + key.id,
+                        keyIds = if (isKeyPoint) node.keyIds + key.id else node.keyIds,
                     )
                 }
             }
