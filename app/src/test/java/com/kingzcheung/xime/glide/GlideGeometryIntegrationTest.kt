@@ -38,7 +38,7 @@ class GlideGeometryIntegrationTest {
         val ctl = GlideKeyboardController(r, GlideCoordinator(l, object : GlideCommitter {
             override fun installRawInput(rawInput: String) = true
             override fun selectCandidate(rawInput: String, text: String) = true
-        })) { true }
+        }), glideEnabled = { true })
         return ctl to l
     }
 

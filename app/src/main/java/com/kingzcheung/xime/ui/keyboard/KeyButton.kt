@@ -469,6 +469,7 @@ fun KeyButton(
     var dragActivated by remember { mutableStateOf(false) }
     
     val density = LocalDensity.current
+    val glideCtxLocal = com.kingzcheung.xime.glide.LocalGlideContext.current
     val view = LocalView.current
     val keyFontFamily = AppFonts.keyFontFamily
     val keyLabelFontFamily = AppFonts.keyLabelFontFamily
@@ -521,6 +522,18 @@ fun KeyButton(
             modifier = modifier
                 .fillMaxHeight()
                 .fillMaxWidth()
+                .onGloballyPositioned { coordinates ->
+                    // 双拼分号韵母键：注册进滑动几何，滑动经过时解码为 ing
+                    if (glideCtxLocal.enabled && text == ";") {
+                        val b = coordinates.boundsInRoot()
+                        glideCtxLocal.registry?.register(
+                            com.kingzcheung.xime.glide.GlideKey(
+                                id = "k_semicolon", code = ";",
+                                rect = com.kingzcheung.xime.glide.GlideKeyRect(b.left, b.top, b.right, b.bottom),
+                            )
+                        )
+                    }
+                }
                 .pointerInput(Unit) {
                     detectDragGestures(
                         onDragStart = {

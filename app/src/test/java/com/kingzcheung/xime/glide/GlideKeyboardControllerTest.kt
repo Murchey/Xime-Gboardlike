@@ -60,7 +60,7 @@ class GlideKeyboardControllerTest {
     }
     private fun setup(l: L): GlideKeyboardController {
         val c = C()
-        return GlideKeyboardController(registry(), GlideCoordinator(l, c)) { true }
+        return GlideKeyboardController(registry(), GlideCoordinator(l, c), glideEnabled = { true })
     }
 
     @Test fun `短按当点按 不产生glide与查询`() {
@@ -118,7 +118,7 @@ class GlideKeyboardControllerTest {
 
     @Test fun `glide关闭时点按语义保持不变`() {
         val l = L()
-        val ctl = GlideKeyboardController(registry(), GlideCoordinator(l, C())) { false }
+        val ctl = GlideKeyboardController(registry(), GlideCoordinator(l, C()), glideEnabled = { false })
         ctl.onDown(1, 50f, 50f, host, schema)
         ctl.onMove(1, 250f, 50f, false)
         // 功能关闭时 glide 不接管：返回 Idle，由原有点击链路处理（allowFallbackClick=true）

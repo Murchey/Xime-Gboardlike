@@ -376,9 +376,10 @@ fun KeyboardLayout(
         )
     }
     val glideController = remember(glideRegistry, glideCoordinator) {
-        com.kingzcheung.xime.glide.GlideKeyboardController(glideRegistry, glideCoordinator) {
-            glideTypingEnabled
-        }
+        com.kingzcheung.xime.glide.GlideKeyboardController(glideRegistry, glideCoordinator,
+            glideEnabled = { glideTypingEnabled },
+            semicolonFinal = { semicolonFinal },
+        )
     }
     // 滑动开始即清空既有组合（新建语义），避免新编码拼在旧编码后面
     val currentOnGlideStart by rememberUpdatedState(callbacks.onGlideStart)

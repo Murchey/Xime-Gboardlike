@@ -23,7 +23,7 @@ class GlideStartSemanticsTest {
             r.register(GlideKey("k" + i, c, GlideKeyRect(i * 100f, 0f, i * 100f + 100f, 100f)))
         }
         val starts = mutableListOf<Int>()
-        val ctl = GlideKeyboardController(r, GlideCoordinator(L(), C())) { glideOn }
+        val ctl = GlideKeyboardController(r, GlideCoordinator(L(), C()), glideEnabled = { glideOn })
         ctl.onGlideStart = { starts += 1 }
         return ctl to starts
     }

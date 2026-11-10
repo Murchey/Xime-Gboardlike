@@ -11,6 +11,8 @@ class GlideKeyboardController(
     private val registry: GlideGeometryRegistry,
     private val coordinator: GlideCoordinator,
     glideEnabled: () -> Boolean,
+    /** 当前方案是否用分号输入 ing（紫光/搜狗/微软双拼）：决定编码送 Rime 前是否把 ing 转为 ;。 */
+    private val semicolonFinal: () -> Boolean = { false },
 ) {
     private val arbiter = GlideGestureArbiter(
         eligibleStart = { true },
@@ -152,7 +154,8 @@ class GlideKeyboardController(
         // 几何代价：越小越好；转成分数要取负
         val best = hypotheses.minOfOrNull { it.cost } ?: 0f
         for ((hIdx, h) in hypotheses.withIndex()) {
-            when (val r = coordinator.lookup.lookup(h.letters)) {
+            val query = if (semicolonFinal()) h.letters.replace("ing", ";") else h.letters
+            when (val r = coordinator.lookup.lookup(query)) {
                 is GlideLookupResult.Candidates -> {
                     for ((i, c) in r.list.withIndex()) {
                         if (!seen.add(c.text)) continue

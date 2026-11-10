@@ -89,15 +89,22 @@ object GlideGeometryDecoder {
         return Decoder(centers, keyWidth, keyHeight, samples).run(limit)
     }
 
+    /** 分号键（双拼 ing 韵母）的字母索引，输出时展开为 "ing"。 */
+    const val SEMICOLON_INDEX = 26
+
     private fun centersOf(geometry: GlideGeometrySnapshot): Array<Pair<Float, Float>>? {
-        val out = arrayOfNulls<Pair<Float, Float>>(26)
+        val out = arrayOfNulls<Pair<Float, Float>>(27)
         for (key in geometry.eligibleKeys) {
             if (key.code.length != 1) continue
             val c = key.code[0].lowercaseChar()
-            if (c !in 'a'..'z') continue
-            out[c - 'a'] = key.rect.centerX to key.rect.centerY
+            if (c in 'a'..'z') out[c - 'a'] = key.rect.centerX to key.rect.centerY
+            else if (c == ';') out[SEMICOLON_INDEX] = key.rect.centerX to key.rect.centerY
         }
-        return if (out.all { it != null }) out.map { it!! }.toTypedArray() else null
+        // a-z 必须齐全；分号键可选（双拼方案才有）
+        if (out.take(26).any { it == null }) return null
+        // 无分号键时收缩到 26，保证索引连续
+        val size = if (out[SEMICOLON_INDEX] != null) 27 else 26
+        return (0 until size).map { out[it]!! }.toTypedArray()
     }
 
     private fun minKeyWidth(geometry: GlideGeometrySnapshot): Float =
@@ -166,12 +173,13 @@ object GlideGeometryDecoder {
         keyHeight: Float,
         private val samples: List<Sample>,
     ) {
+        private val letterCount = centers.size
         /** 把字母 l 对齐到采样点 j 的代价。 */
-        private val align = arrayOfNulls<FloatArray>(26)
+        private val align = arrayOfNulls<FloatArray>(letterCount)
         /** 离各字母键 NEAR_DISTANCE 以内的采样点（升序）。 */
-        private val reach = Array(26) { mutableListOf<Int>() }
+        private val reach = Array(letterCount) { mutableListOf<Int>() }
         /** 字母对的逐点累计代价：偏离连线、反向走、跳过停留。 */
-        private val lines = arrayOfNulls<FloatArray>(26 * 26)
+        private val lines = arrayOfNulls<FloatArray>(letterCount * letterCount)
         val count: Int = samples.size
 
         init {
@@ -182,14 +190,14 @@ object GlideGeometryDecoder {
             val near = NEAR_DISTANCE * NEAR_DISTANCE
 
             val nc = centers.map { (x, y) -> (x / keyWidth) to (y / keyHeight) }
-            val squared = Array(26) { l ->
+            val squared = Array(letterCount) { l ->
                 val (cx, cy) = nc[l]
                 FloatArray(count) { j ->
                     val s = samples[j]
                     (s.x - cx).pow(2) + (s.y - cy).pow(2)
                 }
             }
-            for (l in 0 until 26) {
+            for (l in 0 until letterCount) {
                 for (j in 0 until count) {
                     if (squared[l][j] <= near) reach[l].add(j)
                 }
@@ -197,8 +205,8 @@ object GlideGeometryDecoder {
                     align[l] = FloatArray(count) { j -> squared[l][j] / ALIGN_SCALE }
                 }
             }
-            for (from in 0 until 26) {
-                for (to in 0 until 26) {
+            for (from in 0 until letterCount) {
+                for (to in 0 until letterCount) {
                     if (align[from] == null || align[to] == null) continue
                     val a = nc[from]
                     val b = nc[to]
@@ -225,7 +233,7 @@ object GlideGeometryDecoder {
                         if (s.dwell) total += SKIPPED_DWELL_COST
                         arr[j] = total
                     }
-                    lines[from * 26 + to] = arr
+                    lines[from * letterCount + to] = arr
                 }
             }
         }
@@ -233,13 +241,13 @@ object GlideGeometryDecoder {
         fun run(limit: Int): List<Hypothesis> {
             val trie = GlideSyllableTrie.get()
             val last = count - 1
-            val near = (0 until 26).filter { align[it] != null }
+            val near = (0 until letterCount).filter { align[it] != null }
             val states = mutableListOf<Int>()
             var level = mutableListOf<Prefix>()
 
             for (letter in near) {
                 if (reach[letter].firstOrNull() != 0) continue
-                trie.extend(listOf(0), letter, states)
+                extendLetter(trie, listOf(0), letter, states)
                 if (states.isEmpty()) continue
                 val cost = align[letter]!![0] + LETTER_COST
                 level += Prefix(mutableListOf(letter), states.toMutableList(), mutableListOf(0 to cost))
@@ -255,11 +263,13 @@ object GlideGeometryDecoder {
                     val followers = trie.followers(prefix.states)
                     val earliest = prefix.costs.first().first
                     for (letter in near) {
-                        if (followers and (1 shl letter) == 0) continue
+                        // ; 的可接性按 ing 首字母 i 判定
+                        val probe = if (letter == SEMICOLON_INDEX) ('i' - 'a') else letter
+                        if (followers and (1 shl probe) == 0) continue
                         if ((reach[letter].lastOrNull() ?: -1) <= earliest) continue
-                        trie.extend(prefix.states, letter, states)
+                        extendLetter(trie, prefix.states, letter, states)
                         if (states.isEmpty()) continue
-                        val line = lines[from * 26 + letter] ?: continue
+                        val line = lines[from * letterCount + letter] ?: continue
                         val al = align[letter]!!
                         val step = if (letter == from) LETTER_COST + REPEAT_COST else LETTER_COST
                         val candidateCosts = mutableListOf<Pair<Int, Float>>()
@@ -291,7 +301,7 @@ object GlideGeometryDecoder {
                     val lastCost = prefix.costs.lastOrNull() ?: continue
                     if (lastCost.first == last && prefix.states.contains(0)) {
                         finals += Hypothesis(
-                            prefix.letters.map { ('a' + it) }.joinToString(""),
+                            prefix.letters.map { if (it == SEMICOLON_INDEX) "ing" else ('a' + it).toString() }.joinToString(""),
                             lastCost.second,
                         )
                     }
@@ -314,6 +324,25 @@ object GlideGeometryDecoder {
             }
             return finals.sortedWith(compareBy({ it.cost }, { it.letters })).take(limit)
         }
+    }
+
+    /**
+     * 把一个"字母"接入音节树状态。分号键展开为 ing 三个字母，
+     * 其余按单字母扩展；任一字母无法接入时清空 next。
+     */
+    private fun extendLetter(trie: GlideSyllableTrie, states: List<Int>, letter: Int, next: MutableList<Int>) {
+        if (letter != SEMICOLON_INDEX) {
+            trie.extend(states, letter, next)
+            return
+        }
+        var cur = states
+        for (l in intArrayOf('i' - 'a', 'n' - 'a', 'g' - 'a')) {
+            val nxt = mutableListOf<Int>()
+            trie.extend(cur, l, nxt)
+            if (nxt.isEmpty()) { next.clear(); return }
+            cur = nxt
+        }
+        next.clear(); next.addAll(cur)
     }
 
     /** 每个采样点只保留 TOKENS_PER_SAMPLE 个最便宜且与最便宜者相差不超过 BEAM 的前缀。 */
