@@ -44,8 +44,15 @@ data class GlideKey(
     val eligible: Boolean = true,
     /** 分体键盘左右区等归属，供调试与分区特征。 */
     val zone: String = "",
+    /** 逻辑行列：用于"相邻键才可能连续"的路径合理性约束。 */
+    val row: Int = 0,
+    val col: Int = 0,
 ) {
     val isValid: Boolean get() = id.isNotEmpty() && code.isNotEmpty() && rect.isValid
+
+    /** 与另一键的"键盘距离"（行列差的切比雪夫距离）。 */
+    fun gridDistance(other: GlideKey): Int =
+        maxOf(kotlin.math.abs(row - other.row), kotlin.math.abs(col - other.col))
 }
 
 /**

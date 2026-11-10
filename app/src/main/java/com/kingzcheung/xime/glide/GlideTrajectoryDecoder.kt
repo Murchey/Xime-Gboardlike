@@ -26,6 +26,10 @@ object GlideTrajectoryDecoder {
     private const val DWELL_STRONG_MS = 80L
     /** 转折/停留点的置信度加成。 */
     private const val KEY_POINT_BOOST = 1.2
+    /** 相邻点所选键的最大合理行列距离；超过视为不合理跳跃。 */
+    private const val MAX_GRID_JUMP = 2
+    /** 不合理跳跃的惩罚。 */
+    private const val JUMP_PENALTY = 1.5
 
     /** 一个解码假设。 */
     data class Hypothesis(
@@ -82,12 +86,19 @@ object GlideTrajectoryDecoder {
             val next = mutableListOf<Node>()
             for (node in beam) {
                 for ((key, logP) in cands) {
+                    // 路径合理性：真实滑动不会从 q 直接跳到 m。
+                    // 与上一个键的行列距离过大时给显著惩罚（不直接禁止，保留容错）。
+                    val lastKey = node.keyIds.lastOrNull()?.let { id -> keys.firstOrNull { it.id == id } }
+                    val jumpPenalty = if (lastKey != null) {
+                        val d = lastKey.gridDistance(key)
+                        if (d > MAX_GRID_JUMP) JUMP_PENALTY else 0.0
+                    } else 0.0
                     // 回摆去重：轨迹在相邻两键间抖动时（h→i→h→i），只应记一次转移。
                     // 看最近 DISTINCT_WINDOW 个键里是否已出现过该键。
                     val recent = node.keyIds.takeLast(DISTINCT_WINDOW)
                     val repeated = recent.contains(key.id)
                     val newCode = if (repeated) node.code else node.code + key.code
-                    val penalized = if (repeated) logP - 0.6 else logP
+                    val penalized = if (repeated) logP - 0.6 else logP - jumpPenalty
                     next += Node(
                         code = newCode,
                         lastKeyId = key.id,
