@@ -110,6 +110,8 @@ class GlideKeyboardController(
                 val points = collected.toList()
                 clearTrail()
                 if (geo == null || points.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
+                // 采集真实轨迹（仅在显式开启时写入），供准确率评估与离线训练
+                GlideTraceRecorder.onTraceFinished(points, geo, currentSchema)
                 // 阶段C：多假设轨迹解码，而不是单一路径串键
                 val hypotheses = GlideTrajectoryDecoder.decode(points, geo)
                 if (hypotheses.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }

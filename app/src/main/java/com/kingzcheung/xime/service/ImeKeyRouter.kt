@@ -1413,6 +1413,8 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
      */
     private suspend fun commitPluginCandidate(text: String) {
         withContext(Dispatchers.Main) {
+            // 采集：用户确认了文本，把它作为该次滑动的期望结果落盘
+            com.kingzcheung.xime.glide.GlideTraceRecorder.attachExpected(text)
             service.commitText(text)
             service.candidateState.value = service.candidateState.value.copy(
                 inputText = "",
