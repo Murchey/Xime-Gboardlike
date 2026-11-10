@@ -380,8 +380,6 @@ fun KeyboardLayout(
             glideTypingEnabled
         }
     }
-    // 手势代际：每次手势结束递增，作为 pointerInput key 强制重建手势循环
-    val glideEpoch by glideController.epoch.collectAsStateWithLifecycle()
 
     CompositionLocalProvider(
         LocalShowLetterHintSymbols provides showLetterHintSymbols,
@@ -438,7 +436,6 @@ fun KeyboardLayout(
                 if (glideTypingEnabled) com.kingzcheung.xime.glide.glideTouchModifier(
                     controller = glideController,
                     onGlideCode = { _ ->
-                        // 整句候选由 glide 会话产出，投影到候选栏；不再逐键送编码
                         val texts = glideController.candidateTexts()
                         if (texts.isNotEmpty()) callbacks.onGlideCandidates?.invoke(glideController.rawInputForDisplay(), texts)
                     },
@@ -447,11 +444,9 @@ fun KeyboardLayout(
                     asciiMode = isAsciiMode,
                     origin = { androidx.compose.ui.geometry.Offset(keyboardBounds.left, keyboardBounds.top) },
                     onTrailChange = { glideTrail = it },
-                    epoch = glideEpoch,
                     onGestureFinished = {
-                        // 抬手/取消后清空按压气泡，避免上一次滑动的提示悬挂
                         swipeBubble.update(
-                            com.kingzcheung.xime.ui.keyboard.SwipeState(false, null, false, emptyList(), false, null),
+                            SwipeState(false, null, false, emptyList(), false, null),
                             androidx.compose.ui.geometry.Rect.Zero,
                         )
                     },
