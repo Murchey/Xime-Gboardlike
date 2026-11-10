@@ -4,15 +4,21 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class GlideBubblePolicyTest {
-    @Test fun 滑动输入开启不显示起点字母或分号按压气泡() {
-        assertTrue(hideGlidePressBubble(true, SwipeState(isPressed = true, pressedText = "u", isLetterPress = true)))
-        assertTrue(hideGlidePressBubble(true, SwipeState(isPressed = true, pressedText = ";")))
+    private val press = SwipeState(isPressed = true, pressedText = "u", isLetterPress = true)
+
+    @Test fun 普通短按气泡在滑动开关开启时仍显示() {
+        assertFalse(shouldSuppressGlideBubble(false, press))
     }
-    @Test fun 原地长按符号气泡仍保留() {
-        assertFalse(hideGlidePressBubble(true, SwipeState(isPressed = true, isLongPress = true, longPressItems = listOf("!"))))
+    @Test fun 手势被滑动接管后抑制按压气泡() {
+        assertTrue(shouldSuppressGlideBubble(true, press))
     }
-    @Test fun 关闭滑动输入和功能键不受影响() {
-        assertFalse(hideGlidePressBubble(false, SwipeState(isPressed = true, pressedText = "u", isLetterPress = true)))
-        assertFalse(hideGlidePressBubble(true, SwipeState(isPressed = true, pressedText = "退格")))
+    @Test fun 原地长按符号气泡始终保留() {
+        val longPress = SwipeState(isPressed = true, isLongPress = true, longPressItems = listOf("!"))
+        assertFalse(shouldSuppressGlideBubble(false, longPress))
+        assertFalse(shouldSuppressGlideBubble(true, longPress))
+    }
+    @Test fun 上滑提示气泡始终保留() {
+        val swiping = SwipeState(isPressed = true, isSwiping = true, swipeText = "1")
+        assertFalse(shouldSuppressGlideBubble(true, swiping))
     }
 }

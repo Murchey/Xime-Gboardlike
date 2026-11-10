@@ -1,8 +1,5 @@
 package com.kingzcheung.xime.ui.keyboard
 
-/** 滑动输入开启时不闪现起点字母气泡，原地长按符号选择仍保留。 */
-internal fun hideGlidePressBubble(enabled: Boolean, state: SwipeState): Boolean =
-    enabled && state.isPressed && !state.isLongPress && !state.isSwiping &&
-        (state.isLetterPress || state.pressedText?.let { text ->
-            text.length == 1 && (text[0].lowercaseChar() in 'a'..'z' || text == ";")
-        } == true)
+/** 只有手势已由 glide 接管才抑制按键气泡；普通短按与原地长按照常显示。 */
+internal fun shouldSuppressGlideBubble(captured: Boolean, state: SwipeState): Boolean =
+    captured && !state.isLongPress && !state.isSwiping

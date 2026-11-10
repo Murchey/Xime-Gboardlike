@@ -334,8 +334,7 @@ fun KeyboardLayout(
         } else {
             state
         }
-        if (glideBubbleSuppressed) return
-        if (hideGlidePressBubble(glideTypingEnabled, newState)) {
+        if (shouldSuppressGlideBubble(glideBubbleSuppressed, newState)) {
             swipeBubble.update(SwipeState(), Rect.Zero)
             return
         }
@@ -444,7 +443,7 @@ fun KeyboardLayout(
             .drawWithContent {
                 drawContent()
                 drawLongPressScrim(swipeBubble.state.isLongPress)
-                if (!glideBubbleSuppressed) bubbleData?.let { drawSwipeBubble(it) }
+                bubbleData?.let { drawSwipeBubble(it) }
                 if (glideTypingEnabled && glideTrailVisible) {
                     drawGlideTrail(glideTrail, glideTrailColor)
                 }

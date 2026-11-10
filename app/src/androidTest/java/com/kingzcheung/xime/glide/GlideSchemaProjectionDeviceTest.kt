@@ -317,6 +317,119 @@ class GlideSchemaProjectionDeviceTest {
         }
     }
 
+    @Test fun 复现你说什么滑动被识别为niuuoffme() {
+        val e = engine()
+        val spellings = e.getGlideSpellings("double_pinyin_flypy", GlideSyllableTrie.syllables())
+        android.util.Log.i("GlidePhrase", "spellings=" + spellings.size +
+            " ni=" + spellings.contains("ni") + " uo=" + spellings.contains("uo") +
+            " uf=" + spellings.contains("uf") + " me=" + spellings.contains("me") +
+            " uu=" + spellings.contains("uu") + " of=" + spellings.contains("of") +
+            " ff=" + spellings.contains("ff") + " uof=" + spellings.contains("uof"))
+        val rows = listOf("qwertyuiop", "asdfghjkl", "zxcvbnm")
+        val keys = rows.flatMapIndexed { r, row -> row.mapIndexed { c, ch ->
+            val x = c * 100f + listOf(0f, 50f, 150f)[r]
+            GlideKey(ch.toString(), ch.toString(), GlideKeyRect(x, r * 140f, x + 100f, r * 140f + 140f))
+        } }
+        val geometry = GlideGeometrySnapshot("phrase", keys, 1000f, 420f)
+        fun trace(code: String): List<GlidePoint> {
+            val out = mutableListOf<GlidePoint>()
+            var time = 1000L
+            var prev: Pair<Float, Float>? = null
+            for (ch in code) {
+                val k = keys.first { it.code == ch.toString() }
+                val xy = k.rect.centerX to k.rect.centerY
+                prev?.let { p -> for (step in 1..10) {
+                    time += 16
+                    val f = step / 11f
+                    out += GlidePoint(p.first + (xy.first - p.first) * f,
+                        p.second + (xy.second - p.second) * f, time, 1)
+                } }
+                out += GlidePoint(xy.first, xy.second, time, 1)
+                time += 40
+                prev = xy
+            }
+            return out
+        }
+        val target = "niuoufme"
+        val wrong = "niuuoffme"
+        val h = GlideGeometryDecoder.decode(trace(target), geometry, 16, spellings, densityDpi = deviceDpi())
+        android.util.Log.i("GlidePhrase", "target=" + target + " hypotheses=" + h.map { it.letters + ":" + String.format("%.1f", it.cost) })
+        val hw = GlideGeometryDecoder.decode(trace(wrong), geometry, 16, spellings, densityDpi = deviceDpi())
+        android.util.Log.i("GlidePhrase", "wrong=" + wrong + " hypotheses=" + hw.map { it.letters + ":" + String.format("%.1f", it.cost) })
+        assertTrue("至少应产出假设", h.isNotEmpty())
+    }
+
+    @Test fun 分析你说什么候选的实际Rime排名() {
+        val e = engine()
+        val original = e.getCurrentSchema()
+        try {
+            assertTrue(e.switchSchema("double_pinyin_flypy"))
+            for (code in listOf("niuoufme", "niuuoffme", "niuoffme", "niuogfme")) {
+                e.clearComposition()
+                val c = e.bypassLookup(code, 12)
+                android.util.Log.i("GlidePhraseRank", code + " => " + c.take(6).joinToString(",") { it.text })
+                assertTrue(code + " 至少一个候选", c.isNotEmpty())
+            }
+        } finally {
+            e.clearComposition()
+            if (original.isNotEmpty()) e.switchSchema(original)
+        }
+    }
+
+    @Test fun 盘旋轨迹下正确整句你说什么应进入候选() {
+        val e = engine()
+        val original = e.getCurrentSchema()
+        val registry = GlideGeometryRegistry()
+        registry.beginFrame(1000f, 420f)
+        listOf("qwertyuiop", "asdfghjkl", "zxcvbnm").forEachIndexed { r, row -> row.forEachIndexed { c, ch ->
+            val x = c * 100f + listOf(0f, 50f, 150f)[r]
+            registry.register(GlideKey(ch.toString(), ch.toString(), GlideKeyRect(x, r * 140f, x + 100f, r * 140f + 140f)))
+        } }
+        try {
+            assertTrue(e.switchSchema("double_pinyin_flypy"))
+            e.clearComposition()
+            val controller = GlideKeyboardController(registry, GlideCoordinator(
+                RimeGlideSentenceLookup(), object : GlideCommitter {
+                    override fun installRawInput(rawInput: String) = true
+                    override fun selectCandidate(rawInput: String, text: String) = true
+                }), glideEnabled = { true }, densityDpi = { deviceDpi() }, schemaSpellings = {
+                    e.getGlideSpellings(it, GlideSyllableTrie.syllables())
+                })
+            var time = 1000L
+            var prev: Pair<Float, Float>? = null
+            // 模拟用户所述盘旋：目标 ni-uo-uf-me，在 uo/uf 交界补一点重复经过。
+            for (ch in "niuuoffme") {
+                val k = registry.snapshot().keys.first { it.code == ch.toString() }
+                val xy = k.rect.centerX to k.rect.centerY
+                if (prev == null) controller.onDown(1, xy.first, xy.second, "host", "double_pinyin_flypy", timeMs = time)
+                else {
+                    val p = prev!!
+                    for (step in 1..10) {
+                        time += 16
+                        val f = step / 11f
+                        controller.onMove(1, p.first + (xy.first - p.first) * f, p.second + (xy.second - p.second) * f, false, time)
+                    }
+                    time += 16
+                    controller.onMove(1, xy.first, xy.second, false, time)
+                }
+                time += 40
+                prev = xy
+            }
+            val request = controller.finishRequest(1, "host")!!
+            val result = controller.decode(request)
+            android.util.Log.i("GlidePhraseRank", "盘旋轨迹候选=" + result.candidates.take(8).map { it.text } +
+                " raw=" + result.rawInput)
+            assertTrue(controller.accept(result))
+            assertTrue("候选缺少你说什么: " + controller.candidateTexts(),
+                controller.candidateTexts().contains("你说什么"))
+            assertEquals("首选编码应为正确整句", "niuoufme", controller.rawInputForDisplay())
+            assertEquals("首选候选应为你说什么", "你说什么", controller.candidateTexts().firstOrNull())
+        } finally {
+            e.clearComposition()
+            if (original.isNotEmpty()) e.switchSchema(original)
+        }
+    }
+
     @Test fun 微软搜狗已部署方案都能查询你好() {
         val e = engine()
         val original = e.getCurrentSchema()

@@ -175,29 +175,40 @@ class GlideKeyboardController(
         val seen = mutableSetOf<String>()
         // 几何代价：越小越好；转成分数要取负
         val best = hypotheses.minOfOrNull { it.cost } ?: 0f
+        // 查完所有假设再统一排序：前几个错误假设的碎词不能占满候选池，
+        // 否则排在后面的正确整句编码没有机会被 Rime 查到。
         for ((hIdx, h) in hypotheses.withIndex()) {
-            // 已有未确认候选时把当前编码作前缀，用完整串整句查词。
             val query = prefix + h.letters
             when (val r = coordinator.lookup.lookup(query)) {
                 is GlideLookupResult.Candidates -> {
+                    // 同一编码连续产出同一词根的整句候选，如「你说什么/你说什么呢/…」，
+                    // 比只有一个勉强成串、随后退回「你」的编码更可信。
+                    val head = r.list.firstOrNull()?.text.orEmpty()
+                    val coherent = if (head.length >= 4) r.list.take(3).count {
+                        it.text.length >= head.length && it.text.startsWith(head)
+                    } else 0
+                    val fullPhraseDepth = if (head.length >= 4) r.list.take(4).count {
+                        it.text.length >= 4 && it.text.startsWith(head.take(2))
+                    } else 0
+                    val shortFallback = r.list.take(4).count { it.text.length <= 2 }
+                    val phraseBonus = coherent * PHRASE_COHERENCE_BONUS +
+                        fullPhraseDepth * PHRASE_COHERENCE_BONUS * 0.7 -
+                        shortFallback * PHRASE_COHERENCE_BONUS
                     for ((i, c) in r.list.withIndex()) {
                         if (!seen.add(c.text)) continue
-                        // 位次惩罚（语言模型信号）> 假设间空间分差（通常 < 0.5）
                         val rankPenalty = i * RANK_PENALTY_WEIGHT
                         val hypPenalty = hIdx * HYPOTHESIS_PENALTY_WEIGHT
-                        // 几何分：以最优假设为基准，代价差越大分越低
                         val geometryScore = -(h.cost - best)
                         merged += c.copy(
                             id = "glide-" + hIdx + "-" + i + "-" + c.text,
-                            score = geometryScore - rankPenalty - hypPenalty,
+                            score = geometryScore - rankPenalty - hypPenalty + phraseBonus,
                         )
                     }
                 }
                 else -> Unit
             }
-            if (merged.size >= 12) break
         }
-        return merged.sortedByDescending { it.score }
+        return merged.sortedByDescending { it.score }.take(MAX_GLIDE_CANDIDATES)
     }
 
     private fun installCandidates(sorted: List<GlideCandidate>, hostToken: String) {
@@ -282,6 +293,9 @@ class GlideKeyboardController(
         const val RANK_PENALTY_WEIGHT = 0.45
         /** 假设之间的惩罚：空间分已含此信息，这里只需弱化次选假设。 */
         const val HYPOTHESIS_PENALTY_WEIGHT = 0.15
+        /** 连续长词候选代表编码整体成句，补偿正确整句假设靠后时的几何差距。 */
+        const val PHRASE_COHERENCE_BONUS = 1.1
+        const val MAX_GLIDE_CANDIDATES = 16
     }
 
     private fun clearTrail() {
