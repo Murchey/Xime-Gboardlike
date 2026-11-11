@@ -5,6 +5,7 @@ import com.kingzcheung.xime.i18n.tr
 import com.kingzcheung.xime.keyboard.ToolbarButton
 import com.kingzcheung.xime.keyboard.ToolbarButtonItem
 import com.kingzcheung.xime.keyboard.isBuiltinToolbarButtonAvailable
+import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.viewmodel.SchemaSwitchUiState
 import com.kingzcheung.xime.viewmodel.currentIcon
 import com.kingzcheung.xime.viewmodel.currentLabel
@@ -155,6 +156,7 @@ fun MenuBar(
             it,
             state.isSttEnabled,
             { com.kingzcheung.xime.handwriting.HandwritingEngine.hasModel(context) },
+            isDebugLogEnabled = SettingsPreferences.isVerboseLoggingEnabled(context),
         )
     }.map { b ->
         MenuTool(b.id, b.label, rememberVectorPainter(b.icon)) {

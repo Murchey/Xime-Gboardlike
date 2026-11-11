@@ -20,6 +20,7 @@ import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.Create
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.PictureInPicture
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Gesture
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Mic
@@ -45,7 +46,10 @@ enum class ToolbarButton(
     END("end", tr(R.string.s_duanwei), Icons.AutoMirrored.Rounded.LastPage),
     HANDWRITING_LOOKUP("handwriting_lookup", tr(R.string.s_shouxiezhaozi), Icons.Outlined.Gesture),
     EDIT("edit", tr(R.string.s_bianji), Icons.Rounded.Edit),
-    VOICE("voice", tr(R.string.s_yuyin), Icons.Rounded.Mic);
+    VOICE("voice", tr(R.string.s_yuyin), Icons.Rounded.Mic),
+
+    /** 开发者调试用：一键开关滑动轨迹采集，并在同一面板里标记真实意图。 */
+    DEBUG_GLIDE("debug_glide", tr(R.string.s_debug_huadongbiaoj), Icons.Outlined.BugReport);
 
     companion object {
         /** Gboard 风格的首次启用工具：设置、表情、剪贴板、方案切换和快捷短语。 */
@@ -69,9 +73,12 @@ fun isBuiltinToolbarButtonAvailable(
     button: ToolbarButton,
     isSttEnabled: Boolean,
     hasHandwritingModel: () -> Boolean,
+    /** 调试日志总开关：关着时调试类按钮（滑动标记）不出现，避免误触日常使用。 */
+    isDebugLogEnabled: Boolean = false,
 ): Boolean = when (button) {
     ToolbarButton.HANDWRITING_LOOKUP -> hasHandwritingModel()
     ToolbarButton.VOICE -> isSttEnabled
+    ToolbarButton.DEBUG_GLIDE -> isDebugLogEnabled
     else -> true
 }
 

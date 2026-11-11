@@ -156,6 +156,41 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         }
         // 只有空格参与“连按两次”窗口；任何其他按键都中断计数。
         if (key != "space") service.lastSpaceCommitAt = 0L
+        // 开发者「滑动标记」面板：只要面板开着，按键就归标注框（避免误打进宿主应用）
+        if (service.uiState.value.glideMarkVisible) {
+            when (key) {
+                "enter" -> {
+                    service.saveGlideMark()
+                    return
+                }
+                "delete" -> {
+                    com.kingzcheung.xime.service.GlideMarkEditTextHolder.editText?.let { et ->
+                        val start = et.selectionStart.coerceAtLeast(0)
+                        val end = et.selectionEnd.coerceAtLeast(start)
+                        if (end > start) {
+                            et.text?.delete(start, end)
+                            runCatching { et.setSelection(start) }
+                        } else if (start > 0) {
+                            et.text?.delete(start - 1, start)
+                            runCatching { et.setSelection(start - 1) }
+                        }
+                    }
+                    return
+                }
+                else -> {
+                    if (key.length == 1) {
+                        val char = if (isShifted) key.uppercase() else key
+                        com.kingzcheung.xime.service.GlideMarkEditTextHolder.editText?.let { et ->
+                            val start = et.selectionStart.coerceAtLeast(0)
+                            et.text?.insert(start, char)
+                            runCatching { et.setSelection(start + char.length) }
+                        }
+                        return
+                    }
+                }
+            }
+            return
+        }
         if (service.uiState.value.toolPanelInputFocused) {
             val candState = service.candidateState.value
             val hasComposing = candState.isComposing || candState.inputText.isNotEmpty()
@@ -1352,9 +1387,9 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                 }
             }
             withContext(Dispatchers.Main) {
-                // 采集：若上屏的正是滑动候选（编码与采集的轨迹对应），补上期望文本落盘
-                com.kingzcheung.xime.glide.GlideTraceRecorder.attachExpected(
-                    fullCommitText, service.candidateState.value.inputText)
+                // 采集：滑动候选确认上屏 → 给对应轨迹记一条「确认文本」标注（可被手动标记覆盖）
+                com.kingzcheung.xime.glide.GlideTraceRecorder.labelConfirmed(
+                    service.glideLastTraceId(), fullCommitText, service.candidateState.value.inputText)
                 service.commitText(fullCommitText)
                 service.t9PartialSegments.clear()
                 // 编码已随候选整串上屏：退出编码编辑态（光标复位到末尾语义）
@@ -1418,9 +1453,9 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
      */
     private suspend fun commitPluginCandidate(text: String) {
         withContext(Dispatchers.Main) {
-            // 采集：用户确认了文本，把它作为该次滑动的期望结果落盘
-            com.kingzcheung.xime.glide.GlideTraceRecorder.attachExpected(
-                text, service.candidateState.value.inputText)
+            // 采集：插件候选上屏 → 同口径给对应轨迹记标注（可被手动标记覆盖）
+            com.kingzcheung.xime.glide.GlideTraceRecorder.labelConfirmed(
+                service.glideLastTraceId(), text, service.candidateState.value.inputText)
             service.commitText(text)
             service.clearGlideSession()
             service.candidateState.value = service.candidateState.value.copy(

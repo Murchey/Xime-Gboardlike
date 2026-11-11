@@ -37,13 +37,26 @@ class ToolbarButtonAvailabilityTest {
         assertTrue(available(ToolbarButton.CLIPBOARD, isSttEnabled = false))
     }
 
+    @Test
+    fun `滑动标记按钮只在调试日志开启时出现`() {
+        assertFalse(available(ToolbarButton.DEBUG_GLIDE, debugLog = false))
+        assertTrue(available(ToolbarButton.DEBUG_GLIDE, debugLog = true))
+    }
+
+    @Test
+    fun `滑动标记不受语音与手写模型影响`() {
+        assertTrue(available(ToolbarButton.DEBUG_GLIDE, isSttEnabled = false, hasModel = false, debugLog = true))
+    }
+
     private fun available(
         button: ToolbarButton,
         isSttEnabled: Boolean = true,
         hasModel: Boolean = true,
+        debugLog: Boolean = false,
     ) = isBuiltinToolbarButtonAvailable(
         button,
         isSttEnabled = isSttEnabled,
         hasHandwritingModel = { hasModel },
+        isDebugLogEnabled = debugLog,
     )
 }

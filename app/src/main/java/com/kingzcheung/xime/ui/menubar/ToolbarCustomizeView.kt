@@ -54,6 +54,7 @@ import com.kingzcheung.xime.i18n.tr
 import com.kingzcheung.xime.keyboard.ToolbarButton
 import com.kingzcheung.xime.keyboard.ToolbarButtonItem
 import com.kingzcheung.xime.keyboard.isBuiltinToolbarButtonAvailable
+import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.ui.keyboard.ToolbarButtonIcon
 import com.kingzcheung.xime.ui.keyboard.WIDE_CONTAINER_WIDTH
 
@@ -88,6 +89,7 @@ fun ToolbarCustomizeView(
                 it,
                 isSttEnabled = isSttEnabled,
                 hasHandwritingModel = { com.kingzcheung.xime.handwriting.HandwritingEngine.hasModel(context) },
+                isDebugLogEnabled = SettingsPreferences.isVerboseLoggingEnabled(context),
             )
         }
         .map { ToolbarButtonItem.Builtin(it) }

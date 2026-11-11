@@ -399,6 +399,8 @@ fun KeyboardLayout(
         glideController.onGlideReset = { glideController.resetCompositionSession() }
         (context as? com.kingzcheung.xime.service.XimeInputMethodService)?.glideSessionReset =
             { glideController.resetCompositionSession() }
+        (context as? com.kingzcheung.xime.service.XimeInputMethodService)?.glideLastTraceId =
+            { glideController.lastTraceId }
     }
 
     CompositionLocalProvider(

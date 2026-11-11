@@ -129,8 +129,6 @@ class GlideKeyboardController(
                 if (geo == null || points.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
                 // 几何解码：按对齐/连线/回溯/停留代价枚举完整音节串（代价低的在前）
                 val hypotheses = GlideGeometryDecoder.decode(points, geo, GLIDE_HYPOTHESES, activeSpellings, activeDensityDpi)
-                // 采集真实轨迹（仅在显式开启时写入），供准确率评估与离线训练
-                recordTrace(points, geo, currentSchema, activePrefix, hypotheses)
                 if (hypotheses.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
                 // 英文模式：轨迹解出的字母串即候选，不查中文词库（随键盘中英文模式变化）
                 if (asciiMode) {
@@ -219,8 +217,6 @@ class GlideKeyboardController(
         session.deliverCandidates(
             session.state.traceId, session.state.revision, hostToken, top.rawInput, sorted,
         )
-        // 采集：记下真正装进组合的编码，确认上屏时据此校验样本对应关系
-        GlideTraceRecorder.onCandidatesInstalled(top.rawInput)
     }
 
     internal data class DecodeRequest(
@@ -230,7 +226,13 @@ class GlideKeyboardController(
         val final: Boolean, val prefix: String = "",
     )
 
-    internal data class DecodeResult(val request: DecodeRequest, val rawInput: String, val candidates: List<GlideCandidate>)
+    /** @param traceId 本次落盘的轨迹 id（未采集时为空串），确认上屏时据此自动标注 */
+    internal data class DecodeResult(
+        val request: DecodeRequest,
+        val rawInput: String,
+        val candidates: List<GlideCandidate>,
+        val traceId: String = "",
+    )
 
     /** 主线程固定快照，后台解码不读写正在采集的轨迹或会话。 */
     internal fun previewRequest(): DecodeRequest? {
@@ -251,9 +253,6 @@ class GlideKeyboardController(
     /** 仅在后台线程执行；预览只使用独立查询，不往 Rime 主组合写编码。 */
     internal fun decode(request: DecodeRequest): DecodeResult {
         val hypotheses = GlideGeometryDecoder.decode(request.points, request.geometry, GLIDE_HYPOTHESES, request.spellings, request.densityDpi)
-        if (request.final) {
-            recordTrace(request.points, request.geometry, request.schema, request.prefix, hypotheses)
-        }
         val candidates = if (request.ascii) hypotheses.mapIndexed { i, h ->
             GlideCandidate("en-$" + i, h.letters, h.letters, score = -h.cost.toDouble())
         } else lookupHypotheses(hypotheses, request.prefix)
@@ -261,7 +260,19 @@ class GlideKeyboardController(
         val rawInput = candidates.firstOrNull()?.rawInput
             ?: (request.prefix + hypotheses.firstOrNull()?.letters.orEmpty()).takeIf { it.isNotEmpty() }
             ?: request.prefix
-        return DecodeResult(request, rawInput, candidates)
+        // 采集：抬手即落盘（不等确认）。解码可能是错的，但轨迹本身必须无损保留，
+        // 事后由「滑动标记」补上真实意图。
+        val traceId = if (request.final) {
+            GlideTraceRecorder.record(
+                points = request.points,
+                geometry = request.geometry,
+                schemaFingerprint = request.schema,
+                prefix = request.prefix,
+                code = rawInput,
+                candidates = hypotheses.take(TRACE_CANDIDATE_LIMIT).map { request.prefix + it.letters },
+            )
+        } else ""
+        return DecodeResult(request, rawInput, candidates, traceId)
     }
 
     internal fun isCurrent(request: DecodeRequest): Boolean =
@@ -276,34 +287,27 @@ class GlideKeyboardController(
         if (result.candidates.isEmpty()) {
             // 有可追加前缀但本次未解出新候选：保留既有组合与候选，不清空。
             if (request.prefix.isEmpty()) coordinator.session.cancel()
-        } else installCandidates(result.candidates, request.hostToken)
+        } else {
+            installCandidates(result.candidates, request.hostToken)
+            lastTraceId = result.traceId
+        }
         return true
     }
+
+    /**
+     * 最近一次安装候选对应的轨迹 id（未采集时为空串）。
+     * 服务层确认上屏时用它给该条轨迹自动打一个「确认文本」标注；
+     * 该标注只是猜测，手动标记会覆盖。
+     */
+    @Volatile
+    var lastTraceId: String = ""
+        private set
 
     fun onCancel() {
         gestureId++
         arbiter.onCancel()
         coordinator.session.cancel()
-        // 取消的滑动不该被后续确认认领：丢弃待写样本，避免期望文本错位
-        GlideTraceRecorder.discard()
         clearTrail()
-    }
-
-    /** 采样落盘用：几何假设文本（首选在前）+ 前缀，供确认时补 expected 与离线分析。 */
-    private fun recordTrace(
-        points: List<GlidePoint>,
-        geo: GlideGeometrySnapshot,
-        schema: String,
-        prefix: String,
-        hypotheses: List<GlideGeometryDecoder.Hypothesis>,
-    ) {
-        GlideTraceRecorder.onTraceFinished(
-            points = points,
-            geometry = geo,
-            schemaFingerprint = schema,
-            prefix = prefix,
-            candidates = hypotheses.take(TRACE_CANDIDATE_LIMIT).map { prefix + it.letters },
-        )
     }
 
     fun allowFallbackClick(): Boolean = arbiter.allowFallbackClick()

@@ -142,6 +142,11 @@ fun GlideTraceScreen(onBack: () -> Unit) {
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.primary,
             )
+            Text(
+                text = tr(R.string.s_biaojishishuoming),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(

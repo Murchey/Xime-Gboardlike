@@ -1461,4 +1461,14 @@
     <string name="s_huadongguijishuju_fu">记录每次滑动输入的轨迹、键位几何与确认文本（仅存本机），用于离线评测滑动准确率。</string>
     <string name="s_yicaiji_tiao">已采集 %1$s 条</string>
     <string name="s_guijikaiguan">记录滑动轨迹</string>
+    <string name="s_debug_huadongbiaoj">滑动标记</string>
+    <string name="s_yijilu_tiao_guiji">已记录 %1$s 条轨迹</string>
+    <string name="s_jiluzhong">记录中</string>
+    <string name="s_yitingzhi">已停止</string>
+    <string name="s_zanwuguidingshuru">暂无轨迹，先滑几笔</string>
+    <string name="s_weijiechubianma">未解出编码</string>
+    <string name="s_yibiaoj_">标记：%1$s</string>
+    <string name="s_weibiaoj">未标记（点这条补上真实意图）</string>
+    <string name="s_shuruwoxiangdade">输入我实际想打出的内容，回车保存</string>
+    <string name="s_biaojishishuoming">轨迹在抬手时即落盘（e=trace），标注另起一行（e=label，按 id 对应）；同一 id 后写的标注覆盖先前的，确认候选的自动标注可被手动标记覆盖。</string>
 </resources>

@@ -255,6 +255,25 @@ internal fun rememberImeKeyboardCallbacks(
                     service.moveCursor(direction)
                 }
             },
+            onToggleGlideMark = {
+                if (service.uiState.value.glideMarkVisible) service.closeGlideMarkPanel()
+                else service.openGlideMarkPanel()
+            },
+            onGlideMarkSelect = { id ->
+                // 选中即聚焦标注框，方便直接打字标注
+                service.uiState.value = service.uiState.value.copy(
+                    glideMarkSelectedId = id, glideMarkFocused = true,
+                )
+            },
+            onGlideMarkFocusChange = { focused ->
+                service.uiState.value = service.uiState.value.copy(glideMarkFocused = focused)
+            },
+            onGlideRecordingChange = { enabled ->
+                SettingsPreferences.setGlideTraceEnabled(service, enabled)
+                com.kingzcheung.xime.glide.GlideTraceRecorder.init(service)
+                com.kingzcheung.xime.glide.GlideTraceRecorder.enabled = enabled
+                service.notifyGlideMarkRefresh()
+            },
             onGlideCandidates = { rawInput, texts ->
                 // 滑动输入：整句候选投影到候选栏（未确认，不提交）
                 service.applyGlideCandidates(rawInput, texts)

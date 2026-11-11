@@ -410,6 +410,27 @@ fun KeyboardView(
                 )
             }
 
+            if (state.glideMarkVisible) {
+                GlideMarkPanel(
+                    backgroundColor = Color.Transparent,
+                    textColor = keyTextColor,
+                    accentColor = accentColor,
+                    cardBgColor = keyBgColor,
+                    recording = com.kingzcheung.xime.glide.GlideTraceRecorder.enabled,
+                    onRecordingChange = { enabled ->
+                        callbacks.onGlideRecordingChange?.invoke(enabled)
+                    },
+                    entries = remember(state.glideMarkRefresh) {
+                        com.kingzcheung.xime.glide.GlideTraceRecorder.recentEntries()
+                    },
+                    selectedId = state.glideMarkSelectedId,
+                    isFocused = state.glideMarkFocused,
+                    onSelect = { id -> callbacks.onGlideMarkSelect?.invoke(id) },
+                    onFocusChange = { focused -> callbacks.onGlideMarkFocusChange?.invoke(focused) },
+                    onClose = { callbacks.onToggleGlideMark?.invoke() },
+                )
+            }
+
             // ACTIVE 输入面板在候选栏上方（需要 EditText 输入，保留候选栏可见）；
             // PASSIVE 纯展示面板走 Overlay 全屏（KeyboardView 底部 Overlay 分支渲染 InfoPanel）
             if (state.toolPanelVisible && state.toolPanelDisplay != "PASSIVE") {
@@ -464,6 +485,7 @@ fun KeyboardView(
                             hasHandwritingModel = {
                                 com.kingzcheung.xime.handwriting.HandwritingEngine.hasModel(toolbarContext)
                             },
+                            isDebugLogEnabled = SettingsPreferences.isVerboseLoggingEnabled(toolbarContext),
                         )
                     ) {
                         return@mapNotNull null
@@ -484,6 +506,9 @@ fun KeyboardView(
                             ToolbarButton.FLOAT -> ({ callbacks.onFloatingModeChange?.invoke(!state.isFloatingMode) })
                             ToolbarButton.HANDWRITING_LOOKUP -> ({ isHandwritingLookup = !isHandwritingLookup })
                             ToolbarButton.EDIT -> ({ viewModel.showOverlay(OverlayRoute.Edit) })
+                            ToolbarButton.DEBUG_GLIDE -> ({
+                                callbacks.onToggleGlideMark?.invoke()
+                            })
                             ToolbarButton.VOICE -> ({
                                 if (PermissionHelper.hasRecordAudioPermission(toolbarContext)) {
                                     callbacks.onVoiceStickyToggle?.invoke()
@@ -1493,6 +1518,7 @@ fun KeyboardView(
                                         ToolbarButton.HANDWRITING_LOOKUP -> callbacks.onToolbarEditingAction?.invoke("handwriting_lookup")
                                         ToolbarButton.EDIT -> viewModel.showOverlay(OverlayRoute.Edit)
                                         ToolbarButton.VOICE -> callbacks.onVoiceStickyToggle?.invoke()
+                                        ToolbarButton.DEBUG_GLIDE -> callbacks.onToggleGlideMark?.invoke()
                                     }
                                     is ToolbarButtonItem.Plugin -> if (item.action == "open_panel") {
                                         callbacks.onOpenToolPanel?.invoke(item.pluginId)

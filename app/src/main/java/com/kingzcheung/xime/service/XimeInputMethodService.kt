@@ -169,6 +169,11 @@ object QuickSendFormCodeEditTextHolder {
     var editText: android.widget.EditText? = null
 }
 
+/** 开发者「滑动标记」面板的标注输入框 holder。 */
+object GlideMarkEditTextHolder {
+    var editText: android.widget.EditText? = null
+}
+
 /** 通用工具面板输入框 holder（与快捷发送独立，避免互相覆盖）。 */
 object ToolPanelEditTextHolder {
     /** 当前聚焦的输入框（软/硬按键路由目标；主输入框与控件行字段共用，谁聚焦指向谁）。 */
@@ -449,6 +454,72 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     /** 由键盘层创建 controller 后注入。 */
     internal var glideSessionReset: () -> Unit = {}
+
+    /** 最近一次滑动候选对应的采集轨迹 id（键盘层注入；未开启采集时为空串）。 */
+    internal var glideLastTraceId: () -> String = { "" }
+
+    /** 打开标记面板：开启采集（否则没有新轨迹可标）并清空选择。 */
+    internal fun openGlideMarkPanel() {
+        com.kingzcheung.xime.glide.GlideTraceRecorder.init(this)
+        if (!SettingsPreferences.isGlideTraceEnabled(this)) {
+            SettingsPreferences.setGlideTraceEnabled(this, true)
+        }
+        com.kingzcheung.xime.glide.GlideTraceRecorder.enabled = true
+        uiState.value = uiState.value.copy(
+            glideMarkVisible = true, glideMarkFocused = false, glideMarkSelectedId = null,
+        )
+        startGlideMarkRefreshLoop()
+    }
+
+    /** 关闭标记面板：清选择、清输入框。 */
+    internal fun closeGlideMarkPanel() {
+        stopGlideMarkRefreshLoop()
+        GlideMarkEditTextHolder.editText?.setText("")
+        GlideMarkEditTextHolder.editText = null
+        uiState.value = uiState.value.copy(
+            glideMarkVisible = false, glideMarkFocused = false, glideMarkSelectedId = null,
+        )
+    }
+
+    private var glideMarkRefreshJob: Runnable? = null
+
+    /** 面板打开期间定时刷新列表（新滑动、外部标注都能及时看到）。 */
+    private fun startGlideMarkRefreshLoop() {
+        stopGlideMarkRefreshLoop()
+        val job = object : Runnable {
+            override fun run() {
+                if (!uiState.value.glideMarkVisible) return
+                notifyGlideMarkRefresh()
+                mainHandler.postDelayed(this, 800)
+            }
+        }
+        glideMarkRefreshJob = job
+        mainHandler.postDelayed(job, 800)
+    }
+
+    private fun stopGlideMarkRefreshLoop() {
+        glideMarkRefreshJob?.let { mainHandler.removeCallbacks(it) }
+        glideMarkRefreshJob = null
+    }
+
+    /** 标记面板列表刷新信号（新轨迹、标注、开关变化后自增，驱动重组重读记录）。 */
+    internal fun notifyGlideMarkRefresh() {
+        uiState.value = uiState.value.copy(glideMarkRefresh = uiState.value.glideMarkRefresh + 1)
+    }
+
+    /** 保存标注：把输入框里的真实意图写给选中的那条轨迹。 */
+    internal fun saveGlideMark() {
+        val id = uiState.value.glideMarkSelectedId ?: return
+        val text = GlideMarkEditTextHolder.editText?.text?.toString()?.trim().orEmpty()
+        if (text.isEmpty()) return
+        com.kingzcheung.xime.glide.GlideTraceRecorder.label(id, text, "mark")
+        GlideMarkEditTextHolder.editText?.setText("")
+        uiState.value = uiState.value.copy(
+            glideMarkFocused = false,
+            glideMarkSelectedId = null,
+            glideMarkRefresh = uiState.value.glideMarkRefresh + 1,
+        )
+    }
 
     /** 候选确认或放弃后，清理候选预览锁并通知 controller 丢弃旧会话。 */
     internal fun clearGlideSession() {
@@ -2024,6 +2095,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     toolPanelDisplay = state.toolPanelDisplay,
                                     toolPanelUiNodes = state.toolPanelUiNodes,
                                     clipboardSyncEnabled = state.clipboardSyncEnabled,
+                                    glideMarkVisible = state.glideMarkVisible,
+                                    glideMarkFocused = state.glideMarkFocused,
+                                    glideMarkEntries = com.kingzcheung.xime.glide.GlideTraceRecorder.recentEntries(),
+                                    glideMarkSelectedId = state.glideMarkSelectedId,
+                                    glideMarkRefresh = state.glideMarkRefresh,
                                 )
                             }
                             // 覆盖页（菜单/剪贴板/表情等）激活时清除内联建议：

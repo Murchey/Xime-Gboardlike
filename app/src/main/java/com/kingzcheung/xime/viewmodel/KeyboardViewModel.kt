@@ -153,6 +153,13 @@ data class KeyboardUiState(
     val toolPanelDisplay: String? = null,
     val toolPanelUiNodes: List<com.kingzcheung.xime.plugin.core.config.UiNode>? = null,
     val clipboardSyncEnabled: Boolean = false,
+    /** 开发者「滑动标记」面板（与快捷发送同位置显示）。 */
+    val glideMarkVisible: Boolean = false,
+    val glideMarkFocused: Boolean = false,
+    /** 标记面板列表数据：最近轨迹摘要（含已标注的期望文本）。 */
+    val glideMarkEntries: List<com.kingzcheung.xime.glide.GlideTraceRecorder.TraceEntry> = emptyList(),
+    val glideMarkSelectedId: String? = null,
+    val glideMarkRefresh: Long = 0,
 )
 
 class KeyboardViewModel(application: Application) : AndroidViewModel(application) {

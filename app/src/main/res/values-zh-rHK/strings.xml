@@ -1318,4 +1318,14 @@
     <string name="s_huadongguijishuju_fu">記錄每次滑動輸入的軌跡、鍵位幾何與確認文本（僅存本機），用於離線評測滑動準確率。</string>
     <string name="s_yicaiji_tiao">已採集 %1$s 條</string>
     <string name="s_guijikaiguan">記錄滑動軌跡</string>
+    <string name="s_debug_huadongbiaoj">滑動標記</string>
+    <string name="s_yijilu_tiao_guiji">已記錄 %1$s 條軌跡</string>
+    <string name="s_jiluzhong">記錄中</string>
+    <string name="s_yitingzhi">已停止</string>
+    <string name="s_zanwuguidingshuru">暫無軌跡，先滑幾筆</string>
+    <string name="s_weijiechubianma">未解出編碼</string>
+    <string name="s_yibiaoj_">標記：%1$s</string>
+    <string name="s_weibiaoj">未標記（點這條補上真實意圖）</string>
+    <string name="s_shuruwoxiangdade">輸入我實際想打出的內容，回車儲存</string>
+    <string name="s_biaojishishuoming">軌跡在抬手時即落盤（e=trace），標註另起一行（e=label，按 id 對應）；同一 id 後寫的標註覆蓋先前的，確認候選的自動標註可被手動標記覆蓋。</string>
 </resources>

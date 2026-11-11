@@ -95,4 +95,12 @@ data class InputUIState(
     /** passive 纯展示节点树（getPanelState.ui，统一 UiNode 声明式模型）。 */
     val toolPanelUiNodes: List<com.kingzcheung.xime.plugin.core.config.UiNode>? = null,
     val clipboardSyncEnabled: Boolean = false,
+    /** 开发者「滑动标记」面板是否显示。 */
+    val glideMarkVisible: Boolean = false,
+    /** 标记面板的标注输入框是否聚焦（聚焦时按键路由进标注框）。 */
+    val glideMarkFocused: Boolean = false,
+    /** 标记面板当前选中的轨迹 id（选中后才显示标注输入框）。 */
+    val glideMarkSelectedId: String? = null,
+    /** 标记面板列表刷新信号（新轨迹/标注后自增）。 */
+    val glideMarkRefresh: Long = 0,
 )
