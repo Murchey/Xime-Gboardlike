@@ -27,7 +27,20 @@ import kotlin.math.sqrt
  */
 object GlideGeometryDecoder {
 
-    /** 一笔最多重采样成多少个点。 */
+    /**
+     * 一笔最多重采样成多少个点。
+     *
+     * 步长是 0.25 键，而长句滑动弧长可达 80 键（实测 20 条样本最长 8590px ≈ 80 键），
+     * 需要 320 个点；128 会把实际步长顶到 0.63 键，比手指停靠的键还稀，
+     * 相邻两个对齐点之间跨好几个键 → 多键/缺键。实测饱和组平均编辑距离 2.63，
+     * 未饱和组 1.25。
+     *
+     * 但实测把上限提到 320 并不会变好（top-1 3→2）：采样更密后，
+     * 按点累加的代价（SKIPPED_DWELL_COST、连线偏差）同步放大，beam 反而更分散。
+     * 而 TOKENS_PER_SAMPLE / BEAM 放宽、以及各项代价权重扫描，都把
+     * "几何可达率"钉在 4~5/16 —— 说明瓶颈不在参数，而在对齐搜索本身
+     * （见 DOCS/glide-accuracy-plan.md 的 P2）。此处保持 128 不动。
+     */
     private const val MAX_SAMPLES = 128
     /** 重采样步长（键为单位）。 */
     private const val SAMPLE_STEP = 0.25f
@@ -38,12 +51,27 @@ object GlideGeometryDecoder {
     private const val LINE_SCALE = 0.25f
     /** 每个字母的固定价。小值：让词典而不是几何去分 zhong / zong。 */
     private const val LETTER_COST = 0.8f
-    /** 与前一个字母相同时的额外价（笔画画不出连按两次）。 */
+    /**
+     * 与前一个字母相同时的额外价（笔画画不出连按两次）。
+     *
+     * 双拼每音节固定两键，"同键连续"只在跨音节边界时合法，
+     * 所以这个值偏低（叠上 LETTER_COST 才 1.6）时，手指在键内稍停就会被读成按了两次。
+     * 但实测调到 3.0 / 6.0 对理想轨迹与真实轨迹指标都没有变化——
+     * 说明当前数据里"多吐一个键"主要是对齐跨度问题，不是这条权重能压住的。
+     * 保留原值，待 P2 对齐搜索修好后再回来标定。
+     */
     private const val REPEAT_COST = 0.8f
     /** 沿连线反方向每走一个键的代价。 */
     private const val BACKTRACK_COST = 2.0f
-    /** 没有字母对齐到的停留的罚分。 */
-    private const val SKIPPED_DWELL_COST = 4.0f
+    /**
+     * 没有字母对齐到的停留的罚分。
+     *
+     * 原来 4.0：比"把一次停留读成两次按键"（LETTER_COST+REPEAT_COST=1.6）贵得多，
+     * 于是理想轨迹（精确经过键中心并停留 150ms）也会被解成 vhgr→vhggrr 这种多键串。
+     * 降到 1.0 后，"点到即对齐"比"多吐一个键"更便宜，理想轨迹 top-1 由 3/5 升到 4/5，
+     * 真实轨迹的几何可达率由 4/16 升到 5/16。
+     */
+    private const val SKIPPED_DWELL_COST = 1.0f
     /** 离每个采样点都超过此距离（键为单位）的键不可能在串里。 */
     private const val NEAR_DISTANCE = 1.4f
     /** 每个采样点保留的前缀数。 */
