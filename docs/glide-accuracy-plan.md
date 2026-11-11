@@ -869,3 +869,47 @@ w e r t y u y t r e w q w e r t y u i u y t ...
 期望 `yj`，但轨迹实际经过 `y u h`，**根本没碰 `j`**。
 之前能「正确」解出 `yj`，是因为漏检了 u/h 的停留；修复后反而暴露真问题。
 这是又一条标注与轨迹不符的样本。
+
+## 二十三、第十八轮：SKIPPED_DWELL_COST 的阈值效应（2026-11-11）
+
+上一轮的 1.0/2.0/4.0 扫描是在 **APK 未真正安装**的情况下做的，结论作废。
+本轮先修好测量流程再重做。
+
+### 可靠的测量流程
+
+```powershell
+./gradlew assembleDebug assembleDebugAndroidTest
+$r1 = adb install -r app/build/outputs/apk/debug/...apk 2>&1 | Out-String
+$r2 = adb install -r -t app/build/outputs/apk/androidTest/debug/...apk 2>&1 | Out-String
+if(($r1 -notlike '*Success*') -or ($r2 -notlike '*Success*')){ exit }
+```
+
+要点：`adb install` 输出是多行（`Performing Streamed Install` + `Success`），
+用 `-match` 会误判，必须 `-like '*Success*'`；输出必须 `Out-String` 聚合。
+
+### 真实数据
+
+| SKIPPED_DWELL_COST | 平均编辑距离 |
+|---|---|
+| 去掉该项（0） | 1.94 |
+| **1.0** | **1.44** |
+| 2.0 | 1.44 |
+| 4.0 | 1.44 |
+
+**阈值效应**：1.0 已跨过「能让排序翻转」的门槛，再加大只是等比放大，
+不产生额外区分度。保持 1.0 合理。
+
+### 一个被我证伪的推断
+
+我一度认为这个惩罚是「常数偏移」——理由是所有假设都从 sample 0 走到最后，
+累加的停留点集合应该相同。按这个思路删掉该项后，指标从 1.44 退化到 1.94，
+**推断被证伪**。
+
+真实机制：搜索里 `best = cost - line[i]` 把累计值转成**区间增量**，
+不同路径走过的区间不同，累计的停留点自然不同。已写进代码注释。
+
+### 试过并回退的方案
+
+「停留覆盖位掩码」：给 Prefix 加位掩码，只惩罚**未被任何字母对齐**的停留点。
+理论更精确，实测恶化到 5/16、1.94，已回退。
+推测原因是它对短假设过于苛刻——短编码天然覆盖更少停留点。
