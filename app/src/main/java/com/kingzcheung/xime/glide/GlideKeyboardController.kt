@@ -77,6 +77,9 @@ class GlideKeyboardController(
         currentSchema = schemaFingerprint
         activeSpellings = if (ascii) null else schemaSpellings?.invoke(schemaFingerprint)?.toList()
         glideSessionStarted = false
+        // 前文只在手势开始取一次：读 InputConnection 有开销，且同一次手势里它不会变
+        gestureContext = runCatching { precedingText().orEmpty() }.getOrDefault("")
+        gramBaseline = null
         collected.clear()
         collected += GlidePoint(x, y, timeMs, pointerId.toInt())
         val startKey = geo.keyAt(x, y)?.id
@@ -218,6 +221,15 @@ class GlideKeyboardController(
     private var gramBaseline: Double? = null
 
     /**
+     * 编辑器前文（最近几个字），由宿主在滑动开始时注入。
+     *
+     * 空串表示拿不到前文（或宿主没提供）：此时 gram 退化为无条件词频，
+     * 跟改动前行为一致。只在手势开始时取一次，避免每次候选都读 InputConnection。
+     */
+    var precedingText: () -> String = { "" }
+    private var gestureContext: String = ""
+
+    /**
      * 候选文本的 gram 相对增量。
      *
      * 第一次调用记录基准，之后返回 (score - baseline) * GRAM_WEIGHT。
@@ -229,7 +241,8 @@ class GlideKeyboardController(
         // 纯 JVM 单测里 RimeEngine 的 native 库加载不了（NoClassDefFoundError），
         // 而且真实场景下方案也可能没挂语法模型：两种情况都必须静默退回原排序。
         val score = try {
-            com.kingzcheung.xime.rime.RimeEngine.getInstance().queryGramScore(schema, "", text)
+            com.kingzcheung.xime.rime.RimeEngine.getInstance()
+                .queryGramScore(schema, gestureContext, text)
         } catch (_: Throwable) {
             return 0.0
         }

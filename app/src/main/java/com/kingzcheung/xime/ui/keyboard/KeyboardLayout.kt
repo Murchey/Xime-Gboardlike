@@ -394,6 +394,9 @@ fun KeyboardLayout(
     }
     // 滑动开始即清空既有组合（新建语义），避免新编码拼在旧编码后面
     val currentOnGlideStart by rememberUpdatedState(callbacks.onGlideStart)
+    val currentGlidePreceding by rememberUpdatedState(
+        (context as? com.kingzcheung.xime.service.XimeInputMethodService)?.glidePrecedingText
+    )
     remember(glideController) {
         glideController.onGlideStart = { currentOnGlideStart?.invoke() ?: "" }
         glideController.onGlideReset = { glideController.resetCompositionSession() }
@@ -401,6 +404,8 @@ fun KeyboardLayout(
             { glideController.resetCompositionSession() }
         (context as? com.kingzcheung.xime.service.XimeInputMethodService)?.glideLastTraceId =
             { glideController.lastTraceId }
+        // 编辑器前文：滑动排序的 gram 需要它才能从"无条件词频"变成"语境条件概率"
+        glideController.precedingText = { currentGlidePreceding?.invoke().orEmpty() }
     }
 
     CompositionLocalProvider(

@@ -416,3 +416,34 @@ SharedPreferences 不共享，在测试里调用 `GramBundledModel.ensureDefault
 （NoClassDefFoundError），一度打挂 4 个 glide 测试。
 `gramDeltaFor` 已用 try/catch 兜住：**这是设计上的必要容错**，
 不只是为了让测试过——真实场景下方也可能没挂语法模型。
+
+## 十二、第七轮：编辑器前文接入（2026-11-11）
+
+gram 通道打通后，最关键的发现是：**没有前文时它毫无区分度**。
+
+### 实测数据（真机真实进程日志）
+
+| 情况 | 起来 | 起凉 | 区分度 |
+|---|---|---|---|
+| 空 context | -12.0 | -12.0 | **0.0** |
+| 有 context「我们」 | -3.56 | -9.84 | **6.28** |
+
+空 context 时两词都落到 `non_collocation_penalty`，完全一样。
+这印证了文档的判断：**独立查询不带前文 → gram 退化成无条件词频**。
+所以前文接入不是优化项，是必要项。
+
+### 实现
+
+- `XimeInputMethodService.glidePrecedingText`：复用既有的
+  `readTextBeforeCursorWindowed()`，只取末尾 8 字（gram 的
+  `collocation_max_length` 默认 5，再多只是白读字符串）
+- `GlideKeyboardController.precedingText` + `gestureContext`：
+  **只在手势开始（onDown）取一次**，因为读 InputConnection 有开销，
+  且同一次手势里前文不会变
+- `KeyboardLayout` 把 service 的 provider 注入 controller
+- `gramDeltaFor` 改用 `gestureContext` 而非空串
+
+### 边界处理
+
+拿不到前文（宿主不支持 getTextBeforeCursor、或用户都没输入过）时
+`gestureContext` 为空串，gram 退回无条件词频——与改动前行为一致，不会更差。

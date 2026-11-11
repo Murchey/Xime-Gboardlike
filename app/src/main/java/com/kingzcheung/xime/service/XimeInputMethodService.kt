@@ -221,6 +221,14 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
          */
         internal const val UNDO_TEXT_WINDOW = 4096
 
+        /**
+         * 滑动排序取的前文字数。
+         *
+         * gram 的 collocation_max_length 默认 5，n-gram 最长也就看 5 个字，
+         * 取 8 已足够覆盖所有可命中的上下文，再多只是白读字符串。
+         */
+        internal const val GLIDE_CONTEXT_CHARS = 8
+
         /** 面板 loading 延迟显示阈值：此时间内完成的动作不显示进度条（面板高度也不变，防闪烁）。 */
         private const val TOOL_PANEL_LOADING_SHOW_DELAY_MS = 250L
     }
@@ -452,6 +460,18 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     /** 最近一次滑动候选对应的采集轨迹 id（键盘层注入；未开启采集时为空串）。 */
     internal var glideLastTraceId: () -> String = { "" }
+
+    /**
+     * 滑动排序用的编辑器前文（最近若干字）。
+     *
+     * gram 是**条件**概率：不带前文时所有候选都落到 non_collocation_penalty，
+     * 等于退化成无条件词频，"在/再""他/她"这类同音选择就只剩词频可依。
+     * 键盘层在滑动开始时通过这个钩子取一次即可（结果缓存到本次手势）。
+     */
+    internal var glidePrecedingText: () -> String = {
+        runCatching { readTextBeforeCursorWindowed().orEmpty().takeLast(GLIDE_CONTEXT_CHARS) }
+            .getOrDefault("")
+    }
 
     /** 候选确认或放弃后，清理候选预览锁并通知 controller 丢弃旧会话。 */
     internal fun clearGlideSession() {
