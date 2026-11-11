@@ -61,6 +61,18 @@ object GlideGeometryDecoder {
      * 保留原值，待 P2 对齐搜索修好后再回来标定。
      */
     private const val REPEAT_COST = 0.8f
+    /**
+     * 同键折返**没有停留证据**时的额外代价（正数=惩罚）。
+     *
+     * 手指快速滑过一个键再折回，会被 GlideRepeatGesture 当成"同键两次"的线索；
+     * 但那只是经过，不构成本键被按了两次。旧实现无论有无停留都直接减 2.4 分，
+     * 于是样本 g111046-12 的 "jue qu liang shi" 盖掉了真实的 "jue qu ling shi"。
+     *
+     * 实测（16 条真实样本）：只要由「奖励」改成「不奖励」，可达率就从 5/16 提到 8/16；
+     * 数值在 0.05~4.0 之间结果一致，说明起决定作用的是"是否给折扣"而非罚分大小。
+     * 取 0.2 保留"无停留仍应轻微惩罚"的语义。
+     */
+    private const val REPEAT_NO_DWELL_PENALTY = 0.2f
     /** 沿连线反方向每走一个键的代价。 */
     private const val BACKTRACK_COST = 2.0f
     /**
@@ -233,11 +245,23 @@ object GlideGeometryDecoder {
         traceLength: Float,
         private val gaussianCosts: Array<FloatArray>?,
     ) {
-        private data class Repeat(val key: Int, val start: Int, val end: Int)
+        /**
+         * 一次"同键折返"线索。
+         *
+         * [hasDwell] 是关键：折返区间里若**没有停留证据**（手指只是经过该键又折回），
+         * 这次重复没有独立按键的语义，只可能是路径噪声；有停留才算真的按了两次。
+         * 实测样本 g111046-12：手指从 k 快速滑到 l（每步 1~4ms，无停留）再折回 k
+         * 并在 k 上停住（距键心 4px），正确解读是"经过 l、停在 k"（lk=ling），
+         * 但旧逻辑把 l 读成了两次按键（ll=liang）。
+         */
+        private data class Repeat(val key: Int, val start: Int, val end: Int, val hasDwell: Boolean)
         private val repeats = repeatCues.map { cue ->
             val start = if (traceLength > 0f) (cue.startArc / traceLength * samples.lastIndex).toInt() else 0
             val end = if (traceLength > 0f) ceil(cue.endArc / traceLength * samples.lastIndex).toInt() else 0
-            Repeat(cue.key, start.coerceIn(0, samples.lastIndex), end.coerceIn(0, samples.lastIndex))
+            val s = start.coerceIn(0, samples.lastIndex)
+            val e = end.coerceIn(0, samples.lastIndex)
+            val dwell = (s..e).any { samples[it].dwell }
+            Repeat(cue.key, s, e, dwell)
         }.filter { it.end > it.start }
         private val letterCount = centers.size
         /** 把字母 l 对齐到采样点 j 的代价。 */
@@ -356,8 +380,11 @@ object GlideGeometryDecoder {
                                     if (repeat.key != letter || j < repeat.end) continue
                                     val before = prefix.costs.filter { it.first <= repeat.start }
                                         .minOfOrNull { (i, c) -> c - line[i] } ?: continue
-                                    // 只有横跨一次完整折返的同键转移才获得奖励，不能重复消费同一折返。
-                                    cost = min(cost, before + line[j - 1] + al[j] + LETTER_COST - 2.4f)
+                                    // 只有横跨一次完整折返的同键转移才享受折扣，
+                                    // 且折返区间内必须有停留证据：手指只是"经过该键又折回"
+                                    // 不构成两次按键（实测 g111046-12 的 l→折返 属这一类）。
+                                    val delta = if (repeat.hasDwell) -2.4f else REPEAT_NO_DWELL_PENALTY
+                                    cost = min(cost, before + line[j - 1] + al[j] + LETTER_COST + delta)
                                 }
                             }
                             if (cost <= floors[j] + BEAM) {

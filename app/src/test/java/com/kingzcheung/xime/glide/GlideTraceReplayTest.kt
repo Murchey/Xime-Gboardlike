@@ -123,6 +123,11 @@ class GlideTraceReplayTest {
             )
         }
         val avg = distSum.toDouble() / usable.size
+        val unreachable = usable.filter { s ->
+            val h = GlideGeometryDecoder.decode(s.points, s.geometry, 16, spellings, 420f)
+            s.expected !in h.map { it.letters }
+        }
+        println("[replay] 不可达条目=" + unreachable.joinToString(",") { it.id })
         println(
             "[replay] top-1=" + top1 + "/" + usable.size +
                 " 几何可达=" + reachable + "/" + usable.size +
