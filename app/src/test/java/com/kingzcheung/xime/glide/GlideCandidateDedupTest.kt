@@ -58,14 +58,22 @@ class GlideCandidateDedupTest {
     }
 
     @Test
-    fun 去重应保留先出现的那条() {
-        // 假设 aa 的「甲」先于 bb 的「甲」出现
+    fun 去重应保留分数更高的那条() {
+        // 同一文本「甲」由两个假设产出：aa 代价 5（差），bb 代价 1（好）。
+        // 旧实现"先到先得"会留下 aa 那条（分数更低）；正确做法是保留 bb 那条。
         val ctl = controller(Lookup(mapOf("aa" to listOf("甲"), "bb" to listOf("甲"))))
         ctl.gramScorer = { _, _ -> com.kingzcheung.xime.rime.RimeEngine.GRAM_UNAVAILABLE }
-        val out = rank(ctl, listOf(
-            GlideGeometryDecoder.Hypothesis("aa", 1f),
-            GlideGeometryDecoder.Hypothesis("bb", 5f)))
-        assertEquals("去重后只应剩一条", 1, out.count { it == "甲" })
+        val m = GlideKeyboardController::class.java.getDeclaredMethod(
+            "lookupHypotheses", java.util.List::class.java, String::class.java)
+        m.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val all = m.invoke(ctl, listOf(
+            GlideGeometryDecoder.Hypothesis("aa", 5f),
+            GlideGeometryDecoder.Hypothesis("bb", 1f)), "") as List<GlideCandidate>
+        assertEquals("去重后只应剩一条", 1, all.count { it.text == "甲" })
+        // id 里带 hIdx：应为 1（来自第二个假设 bb），而不是 0
+        assertTrue("应保留分数更高的那条（hIdx=1），实际=" + all.first().id,
+            all.first().id.startsWith("glide-1-"))
     }
 
     @Test

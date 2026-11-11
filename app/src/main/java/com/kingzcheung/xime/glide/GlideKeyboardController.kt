@@ -173,7 +173,8 @@ class GlideKeyboardController(
 
     private fun lookupHypotheses(hypotheses: List<GlideGeometryDecoder.Hypothesis>, prefix: String = ""): List<GlideCandidate> {
         val merged = mutableListOf<GlideCandidate>()
-        val seen = mutableSetOf<String>()
+        /** 文本 -> 在 merged 中的下标，用于按分数择优去重（避免 O(n²) 线性查找）。 */
+        val indexByText = HashMap<String, Int>()
         // 几何代价：越小越好；转成分数要取负
         val best = hypotheses.minOfOrNull { it.cost } ?: 0f
         // 查完所有假设再统一排序：前几个错误假设的碎词不能占满候选池，
@@ -193,7 +194,9 @@ class GlideKeyboardController(
                     } else 0
                     val shortFallback = r.list.take(4).count { it.text.length <= 2 }
                     for ((i, c) in r.list.withIndex()) {
-                        if (!seen.add(c.text)) continue
+                        // 同一文本可能由多个编码假设产出，分数各不相同。
+                        // 旧实现用 seen.add 在**计分前**去重，等于"先到先得"，
+                        // 可能留下低分那条、丢掉高分那条。改为先算分再择优保留。
                         // 所有项统一到 log-domain（自然对数），逐项都有物理含义：
                         //   geometryLogP  几何似然：h.cost 越小越可能，直接取负
                         //   rimeLogP      Rime 位次推出的近似 log 概率
@@ -206,10 +209,18 @@ class GlideKeyboardController(
                         val gramLogP = gramDeltaFor(c.text)
                         val phraseLogP = phraseLogProb(coherent, fullPhraseDepth, shortFallback)
                         val hypLogP = -hIdx * HYPOTHESIS_LOG_PENALTY
-                        merged += c.copy(
+                        val scored = c.copy(
                             id = "glide-" + hIdx + "-" + i + "-" + c.text,
                             score = geometryLogP + rimeLogP + gramLogP + phraseLogP + hypLogP,
                         )
+                        val known = indexByText[c.text]
+                        if (known == null) {
+                            indexByText[c.text] = merged.size
+                            merged += scored
+                        } else if (scored.score > merged[known].score) {
+                            // 同文本保留分数更高的一条（通常是更低代价假设产出的）
+                            merged[known] = scored
+                        }
                     }
                 }
                 else -> Unit
