@@ -62,6 +62,23 @@ class GlideE2eReplayDeviceTest {
         }
     }
 
+    private fun editDistance(a: String, b: String): Int {
+        if (a == b) return 0
+        if (a.isEmpty()) return b.length
+        if (b.isEmpty()) return a.length
+        var prev = IntArray(b.length + 1) { it }
+        var cur = IntArray(b.length + 1)
+        for (i in 1..a.length) {
+            cur[0] = i
+            for (j in 1..b.length) {
+                val cost = if (a[i - 1] == b[j - 1]) 0 else 1
+                cur[j] = minOf(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost)
+            }
+            val t = prev; prev = cur; cur = t
+        }
+        return prev[b.length]
+    }
+
     private data class Result(val raw: String, val cands: List<String>, val hyps: List<String>)
 
     private fun replay(s: Sample): Result {
@@ -99,6 +116,7 @@ class GlideE2eReplayDeviceTest {
 
         var rawExact = 0
         var hasCands = 0
+        var distSum = 0
         val rows = mutableListOf<String>()
         for ((idx, sample) in usable.withIndex()) {
             if (idx > 0) RimeEngine.getInstance().switchSchema("double_pinyin_flypy")
@@ -106,10 +124,15 @@ class GlideE2eReplayDeviceTest {
             val exact = r.raw == sample.expected
             if (exact) rawExact++
             if (r.cands.isNotEmpty()) hasCands++
+            distSum += editDistance(r.raw, sample.expected)
             rows += sample.id + " exp=" + sample.expected + " raw=" + r.raw +
                 " cands=" + r.cands.take(2) + (if (exact) " OK" else "")
         }
+        // 平均编辑距离比"完全一致率"更敏感：能反映"从差 5 键变成差 1 键"这类进步。
+        // 历史基线：采样时的解码器 1.94（见 docs 第十五轮）。
+        val avg = if (usable.isEmpty()) 0.0 else distSum.toDouble() / usable.size
         val summary = "端到端回放 编码完全一致=" + rawExact + "/" + usable.size +
+            " 平均距离=" + String.format("%.2f", avg) +
             " 有候选=" + hasCands + "/" + usable.size
         println("[e2e-replay] " + summary)
         rows.forEach { println("[e2e-replay] " + it) }
