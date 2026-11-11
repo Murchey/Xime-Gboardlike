@@ -443,18 +443,17 @@ object GlideGeometryDecoder {
         val keep = Array(prefixes.size) { BooleanArray(prefixes[it].costs.size) }
         for (groups in byPoint) {
             if (groups.isEmpty()) continue
-            var globalFloor = Float.POSITIVE_INFINITY
-            for (tokens in groups.values) for ((cost, _, _) in tokens) {
-                if (cost < globalFloor) globalFloor = cost
-            }
+            // BEAM 的参照系必须**按组**取：字母数多的路径累计代价天然更高，
+            // 用跨组的最小值当 floor 会把它们整组筛掉，分层裁剪就白做了。
             for (tokens in groups.values) {
+                val floor = tokens.minOf { it.first }
                 if (tokens.size > TOKENS_PER_SAMPLE) {
                     val trimmed = tokens.sortedBy { it.first }.take(TOKENS_PER_SAMPLE)
                     tokens.clear()
                     tokens.addAll(trimmed)
                 }
                 for ((cost, p, entry) in tokens) {
-                    if (cost <= globalFloor + BEAM) keep[p][entry] = true
+                    if (cost <= floor + BEAM) keep[p][entry] = true
                 }
             }
         }
