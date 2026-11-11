@@ -249,8 +249,14 @@ fun SpeechToTextSettingsContent(
                     EngineRow(
                         title = tr(R.string.s_xitongyuyin),
                         status = if (systemReady) {
-                            systemLabel?.let { tr(R.string.s_xitongyuyin_shi, it) }
-                                ?: tr(R.string.s_xitongyuyin_zhengzai)
+                            // 服务名常与标题同名（如小米的「系统语音引擎」），
+                            // 相同就不重复展示，避免「系统语音引擎 · 系统语音引擎」。
+                            val label = systemLabel
+                            if (label.isNullOrBlank() || label == tr(R.string.s_xitongyuyin)) {
+                                tr(R.string.s_xitongyuyin_keyong)
+                            } else {
+                                tr(R.string.s_xitongyuyin_shi, label)
+                            }
                         } else {
                             tr(R.string.s_xitongyuyin_bukeyong)
                         },
@@ -353,8 +359,12 @@ private fun SystemEngineSection(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = if (available) {
-                            serviceLabel?.let { tr(R.string.s_xitongyuyin_shi, it) }
-                                ?: tr(R.string.s_xitongyuyin_zhengzai)
+                            val label = serviceLabel
+                            if (label.isNullOrBlank() || label == tr(R.string.s_xitongyuyin)) {
+                                tr(R.string.s_xitongyuyin_zhengzai)
+                            } else {
+                                tr(R.string.s_xitongyuyin_shi, label)
+                            }
                         } else {
                             tr(R.string.s_xitongyuyin_bukeyong_shuoming)
                         },
