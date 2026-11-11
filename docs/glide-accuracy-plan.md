@@ -1049,3 +1049,45 @@ e=label  expected=veuihxdsuurufa   ← 5.8 秒后修正
 | 时间戳语义 | 3 | 无缺陷 |
 | GlideTraceSampler 隔离 | 2 | 标记死代码 |
 | **合计** | **48** | 1 项修复，其余为确认/记录 |
+
+## 二十七、第二十二轮：验证 gram 确实生效，排除一处误判的「bug」（2026-11-11）
+
+前几轮打通 gram 后，从没在排序层面确认它真的参与了计算。本轮补上。
+
+### 结论一：gram 在 flypy 方案上确实可用
+
+曾怀疑只有 `rime_ice.custom.yaml` 带 grammar patch，回放用的
+`double_pinyin_flypy` 没有 → gram 会返回 UNAVAILABLE。真机验证证伪：
+
+```
+flypy:    起来=-3.558 起凉=-9.839 差=6.281
+rime_ice: 起来=-3.558 起凉=-9.839 差=6.281
+```
+
+两者一致。Octagram 按 language 名 `XimeGboard` 加载全局 .gram 文件，
+grammar 配置来自全局 patch，不需要每个方案单独配。
+
+### 结论二：gramBaseline 跨批沿用不是 bug
+
+发现 `gramBaseline` 只在 `onDown` 重置，而预览与最终解码都会调用
+`lookupHypotheses`，一度以为基准会跨批泄漏。
+
+实测：在 `lookupHypotheses` 入口加重置 vs 不加重置，
+真机端到端回放**两版指标完全相同**（6/16、平均距离 1.44）。
+
+原因：泄漏只给整批候选加**相同的常数偏移**，而排序依据是批内分差，
+常数会抵消。**已回退该无意义改动**，并删掉抓不住差异的测试。
+
+### 结论三：gram 真的参与了排序（6.0 的权重不是摆设）
+
+用两个几何同价、gram 差 6.0 的候选验证：分差 = 6.0（gram） + 0.4（位次）
+= **6.4**，与预期一致。
+
+这里踩到一个测试陷阱：`gramDeltaFor` 在 `currentSchema.isEmpty()` 时直接返回 0。
+只反射调 `lookupHypotheses` 而不走 `onDown`，gram 会被整体绕过，
+测出的分差只有 0.4（全是位次惩罚）。**测试必须走完整手势路径**。
+
+### 产出
+
+`GlideGramBaselineScopeTest`（2 项）把上述理解固化，避免后人重走。
+全量 1726 项，仅 4 个既有基线失败。
