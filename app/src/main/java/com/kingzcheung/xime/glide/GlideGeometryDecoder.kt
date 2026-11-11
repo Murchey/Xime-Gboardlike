@@ -422,25 +422,40 @@ object GlideGeometryDecoder {
         next.clear(); next.addAll(cur)
     }
 
-    /** 每个采样点只保留 TOKENS_PER_SAMPLE 个最便宜且与最便宜者相差不超过 BEAM 的前缀。 */
+    /**
+     * 每个采样点保留若干条最有希望的前缀。
+     *
+     * 按已对齐字母数分层保留：同一采样点上，"已走 8 个字母"和"只走 6 个字母"
+     * 的路径不再互相挤占 TOKENS_PER_SAMPLE 名额。
+     *
+     * 实测说明：这一改动对现有 16 条样本的指标**没有变化**（top-1 4/16、
+     * 可达 5/16 与改前一致），保留它是为了修掉"长短路径互相挤"这个结构隐患，
+     * 不作为准确率提升。层内排序仍用累计代价。
+     */
     private fun prune(prefixes: List<Prefix>, count: Int): List<Prefix> {
-        val at = Array(count) { mutableListOf<Triple<Float, Int, Int>>() }
+        val byPoint = Array(count) { HashMap<Int, MutableList<Triple<Float, Int, Int>>>() }
         prefixes.forEachIndexed { p, prefix ->
+            val len = prefix.letters.size
             prefix.costs.forEachIndexed { entry, (j, cost) ->
-                at[j].add(Triple(cost, p, entry))
+                byPoint[j].getOrPut(len) { mutableListOf() }.add(Triple(cost, p, entry))
             }
         }
         val keep = Array(prefixes.size) { BooleanArray(prefixes[it].costs.size) }
-        for (tokens in at) {
-            if (tokens.size > TOKENS_PER_SAMPLE) {
-                val trimmed = tokens.sortedBy { it.first }.take(TOKENS_PER_SAMPLE)
-                tokens.clear()
-                tokens.addAll(trimmed)
+        for (groups in byPoint) {
+            if (groups.isEmpty()) continue
+            var globalFloor = Float.POSITIVE_INFINITY
+            for (tokens in groups.values) for ((cost, _, _) in tokens) {
+                if (cost < globalFloor) globalFloor = cost
             }
-            if (tokens.isEmpty()) continue
-            val floor = tokens.minOf { it.first }
-            for ((cost, p, entry) in tokens) {
-                if (cost <= floor + BEAM) keep[p][entry] = true
+            for (tokens in groups.values) {
+                if (tokens.size > TOKENS_PER_SAMPLE) {
+                    val trimmed = tokens.sortedBy { it.first }.take(TOKENS_PER_SAMPLE)
+                    tokens.clear()
+                    tokens.addAll(trimmed)
+                }
+                for ((cost, p, entry) in tokens) {
+                    if (cost <= globalFloor + BEAM) keep[p][entry] = true
+                }
             }
         }
         val out = mutableListOf<Prefix>()
