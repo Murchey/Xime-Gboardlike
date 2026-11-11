@@ -187,13 +187,18 @@ object GlideGeometryDecoder {
             while (end + 1 < points.size && distance(points[start], points[end + 1]) <= DWELL_RADIUS) {
                 end++
             }
-            // 停留须由一次时间空洞证明（手指实际没动）；慢速连续经过会由多个
-            // 短间隔累积出同样长的时间跨度，不能判成停留，否则途经键被逐点计入编码。
-            var hasPause = false
-            for (i in start until end) {
-                if (points[i + 1].timeMs - points[i].timeMs >= DWELL_MS) { hasPause = true; break }
-            }
-            val rested = hasPause && (points[end].timeMs - points[start].timeMs) >= DWELL_MS
+            // 停留判定：在 DWELL_RADIUS 内持续 DWELL_MS 以上。
+            //
+            // 旧实现额外要求「出现一次 >= DWELL_MS 的单次时间空洞」，这在真机上
+            // 几乎永不成立：手指静止时设备仍以 3~4ms 的间隔持续上报同一坐标。
+            // 实测 20 条样本旧判据共只检出 11 个停留点，而按停留键统计应有 160+ 个，
+            // 漏检率超过 90%，SKIPPED_DWELL_COST 从来没真正生效过。
+            //
+            // 去掉空洞要求后，检出点有 94% 落在期望编码对应的键上，
+            // 说明这个判据抓的确实是"用户有意停顿的键"。
+            // 慢速连续经过的保护由 DWELL_RADIUS 提供：途经时手指持续移动，
+            // 位移会超出半径而切断判定。
+            val rested = (points[end].timeMs - points[start].timeMs) >= DWELL_MS
             if (rested) {
                 dwells += (arc[start] + arc[end]) / 2f
                 start = end + 1

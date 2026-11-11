@@ -101,7 +101,15 @@ class GlideE2eReplayDeviceTest {
             false, pts.first().timeMs)
         for (p in pts.drop(1)) ctl.onMove(1, p.x, p.y, false, p.timeMs)
         ctl.onUp(1, "e2e")
-        return Result(ctl.rawInputForDisplay(), ctl.candidateTexts().take(5), emptyList())
+        // 记录几何解码的假设列表（仅用于失败样本诊断）
+        val hyps = runCatching {
+            GlideGeometryDecoder.decode(
+                pts, geo, 16,
+                RimeEngine.getInstance().getGlideSpellings("double_pinyin_flypy", GlideSyllableTrie.syllables()),
+                420f,
+            ).map { it.letters + "(" + String.format("%.1f", it.cost) + ")" }
+        }.getOrDefault(emptyList())
+        return Result(ctl.rawInputForDisplay(), ctl.candidateTexts().take(5), hyps)
     }
 
     @Test
@@ -126,7 +134,9 @@ class GlideE2eReplayDeviceTest {
             if (r.cands.isNotEmpty()) hasCands++
             distSum += editDistance(r.raw, sample.expected)
             rows += sample.id + " exp=" + sample.expected + " raw=" + r.raw +
-                " cands=" + r.cands.take(2) + (if (exact) " OK" else "")
+                " cands=" + r.cands.take(2) +
+                (if (!exact && sample.id == "g111046-16") " hyps=" + r.hyps else "") +
+                (if (exact) " OK" else "")
         }
         // 平均编辑距离比"完全一致率"更敏感：能反映"从差 5 键变成差 1 键"这类进步。
         // 历史基线：采样时的解码器 1.94（见 docs 第十五轮）。
