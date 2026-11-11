@@ -8,6 +8,7 @@ import com.kingzcheung.xime.settings.BuiltinPackages
 import com.kingzcheung.xime.settings.BuiltinSeedState
 import com.kingzcheung.xime.settings.PersonalDictManager
 import com.kingzcheung.xime.settings.SchemaConfigHelper
+import com.kingzcheung.xime.settings.RimeSharedFiles
 import com.kingzcheung.xime.settings.SchemaManifestManager
 import com.kingzcheung.xime.settings.MarketVersionStore
 import com.kingzcheung.xime.settings.RimeDependencyResolver
@@ -569,6 +570,14 @@ object RimeConfigHelper {
             if (updated > 0) {
                 Log.i(TAG, "Updated $updated builtin asset file(s)")
             }
+            // 内置方案被下架时（例如移除 pinyin_simp 全拼方案），旧设备上的
+            // .schema.yaml 不会被 updateBuiltinAssets 删掉（它只覆盖/新增），
+            // 残留文件仍会被当成可用方案出现在切换列表里。这里清理
+            // 「用户目录有、assets 清单没有、且属于内置包」的方案文件。
+            val removed = removeObsoleteBuiltinSchemas(context, targetDir)
+            if (removed > 0) {
+                Log.i(TAG, "Removed $removed obsolete builtin schema file(s)")
+            }
             syncBuiltinDefaultCustom(context, targetDir)
             return false
         }
@@ -747,6 +756,42 @@ object RimeConfigHelper {
         return updated
     }
 
+    /**
+     * 清理「用户目录存在、assets 清单里已没有」的内置方案文件。
+     *
+     * 只处理属于内置包（[BuiltinPackages.isBuiltinAsset]）且后缀为
+     * `.schema.yaml` / `.dict.yaml` 的文件：第三方方案不在 assets 清单内，
+     * 会被 isBuiltinAsset 判为非内置而跳过，不会误删。
+     *
+     * 返回删除的文件数。
+     */
+    private fun removeObsoleteBuiltinSchemas(context: Context, targetDir: File): Int {
+        val builtin = RimeSharedFiles.allAssetNames(context)
+        if (builtin.isEmpty()) return 0
+        val disabled = BuiltinSeedState.disabledPackages(context)
+        var removed = 0
+        val candidates = targetDir.listFiles()?.filter { f ->
+            f.isFile && (f.name.endsWith(".schema.yaml") || f.name.endsWith(".dict.yaml"))
+        } ?: return 0
+        for (file in candidates) {
+            val rel = file.name
+            // 仍是内置资产 → 由 updateBuiltinAssets 负责，不在此删
+            if (builtin.contains(rel)) continue
+            val pkg = BuiltinPackages.packageFor(rel)
+            // 非内置包（第三方方案）或该包已被用户卸载 → 不碰
+            if (pkg !in builtinPackagesOf(builtin) || pkg in disabled) continue
+            if (file.delete()) {
+                removed++
+                FileLogger.w(TAG, "Removed obsolete builtin asset: $rel")
+            }
+        }
+        return removed
+    }
+
+    /** 当前 assets 清单里实际存在文件的内置包集合。 */
+    private fun builtinPackagesOf(builtin: Set<String>): Set<String> =
+        builtin.mapTo(mutableSetOf()) { BuiltinPackages.packageFor(it) }
+
     /** 补齐缺失/空的内置共享文件（不覆盖已有内容），返回补齐数。 */
     fun ensureBuiltinBaseFiles(context: Context): Int {
         val rimeDir = SchemaManager.getRimeDir(context)
@@ -777,7 +822,7 @@ object RimeConfigHelper {
             false
         }
         if (!copied && !File(rimeDir, "rime_ice.schema.yaml").isFile &&
-            !File(rimeDir, "pinyin_simp.schema.yaml").isFile &&
+            !File(rimeDir, "t9_pinyin.schema.yaml").isFile &&
             !File(rimeDir, "wubi86.schema.yaml").isFile
         ) {
             previous.forEach { BuiltinSeedState.setDisabled(context, it, true) }

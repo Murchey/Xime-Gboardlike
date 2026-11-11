@@ -17,14 +17,14 @@ object BuiltinPackages {
     fun versionSchema(packageId: String): String? = when (packageId) {
         RIME_ICE -> "rime_ice"
         WUBI86 -> "wubi86"
-        PINYIN_SIMP -> "pinyin_simp"
+        PINYIN_SIMP -> "t9_pinyin"
         else -> null
     }
 
     fun displayName(packageId: String): String = when (packageId) {
         RIME_ICE -> "雾凇拼音"
         WUBI86 -> "五笔 86"
-        PINYIN_SIMP -> "简体拼音 / 九键"
+        PINYIN_SIMP -> "九键拼音"
         SHARED -> "内置共享资源"
         else -> packageId
     }

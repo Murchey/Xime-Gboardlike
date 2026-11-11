@@ -916,7 +916,7 @@ public:
         }
 
         // fallback: 依次尝试已知编码字典
-        const char *fallbacks[] = {"wubi86", "pinyin_simp", nullptr};
+        const char *fallbacks[] = {"wubi86", "rime_ice", nullptr};
         for (int i = 0; fallbacks[i]; i++)
         {
             auto d = rldc->Create(fallbacks[i]);

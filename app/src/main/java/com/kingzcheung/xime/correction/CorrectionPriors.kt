@@ -44,7 +44,7 @@ object CorrectionPriors {
     private const val TAG = "CorrectionPriors"
     private const val MAX_TAPS = 12
     /** 配置缺失时的兜底（xime.yaml correction.schemas 正常都有，防旧 APK/解析失败）。 */
-    private val SCHEMAS_FALLBACK = setOf("wubi86", "wubi86_pinyin", "pinyin_simp")
+    private val SCHEMAS_FALLBACK = setOf("wubi86", "wubi86_pinyin")
 
     /** 端上自校准：从本机击键行为在线估计每键偏移（滑窗中位数），持久化到
      *  filesDir（应用私有目录，随用户数据存留/卸载清除）。APK 不携带任何人的偏移数据。 */

@@ -37,7 +37,7 @@ style:
 # 「完整词条 / 合法前缀 / 非法码」三值判定（仍可纠错，词间区分度弱一些），
 # 任何时候都不会用其他方案的频次。
 correction:
-  schemas: [wubi86, wubi86_pinyin, pinyin_simp]
+  schemas: [wubi86, wubi86_pinyin]
 
 # 配色方案可配置背景类型（纯色/渐变/图片），默认均为纯色。
 # 如需渐变/图片背景，在 xime.custom.yaml 的对应主题下覆盖 keyboard_background 即可：
