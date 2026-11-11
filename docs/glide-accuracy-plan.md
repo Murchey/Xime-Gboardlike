@@ -1003,3 +1003,49 @@ e=label  expected=veuihxdsuurufa   ← 5.8 秒后修正
 
 采集链路本身没有缺陷。之前认为「标注可疑」的样本，
 问题出在标注内容与轨迹的匹配上，而非数据记录有误。
+
+## 二十六、第二十一轮：链路审查收尾，发现 162 行死代码（2026-11-11）
+
+### 时间戳语义
+
+真机上同一毫秒常有 2 个采样点。实测 20 条样本共数百个重复时间戳，
+但**没有任何逆序**。两个下游前提已用测试锁住：
+
+- `dwellPositions` 用「总时长 ≥ DWELL_MS」判停留 → 重复不影响
+- `GlideRepeatGesture` 要求折返时差 ≥ 32ms → 连续 2 点重复仅几毫秒，可忽略
+
+### 发现：162 行死代码
+
+`GlideTrace.kt` 共 210 行，其中第 49–210 行（**162 行**）的
+`GlideTraceSampler` 及 `GlideTrace`/`GlideFeature` 数据结构
+在**生产路径上零调用**：
+
+| 方法 | main 中调用 | test 中调用 |
+|---|---|---|
+| `downsample` | 0 | GlideTraceTest |
+| `resampleByArc` | 0 | GlideTraceTest |
+| `resampleByKeyRun` | 0 | GlideTraceTest |
+| `extractFeatures` | 0 | GlideTraceTest |
+| `visitedCodes` | 0 | GlideTraceTest |
+
+解码器 `GlideGeometryDecoder` 用的是自己的 `resample` / `dwellPositions` 实现。
+这是上一套实现留下的遗产。
+
+**没有删除**（遵循「最小修改原则」「不要顺便重构」），
+而是新增 `GlideTraceSamplerIsolationTest` 把「改这里不影响准确率」
+变成可验证的事实——避免后续（包括我自己）把时间花在调这些参数上。
+
+### 链路审查完成
+
+| 组件 | 新增测试 | 结论 |
+|---|---|---|
+| GlideSpellingTrie | 5 | 无缺陷 |
+| GlideGestureArbiter | 8 | 无缺陷 |
+| DistinctKeys 语义 | 2 | 名字有误导，行为正确 |
+| GlideCompositionSession | 10 | 无缺陷 |
+| 候选去重 | 4 | **修复**先到先得缺陷 |
+| GlideGeometryRegistry | 11 | 记录 cluster 链式合并边界 |
+| 采集完整性 | 3 | 数据质量合格 |
+| 时间戳语义 | 3 | 无缺陷 |
+| GlideTraceSampler 隔离 | 2 | 标记死代码 |
+| **合计** | **48** | 1 项修复，其余为确认/记录 |
