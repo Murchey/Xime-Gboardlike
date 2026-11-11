@@ -25,48 +25,7 @@ class GlideTraceReplayTest {
         return File("src/test/resources/glide/samples.jsonl")
     }
 
-    /** 小鹤双拼：声母键 + 韵母键，每音节固定 2 键。 */
-    private fun flypySpellings(): List<String> {
-        val initials = listOf(
-            "b","p","m","f","d","t","n","l","g","k","h","j","q","x",
-            "zh","ch","sh","r","z","c","s","y","w",
-        )
-        val finals = listOf(
-            "a","o","e","i","u","v","ai","ei","ui","ao","ou","iu","ie","ve","er",
-            "an","en","in","un","vn","ang","eng","ing","ong","ia","ua","uo","uai",
-            "uan","uang","ian","iang","iao","iong",
-        )
-        val out = LinkedHashSet<String>()
-        for (i in initials) for (f in finals) {
-            val head = initialKey(i) ?: continue
-            val tail = finalKey(f) ?: continue
-            out += "" + head + tail
-        }
-        // 零声母音节：a/o/e 双写 + 鼻韵母用 o 占位
-        out += listOf("aa", "oo", "ee", "oj", "of", "oh", "og", "or")
-        return out.toList()
-    }
-
-    /** 声母 -> 键。小鹤里 zh/ch/sh 用 v/i/u。 */
-    private fun initialKey(initial: String): Char? = when (initial) {
-        "zh" -> 'v'
-        "ch" -> 'i'
-        "sh" -> 'u'
-        else -> initial.firstOrNull()
-    }
-
-    /** 韵母 -> 键（小鹤双拼）。 */
-    private fun finalKey(f: String): Char? = when (f) {
-        "a" -> 'a'; "o" -> 'o'; "e" -> 'e'
-        "i" -> 'i'; "u" -> 'u'; "v" -> 'v'
-        "ai" -> 'd'; "ei" -> 'w'; "ui" -> 'v'; "ao" -> 'c'; "ou" -> 'z'
-        "iu" -> 'q'; "ie" -> 'p'; "ve" -> 't'; "er" -> 'r'
-        "an" -> 'j'; "en" -> 'f'; "in" -> 'b'; "un" -> 'y'; "vn" -> 'y'
-        "ang" -> 'h'; "eng" -> 'g'; "ing" -> 'k'; "ong" -> 's'
-        "ia" -> 'x'; "ua" -> 'x'; "uo" -> 'o'; "uai" -> 'k'; "uan" -> 'r'
-        "uang" -> 'l'; "ian" -> 'm'; "iang" -> 'l'; "iao" -> 'n'; "iong" -> 's'
-        else -> null
-    }
+    private fun flypySpellings(): List<String> = FlypySpellings.all()
 
     private data class Sample(
         val id: String,
@@ -156,9 +115,11 @@ class GlideTraceReplayTest {
             if (s.expected in codes) reachable++
             val d = editDistance(s.code, s.expected)
             distSum += d
+            val rank = codes.indexOf(s.expected)
             println(
                 "[replay] " + s.id + " n=" + codes.size + " top=" + codes.firstOrNull() +
-                    " exp=" + s.expected + " 可达=" + (s.expected in codes) + " d=" + d
+                    " exp=" + s.expected + " 可达=" + (s.expected in codes) +
+                    " 位次=" + rank + " d=" + d
             )
         }
         val avg = distSum.toDouble() / usable.size
@@ -166,6 +127,12 @@ class GlideTraceReplayTest {
             "[replay] top-1=" + top1 + "/" + usable.size +
                 " 几何可达=" + reachable + "/" + usable.size +
                 " 平均距离=" + String.format("%.2f", avg)
+        )
+        // 可达但不在 top-1 → 只能靠重排救；根本不可达 → 只能靠改搜索
+        println(
+            "[replay] 诊断：可达但非 top-1=" + (reachable - top1) +
+                "（重排可救），根本不可达=" + (usable.size - reachable) +
+                "（必须改搜索）"
         )
     }
 }

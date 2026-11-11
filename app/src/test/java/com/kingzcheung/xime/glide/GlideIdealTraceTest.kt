@@ -12,34 +12,7 @@ import org.junit.Test
  */
 class GlideIdealTraceTest {
 
-    private fun flypySpellings(): List<String> {
-        val out = LinkedHashSet<String>()
-        val initials = listOf("", "b","p","m","f","d","t","n","l","g","k","h","j","q","x","zh","ch","sh","r","z","c","s","y","w")
-        val finals = linkedMapOf(
-            "a" to 'a', "o" to 'o', "e" to 'e', "i" to 'i', "u" to 'u', "v" to 'v', "er" to 'r',
-            "ai" to 'd', "ei" to 'w', "ui" to 'v', "ao" to 'c', "ou" to 'z',
-            "iu" to 'q', "ie" to 'p', "ve" to 't',
-            "an" to 'j', "en" to 'f', "in" to 'b', "un" to 'y', "vn" to 'y',
-            "ang" to 'h', "eng" to 'g', "ing" to 'k', "ong" to 's',
-            "ia" to 'x', "ua" to 'x', "uo" to 'o', "uai" to 'k', "uan" to 'r', "uang" to 'l',
-            "ian" to 'm', "iang" to 'l', "iao" to 'n', "iong" to 's',
-        )
-        for (i in initials) for ((f, k) in finals) {
-            val head = when (i) {
-                "" -> {
-                    if (f == "a" || f == "o" || f == "e") { out += "" + k + k; continue }
-                    if (f == "er") { out += "or"; continue }
-                    'o'
-                }
-                "zh" -> 'v'
-                "ch" -> 'i'
-                "sh" -> 'u'
-                else -> i.first()
-            }
-            out += "" + head + k
-        }
-        return out.toList()
-    }
+    private fun flypySpellings(): List<String> = FlypySpellings.all()
 
     private fun geometry(): GlideGeometrySnapshot {
         val rows = listOf("qwertyuiop", "asdfghjkl", "zxcvbnm")
