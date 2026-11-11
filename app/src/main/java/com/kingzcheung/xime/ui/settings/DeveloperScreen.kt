@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +48,7 @@ import com.kingzcheung.xime.settings.SettingsPreferences
 fun DeveloperContent(
     onBack: () -> Unit,
     onNavigateToHandwritingCapture: () -> Unit = {},
+    onNavigateToGlideTrace: () -> Unit = {},
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var pluginDevModeEnabled by remember {
@@ -94,6 +96,16 @@ fun DeveloperContent(
                             icon = Icons.Default.Edit,
                             title = tr(R.string.s_shouxieshujucaiji),
                             onClick = onNavigateToHandwritingCapture
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 72.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                        SettingsItem(
+                            icon = Icons.Default.IosShare,
+                            title = tr(R.string.s_huadongguijishuju),
+                            onClick = onNavigateToGlideTrace
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 72.dp),

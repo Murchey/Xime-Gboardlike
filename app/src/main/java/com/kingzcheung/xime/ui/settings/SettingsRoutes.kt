@@ -42,6 +42,7 @@ object SettingsRoutes {
     const val Licenses = "licenses"
     const val LogViewer = "log_viewer"
     const val HandwritingCapture = "handwriting_capture"
+    const val GlideTrace = "glide_trace"
     const val Clipboard = "clipboard"
     const val ClipboardSync = "clipboard_sync"
     const val Backup = "backup"

@@ -1352,6 +1352,9 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                 }
             }
             withContext(Dispatchers.Main) {
+                // 采集：若上屏的正是滑动候选（编码与采集的轨迹对应），补上期望文本落盘
+                com.kingzcheung.xime.glide.GlideTraceRecorder.attachExpected(
+                    fullCommitText, service.candidateState.value.inputText)
                 service.commitText(fullCommitText)
                 service.t9PartialSegments.clear()
                 // 编码已随候选整串上屏：退出编码编辑态（光标复位到末尾语义）
@@ -1416,7 +1419,8 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
     private suspend fun commitPluginCandidate(text: String) {
         withContext(Dispatchers.Main) {
             // 采集：用户确认了文本，把它作为该次滑动的期望结果落盘
-            com.kingzcheung.xime.glide.GlideTraceRecorder.attachExpected(text)
+            com.kingzcheung.xime.glide.GlideTraceRecorder.attachExpected(
+                text, service.candidateState.value.inputText)
             service.commitText(text)
             service.clearGlideSession()
             service.candidateState.value = service.candidateState.value.copy(

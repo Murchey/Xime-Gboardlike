@@ -1314,4 +1314,8 @@
     <string name="storage_plugin_sync_hint">選擇及設定 WebDAV 等剪貼簿同步外掛</string>
     <string name="s_huadongshuru">滑動輸入</string>
     <string name="s_huadongshuru_fu">26 鍵中文全拼／雙拼可連續滑動整句輸入；開啟後字母滑動快捷動作暫不觸發，且不使用左右滑動游標。</string>
+    <string name="s_huadongguijishuju">滑動軌跡數據</string>
+    <string name="s_huadongguijishuju_fu">記錄每次滑動輸入的軌跡、鍵位幾何與確認文本（僅存本機），用於離線評測滑動準確率。</string>
+    <string name="s_yicaiji_tiao">已採集 %1$s 條</string>
+    <string name="s_guijikaiguan">記錄滑動軌跡</string>
 </resources>

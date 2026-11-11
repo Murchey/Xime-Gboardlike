@@ -127,10 +127,10 @@ class GlideKeyboardController(
                 val points = collected.toList()
                 clearTrail()
                 if (geo == null || points.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
-                // 采集真实轨迹（仅在显式开启时写入），供准确率评估与离线训练
-                GlideTraceRecorder.onTraceFinished(points, geo, currentSchema)
                 // 几何解码：按对齐/连线/回溯/停留代价枚举完整音节串（代价低的在前）
                 val hypotheses = GlideGeometryDecoder.decode(points, geo, GLIDE_HYPOTHESES, activeSpellings, activeDensityDpi)
+                // 采集真实轨迹（仅在显式开启时写入），供准确率评估与离线训练
+                recordTrace(points, geo, currentSchema, activePrefix, hypotheses)
                 if (hypotheses.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
                 // 英文模式：轨迹解出的字母串即候选，不查中文词库（随键盘中英文模式变化）
                 if (asciiMode) {
@@ -219,6 +219,8 @@ class GlideKeyboardController(
         session.deliverCandidates(
             session.state.traceId, session.state.revision, hostToken, top.rawInput, sorted,
         )
+        // 采集：记下真正装进组合的编码，确认上屏时据此校验样本对应关系
+        GlideTraceRecorder.onCandidatesInstalled(top.rawInput)
     }
 
     internal data class DecodeRequest(
@@ -248,8 +250,10 @@ class GlideKeyboardController(
 
     /** 仅在后台线程执行；预览只使用独立查询，不往 Rime 主组合写编码。 */
     internal fun decode(request: DecodeRequest): DecodeResult {
-        if (request.final) GlideTraceRecorder.onTraceFinished(request.points, request.geometry, request.schema)
         val hypotheses = GlideGeometryDecoder.decode(request.points, request.geometry, GLIDE_HYPOTHESES, request.spellings, request.densityDpi)
+        if (request.final) {
+            recordTrace(request.points, request.geometry, request.schema, request.prefix, hypotheses)
+        }
         val candidates = if (request.ascii) hypotheses.mapIndexed { i, h ->
             GlideCandidate("en-$" + i, h.letters, h.letters, score = -h.cost.toDouble())
         } else lookupHypotheses(hypotheses, request.prefix)
@@ -280,7 +284,26 @@ class GlideKeyboardController(
         gestureId++
         arbiter.onCancel()
         coordinator.session.cancel()
+        // 取消的滑动不该被后续确认认领：丢弃待写样本，避免期望文本错位
+        GlideTraceRecorder.discard()
         clearTrail()
+    }
+
+    /** 采样落盘用：几何假设文本（首选在前）+ 前缀，供确认时补 expected 与离线分析。 */
+    private fun recordTrace(
+        points: List<GlidePoint>,
+        geo: GlideGeometrySnapshot,
+        schema: String,
+        prefix: String,
+        hypotheses: List<GlideGeometryDecoder.Hypothesis>,
+    ) {
+        GlideTraceRecorder.onTraceFinished(
+            points = points,
+            geometry = geo,
+            schemaFingerprint = schema,
+            prefix = prefix,
+            candidates = hypotheses.take(TRACE_CANDIDATE_LIMIT).map { prefix + it.letters },
+        )
     }
 
     fun allowFallbackClick(): Boolean = arbiter.allowFallbackClick()
@@ -296,6 +319,8 @@ class GlideKeyboardController(
         /** 连续长词候选代表编码整体成句，补偿正确整句假设靠后时的几何差距。 */
         const val PHRASE_COHERENCE_BONUS = 1.1
         const val MAX_GLIDE_CANDIDATES = 16
+        /** 采集用的候选文本上限：只留前几名，足够判断几何排序是否出错。 */
+        const val TRACE_CANDIDATE_LIMIT = 8
     }
 
     private fun clearTrail() {

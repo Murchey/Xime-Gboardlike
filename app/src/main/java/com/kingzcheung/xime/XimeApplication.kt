@@ -8,6 +8,7 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.kingzcheung.xime.correction.CorrectionPriors
 import com.kingzcheung.xime.correction.KeyTapLogger
+import com.kingzcheung.xime.glide.GlideTraceRecorder
 import com.kingzcheung.xime.plugin.ExtensionManager
 import com.kingzcheung.xime.plugin.PluginConfigStoreImpl
 import com.kingzcheung.xime.util.FileLogger
@@ -75,6 +76,8 @@ class XimeApplication : Application(), ImageLoaderFactory {
         FileLogger.init(this)
         KeyTapLogger.init(this)
         KeyTapLogger.enabled = SettingsPreferences.isKeyTapLogEnabled(this)
+        GlideTraceRecorder.init(this)
+        GlideTraceRecorder.enabled = SettingsPreferences.isGlideTraceEnabled(this)
         // 邻键误触纠错（librime 插件版）：初始化先验推送器
         CorrectionPriors.init(this)
         CorrectionPriors.enabled = SettingsPreferences.isCorrectorEnabled(this)

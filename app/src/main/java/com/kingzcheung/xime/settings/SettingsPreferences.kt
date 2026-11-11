@@ -22,6 +22,8 @@ object SettingsPreferences {
     private const val KEY_PLUGIN_DEV_MODE = "plugin_dev_mode"
     /** 按键坐标日志开关（相邻键纠错数据采集，默认关闭）。 */
     private const val KEY_KEY_TAP_LOG = "key_tap_log"
+    /** 滑动轨迹采集开关（glide 离线评测数据，默认关闭）。 */
+    private const val KEY_GLIDE_TRACE = "glide_trace_recording"
     /** 纠错模型影子模式（只记录"会怎么改"，不改行为，默认关闭）。 */
 
     private const val KEY_CORRECTOR_ENABLED = "corrector_enabled"
@@ -356,6 +358,15 @@ object SettingsPreferences {
 
     fun setKeyTapLogEnabled(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_KEY_TAP_LOG, enabled).apply()
+    }
+
+    /** 滑动轨迹采集（glide 离线评测数据），默认关闭。 */
+    fun isGlideTraceEnabled(context: Context): Boolean {
+        return getPrefs(context).getBoolean(KEY_GLIDE_TRACE, false)
+    }
+
+    fun setGlideTraceEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_GLIDE_TRACE, enabled).apply()
     }
 
     /** 智能纠错（相邻键纠错候选，默认关闭）。 */

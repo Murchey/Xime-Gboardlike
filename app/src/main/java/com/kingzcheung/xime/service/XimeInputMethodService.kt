@@ -113,6 +113,7 @@ import com.kingzcheung.xime.rime.RimeCandidate
 import com.kingzcheung.xime.rime.resolveRimeCandidateIndex
 
 import com.kingzcheung.xime.correction.KeyTapLogger
+import com.kingzcheung.xime.glide.GlideTraceRecorder
 import com.kingzcheung.xime.settings.AppLocale
 import com.kingzcheung.xime.settings.SchemaConfigHelper
 import com.kingzcheung.xime.settings.SchemaManager
@@ -851,6 +852,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         KeyTapLogger.init(this)
         KeyTapLogger.enabled = SettingsPreferences.isKeyTapLogEnabled(this)
         KeyTapLogger.schemaProvider = { uiState.value.currentSchemaId }
+        GlideTraceRecorder.init(this)
+        GlideTraceRecorder.enabled = SettingsPreferences.isGlideTraceEnabled(this)
         FileLogger.i(TAG, "XimeInputMethodService created")
         FileLogger.i(
             TAG,

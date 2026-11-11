@@ -357,7 +357,8 @@ fun SettingsScreen(
         composable(SettingsRoutes.Developer) {
             DeveloperContent(
                 onBack = { navController.popBackStack() },
-                onNavigateToHandwritingCapture = { navController.navigate(SettingsRoutes.HandwritingCapture) }
+                onNavigateToHandwritingCapture = { navController.navigate(SettingsRoutes.HandwritingCapture) },
+                onNavigateToGlideTrace = { navController.navigate(SettingsRoutes.GlideTrace) }
             )
         }
         composable(SettingsRoutes.StorageSpace) {
@@ -413,6 +414,11 @@ fun SettingsScreen(
         }
         composable(SettingsRoutes.HandwritingCapture) {
             HandwritingCaptureScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(SettingsRoutes.GlideTrace) {
+            GlideTraceScreen(
                 onBack = { navController.popBackStack() }
             )
         }
