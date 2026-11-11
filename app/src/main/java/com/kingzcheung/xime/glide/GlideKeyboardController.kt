@@ -259,17 +259,24 @@ class GlideKeyboardController(
      * 第一次调用记录基准，之后返回 (score - baseline) * GRAM_WEIGHT。
      * 没有 gram 信号（方案无语法模型 / 引擎未就绪）时恒返回 0，行为与改动前一致。
      */
-    private fun gramDeltaFor(text: String): Double {
+    /**
+     * gram 打分入口（context, word）-> ln P。可注入：单测里替换成假实现，
+     * 生产环境默认走 RimeEngine 的 octagram。返回 GRAM_UNAVAILABLE 表示无信号。
+     */
+    var gramScorer: (context: String, word: String) -> Double = { ctx, word ->
         val schema = currentSchema
-        if (schema.isEmpty() || text.isEmpty()) return 0.0
         // 纯 JVM 单测里 RimeEngine 的 native 库加载不了（NoClassDefFoundError），
         // 而且真实场景下方案也可能没挂语法模型：两种情况都必须静默退回原排序。
-        val score = try {
-            com.kingzcheung.xime.rime.RimeEngine.getInstance()
-                .queryGramScore(schema, gestureContext, text)
+        try {
+            com.kingzcheung.xime.rime.RimeEngine.getInstance().queryGramScore(schema, ctx, word)
         } catch (_: Throwable) {
-            return 0.0
+            com.kingzcheung.xime.rime.RimeEngine.GRAM_UNAVAILABLE
         }
+    }
+
+    private fun gramDeltaFor(text: String): Double {
+        if (currentSchema.isEmpty() || text.isEmpty()) return 0.0
+        val score = gramScorer(gestureContext, text)
         if (score <= com.kingzcheung.xime.rime.RimeEngine.GRAM_UNAVAILABLE) return 0.0
         val base = gramBaseline ?: score.also { gramBaseline = it }
         return (score - base) * GRAM_WEIGHT
