@@ -376,3 +376,43 @@ dwell 项），逐层 dump 显示真实代价顺序未必如此。至少 g111046
 但**不完全同意**「不要追准确率」：本轮把可达率从 5/16 提到 8/16 是靠修一个判定逻辑
 （是否给重复折扣），纯工程、零训练成本。先把这类「明显写错」的地方修完，
 再谈天花板更公允。
+
+## 十一、第六轮：跨假设 gram 打通（2026-11-11）
+
+按上一轮结论，补齐「可比较的语言模型分数」。
+
+### 做了什么
+
+1. **JNI 入口** `nativeQueryGramScore(schema, context, word)`：
+   按 schema 造 `Config`，再 `Grammar::Require("grammar")->Create(config)`
+   得到 `Octagram`，调用 `Query(context, word, false)`。按方案缓存实例。
+2. **Kotlin API** `RimeEngine.queryGramScore`，`GRAM_UNAVAILABLE` 标记无信号。
+3. **接入滑动排序**：`GlideKeyboardController.gramDelta` 以本次首个候选为基准
+   转成相对增量，按 `GRAM_WEIGHT=1.0` 并入候选分。无信号时静默退回原排序。
+
+### 真机验证（真实 IME 进程日志）
+
+```
+GramSelfCheck: schema=rime_ice 起来=-3.558 起凉=-9.839 可用=true
+```
+
+区分度 6.28 个 ln 单位。对比几何分差（本批样本只有 0.5~2），
+说明 gram 足以在「几何难分」时定夺，这正是 g111046-12 这类样本需要的信号。
+
+### 排查中发现的部署问题
+
+内置 `XimeGboard.gram`（26MB）此前**没有落到设备 rime 目录**。
+原因是我的验证方式踩了坑：instrumentation 进程与 IME 进程的
+SharedPreferences 不共享，在测试里调用 `GramBundledModel.ensureDefault`
+既看不到写入、也不会留下 `gram_model.xml`。
+真实启动 App 后模型正确落盘、偏好正确写入（active_language=XimeGboard）。
+
+**这对以后的真机测试是个重要约束**：涉及偏好/引擎状态的验证必须走真实进程，
+不能依赖 instrumentation 里的 targetContext。
+
+### 一个必须留意的回归
+
+接入 gram 后，纯 JVM 单测里 `RimeEngine` 加载不了 native 库
+（NoClassDefFoundError），一度打挂 4 个 glide 测试。
+`gramDeltaFor` 已用 try/catch 兜住：**这是设计上的必要容错**，
+不只是为了让测试过——真实场景下方也可能没挂语法模型。
