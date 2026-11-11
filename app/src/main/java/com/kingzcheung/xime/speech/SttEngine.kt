@@ -1,15 +1,19 @@
 package com.kingzcheung.xime.speech
 
 /**
- * 语音识别引擎。三者互斥单选：
+ * 语音识别引擎。互斥单选：
  * - [LOCAL]：本地离线模型（:asr 进程 + zipformer2）
  * - [BUILTIN_ONLINE]：内置在线识别，App 自己发请求，**不需要安装任何插件**
  * - [PLUGIN]：已安装的在线 ASR 插件
+ * - [SYSTEM]：设备自带语音引擎（android.speech.SpeechRecognizer）。
+ *   与其他三者的根本差异：系统引擎**自己持有麦克风**并经 RecognitionListener 回调，
+ *   无法接收 App 采集的音频块，因此录音走旁路（不启动 AudioRecord）。
  */
 enum class SttEngine(val prefValue: String) {
     LOCAL("local"),
     BUILTIN_ONLINE("builtin"),
-    PLUGIN("plugin");
+    PLUGIN("plugin"),
+    SYSTEM("system");
 
     companion object {
         fun fromPrefValue(value: String?): SttEngine? =
@@ -27,6 +31,9 @@ enum class SttUnavailable {
 
     /** 插件模式但没有启用任何语音插件。 */
     PLUGIN_MISSING,
+
+    /** 系统语音引擎模式，但本机没有可用的识别服务。 */
+    SYSTEM_MISSING,
 }
 
 /**
@@ -58,12 +65,16 @@ object SttEngineResolver {
      * - [SttEngine.BUILTIN_ONLINE] 且未填 Key → [SttUnavailable.KEY_MISSING]
      * - [SttEngine.PLUGIN] 且无已启用插件 → 有内置 Key 则降级到内置在线，否则
      *   [SttUnavailable.PLUGIN_MISSING]
+     * - [SttEngine.SYSTEM] 且本机无可用识别服务 → [SttUnavailable.SYSTEM_MISSING]
+     *   （同样不静默换引擎：系统引擎在不同机型差异极大，换到别的引擎会让用户
+     *   以为是系统在识别，出问题无从判断）
      */
     fun resolve(
         preferred: SttEngine?,
         localAvailable: Boolean,
         builtinConfigured: Boolean,
         enabledPluginIds: List<String>,
+        systemAvailable: Boolean = false,
     ): SttEngineResolution {
         val pref = preferred ?: SttEngine.BUILTIN_ONLINE
         return when (pref) {
@@ -94,6 +105,13 @@ object SttEngineResolver {
                     )
                 } else {
                     SttEngineResolution(SttEngine.PLUGIN, unavailable = SttUnavailable.PLUGIN_MISSING)
+                }
+
+            SttEngine.SYSTEM ->
+                if (systemAvailable) {
+                    SttEngineResolution(SttEngine.SYSTEM)
+                } else {
+                    SttEngineResolution(SttEngine.SYSTEM, unavailable = SttUnavailable.SYSTEM_MISSING)
                 }
         }
     }

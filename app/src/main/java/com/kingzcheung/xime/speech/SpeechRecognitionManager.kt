@@ -42,6 +42,10 @@ class SpeechRecognitionManager(private val context: Context) {
 
     private var backend: AsrBackend? = null
     private var recordingThread: RecordingThread? = null
+
+    /** 系统引擎（capturesAudioItself）没有录音线程，用它跟踪"正在识别"。 */
+    @Volatile
+    private var recognitionActive = false
     private val mainHandler = Handler(Looper.getMainLooper())
 
     // 会话序号：用于区分连续语音会话，防止旧会话的回收线程误释放新会话的后端
@@ -96,7 +100,14 @@ class SpeechRecognitionManager(private val context: Context) {
             }
         }
         
-        if (recordingThread != null) {
+        // 系统引擎不建录音线程（recordingThread 恒为 null），
+        // 因此"是否已在识别"改由后端自身状态判断，避免重复 start 或漏判。
+        val alreadyRunning = if (backend?.capturesAudioItself == true) {
+            recognitionActive
+        } else {
+            recordingThread != null
+        }
+        if (alreadyRunning) {
             FileLogger.w(TAG, "Recognition already running, ignoring start request")
             return
         }
@@ -166,6 +177,18 @@ class SpeechRecognitionManager(private val context: Context) {
         }
         mainHandler.removeCallbacks(preStartTimeoutRunnable)
 
+        // 系统语音引擎自己持有麦克风并经 RecognitionListener 回调，
+        // 不能走 AudioRecord 流式路径（否则会抢占麦克风、两路都收不到音）。
+        if (currentBackend.capturesAudioItself) {
+            preStarted?.let { runCatching { it.stop() }; runCatching { it.release() } }
+            val ok = runCatching { currentBackend.start() }.getOrDefault(false)
+            recognitionActive = ok
+            if (!ok) {
+                stateCallback?.invoke(RecognitionState.ERROR)
+            }
+            return
+        }
+
         recordingThread = RecordingThread(currentBackend, preStarted)
         recordingThread!!.start()
     }
@@ -228,6 +251,13 @@ class SpeechRecognitionManager(private val context: Context) {
         Log.d(TAG, "Canceling recognition")
         val thread = recordingThread
         if (thread == null) {
+            // 系统引擎没有录音线程：必须显式取消后端，否则识别会继续跑
+            if (backend?.capturesAudioItself == true) {
+                recognitionActive = false
+                runCatching { backend?.cancel() }
+                mainHandler.post { setState(RecognitionState.IDLE) }
+                return
+            }
             // 模型仍在后台加载中：标记取消，加载完成后不再启动录音
             if (loadingInProgress) {
                 loadingCancelled = true
@@ -380,12 +410,15 @@ class SpeechRecognitionManager(private val context: Context) {
             localAvailable = AsrBackendFactory.getLocalName(context) != null,
             builtinConfigured = AsrBackendFactory.isBuiltinConfigured(context),
             enabledPluginIds = enabledPlugins,
+            systemAvailable = AsrBackendFactory.isSystemAvailable(context),
         )
         Log.d(TAG, "STT engine=${resolution.engine} pref=$engine fallback=${resolution.fallbackFrom} unavailable=${resolution.unavailable}")
         return when (resolution.engine) {
             SttEngine.LOCAL -> AsrBackendFactory.create(context)
             SttEngine.BUILTIN_ONLINE -> AsrBackendFactory.createBuiltinOnline(context)
             SttEngine.PLUGIN -> createOnlineAsrBackend()
+            // 系统引擎自己录音（见 SystemSpeechAsrBackend），录音线程会据此跳过 AudioRecord
+            SttEngine.SYSTEM -> AsrBackendFactory.createSystem(context)
         }
     }
 

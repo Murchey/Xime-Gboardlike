@@ -19,6 +19,16 @@ object AsrBackendFactory {
     /** 本地引擎显示名（当前生效模型名；未下载任何模型时为 null）。 */
     fun getLocalName(context: Context): String? = AsrSupport.getLocalName(context)
 
+    /** 设备是否有可用的系统语音引擎（android.speech.SpeechRecognizer）。 */
+    fun isSystemAvailable(context: Context): Boolean =
+        SystemSpeechAvailability.check(context).available
+
+    /** 系统语音引擎显示名（系统识别服务的应用名）；探测不到时返回 null。 */
+    fun getSystemName(context: Context): String? = SystemSpeechAvailability.serviceLabel(context)
+
+    /** 系统引擎后端。系统引擎自己录音，不接收外部音频块。 */
+    fun createSystem(context: Context): AsrBackend = SystemSpeechAsrBackend(context)
+
     /** 内置在线是否已配置（选中的服务商填了 Key，或该服务商允许无 Key）。 */
     fun isBuiltinConfigured(context: Context): Boolean = BuiltinOnlineAsrBackend.isConfigured(context)
 

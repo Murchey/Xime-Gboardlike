@@ -1479,4 +1479,20 @@
     <string name="s_daibiaojishu">%1$s 条待标注</string>
     <string name="s_yikaishijilu_huawanhouqu_shezh_9b8f1">开始记录滑动轨迹。滑完到「设置 → 关于 → 开发者选项 → 滑动轨迹数据」标注和导出。</string>
     <string name="s_yiguanbijilu_qu_shezhiqubiaoj_2f4a7">已停止记录。到「设置 → 关于 → 开发者选项 → 滑动轨迹数据」标注并导出。</string>
+    <string name="s_xitongyuyin">系统语音引擎</string>
+    <string name="s_xitongyuyin_shi">系统语音引擎 · %1$s</string>
+    <string name="s_xitongyuyin_bukeyong">本机没有可用的系统语音引擎</string>
+    <string name="s_xitongyuyin_chuangjian">无法创建系统语音识别服务</string>
+    <string name="s_xitongyuyin_bukeyong_shuoming">本机未安装或未启用系统语音识别服务，请改用其他识别引擎</string>
+    <string name="s_xitongyuyin_zhengzai">正在使用系统语音引擎</string>
+    <string name="s_yuyin_audioerror">录音出错</string>
+    <string name="s_yuyin_clienterror">识别客户端出错</string>
+    <string name="s_yuyin_quanxian">缺少录音权限，请在系统设置中授权</string>
+    <string name="s_yuyin_wangluo">网络异常，请检查网络</string>
+    <string name="s_yuyin_wangluochaoshi">网络超时，请重试</string>
+    <string name="s_yuyin_weishibie">没有识别到内容</string>
+    <string name="s_yuyin_mang">识别服务忙，请稍后再试</string>
+    <string name="s_yuyin_fuwuyichang">识别服务异常</string>
+    <string name="s_yuyin_meiyoushuohua">没有检测到语音输入</string>
+    <string name="s_yuyin_shibai">语音识别失败</string>
 </resources>

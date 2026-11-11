@@ -194,6 +194,11 @@ class VoiceRecognitionHandler(
             SttEngine.BUILTIN_ONLINE ->
                 tr(R.string.s_neizhianzaixian_shi, AsrBackendFactory.getBuiltinName(context))
 
+            SttEngine.SYSTEM ->
+                AsrBackendFactory.getSystemName(context)
+                    ?.let { tr(R.string.s_xitongyuyin_shi, it) }
+                    ?: tr(R.string.s_xitongyuyin)
+
             SttEngine.PLUGIN -> {
                 val enabledPlugins = ExtensionManager.getEnabledAsrPlugins(context)
                 val selectedId = SettingsPreferences.getSttOnlinePluginId(context)
@@ -225,12 +230,14 @@ class VoiceRecognitionHandler(
             localAvailable = AsrBackendFactory.getLocalName(context) != null,
             builtinConfigured = AsrBackendFactory.isBuiltinConfigured(context),
             enabledPluginIds = ExtensionManager.getEnabledAsrPlugins(context).map { it.first },
+            systemAvailable = AsrBackendFactory.isSystemAvailable(context),
         )
         if (resolution.isAvailable) return false
         val message = when (resolution.unavailable) {
             SttUnavailable.MODEL_MISSING -> tr(R.string.s_weixiazaiyuyinmoxing)
             SttUnavailable.KEY_MISSING -> tr(R.string.s_weitianxieyuyinmiyao)
             SttUnavailable.PLUGIN_MISSING -> tr(R.string.s_weianzhuangyuyinchajian)
+            SttUnavailable.SYSTEM_MISSING -> tr(R.string.s_xitongyuyin_bukeyong_shuoming)
             null -> tr(R.string.s_yuyinyinqingbunengyong)
         }
         FileLogger.w(TAG, "STT engine unavailable: \$resolution")

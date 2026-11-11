@@ -104,6 +104,9 @@ fun SpeechToTextSettingsContent(
     var localReady by remember { mutableStateOf(AsrBackendFactory.getLocalName(context) != null) }
     var builtinReady by remember { mutableStateOf(AsrBackendFactory.isBuiltinConfigured(context)) }
     var builtinName by remember { mutableStateOf(AsrBackendFactory.getBuiltinName(context)) }
+    // 系统语音引擎探测：结果因机型差异大，需在页面上如实展示可用性。
+    var systemReady by remember { mutableStateOf(AsrBackendFactory.isSystemAvailable(context)) }
+    var systemLabel by remember { mutableStateOf(AsrBackendFactory.getSystemName(context)) }
 
     // 插件列表在 IO 组装：isConfigured() 会进插件运行时（QuickJS），组合期同步调用会阻塞主线程
     var plugins by remember { mutableStateOf<List<AsrProvider>>(emptyList()) }
@@ -158,6 +161,8 @@ fun SpeechToTextSettingsContent(
         localReady = AsrBackendFactory.getLocalName(context) != null
         builtinReady = AsrBackendFactory.isBuiltinConfigured(context)
         builtinName = AsrBackendFactory.getBuiltinName(context)
+        systemReady = AsrBackendFactory.isSystemAvailable(context)
+        systemLabel = AsrBackendFactory.getSystemName(context)
     }
 
     fun selectEngine(target: SttEngine) {
@@ -168,7 +173,7 @@ fun SpeechToTextSettingsContent(
                 scope.launch(Dispatchers.IO) { AsrBackendFactory.warmup(context) }
             }
 
-            SttEngine.BUILTIN_ONLINE, SttEngine.PLUGIN -> Unit
+            SttEngine.BUILTIN_ONLINE, SttEngine.PLUGIN, SttEngine.SYSTEM -> Unit
         }
     }
 
@@ -241,6 +246,19 @@ fun SpeechToTextSettingsContent(
                         selected = engine == SttEngine.PLUGIN,
                         onSelect = { selectEngine(SttEngine.PLUGIN) },
                     )
+                    EngineRow(
+                        title = tr(R.string.s_xitongyuyin),
+                        status = if (systemReady) {
+                            systemLabel?.let { tr(R.string.s_xitongyuyin_shi, it) }
+                                ?: tr(R.string.s_xitongyuyin_zhengzai)
+                        } else {
+                            tr(R.string.s_xitongyuyin_bukeyong)
+                        },
+                        // 不可用时仍可点：展开配置区给出具体原因，比灰掉不解释更好。
+                        ready = true,
+                        selected = engine == SttEngine.SYSTEM,
+                        onSelect = { selectEngine(SttEngine.SYSTEM) },
+                    )
                 },
             )
 
@@ -295,6 +313,59 @@ fun SpeechToTextSettingsContent(
                     onManagePlugins = onNavigateToPlugins,
                     onSettings = onNavigateToPluginSettings,
                 )
+
+                SttEngine.SYSTEM -> SystemEngineSection(
+                    available = systemReady,
+                    serviceLabel = systemLabel,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 系统语音引擎配置区。
+ *
+ * 系统引擎没有任何可调参数（语言、模型、端点都由设备上的识别服务决定），
+ * 这里只如实展示探测结果：可用时显示提供服务名，不可用时说明原因，
+ * 避免"选了却没反应"。
+ */
+@Composable
+private fun SystemEngineSection(
+    available: Boolean,
+    serviceLabel: String?,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        text = tr(R.string.s_xitongyuyin),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = if (available) {
+                            serviceLabel?.let { tr(R.string.s_xitongyuyin_shi, it) }
+                                ?: tr(R.string.s_xitongyuyin_zhengzai)
+                        } else {
+                            tr(R.string.s_xitongyuyin_bukeyong_shuoming)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (available) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
+                    )
+                }
             }
         }
     }
