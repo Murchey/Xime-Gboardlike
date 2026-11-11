@@ -57,14 +57,6 @@ data class KeyboardCallbacks(
     val onGlideStart: (() -> String)? = null,
     /** 手指未抬起时的组词预览，不提交、不写入 Rime 主组合。 */
     val onGlidePreview: ((rawInput: String, texts: List<String>) -> Unit)? = null,
-    /** 开发者「滑动标记」面板开关（工具栏按钮触发）。 */
-    val onToggleGlideMark: (() -> Unit)? = null,
-    /** 标记面板里点选某条轨迹（id）。 */
-    val onGlideMarkSelect: ((String) -> Unit)? = null,
-    /** 标注输入框焦点变化（聚焦时按键路由进这里）。 */
-    val onGlideMarkFocusChange: ((Boolean) -> Unit)? = null,
-    /** 采集开关切换（面板顶部与设置页共用同一偏好）。 */
-    val onGlideRecordingChange: ((Boolean) -> Unit)? = null,
     val onGestureAction: ((GestureAction, String) -> Unit)? = null,
     val onUpdateToolbarButtons: ((List<String>) -> Unit)? = null,
     /**

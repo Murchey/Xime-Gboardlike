@@ -1328,4 +1328,12 @@
     <string name="s_weibiaoj">未標記（點這條補上真實意圖）</string>
     <string name="s_shuruwoxiangdade">輸入我實際想打出的內容，回車儲存</string>
     <string name="s_biaojishishuoming">軌跡在抬手時即落盤（e=trace），標註另起一行（e=label，按 id 對應）；同一 id 後寫的標註覆蓋先前的，確認候選的自動標註可被手動標記覆蓋。</string>
+    <string name="s_biaozhuqiwangwenben">標註期望文本</string>
+    <string name="s_jiechubianma_">解出的編碼：%1$s</string>
+    <string name="s_woxiangdade">我實際想打出的內容</string>
+    <string name="s_biaozhu">標註</string>
+    <string name="s_weibiaoj_dianji">未標記，點擊補上真實意圖</string>
+    <string name="s_daibiaojishu">%1$s 條待標註</string>
+    <string name="s_yikaishijilu_huawanhouqu_shezh_9b8f1">開始記錄滑動軌跡。滑完到「設定 → 關於 → 開發者選項 → 滑動軌跡數據」標註和匯出。</string>
+    <string name="s_yiguanbijilu_qu_shezhiqubiaoj_2f4a7">已停止記錄。到「設定 → 關於 → 開發者選項 → 滑動軌跡數據」標註並匯出。</string>
 </resources>

@@ -156,41 +156,6 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         }
         // 只有空格参与“连按两次”窗口；任何其他按键都中断计数。
         if (key != "space") service.lastSpaceCommitAt = 0L
-        // 开发者「滑动标记」面板：只要面板开着，按键就归标注框（避免误打进宿主应用）
-        if (service.uiState.value.glideMarkVisible) {
-            when (key) {
-                "enter" -> {
-                    service.saveGlideMark()
-                    return
-                }
-                "delete" -> {
-                    com.kingzcheung.xime.service.GlideMarkEditTextHolder.editText?.let { et ->
-                        val start = et.selectionStart.coerceAtLeast(0)
-                        val end = et.selectionEnd.coerceAtLeast(start)
-                        if (end > start) {
-                            et.text?.delete(start, end)
-                            runCatching { et.setSelection(start) }
-                        } else if (start > 0) {
-                            et.text?.delete(start - 1, start)
-                            runCatching { et.setSelection(start - 1) }
-                        }
-                    }
-                    return
-                }
-                else -> {
-                    if (key.length == 1) {
-                        val char = if (isShifted) key.uppercase() else key
-                        com.kingzcheung.xime.service.GlideMarkEditTextHolder.editText?.let { et ->
-                            val start = et.selectionStart.coerceAtLeast(0)
-                            et.text?.insert(start, char)
-                            runCatching { et.setSelection(start + char.length) }
-                        }
-                        return
-                    }
-                }
-            }
-            return
-        }
         if (service.uiState.value.toolPanelInputFocused) {
             val candState = service.candidateState.value
             val hasComposing = candState.isComposing || candState.inputText.isNotEmpty()

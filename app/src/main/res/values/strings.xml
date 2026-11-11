@@ -1471,4 +1471,12 @@
     <string name="s_weibiaoj">未标记（点这条补上真实意图）</string>
     <string name="s_shuruwoxiangdade">输入我实际想打出的内容，回车保存</string>
     <string name="s_biaojishishuoming">轨迹在抬手时即落盘（e=trace），标注另起一行（e=label，按 id 对应）；同一 id 后写的标注覆盖先前的，确认候选的自动标注可被手动标记覆盖。</string>
+    <string name="s_biaozhuqiwangwenben">标注期望文本</string>
+    <string name="s_jiechubianma_">解出的编码：%1$s</string>
+    <string name="s_woxiangdade">我实际想打出的内容</string>
+    <string name="s_biaozhu">标注</string>
+    <string name="s_weibiaoj_dianji">未标记，点击补上真实意图</string>
+    <string name="s_daibiaojishu">%1$s 条待标注</string>
+    <string name="s_yikaishijilu_huawanhouqu_shezh_9b8f1">开始记录滑动轨迹。滑完到「设置 → 关于 → 开发者选项 → 滑动轨迹数据」标注和导出。</string>
+    <string name="s_yiguanbijilu_qu_shezhiqubiaoj_2f4a7">已停止记录。到「设置 → 关于 → 开发者选项 → 滑动轨迹数据」标注并导出。</string>
 </resources>

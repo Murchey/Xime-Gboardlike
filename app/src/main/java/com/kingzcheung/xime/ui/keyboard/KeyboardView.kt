@@ -85,6 +85,26 @@ import com.kingzcheung.xime.viewmodel.KeyboardViewModel
 import com.kingzcheung.xime.viewmodel.asToolbarItem
 import kotlin.math.roundToInt
 
+/**
+ * 工具栏「滑动标记」按钮：一键开关滑动轨迹采集。
+ *
+ * 只做开关 + 提示，不在键盘里编辑任何文本——输入法无法给自己嵌套输入，
+ * 标注要打的中文/汉字只能在普通 App 里打，因此列表和标注放在设置页
+ * （设置 → 关于 → 开发者选项 → 滑动轨迹数据）。
+ */
+private fun toggleGlideRecording(context: android.content.Context) {
+    val next = !com.kingzcheung.xime.glide.GlideTraceRecorder.enabled
+    com.kingzcheung.xime.settings.SettingsPreferences.setGlideTraceEnabled(context, next)
+    com.kingzcheung.xime.glide.GlideTraceRecorder.init(context)
+    com.kingzcheung.xime.glide.GlideTraceRecorder.enabled = next
+    val tip = if (next) {
+        tr(R.string.s_yikaishijilu_huawanhouqu_shezh_9b8f1)
+    } else {
+        tr(R.string.s_yiguanbijilu_qu_shezhiqubiaoj_2f4a7)
+    }
+    android.widget.Toast.makeText(context, tip, android.widget.Toast.LENGTH_LONG).show()
+}
+
 val LocalStretchFactor = compositionLocalOf { 1f }
 val LocalSuppressCursorMove = compositionLocalOf { mutableStateOf(false) }
 
@@ -116,6 +136,8 @@ fun KeyboardView(
     onHapticFeedback: (() -> Unit)? = null,
 ) {
     val isShifted by viewModel.isShifted.collectAsStateWithLifecycle()
+    // 供回调闭包使用的 Context（MenuBar 的 onToolbarButtonClick 不在 composable 作用域内）
+    val callbackContext = LocalContext.current
     val keyboardState by viewModel.keyboardState.collectAsStateWithLifecycle()
     val page by viewModel.page.collectAsStateWithLifecycle()
     val candidatePageExpanded by viewModel.candidatePageExpanded.collectAsStateWithLifecycle()
@@ -410,27 +432,6 @@ fun KeyboardView(
                 )
             }
 
-            if (state.glideMarkVisible) {
-                GlideMarkPanel(
-                    backgroundColor = Color.Transparent,
-                    textColor = keyTextColor,
-                    accentColor = accentColor,
-                    cardBgColor = keyBgColor,
-                    recording = com.kingzcheung.xime.glide.GlideTraceRecorder.enabled,
-                    onRecordingChange = { enabled ->
-                        callbacks.onGlideRecordingChange?.invoke(enabled)
-                    },
-                    entries = remember(state.glideMarkRefresh) {
-                        com.kingzcheung.xime.glide.GlideTraceRecorder.recentEntries()
-                    },
-                    selectedId = state.glideMarkSelectedId,
-                    isFocused = state.glideMarkFocused,
-                    onSelect = { id -> callbacks.onGlideMarkSelect?.invoke(id) },
-                    onFocusChange = { focused -> callbacks.onGlideMarkFocusChange?.invoke(focused) },
-                    onClose = { callbacks.onToggleGlideMark?.invoke() },
-                )
-            }
-
             // ACTIVE 输入面板在候选栏上方（需要 EditText 输入，保留候选栏可见）；
             // PASSIVE 纯展示面板走 Overlay 全屏（KeyboardView 底部 Overlay 分支渲染 InfoPanel）
             if (state.toolPanelVisible && state.toolPanelDisplay != "PASSIVE") {
@@ -506,9 +507,7 @@ fun KeyboardView(
                             ToolbarButton.FLOAT -> ({ callbacks.onFloatingModeChange?.invoke(!state.isFloatingMode) })
                             ToolbarButton.HANDWRITING_LOOKUP -> ({ isHandwritingLookup = !isHandwritingLookup })
                             ToolbarButton.EDIT -> ({ viewModel.showOverlay(OverlayRoute.Edit) })
-                            ToolbarButton.DEBUG_GLIDE -> ({
-                                callbacks.onToggleGlideMark?.invoke()
-                            })
+                            ToolbarButton.DEBUG_GLIDE -> ({ toggleGlideRecording(toolbarContext) })
                             ToolbarButton.VOICE -> ({
                                 if (PermissionHelper.hasRecordAudioPermission(toolbarContext)) {
                                     callbacks.onVoiceStickyToggle?.invoke()
@@ -1518,7 +1517,10 @@ fun KeyboardView(
                                         ToolbarButton.HANDWRITING_LOOKUP -> callbacks.onToolbarEditingAction?.invoke("handwriting_lookup")
                                         ToolbarButton.EDIT -> viewModel.showOverlay(OverlayRoute.Edit)
                                         ToolbarButton.VOICE -> callbacks.onVoiceStickyToggle?.invoke()
-                                        ToolbarButton.DEBUG_GLIDE -> callbacks.onToggleGlideMark?.invoke()
+                                        ToolbarButton.DEBUG_GLIDE -> {
+                                            toggleGlideRecording(callbackContext)
+                                            viewModel.closeOverlay()
+                                        }
                                     }
                                     is ToolbarButtonItem.Plugin -> if (item.action == "open_panel") {
                                         callbacks.onOpenToolPanel?.invoke(item.pluginId)
