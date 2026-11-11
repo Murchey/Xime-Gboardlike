@@ -116,9 +116,11 @@ class GlideE2eReplayDeviceTest {
         // 记录基线：编码完全一致 6/16（JVM 回放口径为 5/16，差 1 条来自候选排序阶段）。
         // 这里只断言链路通，不断言具体数字——避免方案词典变化导致测试脆弱。
         rows.forEach { println("[e2e-replay] " + it) }
-        org.junit.Assert.assertTrue(
-            summary + "\n" + rows.joinToString("\n"),
-            hasCands == usable.size,
-        )
+        // 把摘要写进断言消息：通过时不显示，失败时可见。
+        // 需要读数时临时把条件改成 false（见 git 历史）。
+        org.junit.Assert.assertEquals(summary, usable.size, hasCands)
+        // 同时写进 logcat，便于 adb logcat 抓取
+        android.util.Log.i("GlideE2e", summary)
+        rows.forEach { android.util.Log.i("GlideE2e", it) }
     }
 }

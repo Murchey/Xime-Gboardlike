@@ -676,3 +676,56 @@ GRAM_WEIGHT 下调。目前 16 条样本的 `prefix` 都是空，
 
 现在有了端到端基线，任何排序/权重改动都可以：
 改 → 跑 `GlideE2eReplayDeviceTest` → 看 6/16 这个数字动没动。
+
+## 十九、第十四轮：用端到端基线做首次真实迭代（2026-11-11）
+
+有了 6/16 这个基线，终于可以「改一处、测一次」。本轮试了两项，**都没提升**，
+但定位到了一个重要的样本质量问题。
+
+### 试了什么，结果如何
+
+| 改动 | 端到端结果 | 处置 |
+|---|---|---|
+| GLIDE_HYPOTHESES 16→32 | 仍 6/16 | 回退 |
+| dwell 判定放宽（去掉「单次空洞 ≥120ms」要求） | 仍 6/16 | 回退 |
+
+### 逐条数据（16 条可用样本）
+
+| id | 期望 | 实际 | 距离 |
+|---|---|---|---|
+| g-3, g-6, g-11, g-12, g-19, g-20 | — | — | 0 ✅ |
+| g-7 | yipwwogu | yipwyogu | 1 |
+| g-18 | vfxligwwbdwjfuwg | vfxligfwbdwjfuwg | 1 |
+| g-1 | ilwddetmqi | ilewdetmqi | 2 |
+| g-14 | dahdhhxkkcdouz | dahdhhxkcdoucz | 2 |
+| g-15 | wuwwqiytxx | wuqiytxx | 2 |
+| g-16 | veuihxdsuurufa | veixdsuurufa | 2 |
+| g-4 | nidobmdebnqk | nidobmdebmmqtk | 3 |
+| g-10 | mnxnycfgda | mcxnycga | 3 |
+| g-13 | jixmtnvjvrjquimk | jixmtnvjvehjqimk | 3 |
+| g-9 | kfdejifgklxkqisi | kjdehjiflxkgqiso | 6 |
+
+**10 条错误里有 6 条只差 1~2 个键**，看起来很有希望，但本轮两个改动都没救回来。
+
+### 重要发现：g-7 的期望本身可能不成立
+
+g-7 期望 `yipwwogu`（其中有连续两个 `w`），实际解出 `yipwyogu`。
+我一开始怀疑是 dwell 判定太严（w 键上停了 509ms，但最大单次间隔只有 112ms，差 8ms）。
+
+查轨迹经过的键序列后发现问题不在 dwell：
+
+```
+轨迹: y u i o p o i u y t r e w e r t y u i o i u j h g h y u
+```
+
+期望里 `p` 之后直接到 `w`，但这两个键在键盘两端（p=1026, w=162，横跨 8 个键），
+**真实手指不可能不经过中间的 o/i/u/y/t/r/e**。所以 `p → w` 这种跳法在物理上不成立，
+解码器读成 `p → y`（y 在路径上且更早出现）是合理的。
+
+**结论：这条样本的标注可能是笔误或场景不现实，不应作为改进目标。**
+提这一点是因为：如果把它算进「差 1 键」的乐观统计里，会误导后续方向。
+
+### 本轮也验证了 g-12 已经修好
+
+g-12（`jtqulkui`，期望「绝区零是」）现在**编码完全一致**——
+这是第六轮「同键折返按停留证据判定」的成果，已稳定。
