@@ -138,6 +138,12 @@ class RimeEngine {
 
     companion object {
         private const val TAG = "RimeEngine"
+
+        /**
+         * gram 打分的"无信号"返回值。
+         * 与 librime 的 Grammar::Evaluate 里 log(1e-6) 同源，调用方据此判断不可用。
+         */
+        const val GRAM_UNAVAILABLE = -13.815510557964274
         private var instance: RimeEngine? = null
         private var deploymentCallback: ((Boolean, String) -> Unit)? = null
 
@@ -731,6 +737,22 @@ class RimeEngine {
             else nativeGetGlideSpellings(schemaId, syllables.toTypedArray())?.toList().orEmpty()
         }
 
+    /**
+     * 跨假设 gram 打分：给定上下文与候选词，返回 octagram 的对数概率（含各项罚分）。
+     *
+     * 滑动解码会产出多个**不同编码**的假设，每个假设再查出各自的候选词。
+     * 旧排序只拿 Rime 的"位次下标"当代理，量纲不可比；这里直接把文本级 n-gram
+     * 分数暴露出来，让调用方能在跨编码假设之间比较同一条文本。
+     *
+     * 返回值 [GRAM_UNAVAILABLE] 表示没有 gram 信号（未初始化或该方案无语法模型），
+     * 调用方应退回原排序，不要把 -13.8 当成真实分数。
+     */
+    fun queryGramScore(schemaId: String, context: String, word: String): Double =
+        tryLocked(GRAM_UNAVAILABLE) {
+            if (!isInitialized) GRAM_UNAVAILABLE
+            else nativeQueryGramScore(schemaId, context, word)
+        }
+
     /** 读取方案自带 translator.packs 中声明的个人词库名。 */
     fun getSchemaPacks(schemaId: String): List<String> =
         getSchemaList(schemaId, "translator/packs")
@@ -912,6 +934,8 @@ class RimeEngine {
     private external fun nativeGetSchemaList(schemaId: String, key: String): Array<String>?
     private external fun nativeGetSchemaString(schemaId: String, key: String): String?
     private external fun nativeGetGlideSpellings(schemaId: String, syllables: Array<String>): Array<String>?
+
+    private external fun nativeQueryGramScore(schemaId: String, context: String, word: String): Double
     private external fun nativeGetUserConfigString(key: String): String?
     private external fun nativeGetUserConfigBool(key: String): Boolean
     private external fun nativeSetUserConfigString(key: String, value: String): Boolean

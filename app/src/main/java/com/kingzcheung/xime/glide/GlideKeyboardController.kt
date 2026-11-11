@@ -197,9 +197,14 @@ class GlideKeyboardController(
                         val rankPenalty = i * RANK_PENALTY_WEIGHT
                         val hypPenalty = hIdx * HYPOTHESIS_PENALTY_WEIGHT
                         val geometryScore = -(h.cost - best)
+                        // 跨假设 gram：文本级 n-gram 与编码无关，所以能在**不同编码假设**
+                        // 之间比较同一段文本谁更常见。旧排序只有 rankPenalty（Rime 位次下标，
+                        // 任意量纲的代理），遇到"几何上难分、语义上很明显"的情况就无解。
+                        // 用相对首个候选的差值，避免把 gram 的绝对量级混进几何分。
+                        val gramDelta = gramDeltaFor(c.text)
                         merged += c.copy(
                             id = "glide-" + hIdx + "-" + i + "-" + c.text,
-                            score = geometryScore - rankPenalty - hypPenalty + phraseBonus,
+                            score = geometryScore - rankPenalty - hypPenalty + phraseBonus + gramDelta,
                         )
                     }
                 }
@@ -207,6 +212,30 @@ class GlideKeyboardController(
             }
         }
         return merged.sortedByDescending { it.score }.take(MAX_GLIDE_CANDIDATES)
+    }
+
+    /** 本次手势的 gram 基准分（首个候选），用于把绝对对数概率转成相对增量。 */
+    private var gramBaseline: Double? = null
+
+    /**
+     * 候选文本的 gram 相对增量。
+     *
+     * 第一次调用记录基准，之后返回 (score - baseline) * GRAM_WEIGHT。
+     * 没有 gram 信号（方案无语法模型 / 引擎未就绪）时恒返回 0，行为与改动前一致。
+     */
+    private fun gramDeltaFor(text: String): Double {
+        val schema = currentSchema
+        if (schema.isEmpty() || text.isEmpty()) return 0.0
+        // 纯 JVM 单测里 RimeEngine 的 native 库加载不了（NoClassDefFoundError），
+        // 而且真实场景下方案也可能没挂语法模型：两种情况都必须静默退回原排序。
+        val score = try {
+            com.kingzcheung.xime.rime.RimeEngine.getInstance().queryGramScore(schema, "", text)
+        } catch (_: Throwable) {
+            return 0.0
+        }
+        if (score <= com.kingzcheung.xime.rime.RimeEngine.GRAM_UNAVAILABLE) return 0.0
+        val base = gramBaseline ?: score.also { gramBaseline = it }
+        return (score - base) * GRAM_WEIGHT
     }
 
     private fun installCandidates(sorted: List<GlideCandidate>, hostToken: String) {
@@ -323,6 +352,15 @@ class GlideKeyboardController(
         /** 连续长词候选代表编码整体成句，补偿正确整句假设靠后时的几何差距。 */
         const val PHRASE_COHERENCE_BONUS = 1.1
         const val MAX_GLIDE_CANDIDATES = 16
+
+        /**
+         * 跨假设 gram 的权重。
+         *
+         * gram 是 ln P（自然对数），一条常见短语与罕见短语的差值常有 3~10；
+         * 而几何分差在本批样本里只有 0.5~2。取 1.0 表示"1 个 ln 单位 ≈ 1 个几何分"，
+         * 让语义信号能在几何难分时起作用，但不足以推翻明显的几何差距。
+         */
+        const val GRAM_WEIGHT = 1.0
         /** 采集用的候选文本上限：只留前几名，足够判断几何排序是否出错。 */
         const val TRACE_CANDIDATE_LIMIT = 8
     }

@@ -7,6 +7,8 @@
 #include <rime/service.h>
 #include <rime/schema.h>
 #include <rime/algo/algebra.h>
+#include <rime/gear/grammar.h>
+#include <rime/config.h>
 #include <algorithm>
 #include <rime/dict/db_utils.h>
 #include <rime/dict/table_db.h>
@@ -19,6 +21,8 @@
 #include <jni.h>
 #include <android/log.h>
 #include <memory>
+#include <mutex>
+#include <map>
 #include <string>
 #include <vector>
 #include <unistd.h> // for usleep
@@ -29,6 +33,10 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unwind.h> // 信号安全的 native 调用栈采集
+
+// gram 打分不可用时的返回值（与 Grammar::Evaluate 的 kPenalty 同源：
+// log(1e-6) ≈ -13.8155。调用方据此判断"没有 gram 信号"，不要当成真实分数）。
+static const jdouble kGramUnavailable = -13.815510557964274;
 
 #define LOG_TAG "XimeRime"
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
@@ -125,6 +133,8 @@ public:
         static Rime instance;
         return instance;
     }
+
+    bool isInitialized() const { return rime != nullptr && initialized_; }
 
     void startup(const char *user_data_dir, const char *shared_data_dir)
     {
@@ -2562,6 +2572,67 @@ extern "C"
             env->DeleteLocalRef(str);
         }
         return result;
+    }
+
+    // 跨假设 gram 打分：给"上下文 + 候选词"算 octagram 的对数概率。
+    //
+    // 滑动解码会产出多个**不同编码**的假设，每个假设再查出各自的候选词。
+    // 旧排序里只有 Rime 的"位次下标"当代理，量纲不可比；这里直接把
+    // 文本级 n-gram 分数暴露出来，让调用方能在跨编码假设之间比较。
+    //
+    // 公式与 librime-octagram 的 Octagram::Query 完全一致：
+    //   ln P(word|context) + 10（scale_value 已含），
+    //   再按 collocation / weak_collocation / non_collocation 罚分修正。
+    // context 为空时返回 non_collocation_penalty（等价于无条件词频）。
+    JNIEXPORT jdouble JNICALL
+    Java_com_kingzcheung_xime_rime_RimeEngine_nativeQueryGramScore(
+        JNIEnv* env, jobject, jstring schema_id, jstring context, jstring word) {
+        if (!Rime::Instance().isInitialized()) return kGramUnavailable;
+        const char* schema = env->GetStringUTFChars(schema_id, nullptr);
+        const char* ctx = env->GetStringUTFChars(context, nullptr);
+        const char* w = env->GetStringUTFChars(word, nullptr);
+        if (!schema || !ctx || !w) {
+            if (schema) env->ReleaseStringUTFChars(schema_id, schema);
+            if (ctx) env->ReleaseStringUTFChars(context, ctx);
+            if (w) env->ReleaseStringUTFChars(word, w);
+            return kGramUnavailable;
+        }
+        double score = kGramUnavailable;
+        {
+            const std::string schema_str(schema);
+            const std::string ctx_str(ctx);
+            const std::string word_str(w);
+            // Grammar 是 Class<Grammar, Config*>：先从 schema 造 Config，再 Create。
+            // 每方案建一次即可（方案内 grammar 配置不变），用静态缓存避免热路径反复加载。
+            static std::mutex cache_mutex;
+            static std::map<std::string, std::shared_ptr<rime::Grammar>> cache;
+            std::shared_ptr<rime::Grammar> grammar;
+            {
+                std::lock_guard<std::mutex> lock(cache_mutex);
+                auto it = cache.find(schema_str);
+                if (it != cache.end()) {
+                    grammar = it->second;
+                } else {
+                    if (auto* schema_comp = rime::Config::Require("schema")) {
+                        // Create 返回裸 Config*，需要自己释放
+                        std::unique_ptr<rime::Config> config(schema_comp->Create(schema_str));
+                        if (config) {
+                            if (auto* gram_comp = rime::Grammar::Require("grammar")) {
+                                grammar.reset(gram_comp->Create(config.get()));
+                            }
+                        }
+                    }
+                    cache[schema_str] = grammar;
+                }
+            }
+            if (grammar) {
+                score = grammar->Query(ctx_str, word_str, false);
+            }
+        }
+        env->ReleaseStringUTFChars(schema_id, schema);
+        env->ReleaseStringUTFChars(context, ctx);
+        env->ReleaseStringUTFChars(word, w);
+        return score;
     }
 
     // 由 librime 原生 algebra 投影完整音节，只保留正常拼写，排除简拼/纠错派生。
