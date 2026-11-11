@@ -158,6 +158,7 @@ fun AboutContent(
     onNavigateToLicenses: () -> Unit,
     onNavigateToLogViewer: () -> Unit = {},
     onNavigateToDeveloper: () -> Unit = {},
+    onNavigateToGlideTrace: () -> Unit = {},
     onNavigateToStorageSpace: () -> Unit = {},
     onNavigateToUpdateSettings: () -> Unit = {},
 ) {
@@ -555,6 +556,18 @@ fun AboutContent(
                                         }
                                     )
                                 }
+                            )
+                            // debug 包直接给出滑动轨迹入口，无需连点设备信息解锁；
+                            // release 包仍走开发者选项彩蛋，普通用户看不到。
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 72.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
+                            SettingsItem(
+                                icon = Icons.Default.CloudDownload,
+                                title = tr(R.string.s_huadongguijishuju),
+                                onClick = onNavigateToGlideTrace
                             )
                         }
                     }

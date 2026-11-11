@@ -347,6 +347,7 @@ fun SettingsScreen(
                 onNavigateToLicenses = { navController.navigate(SettingsRoutes.Licenses) },
                 onNavigateToLogViewer = { navController.navigate(SettingsRoutes.LogViewer) },
                 onNavigateToDeveloper = { navController.navigate(SettingsRoutes.Developer) },
+                onNavigateToGlideTrace = { navController.navigate(SettingsRoutes.GlideTrace) },
                 onNavigateToStorageSpace = { navController.navigate(SettingsRoutes.StorageSpace) },
                 onNavigateToUpdateSettings = { navController.navigate(SettingsRoutes.UpdateSettings) }
             )
