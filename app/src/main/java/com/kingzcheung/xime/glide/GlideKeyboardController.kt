@@ -192,22 +192,23 @@ class GlideKeyboardController(
                         it.text.length >= 4 && it.text.startsWith(head.take(2))
                     } else 0
                     val shortFallback = r.list.take(4).count { it.text.length <= 2 }
-                    val phraseBonus = coherent * PHRASE_COHERENCE_BONUS +
-                        fullPhraseDepth * PHRASE_COHERENCE_BONUS * 0.7 -
-                        shortFallback * PHRASE_COHERENCE_BONUS
                     for ((i, c) in r.list.withIndex()) {
                         if (!seen.add(c.text)) continue
-                        val rankPenalty = i * RANK_PENALTY_WEIGHT
-                        val hypPenalty = hIdx * HYPOTHESIS_PENALTY_WEIGHT
-                        val geometryScore = -(h.cost - best)
-                        // 跨假设 gram：文本级 n-gram 与编码无关，所以能在**不同编码假设**
-                        // 之间比较同一段文本谁更常见。旧排序只有 rankPenalty（Rime 位次下标，
-                        // 任意量纲的代理），遇到"几何上难分、语义上很明显"的情况就无解。
-                        // 用相对首个候选的差值，避免把 gram 的绝对量级混进几何分。
-                        val gramDelta = gramDeltaFor(c.text)
+                        // 所有项统一到 log-domain（自然对数），逐项都有物理含义：
+                        //   geometryLogP  几何似然：h.cost 越小越可能，直接取负
+                        //   rimeLogP      Rime 位次推出的近似 log 概率
+                        //   gramLogP      n-gram 条件概率（文本级，跨编码可比）
+                        //   phraseLogP    短语连贯性（同编码下多个候选同根）
+                        //   hypLogP       假设先验（几何首选假设更可信）
+                        // 旧实现是五项不同量纲直接相加，0.45/0.15/1.1 都是手感常数。
+                        val geometryLogP = -h.cost
+                        val rimeLogP = -rimeRankLogProb(i)
+                        val gramLogP = gramDeltaFor(c.text)
+                        val phraseLogP = phraseLogProb(coherent, fullPhraseDepth, shortFallback)
+                        val hypLogP = -hIdx * HYPOTHESIS_LOG_PENALTY
                         merged += c.copy(
                             id = "glide-" + hIdx + "-" + i + "-" + c.text,
-                            score = geometryScore - rankPenalty - hypPenalty + phraseBonus + gramDelta,
+                            score = geometryLogP + rimeLogP + gramLogP + phraseLogP + hypLogP,
                         )
                     }
                 }
@@ -215,6 +216,29 @@ class GlideKeyboardController(
             }
         }
         return merged.sortedByDescending { it.score }.take(MAX_GLIDE_CANDIDATES)
+    }
+
+    /**
+     * Rime 位次 -> 近似的负对数概率。
+     *
+     * Rime 的候选顺序来自词频/语言模型，但接口只给位次不给分数。
+     * 经验上候选概率随位次近似几何衰减（第 0 位最常见，之后快速变稀疏），
+     * 用 p ≈ RANK_DECAY^(i) 折算成 -ln p = i * (-ln RANK_DECAY)。
+     * 这样它和 gram 的 -ln P 是同一量纲，可以直接相加。
+     */
+    private fun rimeRankLogProb(rank: Int): Double =
+        if (rank <= 0) 0.0 else rank * RANK_LOG_STEP
+
+    /**
+     * 短语连贯性的 log 证据。
+     *
+     * 同一编码连续产出同一词根的整句候选（"你说什么"/"你说什么呢"），
+     * 比只勉强成串再退回单词更可信。用对数几率形式：每多一条支撑候选取 +ln(2)。
+     */
+    private fun phraseLogProb(coherent: Int, depth: Int, shortFallback: Int): Double {
+        val support = coherent + depth * PHRASE_DEPTH_WEIGHT
+        val penalty = shortFallback * PHRASE_SHORT_WEIGHT
+        return (support - penalty) * LN2
     }
 
     /** 本次手势的 gram 基准分（首个候选），用于把绝对对数概率转成相对增量。 */
@@ -358,12 +382,16 @@ class GlideKeyboardController(
         /** 交给词典排序的候选串数（共线键如 zhong/zong 需要前几名都在）。 */
         const val GLIDE_HYPOTHESES = 16
 
-        /** Rime 候选位次惩罚：体现语言模型信号，需大于假设间空间分差。 */
-        const val RANK_PENALTY_WEIGHT = 0.45
-        /** 假设之间的惩罚：空间分已含此信息，这里只需弱化次选假设。 */
-        const val HYPOTHESIS_PENALTY_WEIGHT = 0.15
-        /** 连续长词候选代表编码整体成句，补偿正确整句假设靠后时的几何差距。 */
-        const val PHRASE_COHERENCE_BONUS = 1.1
+        /** Rime 每往后一位的 log 差（≈ ln 1.5，位次概率约按 2/3 衰减）。 */
+        const val RANK_LOG_STEP = 0.4
+        /** 整句深度支撑项的权重（相对 coherent 的 1.0）。 */
+        const val PHRASE_DEPTH_WEIGHT = 0.7
+        /** 短词兜底项的权重。 */
+        const val PHRASE_SHORT_WEIGHT = 1.0
+        /** 假设先验：每个位次差对应的 log 惩罚。 */
+        const val HYPOTHESIS_LOG_PENALTY = 0.15
+        /** ln 2，用于"多一条独立证据"的对数几率。 */
+        const val LN2 = 0.6931471805599453
         const val MAX_GLIDE_CANDIDATES = 16
 
         /**
