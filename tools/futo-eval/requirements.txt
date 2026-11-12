@@ -1,0 +1,12 @@
+# Python dependencies for tools/futo-eval.
+#
+# torch must come from the CPU wheel index (the PyPI default on some platforms
+# pulls a very large CUDA build):
+#   uv pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0
+#   uv pip install -r requirements.txt
+#
+# executorch 1.5.1 is the runtime version this repository pins for the
+# Android side as well (ExecuTorch v1.5.1). Do not bump one without the other.
+torch==2.15.0
+executorch==1.5.1
+numpy>=2.0

@@ -381,7 +381,10 @@ fun KeyboardLayout(
             com.kingzcheung.xime.glide.RimeGlideCommitter(),
         )
     }
-    val glideController = remember(glideRegistry, glideCoordinator) {
+    val glideNeuralProvider = remember {
+        com.kingzcheung.xime.glide.neural.FutoHypothesisProvider(context.applicationContext)
+    }
+    val glideController = remember(glideRegistry, glideCoordinator, glideNeuralProvider) {
         com.kingzcheung.xime.glide.GlideKeyboardController(glideRegistry, glideCoordinator,
             glideEnabled = { glideTypingEnabled },
             densityDpi = { context.resources.displayMetrics.densityDpi.toFloat() },
@@ -390,6 +393,7 @@ fun KeyboardLayout(
                     schema, com.kingzcheung.xime.glide.GlideSyllableTrie.syllables(),
                 )
             },
+            neuralProvider = glideNeuralProvider,
         )
     }
     // 滑动开始即清空既有组合（新建语义），避免新编码拼在旧编码后面

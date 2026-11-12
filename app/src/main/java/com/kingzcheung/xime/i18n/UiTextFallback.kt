@@ -1223,6 +1223,8 @@ internal object UiTextFallback {
         R.string.storage_configuration to "存储位置",
         R.string.s_huadongshuru to "滑动输入",
         R.string.s_huadongshuru_fu to "26 键中文全拼/双拼可连续滑动整句输入；开启后字母滑动快捷动作暂不触发，且不使用左右滑动光标。",
+    R.string.s_shenjinghuadong to "神经滑动解码（实验）",
+    R.string.s_shenjinghuadong_fu to "使用 FUTO Swipe 编码器提升中文滑动识别（Powered by FUTO Swipe）；模型不可用时自动回退几何解码，失败不影响输入。",
         R.string.s_huadongguijishuju to "滑动轨迹数据",
         R.string.s_huadongguijishuju_fu to "记录每次滑动输入的轨迹、键位几何与确认文本（仅存本机），用于离线评测滑动准确率。",
         R.string.s_yicaiji_tiao to "已采集 %1\$s 条",

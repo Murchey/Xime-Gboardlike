@@ -25,6 +25,12 @@ object LayoutDisplaySettingsSpecs {
             default = false,
         ),
         SettingSpec.Switch(
+            key = SettingsPreferences.KEY_GLIDE_NEURAL,
+            titleRes = R.string.s_shenjinghuadong,
+            descriptionRes = R.string.s_shenjinghuadong_fu,
+            default = true,
+        ),
+        SettingSpec.Switch(
             key = SettingsPreferences.KEY_HARDWARE_KEYBOARD_DETECTION_ENABLED,
             titleRes = R.string.s_shitijianpanjiance,
             descriptionRes = R.string.s_guanbihoubujianceshitijianpan_6aaf1,

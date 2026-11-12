@@ -78,6 +78,12 @@ class XimeApplication : Application(), ImageLoaderFactory {
         KeyTapLogger.enabled = SettingsPreferences.isKeyTapLogEnabled(this)
         GlideTraceRecorder.init(this)
         GlideTraceRecorder.enabled = SettingsPreferences.isGlideTraceEnabled(this)
+        // FUTO 滑动编码器预热：失败只记日志，不阻塞启动；真正使用前还会再确认
+        applicationScope.launch {
+            runCatching {
+                com.kingzcheung.xime.glide.neural.FutoSwipeEncoder.ensureInitialized(this@XimeApplication)
+            }
+        }
         // 邻键误触纠错（librime 插件版）：初始化先验推送器
         CorrectionPriors.init(this)
         CorrectionPriors.enabled = SettingsPreferences.isCorrectorEnabled(this)

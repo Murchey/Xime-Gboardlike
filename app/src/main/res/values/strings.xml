@@ -1457,6 +1457,8 @@
     <string name="storage_plugin_sync_hint">选择和配置 WebDAV 等剪贴板同步插件</string>
     <string name="s_huadongshuru">滑动输入</string>
     <string name="s_huadongshuru_fu">26 键中文全拼/双拼可连续滑动整句输入；开启后字母滑动快捷动作暂不触发，且不使用左右滑动光标。</string>
+    <string name="s_shenjinghuadong">神经滑动解码（实验）</string>
+    <string name="s_shenjinghuadong_fu">使用 FUTO Swipe 编码器提升中文滑动识别（Powered by FUTO Swipe）；模型不可用时自动回退几何解码，失败不影响输入。</string>
     <string name="s_huadongguijishuju">滑动轨迹数据</string>
     <string name="s_huadongguijishuju_fu">记录每次滑动输入的轨迹、键位几何与确认文本（仅存本机），用于离线评测滑动准确率。</string>
     <string name="s_yicaiji_tiao">已采集 %1$s 条</string>

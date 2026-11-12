@@ -456,6 +456,8 @@ object SettingsPreferences {
     const val KEY_GLIDE_TYPING = "glide_typing"
     /** 是否绘制滑动轨迹（滑动输入开启时有效，默认开启）。 */
     const val KEY_GLIDE_SHOW_TRAIL = "glide_show_trail"
+    /** FUTO 神经滑动解码（实验，默认开启；失败自动回退几何解码）。 */
+    const val KEY_GLIDE_NEURAL = "glide_neural"
 
     /** 五笔连打：打出的字先攒在候选栏，不逐字上屏（默认关闭）。 */
     const val KEY_WUBI_CHAINED_INPUT = "wubi_chained_input"
@@ -587,6 +589,13 @@ object SettingsPreferences {
 
     fun setGlideTrailVisible(context: Context, visible: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_GLIDE_SHOW_TRAIL, visible).apply()
+    }
+
+    fun isGlideNeuralEnabled(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_GLIDE_NEURAL, true)
+
+    fun setGlideNeuralEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_GLIDE_NEURAL, enabled).apply()
     }
 
     /**

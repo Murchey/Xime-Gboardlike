@@ -13,6 +13,8 @@ class GlideKeyboardController(
     glideEnabled: () -> Boolean,
     private val schemaSpellings: ((String) -> Collection<String>)? = null,
     private val densityDpi: () -> Float = { 160f },
+    /** 神经假设来源；null 或运行失败时自动回退几何解码。 */
+    private val neuralProvider: GlideHypothesisProvider? = null,
 ) {
     private val arbiter = GlideGestureArbiter(
         eligibleStart = { true },
@@ -131,7 +133,7 @@ class GlideKeyboardController(
                 clearTrail()
                 if (geo == null || points.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
                 // 几何解码：按对齐/连线/回溯/停留代价枚举完整音节串（代价低的在前）
-                val hypotheses = GlideGeometryDecoder.decode(points, geo, GLIDE_HYPOTHESES, activeSpellings, activeDensityDpi)
+                val hypotheses = hypothesesFor(points, geo, activeSpellings, activeDensityDpi, allowNeural = true)
                 if (hypotheses.isEmpty()) { coordinator.session.cancel(); return UpResult.Idle }
                 // 英文模式：轨迹解出的字母串即候选，不查中文词库（随键盘中英文模式变化）
                 if (asciiMode) {
@@ -336,7 +338,7 @@ class GlideKeyboardController(
 
     /** 仅在后台线程执行；预览只使用独立查询，不往 Rime 主组合写编码。 */
     internal fun decode(request: DecodeRequest): DecodeResult {
-        val hypotheses = GlideGeometryDecoder.decode(request.points, request.geometry, GLIDE_HYPOTHESES, request.spellings, request.densityDpi)
+        val hypotheses = hypothesesFor(request.points, request.geometry, request.spellings, request.densityDpi, allowNeural = request.final)
         val candidates = if (request.ascii) hypotheses.mapIndexed { i, h ->
             GlideCandidate("en-$" + i, h.letters, h.letters, score = -h.cost.toDouble())
         } else lookupHypotheses(hypotheses, request.prefix)
@@ -396,9 +398,33 @@ class GlideKeyboardController(
 
     fun allowFallbackClick(): Boolean = arbiter.allowFallbackClick()
 
+    /**
+     * 先尝试神经假设，失败/为空时回退几何解码。
+     *
+     * 预览（final=false）仍走几何，避免每 100ms 都跑一次模型；
+     * 抬手后的最终解码才用神经。
+     */
+    private fun hypothesesFor(
+        points: List<GlidePoint>,
+        geometry: GlideGeometrySnapshot,
+        spellings: Collection<String>?,
+        densityDpi: Float,
+        allowNeural: Boolean,
+    ): List<GlideGeometryDecoder.Hypothesis> {
+        if (allowNeural) {
+            val neural = runCatching {
+                neuralProvider?.hypotheses(points, geometry, NEURAL_HYPOTHESES, spellings, densityDpi)
+            }.getOrNull()
+            if (!neural.isNullOrEmpty()) return neural
+        }
+        return GlideGeometryDecoder.decode(points, geometry, GLIDE_HYPOTHESES, spellings, densityDpi)
+    }
+
     private companion object {
         /** 交给词典排序的候选串数（共线键如 zhong/zong 需要前几名都在）。 */
         const val GLIDE_HYPOTHESES = 16
+        /** 神经侧多送一些假设：真实轨迹上 top-64 才覆盖到第 10/16 条正解。 */
+        const val NEURAL_HYPOTHESES = 64
 
         /** Rime 每往后一位的 log 差（≈ ln 1.5，位次概率约按 2/3 衰减）。 */
         const val RANK_LOG_STEP = 0.4

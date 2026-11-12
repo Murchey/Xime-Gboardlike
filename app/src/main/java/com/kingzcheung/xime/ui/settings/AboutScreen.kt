@@ -146,6 +146,11 @@ object AppInfo {
             name = "水杉输入法 (msime) — 滑行解码算法与音节表",
             license = "GPL-3.0",
             url = "https://github.com/metasequoiaime/msime"
+        ),
+        LicenseItem(
+            name = "FUTO Swipe — 滑动编码器（honorable_sturgeon）",
+            license = "FUTO Model Weights License 1.0",
+            url = "https://huggingface.co/futo-org/futo-swipe"
         )
     )
 }

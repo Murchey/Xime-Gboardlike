@@ -104,7 +104,11 @@ object GlideGeometryDecoder {
     private const val DWELL_RADIUS = 0.35f
 
     /** 一个解码结果：小写全拼字母（不带分隔符，每个音节完整）。 */
-    data class Hypothesis(val letters: String, val cost: Float)
+    data class Hypothesis(
+        val letters: String,
+        val cost: Float,
+        val origin: GlideHypothesisOrigin = GlideHypothesisOrigin.GEOMETRY,
+    )
 
     private data class Sample(val x: Float, val y: Float, val dwell: Boolean)
 

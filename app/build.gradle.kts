@@ -239,6 +239,9 @@ dependencies {
     // SavedState
     implementation(libs.androidx.savedstate)
 
+    // ExecuTorch（FUTO 滑动编码器推理；仅 x86_64/arm64-v8a 带原生库）
+    implementation("org.pytorch:executorch-android:1.5.1")
+
     // Coil (Image Loading)
     implementation(libs.coil)
 

@@ -19,3 +19,16 @@ Source: https://github.com/rime/librime
 License: BSD 3-Clause License
 
 Used as the core input method engine.
+
+================================================================================
+FUTO Swipe
+================================================================================
+
+Source: https://huggingface.co/futo-org/futo-swipe
+License: FUTO Model Weights License 1.0
+
+Used for on-device swipe (glide) letter emission inference.
+This product uses the FUTO Swipe encoder and displays the required
+"Powered by FUTO Swipe" attribution in the swipe input settings.
+The model weights are distributed under the FUTO Model Weights License 1.0;
+the full text is included at app/src/main/assets/futo-swipe/honorable_sturgeon/LICENSE.md.
