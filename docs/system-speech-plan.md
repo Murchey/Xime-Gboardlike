@@ -70,3 +70,49 @@
   `ERROR_SERVER` / `ERROR_NO_MATCH`，已映射为可读提示。
 - 不做「引擎列表让用户挑具体服务」：不同机器服务名不统一，投入产出低。
 - `capturesAudioItself` 为接口默认方法（默认 `false`），既有三个后端无需改动。
+
+## 七、端到端验证（SpeechRecognitionManager 真实路径）
+
+不只是单元级探测，还走了 `SpeechRecognitionManager` 的完整链路：
+
+```
+preload → createBackend → SystemSpeechAsrBackend.start() → cancelRecognition
+```
+
+真机结果（`stt_engine=system` 已落盘）：
+
+```
+states = [PROCESSING, LISTENING, IDLE, IDLE]
+errors = []
+进入 LISTENING = true
+```
+
+**全程无错误**，确认录音旁路（不建 AudioRecord）与取消路径都正常。
+
+### 一个排查记录
+
+首次跑这个测试时误报「无法初始化语音引擎」：原因是 instrumentation 进程
+的 SharedPreferences 与 IME 进程**不共享**，`setSttEngine` 写入没落盘，
+`getSttEngine` 读到默认值 `BUILTIN_ONLINE`（未配 Key）→ 后端为 null。
+改用 UI 真实切换（`stt_engine=system` 落盘）后测试通过。
+**涉及偏好的验证必须走真实进程**，这是本项目反复踩到的坑。
+
+## 八、设置页实测
+
+第四张卡片显示正常：
+
+```
+系统语音引擎
+本机已就绪
+```
+
+点击后 `stt_engine` 写入 `system`，配置区展开显示「系统语音引擎」。
+
+## 九、本机服务的一个真实情况
+
+这台小米的 `com.xiaomi.mibrain.speech`（v1.5.2）**包本身 `enabled=0`**（已停用），
+但 `AsrService` 仍可被查询到。实际调用时系统会弹 `AsrRemovalNotice`
+（提示该服务已移除）。
+
+这不是我们的代码问题，而是**厂商主动下架**——正好印证计划里
+「不同机器服务差异极大」的判断，也说明「不可用时明说」比「静默回退」更合理。
