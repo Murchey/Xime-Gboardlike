@@ -4,7 +4,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
-/** 雾凇拼音内置方案开关必须能被菜单解析（半角/全角、简/繁等）。 */
+/** 简体全拼内置方案开关必须能被菜单解析（半角/全角、简/繁等）。 */
 class RimeIceSwitchConfigTest {
 
     @Test

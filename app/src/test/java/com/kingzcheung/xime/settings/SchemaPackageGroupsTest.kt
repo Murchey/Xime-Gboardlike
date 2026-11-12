@@ -21,7 +21,7 @@ class SchemaPackageGroupsTest {
         "handmade" to SchemaPackageGroups.UNGROUPED,
     )
     private val names = mapOf(
-        "builtin_rime_ice" to "雾凇拼音",
+        "builtin_rime_ice" to "简繁全拼双拼包",
         "frost-schemas" to "白霜拼音",
         "wanxiang-base" to "万象拼音",
     )
@@ -77,7 +77,7 @@ class SchemaPackageGroupsTest {
         val namesById = mapOf(
             "double_pinyin_mspy" to "微软双拼",
             "rime_frost_double_pinyin_mspy" to "微软双拼",
-            "rime_ice" to "雾凇拼音",
+            "rime_ice" to "简体全拼",
         )
         val duplicates = SchemaPackageGroups.duplicateNames(namesById)
         assertEquals(setOf("double_pinyin_mspy", "rime_frost_double_pinyin_mspy"), duplicates)
