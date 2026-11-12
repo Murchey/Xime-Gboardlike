@@ -3,6 +3,7 @@ package com.kingzcheung.xime.settings
 import com.kingzcheung.xime.R
 
 import com.kingzcheung.xime.i18n.tr
+import com.kingzcheung.xime.rime.RimeConfigHelper
 
 import android.content.Context
 import android.util.Log
@@ -535,8 +536,33 @@ object SchemaManifestManager {
 
     // ── Migration ──
 
+
+    /**
+     * v5 迁移：解除 `builtin_pinyin_simp` 的卸载标记并恢复文件。
+     *
+     * 背景：该包原内容为「简体拼音全拼」，本轮删除了全拼方案、改由九键复用其词库。
+     * 曾卸载过全拼的用户其 disabled 标记仍在，而禁用包的文件不会被重新复制，
+     * 会导致**九键缺词库**、永久不可用。
+     *
+     * 只解除禁用与恢复文件，不写入启用列表——避免擅自替用户开启方案。
+     */
+    private suspend fun rolloverPinyinSimpPackage(context: Context) {
+        if (!BuiltinSeedState.isDisabled(context, BuiltinPackages.PINYIN_SIMP)) return
+        runCatching {
+            val restored = RimeConfigHelper.restoreBuiltinPackage(
+                context, BuiltinPackages.PINYIN_SIMP,
+            )
+            android.util.Log.i(
+                TAG,
+                "v5 migration: builtin_pinyin_simp restored=" + restored +
+                    " (content changed from 全拼 to 九键)",
+            )
+        }.onFailure {
+            android.util.Log.w(TAG, "v5 migration failed: " + it.message)
+        }
+    }
     private const val KEY_MIGRATION_VERSION = "manifest_migration_version"
-    private const val MIGRATION_VERSION_CURRENT = 4
+    private const val MIGRATION_VERSION_CURRENT = 5
     internal const val BUILTIN_PACKAGE_ID = "builtin"
 
     /**
@@ -644,6 +670,14 @@ object SchemaManifestManager {
                     refreshBuiltinManifest(context)
                     prefs.edit().putInt(KEY_MIGRATION_VERSION, MIGRATION_VERSION_CURRENT).apply()
                     return@withContext
+                }
+
+                // v5：内置包 builtin_pinyin_simp 的内容已从「简体拼音全拼」改为「九键拼音」。
+                // 曾卸载过该包的老用户，其 disabled 标记仍在，会导致九键永久不可用
+                // （禁用包的文件不会被重新复制）。这里解除禁用并恢复文件，
+                // 但**不强行启用方案**——九键只是重新出现在可选列表，由用户自行决定。
+                if (prevVersion < 5) {
+                    rolloverPinyinSimpPackage(context)
                 }
 
                 // 确保 market/builtin/ 存在（迁移前没有此目录的旧版本会在此补齐）
