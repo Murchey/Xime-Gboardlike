@@ -5,4 +5,21 @@
     <string name="subtype_label_pinyin">拼音</string>
     <string name="keyboard_name">XimeGboard 輸入法</string>
     <string name="ime_service_label">XimeGboard 輸入法</string>
+    <string name="s_xitongyuyin">系統語音引擎</string>
+    <string name="s_xitongyuyin_shi">系統語音引擎 · %1$s</string>
+    <string name="s_xitongyuyin_bukeyong">本機沒有可用的系統語音引擎</string>
+    <string name="s_xitongyuyin_bukeyong_shuoming">本機未安裝或未啟用系統語音辨識服務，請改用其他辨識引擎</string>
+    <string name="s_xitongyuyin_zhengzai">正在使用系統語音引擎</string>
+    <string name="s_xitongyuyin_keyong">本機已就緒</string>
+    <string name="s_xitongyuyin_chuangjian">無法建立系統語音辨識服務</string>
+    <string name="s_yuyin_audioerror">錄音出錯</string>
+    <string name="s_yuyin_clienterror">辨識用戶端出錯</string>
+    <string name="s_yuyin_quanxian">缺少錄音權限，請在系統設定中授權</string>
+    <string name="s_yuyin_wangluo">網路異常，請檢查網路</string>
+    <string name="s_yuyin_wangluochaoshi">網路逾時，請重試</string>
+    <string name="s_yuyin_weishibie">沒有辨識到內容</string>
+    <string name="s_yuyin_mang">辨識服務忙碌，請稍後再試</string>
+    <string name="s_yuyin_fuwuyichang">辨識服務異常</string>
+    <string name="s_yuyin_meiyoushuohua">沒有偵測到語音輸入</string>
+    <string name="s_yuyin_shibai">語音辨識失敗</string>
 </resources>

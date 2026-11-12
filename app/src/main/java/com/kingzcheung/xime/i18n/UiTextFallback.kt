@@ -9,6 +9,23 @@ import com.kingzcheung.xime.R
 internal object UiTextFallback {
     private val table: Map<Int, String> by lazy {
         mapOf(
+        R.string.s_xitongyuyin to "系统语音引擎",
+        R.string.s_xitongyuyin_shi to "系统语音引擎 · %1\$s",
+        R.string.s_xitongyuyin_bukeyong to "本机没有可用的系统语音引擎",
+        R.string.s_xitongyuyin_bukeyong_shuoming to "本机未安装或未启用系统语音识别服务，请改用其他识别引擎",
+        R.string.s_xitongyuyin_zhengzai to "正在使用系统语音引擎",
+        R.string.s_xitongyuyin_keyong to "本机已就绪",
+        R.string.s_xitongyuyin_chuangjian to "无法创建系统语音识别服务",
+        R.string.s_yuyin_audioerror to "录音出错",
+        R.string.s_yuyin_clienterror to "识别客户端出错",
+        R.string.s_yuyin_quanxian to "缺少录音权限，请在系统设置中授权",
+        R.string.s_yuyin_wangluo to "网络异常，请检查网络",
+        R.string.s_yuyin_wangluochaoshi to "网络超时，请重试",
+        R.string.s_yuyin_weishibie to "没有识别到内容",
+        R.string.s_yuyin_mang to "识别服务忙，请稍后再试",
+        R.string.s_yuyin_fuwuyichang to "识别服务异常",
+        R.string.s_yuyin_meiyoushuohua to "没有检测到语音输入",
+        R.string.s_yuyin_shibai to "语音识别失败",
         R.string.app_name to "XimeGboard",
         R.string.subtype_label_wubi to "XimeGboard 输入法",
         R.string.subtype_label_pinyin to "拼音",
