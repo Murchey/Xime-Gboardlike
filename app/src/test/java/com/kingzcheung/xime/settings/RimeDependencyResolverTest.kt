@@ -31,7 +31,8 @@ class RimeDependencyResolverTest {
           import_preset: default
     """.trimIndent()
 
-    // 与内置 pinyin_simp.schema.yaml 结构一致（拼音反查笔画）
+    // 曾参照内置 pinyin_simp.schema.yaml（拼音反查笔画）；该方案已下架，
+    // 这里保留为通用的「拼音 + 反查笔画」结构样例，与 assets 现状无关。
     private val pinyinSimpSchema = """
         schema:
           schema_id: pinyin_simp
