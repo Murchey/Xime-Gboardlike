@@ -40,9 +40,13 @@ class SystemSpeechAsrBackend(private val context: Context) : AsrBackend {
     override val capturesAudioItself: Boolean = true
 
     override val name: String
-        get() = SystemSpeechAvailability.serviceLabel(context)
-            ?.let { tr(R.string.s_xitongyuyin_shi, it) }
-            ?: tr(R.string.s_xitongyuyin)
+        get() {
+            val title = tr(R.string.s_xitongyuyin)
+            val label = SystemSpeechAvailability.serviceLabel(context)
+            // 服务应用名常与标题同名（如小米的「系统语音引擎」），避免拼成重复串。
+            return if (label.isNullOrBlank() || label == title) title
+            else tr(R.string.s_xitongyuyin_shi, label)
+        }
 
     private val main = Handler(Looper.getMainLooper())
     private var recognizer: SpeechRecognizer? = null
