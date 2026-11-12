@@ -578,6 +578,10 @@ object RimeConfigHelper {
             if (removed > 0) {
                 Log.i(TAG, "Removed $removed obsolete builtin schema file(s)")
             }
+            // 方案文件可能在上一次升级就已删除（removed=0），但用户 default.custom.yaml
+            // 的 schema_list 里仍留着该方案条目——运行时会被 available() 过滤掉，
+            // 但配置文件留着是隐患。因此清理独立于本次是否删除了文件。
+            pruneUnavailableSchemasFromCustom(context, targetDir)
             syncBuiltinDefaultCustom(context, targetDir)
             return false
         }
@@ -788,6 +792,48 @@ object RimeConfigHelper {
         return removed
     }
 
+
+    /**
+     * 从用户 `default.custom.yaml` 的 schema_list 移除方案文件已不存在的条目。
+     *
+     * 运行时 [SchemaManager.getEnabledSchemas] 本就会按 `available()` 过滤，
+     * 这里只是把配置文件同步干净，避免残留已下架方案（如移除 pinyin_simp 后）。
+     * 只动 schema_list 块，保留用户其他 patch 内容与换行风格。
+     */
+    private fun pruneUnavailableSchemasFromCustom(context: Context, targetDir: File) {
+        val file = File(targetDir, ASSETS_DEFAULT_CUSTOM)
+        if (!file.isFile) return
+        try {
+            val text = file.readText()
+            val lines = text.lines()
+            val sep = if (text.contains("\r\n")) "\r\n" else "\n"
+            val kept = mutableListOf<String>()
+            var inList = false
+            var dropped = 0
+            for (line in lines) {
+                val trimmed = line.trim()
+                if (trimmed == "schema_list:") { inList = true; kept += line; continue }
+                if (inList && trimmed.startsWith("- schema:")) {
+                    val id = trimmed.removePrefix("- schema:").trim()
+                    if (id.isNotEmpty() && !File(targetDir, "$id.schema.yaml").isFile) {
+                        dropped++
+                        continue
+                    }
+                    kept += line
+                    continue
+                }
+                // schema_list 块结束（下一个非列表项）
+                if (inList && !trimmed.startsWith("- ") && trimmed.isNotEmpty()) inList = false
+                kept += line
+            }
+            if (dropped > 0) {
+                file.writeText(kept.joinToString(sep))
+                Log.i(TAG, "Pruned $dropped unavailable schema(s) from ${file.name}")
+            }
+        } catch (e: Exception) {
+            FileLogger.w(TAG, "Failed to prune unavailable schemas: ${e.message}")
+        }
+    }
     /** 当前 assets 清单里实际存在文件的内置包集合。 */
     private fun builtinPackagesOf(builtin: Set<String>): Set<String> =
         builtin.mapTo(mutableSetOf()) { BuiltinPackages.packageFor(it) }
