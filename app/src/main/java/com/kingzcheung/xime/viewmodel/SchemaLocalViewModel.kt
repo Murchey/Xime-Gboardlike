@@ -26,6 +26,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** 「内置方案」聚合卡片使用的虚拟包 id（不对应任何真实包）。 */
+internal const val BUILTIN_GROUP_ID = "builtin_group_all"
+
 data class LocalPackageItem(
     val packageId: String,
     val displayName: String,
@@ -35,7 +38,18 @@ data class LocalPackageItem(
     val schemaCount: Int = 0,
     val fileCount: Int = 0,
     val restorable: Boolean = false,
+    /**
+     * 聚合项的子包 id（仅「内置方案」聚合卡片使用）。
+     *
+     * 「已导入」页把多个内置包收敛成一张「内置方案」卡片展示，避免三张卡片
+     * 平铺让用户以为要分别管理。非空表示这是聚合项，子包名见 [memberNames]。
+     */
+    val memberPackageIds: List<String> = emptyList(),
+    /** 聚合项展示的成员名称（如「简繁全拼双拼包」「五笔 86」）。 */
+    val memberNames: List<String> = emptyList(),
 ) {
+    /** 是否为内置包的聚合条目。 */
+    val isBuiltinGroup: Boolean get() = memberPackageIds.isNotEmpty()
     val isImport: Boolean get() = packageId.startsWith("import_")
     val statusLabel: String
         get() = when {
@@ -119,9 +133,30 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
                         restorable = true,
                     )
                 }
+            val allItems = packages + restorable
+            // 「已导入」页把内置包收敛成一张「内置方案」卡片：三个内置包平铺会让
+            // 用户以为要分别管理。第三方包保持各自独立卡片，不受影响。
+            val builtinItems = allItems.filter { BuiltinPackages.isBuiltin(it.packageId) }
+            val thirdPartyItems = allItems.filter { !BuiltinPackages.isBuiltin(it.packageId) }
+            val grouped = if (builtinItems.isEmpty()) {
+                thirdPartyItems
+            } else {
+                val group = LocalPackageItem(
+                    packageId = BUILTIN_GROUP_ID,
+                    displayName = tr(R.string.s_neizhifangan),
+                    version = "",
+                    downloaded = builtinItems.all { it.downloaded },
+                    installed = builtinItems.any { it.installed },
+                    schemaCount = builtinItems.sumOf { it.schemaCount },
+                    fileCount = builtinItems.sumOf { it.fileCount },
+                    memberPackageIds = builtinItems.map { it.packageId },
+                    memberNames = builtinItems.map { it.displayName },
+                )
+                listOf(group) + thirdPartyItems
+            }
             _uiState.update {
                 it.copy(
-                    packages = packages + restorable,
+                    packages = grouped,
                     isLoading = false,
                     builtinSeedDisabled = disabled.isNotEmpty(),
                 )

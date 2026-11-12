@@ -1353,4 +1353,6 @@
     <string name="s_yuyin_meiyoushuohua">没有检测到语音输入</string>
     <string name="s_yuyin_shibai">语音识别失败</string>
     <string name="s_xitongyuyin_keyong">本机已就绪</string>
+    <string name="s_neizhifangan">內置方案</string>
+    <string name="s_neizhifangan_baohan">包含 %1\$s</string>
 </resources>

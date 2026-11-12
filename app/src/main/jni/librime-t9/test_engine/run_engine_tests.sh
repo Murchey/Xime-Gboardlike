@@ -65,8 +65,11 @@ if $DO_BUILD; then
     mkdir -p "${BUILD_DIR}/data"
     cp "${ASSETS_DIR}/t9_pinyin.schema.yaml" \
        "${ASSETS_DIR}/pinyin_simp.dict.yaml" \
-       "${ASSETS_DIR}/pinyin_simp_ext.dict.yaml" \
        "${BUILD_DIR}/data/"
+    # pinyin_simp.dict.yaml 通过 import_tables 复用简繁全拼双拼包的 cn_dicts/base，
+    # 测试数据目录需要同步该子目录，否则编译时找不到词库。
+    mkdir -p "${BUILD_DIR}/data/cn_dicts"
+    cp "${ASSETS_DIR}/cn_dicts/base.dict.yaml" "${BUILD_DIR}/data/cn_dicts/"
     python3 - "$ASSETS_DIR/default.yaml" "${BUILD_DIR}/data/default.yaml" <<'EOF'
 import re, sys
 src, dst = sys.argv[1], sys.argv[2]

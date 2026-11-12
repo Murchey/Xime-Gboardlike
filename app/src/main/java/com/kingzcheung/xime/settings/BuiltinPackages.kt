@@ -21,8 +21,15 @@ object BuiltinPackages {
         else -> null
     }
 
+    /**
+     * 包的展示名。
+     *
+     * 注意：包 **内部 ID 保持不变**（如 builtin_rime_ice）。改名只影响展示——
+     * disabled 状态、清单、市场备份都按 ID 记录；改 ID 会让已卸载过该包的用户
+     * 看到它重新出现，需要额外写迁移。
+     */
     fun displayName(packageId: String): String = when (packageId) {
-        RIME_ICE -> "雾凇拼音"
+        RIME_ICE -> "简繁全拼双拼包"
         WUBI86 -> "五笔 86"
         PINYIN_SIMP -> "九键拼音"
         SHARED -> "内置共享资源"

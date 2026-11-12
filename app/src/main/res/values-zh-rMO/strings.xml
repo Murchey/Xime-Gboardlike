@@ -22,4 +22,6 @@
     <string name="s_yuyin_fuwuyichang">辨識服務異常</string>
     <string name="s_yuyin_meiyoushuohua">沒有偵測到語音輸入</string>
     <string name="s_yuyin_shibai">語音辨識失敗</string>
+    <string name="s_neizhifangan">內置方案</string>
+    <string name="s_neizhifangan_baohan">包含 %1\$s</string>
 </resources>

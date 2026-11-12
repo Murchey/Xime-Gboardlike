@@ -590,8 +590,13 @@ private fun LocalPackageCard(
                 )
             }
             Spacer(Modifier.height(4.dp))
+            // 聚合卡片列出包含的方案，普通包仍显示内部 ID（便于排障）
             Text(
-                "ID: ${item.packageId}",
+                if (item.isBuiltinGroup) {
+                    tr(R.string.s_neizhifangan_baohan, item.memberNames.joinToString(" · "))
+                } else {
+                    "ID: ${item.packageId}"
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
             )
@@ -615,6 +620,9 @@ private fun LocalPackageCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 when {
+                    // 聚合卡片不提供安装/卸载：它代表多个包，单独操作会语义不清。
+                    // 需要卸载时到方案列表页对应方案上操作，或关闭对应方案。
+                    item.isBuiltinGroup -> Unit
                     phase != null -> {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
