@@ -1375,4 +1375,10 @@
     <string name="s_xitongyuyin_keyong">本机已就绪</string>
     <string name="s_neizhifangan">內置方案</string>
     <string name="s_neizhifangan_baohan">包含 %1\$s</string>
+    <string name="s_yijianhuifubushu">一鍵恢復內建方案部署</string>
+    <string name="s_yijianhuifubushu_fu">把內建方案檔案按內容補齊、啟用清單重設為內建方案，並清空編譯產物重新部署。第三方方案檔案、你的詞庫與自訂短語都會保留。</string>
+    <string name="s_huifubushu">恢復部署</string>
+    <string name="s_huifubushu_queren">恢復內建方案部署？</string>
+    <string name="s_huifubushu_queren_fu">會重新部署並清空編譯快取，期間鍵盤可能短暫沒有候選。第三方方案檔案保留，可稍後重新啟用。</string>
+    <string name="s_yihuifuneizhibushu">已恢復內建方案部署</string>
 </resources>

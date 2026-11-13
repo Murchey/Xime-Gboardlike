@@ -84,6 +84,8 @@ import com.kingzcheung.xime.viewmodel.SchemaSettingsViewModel
 fun SchemaLocalContent(
     onBack: () -> Unit,
     title: String = tr(R.string.s_bendifangan),
+    /** 已导入页才显示「一键恢复内置方案部署」入口。 */
+    showRestoreDeployment: Boolean = false,
 ) {
     val context = LocalContext.current
     val viewModel: SchemaLocalViewModel = viewModel()
@@ -104,6 +106,7 @@ fun SchemaLocalContent(
     var pendingArchiveUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var showNameDialog by remember { mutableStateOf(false) }
     var packageNameInput by remember { mutableStateOf("") }
+    var showRestoreDeploymentDialog by remember { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
@@ -361,6 +364,25 @@ fun SchemaLocalContent(
         )
     }
 
+    if (showRestoreDeploymentDialog) {
+        AlertDialog(
+            onDismissRequest = { showRestoreDeploymentDialog = false },
+            title = { Text(tr(R.string.s_huifubushu_queren)) },
+            text = { Text(tr(R.string.s_huifubushu_queren_fu)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRestoreDeploymentDialog = false
+                    viewModel.restoreBuiltinDeployment()
+                }) { Text(tr(R.string.s_huifubushu)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreDeploymentDialog = false }) {
+                    Text(tr(R.string.s_quxiao))
+                }
+            },
+        )
+    }
+
     if (uiState.conflictPackageId != null) {
         AlertDialog(
             onDismissRequest = { viewModel.cancelConflictInstall() },
@@ -472,6 +494,9 @@ fun SchemaLocalContent(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            if (showRestoreDeployment) {
+                RestoreDeploymentCard(onRestore = { showRestoreDeploymentDialog = true })
+            }
             if (uiState.builtinSeedDisabled) {
                 RestoreBuiltinCard(onRestore = { viewModel.restoreBuiltinSeed() })
             }
@@ -519,6 +544,37 @@ fun SchemaLocalContent(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/** 已导入页的「一键恢复内置方案部署」卡片：内置文件回填 + 启用列表重置 + 重编部署。 */
+@Composable
+private fun RestoreDeploymentCard(onRestore: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(top = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(
+                text = tr(R.string.s_yijianhuifubushu),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = tr(R.string.s_yijianhuifubushu_fu),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(onClick = onRestore) {
+                Text(tr(R.string.s_huifubushu))
             }
         }
     }

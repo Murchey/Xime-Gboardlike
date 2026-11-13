@@ -939,6 +939,13 @@ object SchemaManager {
      * 背景：老版本升级用户的 custom.yaml 早于新内置方案（如 t9_pinyin）创建，
      * 列表里没有它 → 方案永不部署 → 切九键引擎侧静默失败（按键无候选）。
      */
+    /**
+     * 恢复内置部署时该启用的方案（纯函数）：只保留文件确实存在的内置方案，
+     * 第三方方案即便文件还在也不再自动启用。
+     */
+    internal fun builtinSchemasForRestore(availableSchemaIds: Set<String>): List<String> =
+        BUILTIN_SCHEMAS.filter { it in availableSchemaIds }
+
     internal fun mergeBuiltinSchemas(enabled: List<String>): List<String> {
         val missing = BUILTIN_SCHEMAS.filter { it !in enabled }
         return if (missing.isEmpty()) enabled else enabled + missing

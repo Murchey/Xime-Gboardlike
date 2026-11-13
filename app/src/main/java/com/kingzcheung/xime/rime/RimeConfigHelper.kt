@@ -880,6 +880,43 @@ object RimeConfigHelper {
         deployInstalledSchema(context)
     }
 
+    /**
+     * 一键恢复内置方案部署：把键盘恢复到出厂部署状态。
+     *
+     * 与 [restoreBuiltinSeed] 的区别：那个只补文件；这里连「启用列表」和
+     * 「编译产物」一起归位——导入第三方方案把部署搞乱后，点一下就能回到内置。
+     *
+     * 1. 清「已卸载」标记；
+     * 2. 按内容比对回填内置资源（*.custom.yaml、用户短语、第三方覆盖不动）；
+     * 3. 启用列表重置为内置方案；
+     * 4. 清 build/ 与部署 hash，强制全量重编；
+     * 5. 重新部署。
+     *
+     * 不会删除 rime/ 下的第三方方案文件，也不动用户词库。
+     */
+    suspend fun restoreBuiltinDeployment(context: Context): Boolean = withContext(Dispatchers.IO) {
+        val rimeDir = SchemaManager.getRimeDir(context)
+        if (!rimeDir.exists()) rimeDir.mkdirs()
+        BuiltinSeedState.clearAll(context)
+        runCatching { ensureOpenccAssets(context, rimeDir) }
+        runCatching { ensureDefaultYaml(context, rimeDir) }
+        runCatching { updateBuiltinAssets(context, rimeDir) }
+        val available = (rimeDir.listFiles() ?: emptyArray())
+            .map { it.name }
+            .filter { it.endsWith(".schema.yaml") }
+            .map { it.removeSuffix(".schema.yaml") }
+            .toSet()
+        val enabled = SchemaManager.builtinSchemasForRestore(available)
+        if (enabled.isNotEmpty()) {
+            SchemaManager.setEnabledSchemas(context, enabled)
+        }
+        // 清编译产物：第三方包残留的 .bin 会让重编走增量而留下旧行为
+        runCatching { SchemaManager.getBuildDir(context).deleteRecursively() }
+        SettingsPreferences.setDeploymentHash(context, "")
+        SchemaManifestManager.refreshBuiltinManifest(context)
+        deployInstalledSchema(context)
+    }
+
     /** 从 assets 恢复单个内置包（其他已卸载包保持卸载状态）。 */
     suspend fun restoreBuiltinPackage(context: Context, packageId: String): Boolean = withContext(Dispatchers.IO) {
         if (!BuiltinPackages.isBuiltin(packageId) || packageId == BuiltinPackages.SHARED) return@withContext false

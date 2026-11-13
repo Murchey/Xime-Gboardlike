@@ -104,6 +104,7 @@ fun SettingsScreen(
             SchemaLocalContent(
                 onBack = { navController.popBackStack() },
                 title = tr(R.string.s_yidaoru),
+                showRestoreDeployment = true,
             )
         }
         composable(SettingsRoutes.ModelLocal) {

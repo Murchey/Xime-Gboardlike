@@ -416,6 +416,12 @@
     <string name="s_huifu">恢复</string>
     <string name="s_huifuneizhifangan">恢复内置方案包</string>
     <string name="s_huifuneizhifangan_fu">从应用内置资源重新安装五笔、拼音等默认方案；不会删除用户词库与自定义短语。</string>
+    <string name="s_yijianhuifubushu">一键恢复内置方案部署</string>
+    <string name="s_yijianhuifubushu_fu">把内置方案文件按内容补齐、启用列表重置为内置方案，并清空编译产物重新部署。第三方方案文件、你的词库和自定义短语都会保留。</string>
+    <string name="s_huifubushu">恢复部署</string>
+    <string name="s_huifubushu_queren">恢复内置方案部署？</string>
+    <string name="s_huifubushu_queren_fu">会重新部署并清空编译缓存，期间键盘可能短暂没有候选。第三方方案文件保留，可稍后重新启用。</string>
+    <string name="s_yihuifuneizhibushu">已恢复内置方案部署</string>
     <string name="s_congbendihuifuwanzhengbeifen">从本地恢复完整备份</string>
     <string name="s_huifugai_rime_muluxiatongmingp_8d548">会覆盖 rime/ 目录下同名配置与方案文件，并还原插件、插件配置与设置项；</string>
     <string name="s_zizaocianshijianchuohebing_buh_d11d6">自造词按时间戳合并（不会吃掉本机新词）。重启应用后全部生效。</string>

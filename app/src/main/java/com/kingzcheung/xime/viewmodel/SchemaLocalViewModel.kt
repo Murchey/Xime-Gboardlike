@@ -471,6 +471,34 @@ class SchemaLocalViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    /**
+     * 一键恢复内置方案部署：内置文件回填 + 启用列表重置 + 清编译产物重新部署。
+     * 第三方方案文件保留，只是不再自动启用。
+     */
+    fun restoreBuiltinDeployment() {
+        if (_uiState.value.installingId != null) return
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    installingId = BuiltinPackages.RIME_ICE,
+                    phase = LocalPackagePhase.DEPLOYING,
+                )
+            }
+            val ok = withContext(Dispatchers.IO) {
+                RimeConfigHelper.restoreBuiltinDeployment(context)
+            }
+            val disabled = withContext(Dispatchers.IO) { BuiltinSeedState.isDisabled(context) }
+            _uiState.update {
+                it.copy(installingId = null, phase = null, builtinSeedDisabled = disabled)
+            }
+            showToast(
+                if (ok) tr(R.string.s_yihuifuneizhibushu) else tr(R.string.s_anzhuangshibai)
+            )
+            MarketUpdateChecker.refreshNow(context)
+            loadLocalPackages()
+        }
+    }
+
     fun clearToast() = _uiState.update { it.copy(toastMessage = null) }
 
     private fun showToast(message: String) = _uiState.update { it.copy(toastMessage = message) }
