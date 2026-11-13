@@ -265,7 +265,9 @@ fun CandidateBar(
     }
     val showPreeditBubble = showInputTextRow && preeditBubbleText.isNotEmpty() && !showInputBoxStyle
 
-    val isLoading = (state as? CandidateBarState.ChineseCandidates)?.isLoading == true
+    // loading 条：解码中 + 用户未关闭该提示
+    val isLoading = (state as? CandidateBarState.ChineseCandidates)?.isLoading == true &&
+        SettingsPreferences.isGlideLoadingBarEnabled(context)
 
     // 外层 Box：候选栏内容在下，底部叠一条细 loading 条（滑动解码未出结果时滚动）。
     // 用叠加而不是加高 Column，避免候选栏在滑动中变高导致键盘整体上移。

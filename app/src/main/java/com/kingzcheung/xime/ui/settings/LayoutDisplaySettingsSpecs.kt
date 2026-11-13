@@ -1,6 +1,7 @@
 package com.kingzcheung.xime.ui.settings
 
 import com.kingzcheung.xime.R
+import com.kingzcheung.xime.settings.BottomBarAction
 import com.kingzcheung.xime.settings.DoublePinyinFinals
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.settings.WubiSchemas
@@ -16,6 +17,18 @@ import com.kingzcheung.xime.settings.declarative.SettingVisibility
  */
 object LayoutDisplaySettingsSpecs {
 
+    /** 底部工具条可绑定的动作（与 BottomBarAction 一一对应）。 */
+    private fun bottomBarOptions(): List<ChoiceOption> = listOf(
+        ChoiceOption(BottomBarAction.SWITCH_IME.name, R.string.s_bb_switch_ime),
+        ChoiceOption(BottomBarAction.SWITCH_LANGUAGE.name, R.string.s_bb_switch_language),
+        ChoiceOption(BottomBarAction.CLIPBOARD.name, R.string.s_bb_clipboard),
+        ChoiceOption(BottomBarAction.QUICK_PHRASE.name, R.string.s_bb_quick_phrase),
+        ChoiceOption(BottomBarAction.EMOJI.name, R.string.s_bb_emoji),
+        ChoiceOption(BottomBarAction.HIDE_KEYBOARD.name, R.string.s_bb_hide_keyboard),
+        ChoiceOption(BottomBarAction.SETTINGS.name, R.string.s_bb_settings),
+        ChoiceOption(BottomBarAction.NONE.name, R.string.s_bb_none),
+    )
+
     /** 键盘布局段的纯开关项（按原页面顺序）。 */
     fun keyboardLayout(currentSchema: String): List<SettingSpec> = listOf(
         SettingSpec.Switch(
@@ -29,6 +42,32 @@ object LayoutDisplaySettingsSpecs {
             titleRes = R.string.s_shenjinghuadong,
             descriptionRes = R.string.s_shenjinghuadong_fu,
             default = true,
+        ),
+        SettingSpec.Switch(
+            key = SettingsPreferences.KEY_GLIDE_LOADING_BAR,
+            titleRes = R.string.s_huadongjindutiao,
+            descriptionRes = R.string.s_huadongjindutiao_fu,
+            default = true,
+        ),
+        SettingSpec.Switch(
+            key = SettingsPreferences.KEY_BOTTOM_BAR_ENABLED,
+            titleRes = R.string.s_dibugongjulan,
+            descriptionRes = R.string.s_dibugongjulan_fu,
+            default = false,
+        ),
+        SettingSpec.Choice(
+            key = SettingsPreferences.KEY_BOTTOM_BAR_LEFT,
+            titleRes = R.string.s_dibugongjulan_zuo,
+            default = BottomBarAction.SWITCH_IME.name,
+            options = bottomBarOptions(),
+            visibility = SettingVisibility.Flag(SettingsPreferences.KEY_BOTTOM_BAR_ENABLED, true),
+        ),
+        SettingSpec.Choice(
+            key = SettingsPreferences.KEY_BOTTOM_BAR_RIGHT,
+            titleRes = R.string.s_dibugongjulan_you,
+            default = BottomBarAction.CLIPBOARD.name,
+            options = bottomBarOptions(),
+            visibility = SettingVisibility.Flag(SettingsPreferences.KEY_BOTTOM_BAR_ENABLED, true),
         ),
         SettingSpec.Switch(
             key = SettingsPreferences.KEY_HARDWARE_KEYBOARD_DETECTION_ENABLED,

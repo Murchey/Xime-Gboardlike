@@ -473,6 +473,43 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             .getOrDefault("")
     }
 
+    /**
+     * 嵌入式底部工具条要求的最小留白高度（dp）。
+     *
+     * 全面屏手势条留白一般 16~18dp，部分机型键盘展开后系统会回退到 8dp；
+     * 低于 12dp 时图标会压到按键下沿造成误触，此时宁可不显示。
+     */
+    private val BOTTOM_BAR_MIN_SPACE_DP = 8
+
+    /** 底部工具条为容纳图标额外增加的高度（dp）。 */
+    private val BOTTOM_BAR_ICON_EXTRA_DP = 14
+
+    /** 底部工具条按钮动作分发。 */
+    internal fun onBottomBarAction(action: com.kingzcheung.xime.settings.BottomBarAction) {
+        when (action) {
+            com.kingzcheung.xime.settings.BottomBarAction.SWITCH_IME -> {
+                val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                @Suppress("DEPRECATION")
+                imm.showInputMethodPicker()
+            }
+            com.kingzcheung.xime.settings.BottomBarAction.SWITCH_LANGUAGE -> {
+                // 与主键盘中英切换同一条路径：引擎切换不能在主线程阻塞等待 rimeLock
+                CoroutineScope(Dispatchers.IO).launch {
+                    asciiModeController.switchAscii(AsciiModeController.Reason.USER_TOGGLE)
+                }
+            }
+            com.kingzcheung.xime.settings.BottomBarAction.CLIPBOARD ->
+                keyboardViewModel.showOverlay(com.kingzcheung.xime.keyboard.OverlayRoute.Clipboard(0))
+            com.kingzcheung.xime.settings.BottomBarAction.QUICK_PHRASE ->
+                keyboardViewModel.showOverlay(com.kingzcheung.xime.keyboard.OverlayRoute.Clipboard(1))
+            com.kingzcheung.xime.settings.BottomBarAction.EMOJI ->
+                keyboardViewModel.showOverlay(com.kingzcheung.xime.keyboard.OverlayRoute.Emoji)
+            com.kingzcheung.xime.settings.BottomBarAction.SETTINGS -> schemaController.openSettings()
+            com.kingzcheung.xime.settings.BottomBarAction.HIDE_KEYBOARD -> requestHideSelf(0)
+            com.kingzcheung.xime.settings.BottomBarAction.NONE -> Unit
+        }
+    }
+
     /** 候选确认或放弃后，清理候选预览锁并通知 controller 丢弃旧会话。 */
     internal fun clearGlideSession() {
         glidePreviewActive = false
@@ -1828,6 +1865,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 val minBottomDp = 18
                 // 贴底开关：导航栏/手势条隐藏时，系统 inset 仍可能回退出安全留白，
                 // 导致键面离屏幕底边偏高。开启后按 0 处理，键面落到屏幕底边。
+                // 底部工具条是「嵌入式」的：图标直接画在系统手势条/导航栏让出的那一条
+                // 留白里，不抬高键盘、不额外占高度——键盘总高与关闭时完全一致。
+                val bottomBarNeeded = !state.isFloatingMode &&
+                    !state.showKeyboardResize &&
+                    SettingsPreferences.isBottomBarEnabled(this@XimeInputMethodService)
                 val activeBottomDp = if (state.keyboardFlushBottom) 0
                     else if (bottomSpaceDp == 0) minBottomDp else bottomSpaceDp
                 val navBarDp = activeBottomDp.dp
@@ -2182,6 +2224,29 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                            }
                             if (!state.isFloatingMode && navBarDp > 0.dp) {
                                 Spacer(modifier = Modifier.fillMaxWidth().height(navBarDp))
+                            }
+                            // 底部工具条（嵌入式）：画在根 Box 的最后层，位于键盘内容之上，
+                            // 只占用系统手势条/导航栏让出的留白，不改变键盘高度。
+                            if (bottomBarNeeded && activeBottomDp >= BOTTOM_BAR_MIN_SPACE_DP) {
+                                // 容器高度取「留白 + 图标净高」，让图标能完整落在留白区上方，
+                                // 底边与键盘内容对齐；图标本身仍在留白范围内，不挡按键。
+                                val bottomBarHeightDp = activeBottomDp + BOTTOM_BAR_ICON_EXTRA_DP
+                                com.kingzcheung.xime.ui.keyboard.BottomToolBar(
+                                    left = com.kingzcheung.xime.settings.BottomBarAction.fromName(
+                                        SettingsPreferences.bottomBarLeft(this@XimeInputMethodService)
+                                    ),
+                                    right = com.kingzcheung.xime.settings.BottomBarAction.fromName(
+                                        SettingsPreferences.bottomBarRight(this@XimeInputMethodService)
+                                    ),
+                                    tint = candidateTextCol,
+                                    onAction = { action -> onBottomBarAction(action) },
+                                    barHeightDp = activeBottomDp.toFloat(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(bottomBarHeightDp.dp)
+                                        .align(androidx.compose.ui.Alignment.BottomCenter)
+                                        .padding(bottom = activeBottomDp.dp),
+                                )
                             }
                             // 悬浮拖到底部的停靠提示光：必须是根 Box 最后一个子级
                             // （画在键盘内容之上）——第一版画在卡片后面，手势导航设备上

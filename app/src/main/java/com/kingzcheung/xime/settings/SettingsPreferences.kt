@@ -458,6 +458,15 @@ object SettingsPreferences {
     const val KEY_GLIDE_SHOW_TRAIL = "glide_show_trail"
     /** FUTO 神经滑动解码（实验，默认开启；失败自动回退几何解码）。 */
     const val KEY_GLIDE_NEURAL = "glide_neural"
+    /** 滑动解码 loading 条（默认开启）：抬手到结果确定前在候选栏顶缘滚动。 */
+    const val KEY_GLIDE_LOADING_BAR = "glide_loading_bar"
+
+    /** 键盘底部工具条（默认关闭）：手势条上方的空白区左右各放一个功能按钮。 */
+    const val KEY_BOTTOM_BAR_ENABLED = "bottom_bar_enabled"
+    /** 底部工具条左侧按钮功能。 */
+    const val KEY_BOTTOM_BAR_LEFT = "bottom_bar_left"
+    /** 底部工具条右侧按钮功能。 */
+    const val KEY_BOTTOM_BAR_RIGHT = "bottom_bar_right"
 
     /** 五笔连打：打出的字先攒在候选栏，不逐字上屏（默认关闭）。 */
     const val KEY_WUBI_CHAINED_INPUT = "wubi_chained_input"
@@ -597,6 +606,39 @@ object SettingsPreferences {
     fun setGlideNeuralEnabled(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_GLIDE_NEURAL, enabled).apply()
     }
+
+    fun isGlideLoadingBarEnabled(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_GLIDE_LOADING_BAR, true)
+
+    fun setGlideLoadingBarEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_GLIDE_LOADING_BAR, enabled).apply()
+    }
+
+    fun isBottomBarEnabled(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_BOTTOM_BAR_ENABLED, false)
+
+    fun setBottomBarEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_BOTTOM_BAR_ENABLED, enabled).apply()
+    }
+
+    /** 底部工具条左/右按钮功能（存枚举名；未知值回退默认）。 */
+    fun bottomBarLeft(context: Context): String =
+        getPrefs(context).getString(KEY_BOTTOM_BAR_LEFT, null) ?: BOTTOM_BAR_DEFAULT_LEFT
+
+    fun setBottomBarLeft(context: Context, action: String) {
+        getPrefs(context).edit().putString(KEY_BOTTOM_BAR_LEFT, action).apply()
+    }
+
+    fun bottomBarRight(context: Context): String =
+        getPrefs(context).getString(KEY_BOTTOM_BAR_RIGHT, null) ?: BOTTOM_BAR_DEFAULT_RIGHT
+
+    fun setBottomBarRight(context: Context, action: String) {
+        getPrefs(context).edit().putString(KEY_BOTTOM_BAR_RIGHT, action).apply()
+    }
+
+    /** 默认左「切换输入法」、右「剪贴板」。 */
+    const val BOTTOM_BAR_DEFAULT_LEFT = "SWITCH_IME"
+    const val BOTTOM_BAR_DEFAULT_RIGHT = "CLIPBOARD"
 
     /**
      * 五笔连打：满码不直接上屏，先在候选栏累积成一句，空格/回车时一次性提交。
