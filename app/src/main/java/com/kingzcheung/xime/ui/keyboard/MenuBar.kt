@@ -13,6 +13,7 @@ import com.kingzcheung.xime.viewmodel.currentLabel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import android.os.SystemClock
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -50,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -288,7 +290,11 @@ fun MenuBar(
                 editing = editing,
                 slots = slots,
                 allTools = stripTools,
-                onSlotsChange = { commitSlots(it) },
+                onSlotsChange = { newSlots ->
+                    commitSlots(newSlots)
+                    // 普通态没有"完成"按钮，拖动结果立即落盘
+                    if (!editing) callbacks.onUpdateToolbarButtons(draft)
+                },
                 textColor = textColor,
                 cardColor = cardColor,
                 onDismiss = { callbacks.onDismiss() },
@@ -416,7 +422,9 @@ private fun ToolbarStrip(
                 // 外部拖入的落点占位：虚线圈提示"松手会插在这里"
                 if (slot == externalDropIndex) DropGhost(textColor)
                 val tool = allTools.firstOrNull { it.id == id } ?: return@forEachIndexed
-                if (editing) {
+                // 以 id 作 key：拖动重排后节点跟着 id 走，手势不会被重组打断
+                key(id) {
+                    val dragGuard = remember { longArrayOf(0L) }
                     Box(
                         Modifier
                             .padding(horizontal = 2.dp)
@@ -431,14 +439,12 @@ private fun ToolbarStrip(
                             }
                             .clip(CircleShape)
                             .background(cardColor)
-                            .clickable {
-                                if (id == SCHEMA_SLOT_ID) onSchemaList() else onSlotsChange(slots - id)
-                            }
-                            // 拖动手势放最内层，避免按下事件被 clickable 抢走
-                            .pointerInput(id, slots) {
+                            // 长按拖动放在 clickable 外层：先拿到按下事件，单击仍交给 clickable
+                            .pointerInput(id) {
                                 detectDragGesturesAfterLongPress(
                                     onDragStart = {
                                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        dragGuard[0] = SystemClock.uptimeMillis()
                                         dragSlot = slot
                                         dragOffset = Offset.Zero
                                         outOfStrip = false
@@ -478,6 +484,7 @@ private fun ToolbarStrip(
                                         }
                                     },
                                     onDragEnd = {
+                                        dragGuard[0] = SystemClock.uptimeMillis()
                                         val dragged = currentSlots.getOrNull(dragSlot)
                                         // 拖出栏外即移除（方案按钮同样可以移除，会回到下方功能池）
                                         if (outOfStrip && dragged != null) {
@@ -489,20 +496,26 @@ private fun ToolbarStrip(
                                         onDragVisual(null, Offset.Zero, false)
                                     },
                                     onDragCancel = {
+                                        dragGuard[0] = SystemClock.uptimeMillis()
                                         dragSlot = -1
                                         dragOffset = Offset.Zero
                                         outOfStrip = false
                                         onDragVisual(null, Offset.Zero, false)
                                     },
                                 )
+                            }
+                            .clickable {
+                                // 刚拖完的这一次抬手不要顺带触发单击
+                                if (SystemClock.uptimeMillis() - dragGuard[0] < 300L) return@clickable
+                                if (editing) {
+                                    if (id == SCHEMA_SLOT_ID) onSchemaList() else onSlotsChange(slots - id)
+                                } else {
+                                    tool.action()
+                                }
                             },
                         contentAlignment = Alignment.Center,
                     ) {
                         ToolIcon(tool, textColor, 22.dp)
-                    }
-                } else {
-                    Box(Modifier.padding(horizontal = 2.dp)) {
-                        CircleTool(tool, textColor, cardColor)
                     }
                 }
             }
@@ -709,13 +722,6 @@ private fun ToolbarNormalBody(
             }
         }
         Spacer(Modifier.height(6.dp))
-    }
-}
-
-@Composable
-private fun CircleTool(tool: MenuTool, textColor: Color, cardColor: Color) {
-    Box(Modifier.size(40.dp).clip(CircleShape).background(cardColor).clickable { tool.action() }, contentAlignment = Alignment.Center) {
-        ToolIcon(tool, textColor, 22.dp)
     }
 }
 
