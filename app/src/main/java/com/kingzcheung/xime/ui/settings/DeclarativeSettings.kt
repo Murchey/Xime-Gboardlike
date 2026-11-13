@@ -91,9 +91,9 @@ fun DeclarativeSettingItems(
         visible.forEachIndexed { index, spec ->
             if (index > 0) {
                 HorizontalDivider(
-                    modifier = Modifier.padding(start = 16.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    modifier = Modifier.padding(start = SettingsDimens.RowHorizontal),
+                    thickness = SettingsDimens.DividerThickness,
+                    color = MaterialTheme.colorScheme.outlineVariant
                 )
             }
             val enabled = spec.enabledWhen?.evaluate(localStore) != false
@@ -142,28 +142,13 @@ private fun SwitchSettingRow(
     enabled: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = tr(spec.titleRes),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            spec.descriptionRes?.let {
-                Text(
-                    text = tr(it),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
-    }
+    SettingsSwitchRow(
+        title = tr(spec.titleRes),
+        summary = spec.descriptionRes?.let { tr(it) },
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        enabled = enabled,
+    )
 }
 
 @Composable
@@ -177,13 +162,12 @@ private fun SliderSettingRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(horizontal = SettingsDimens.RowHorizontal, vertical = SettingsDimens.RowVerticalTwoLine)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = tr(spec.titleRes),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
+                style = MaterialTheme.typography.bodyLarge
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -195,7 +179,7 @@ private fun SliderSettingRow(
         spec.descriptionRes?.let {
             Text(
                 text = tr(it),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
             )
@@ -225,7 +209,7 @@ private fun ChoiceSettingRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(horizontal = SettingsDimens.RowHorizontal, vertical = SettingsDimens.RowVerticalTwoLine)
     ) {
         Text(
             text = tr(spec.titleRes),
@@ -235,7 +219,7 @@ private fun ChoiceSettingRow(
         spec.descriptionRes?.let {
             Text(
                 text = tr(it),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -312,14 +296,13 @@ private fun MenuSettingRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(enabled = enabled) { expanded = true }
-                .padding(16.dp),
+                .padding(horizontal = SettingsDimens.RowHorizontal, vertical = SettingsDimens.RowVerticalTwoLine),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = tr(spec.titleRes),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
+                    style = MaterialTheme.typography.bodyLarge
                 )
                 spec.descriptionRes?.let {
                     Text(
@@ -332,7 +315,7 @@ private fun MenuSettingRow(
             Text(
                 text = tr(current.labelRes),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.width(4.dp))
             Icon(

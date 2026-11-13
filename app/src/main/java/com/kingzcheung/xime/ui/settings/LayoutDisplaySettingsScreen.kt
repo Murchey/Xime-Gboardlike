@@ -71,35 +71,17 @@ fun LayoutDisplaySettingsContent(
 
     // 滑动输入相关选项：点条目在下方自然展开（不是侧边抽屉）
     var glideExpanded by remember { mutableStateOf(false) }
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
-        topBar = {
-            TopAppBar(
-                title = { Text(tr(R.string.s_bujuyuxianshi)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = tr(R.string.s_fanhui)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                )
-            )
-        }
+    SettingsPageScaffold(
+        title = tr(R.string.s_bujuyuxianshi),
+        onBack = onBack,
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = paddingValues,
+            verticalArrangement = Arrangement.spacedBy(SettingsDimens.GroupGap)
         ) {
             item {
-                SettingsSection(title = tr(R.string.s_jianpanbuju), content = {
+                SettingsGroup(title = tr(R.string.s_jianpanbuju), content = {
                     // 滑动输入：点条目在下方自然展开相关开关（不是侧边抽屉）
                     val chevronRotation by animateFloatAsState(
                         targetValue = if (glideExpanded) 90f else 0f,
@@ -320,7 +302,7 @@ fun LayoutDisplaySettingsContent(
             }
 
             item {
-                SettingsSection(title = tr(R.string.s_houxuanci), content = {
+                SettingsGroup(title = tr(R.string.s_houxuanci), content = {
                     val candidateTextSizePref = SettingsPreferences.getCandidateTextSize(context)
                     var candidateTextSize by remember(candidateTextSizePref) {
                         mutableStateOf(candidateTextSizePref.toFloat())
@@ -494,7 +476,7 @@ fun LayoutDisplaySettingsContent(
                 })
             }
             item {
-                SettingsSection(title = tr(R.string.s_zhanakaiye_buju), content = {
+                SettingsGroup(title = tr(R.string.s_zhanakaiye_buju), content = {
                     DeclarativeSettingItems(
                         specs = LayoutDisplaySettingsSpecs.expandedLayout,
                         store = settingsStore,
@@ -502,7 +484,7 @@ fun LayoutDisplaySettingsContent(
                 })
             }
             item {
-                SettingsSection(title = tr(R.string.s_shurukuangshipei), content = {
+                SettingsGroup(title = tr(R.string.s_shurukuangshipei), content = {
                     DeclarativeSettingItems(
                         specs = LayoutDisplaySettingsSpecs.inputField,
                         store = settingsStore,

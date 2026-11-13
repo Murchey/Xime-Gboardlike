@@ -50,35 +50,17 @@ fun KeyEffectSettingsContent(
         KeyEffectSettingsSpecs.haptic(uiState.hasAmplitudeControl)
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
-        topBar = {
-            TopAppBar(
-                title = { Text(tr(R.string.s_anjianxiaoguo)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = tr(R.string.s_fanhui)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                )
-            )
-        }
+    SettingsPageScaffold(
+        title = tr(R.string.s_anjianxiaoguo),
+        onBack = onBack,
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = paddingValues,
+            verticalArrangement = Arrangement.spacedBy(SettingsDimens.GroupGap)
         ) {
             item {
-                SettingsSection(title = tr(R.string.s_changganqipao), content = {
+                SettingsGroup(title = tr(R.string.s_changganqipao), content = {
                     DeclarativeSettingItems(
                         specs = KeyEffectSettingsSpecs.longPressBubble,
                         store = settingsStore,
@@ -92,7 +74,7 @@ fun KeyEffectSettingsContent(
             }
 
             item {
-                SettingsSection(title = tr(R.string.s_anjianyinxiao), content = {
+                SettingsGroup(title = tr(R.string.s_anjianyinxiao), content = {
                     DeclarativeSettingItems(
                         specs = KeyEffectSettingsSpecs.sound,
                         store = settingsStore,
@@ -101,7 +83,7 @@ fun KeyEffectSettingsContent(
             }
 
             item {
-                SettingsSection(title = tr(R.string.s_zhendongfankui), content = {
+                SettingsGroup(title = tr(R.string.s_zhendongfankui), content = {
                     DeclarativeSettingItems(
                         specs = hapticSpecs,
                         store = settingsStore,
