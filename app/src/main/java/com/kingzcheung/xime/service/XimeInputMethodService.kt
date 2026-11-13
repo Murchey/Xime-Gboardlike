@@ -513,6 +513,18 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         }
     }
 
+    /**
+     * 用户开始了新的输入动作（敲键）：立刻结束还在跑的滑动解码。
+     *
+     * 误触滑动时 loading 条会挂一小段时间，这里让任何按键都立即把它收掉，
+     * 保证"想打字就能打"，不会被上一次误触的残影拖住。
+     */
+    internal fun abortGlideDecoding() {
+        if (!candidateState.value.isGlideDecoding) return
+        candidateState.value = candidateState.value.copy(isGlideDecoding = false)
+        glideSessionReset()
+    }
+
     /** 候选确认或放弃后，清理候选预览锁并通知 controller 丢弃旧会话。 */
     internal fun clearGlideSession() {
         glidePreviewActive = false
@@ -2253,6 +2265,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     ),
                                     tint = candidateTextCol,
                                     onAction = { action -> onBottomBarAction(action) },
+                                    // 中间留白横向滑动移动光标
+                                    onCursorMove = { step -> moveCursor(step) },
                                     barHeightDp = bottomBarBandDp.toFloat(),
                                     modifier = Modifier
                                         .fillMaxWidth()

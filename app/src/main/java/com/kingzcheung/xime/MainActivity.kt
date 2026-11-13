@@ -5,6 +5,7 @@ import com.kingzcheung.xime.i18n.tr
 import android.content.Context
 import android.content.Intent
 import android.Manifest
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -21,7 +22,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -183,6 +188,55 @@ class MainActivity : ComponentActivity() {
                             onThemeChanged = {
                                 darkMode = SettingsPreferences.getDarkMode(context)
                             }
+                        )
+                    }
+
+                    // 进入设置时检测一次新版本：有更新就弹窗，失败静默不影响使用
+                    var pendingUpdate by remember {
+                        mutableStateOf<com.kingzcheung.xime.update.UpdateInfo?>(null)
+                    }
+                    LaunchedEffect(showWizard) {
+                        if (!showWizard) {
+                            pendingUpdate =
+                                com.kingzcheung.xime.update.UpdateChecker.checkForUpdate(context)
+                        }
+                    }
+                    pendingUpdate?.let { info ->
+                        AlertDialog(
+                            onDismissRequest = {
+                                com.kingzcheung.xime.update.UpdateChecker
+                                    .dismissVersion(context, info.latestVersion)
+                                pendingUpdate = null
+                            },
+                            title = { Text(tr(R.string.s_faxianxinbanben)) },
+                            text = {
+                                Text(
+                                    tr(
+                                        R.string.s_xinbanben_tishi,
+                                        info.latestVersion,
+                                        BuildConfig.VERSION_NAME,
+                                    )
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    runCatching {
+                                        startActivity(
+                                            Intent(Intent.ACTION_VIEW, Uri.parse(info.releaseUrl))
+                                        )
+                                    }
+                                    com.kingzcheung.xime.update.UpdateChecker
+                                        .dismissVersion(context, info.latestVersion)
+                                    pendingUpdate = null
+                                }) { Text(tr(R.string.s_qianwangxiazai)) }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = {
+                                    com.kingzcheung.xime.update.UpdateChecker
+                                        .dismissVersion(context, info.latestVersion)
+                                    pendingUpdate = null
+                                }) { Text(tr(R.string.s_shaohou)) }
+                            },
                         )
                     }
 

@@ -146,6 +146,8 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         // 空键无任何按键语义，且下游 Rime 路由按 key[0] 取码（key.lowercase()[0]），
         // 空串会越界崩溃（2026-09-14 真机实证：滑动手势 commit 值为空时触发）。
         if (key.isEmpty()) return
+        // 敲键即视为"用户要正常输入"：结束还在跑的滑动解码，避免 loading 残影挡住操作
+        service.abortGlideDecoding()
         // 引擎冷启动/切方案竞态：引擎未就绪时缓存按键，就绪后按序补发，避免"无法打字"
         if (!engineReady()) {
             synchronized(pendingKeys) {

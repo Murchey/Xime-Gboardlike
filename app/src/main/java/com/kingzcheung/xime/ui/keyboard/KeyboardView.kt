@@ -462,6 +462,7 @@ fun KeyboardView(
                 isFloatingMode = state.isFloatingMode,
                 // 候选栏图片候选的缩略图文件（不存在返回 null → 渲染占位图标）
                 clipboardImageFileOf = { item -> viewModel.clipboardManager.imageFileOf(item) },
+                isDecoding = cs.isGlideDecoding,
                 isVoiceSticky = state.voiceSticky,
                 voiceAmplitude = voiceAmplitudeState.value,
                 voiceSpectrum = voiceSpectrumState.value,

@@ -1,6 +1,14 @@
 package com.kingzcheung.xime.glide
 
 /**
+ * 超过该位移（键盘局部 px）才考虑从 Pending 升级；小于则视为抖动。
+ *
+ * 取约 1/4 键宽：走路时手指/手机晃动通常只有十几像素，12px 会把它误判成滑动；
+ * 真正的滑动要跨过整块键位，位移远大于这个阈值。
+ */
+private const val DEFAULT_SLOP_PX = 28f
+
+/**
  * 阶段B：统一手势所有权仲裁（纯状态机，不依赖 Compose / Android）。
  *
  * 计划书要求：一次 pointer 序列最多产生一种输入动作；Glide 一旦接管，
@@ -14,7 +22,7 @@ class GlideGestureArbiter(
     /** 当前是否允许滑动输入（设置开关 + 中文 26 键方案）。 */
     private val glideEnabled: () -> Boolean,
     /** 超过该位移（键盘局部 px）才考虑从 Pending 升级；小于则视为抖动。 */
-    private val slopPx: Float = 12f,
+    private val slopPx: Float = DEFAULT_SLOP_PX,
     /** 起点之外经过至少这么多不同键才认定为 Glide（防上滑符号误判）。 */
     private val minDistinctKeys: Int = 2,
 ) {

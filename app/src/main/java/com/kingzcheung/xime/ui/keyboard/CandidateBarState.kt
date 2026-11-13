@@ -69,9 +69,8 @@ sealed interface CandidateBarState {
             val hasAssociations = associationCandidates.isNotEmpty()
             val hasInput = inputText.isNotEmpty()
             return when {
-                // 解码中优先占位：此时可能既无编码也无候选，但用户必须看到反馈
-                isLoading && !hasCandidates && !hasInput ->
-                    ChineseCandidates(isLoading = true)
+                // 解码中不抢候选栏：loading 只作为顶缘细条叠加。
+                // 若在此占位，误触滑动会让工具栏整行消失，用户短时间内点不到按钮。
                 isShowingRecentClipboard && hasCandidates ->
                     ClipboardDisplay(candidates = candidates, images = clipboardImages)
                 isCalculatorActive && hasCandidates ->

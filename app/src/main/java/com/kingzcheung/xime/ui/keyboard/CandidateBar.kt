@@ -152,6 +152,8 @@ fun CandidateBar(
     voicePluginName: String = "",
     /** 剪贴板图片候选 → 本地文件（null 时渲染占位图标）。 */
     clipboardImageFileOf: ((ClipboardItem) -> File?)? = null,
+    /** 滑动解码进行中：只叠加顶缘细条，不替换候选/工具栏内容。 */
+    isDecoding: Boolean = false,
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = !isFloatingMode && configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -265,9 +267,9 @@ fun CandidateBar(
     }
     val showPreeditBubble = showInputTextRow && preeditBubbleText.isNotEmpty() && !showInputBoxStyle
 
-    // loading 条：解码中 + 用户未关闭该提示
-    val isLoading = (state as? CandidateBarState.ChineseCandidates)?.isLoading == true &&
-        SettingsPreferences.isGlideLoadingBarEnabled(context)
+    // loading 条：解码中 + 用户未关闭该提示。
+    // 独立于候选状态：解码时工具栏照常渲染，避免误触后短时间内无法操作。
+    val isLoading = isDecoding && SettingsPreferences.isGlideLoadingBarEnabled(context)
 
     // 外层 Box：候选栏内容在下，底部叠一条细 loading 条（滑动解码未出结果时滚动）。
     // 用叠加而不是加高 Column，避免候选栏在滑动中变高导致键盘整体上移。

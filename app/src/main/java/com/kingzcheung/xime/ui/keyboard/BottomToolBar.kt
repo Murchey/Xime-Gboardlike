@@ -2,6 +2,7 @@ package com.kingzcheung.xime.ui.keyboard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +30,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.kingzcheung.xime.settings.BottomBarAction
 
@@ -40,8 +43,8 @@ import com.kingzcheung.xime.settings.BottomBarAction
  *
  * 布局要点：
  * - 只有左右两个图标，贴两侧但不顶到屏幕边缘（留 20dp，避开手势边缘滑动）；
- * - 图标 18dp、圆形按压底色 30dp，视觉上是“嵌在留白里的小按钮”而非工具栏；
- * - 中间整片区域不挂任何 pointerInput，系统返回/上滑手势照常可用。
+ * - 图标 18dp、圆形按压底色 30dp，视觉上是"嵌在留白里的小按钮"而非工具栏；
+ * - 中间区域只认横向拖动（移动光标），竖向手势留给系统的上滑回桌面。
  */
 @Composable
 fun BottomToolBar(
@@ -51,19 +54,48 @@ fun BottomToolBar(
     onAction: (BottomBarAction) -> Unit,
     modifier: Modifier = Modifier,
     barHeightDp: Float = 24f,
+    /** 中间区域横向滑动：正数向右、负数向左，每次移动一个字符。 */
+    onCursorMove: (Int) -> Unit = {},
 ) {
+    val stepPx = with(LocalDensity.current) { CURSOR_STEP_DP.dp.toPx() }
     Row(
         modifier = modifier
             .fillMaxWidth()
             .fillMaxHeight()
             .padding(horizontal = 18.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BottomBarButton(left, tint, onAction)
+        // 中间留白即光标拖动区：只拦横向拖动，竖向手势继续交给系统
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .pointerInput(stepPx) {
+                    var accumulated = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { accumulated = 0f },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            accumulated += dragAmount
+                            while (accumulated >= stepPx) {
+                                accumulated -= stepPx
+                                onCursorMove(1)
+                            }
+                            while (accumulated <= -stepPx) {
+                                accumulated += stepPx
+                                onCursorMove(-1)
+                            }
+                        },
+                    )
+                },
+        )
         BottomBarButton(right, tint, onAction)
     }
 }
+
+/** 横向拖动多少距离移动一个字符。 */
+private const val CURSOR_STEP_DP = 26f
 
 @Composable
 private fun BottomBarButton(
