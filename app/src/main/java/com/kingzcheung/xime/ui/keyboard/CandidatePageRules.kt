@@ -35,8 +35,15 @@ object CandidatePageRules {
      * 注释占宽明显（每个候选多挂一行小字），开启时压到 3~4 列；
      * 关闭时手机 4~5 列、平板最多 6 列，避免过密或过疏。
      */
-    fun gridColumnsFor(pageWidthDp: Int, showComments: Boolean): Int {
+    fun gridColumnsFor(
+        pageWidthDp: Int,
+        showComments: Boolean,
+        singleCharOnly: Boolean = false,
+    ): Int {
         val available = (pageWidthDp - 100f).coerceAtLeast(160f)
+        // 单字筛选：字宽需求小（约 42dp 一格），手机上正好一行 6 个；
+        // 悬浮窄卡片放不下 6 个时退到 4 个。
+        if (singleCharOnly) return (available / 42f).toInt().coerceIn(4, 6)
         val columns = if (showComments) available / 110f else available / 90f
         return columns.toInt().coerceIn(if (showComments) 3 else 4, if (showComments) 4 else 5)
     }
@@ -46,14 +53,17 @@ object CandidatePageRules {
         expanded && expandedCount > 0
 
     /**
-     * 选词结束后自动收起：候选与联想都为空才收起。
-     * 选词过程中仍有候选/联想时保持展开，避免长候选选择被中断。
+     * 选词结束后自动收起。
+     *
+     * 长句逐字选择时，最后一个字选完候选就用完了，此时才冒出「智能推测」
+     * 联想候选——展开页应当立刻折叠，把位置让给下面的联想栏；
+     * 只要还有待选候选就保持展开，不打断连续选字。
      */
     fun shouldAutoCollapse(
         expanded: Boolean,
         candidateCount: Int,
-        associationCount: Int,
-    ): Boolean = expanded && candidateCount == 0 && associationCount == 0
+        @Suppress("UNUSED_PARAMETER") associationCount: Int = 0,
+    ): Boolean = expanded && candidateCount == 0
 
     /**
      * 展开态候选栏条目：单字筛选只保留单字，且始终携带原始全局索引

@@ -26,10 +26,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -39,6 +35,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.rotate
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -70,18 +69,8 @@ fun LayoutDisplaySettingsContent(
     // 双拼开关的可见性依赖当前方案
     val layoutSpecsSchema = SettingsPreferences.getCurrentSchema(context)
 
-    // 滑动输入相关选项收进右侧抽屉，主列表只保留一个入口
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val drawerScope = rememberCoroutineScope()
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            GlideSettingsDrawer(
-                store = settingsStore,
-                onClose = { drawerScope.launch { drawerState.close() } },
-            )
-        },
-    ) {
+    // 滑动输入相关选项：点条目在下方自然展开（不是侧边抽屉）
+    var glideExpanded by remember { mutableStateOf(false) }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
@@ -111,11 +100,15 @@ fun LayoutDisplaySettingsContent(
         ) {
             item {
                 SettingsSection(title = tr(R.string.s_jianpanbuju), content = {
-                    // 滑动输入：相关开关收纳进抽屉，避免主列表被长尾选项占满
+                    // 滑动输入：点条目在下方自然展开相关开关（不是侧边抽屉）
+                    val chevronRotation by animateFloatAsState(
+                        targetValue = if (glideExpanded) 90f else 0f,
+                        label = "glideChevron",
+                    )
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { drawerScope.launch { drawerState.open() } }
+                            .clickable { glideExpanded = !glideExpanded }
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -134,8 +127,34 @@ fun LayoutDisplaySettingsContent(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.rotate(chevronRotation)
                         )
+                    }
+                    AnimatedVisibility(visible = glideExpanded) {
+                        Column {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 16.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
+                            DeclarativeSettingItems(
+                                specs = LayoutDisplaySettingsSpecs.glide(),
+                                store = settingsStore,
+                                // 打开滑动输入时默认连带打开神经解码；之后仍可单独关闭神经解码
+                                linkedWrites = { spec, value ->
+                                    if (spec.key == SettingsPreferences.KEY_GLIDE_TYPING &&
+                                        value == SettingValue.Flag(true)
+                                    ) {
+                                        listOf(
+                                            SettingsPreferences.KEY_GLIDE_NEURAL to SettingValue.Flag(true)
+                                        )
+                                    } else {
+                                        emptyList()
+                                    }
+                                },
+                            )
+                        }
                     }
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 16.dp),
@@ -491,47 +510,5 @@ fun LayoutDisplaySettingsContent(
                 })
             }
         }
-    }
-    }
-}
-
-/** 滑动输入抽屉：滑动输入 / 神经解码 / 解码进度条三个开关集中在这里。 */
-@Composable
-private fun GlideSettingsDrawer(
-    store: com.kingzcheung.xime.settings.declarative.SettingsStore,
-    onClose: () -> Unit,
-) {
-    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = tr(R.string.s_huadongshuru),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.weight(1f)
-            )
-            IconButton(onClick = onClose) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = tr(R.string.s_guanbi)
-                )
-            }
-        }
-        DeclarativeSettingItems(
-            specs = LayoutDisplaySettingsSpecs.glide(),
-            store = store,
-            // 打开滑动输入时默认连带打开神经解码；之后仍可单独关闭神经解码
-            linkedWrites = { spec, value ->
-                if (spec.key == SettingsPreferences.KEY_GLIDE_TYPING &&
-                    value == SettingValue.Flag(true)
-                ) {
-                    listOf(SettingsPreferences.KEY_GLIDE_NEURAL to SettingValue.Flag(true))
-                } else {
-                    emptyList()
-                }
-            },
-        )
     }
 }

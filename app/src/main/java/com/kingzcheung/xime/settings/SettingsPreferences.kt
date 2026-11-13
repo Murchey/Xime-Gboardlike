@@ -109,6 +109,8 @@ object SettingsPreferences {
     private const val KEY_KEYBOARD_HEIGHT_DP = "keyboard_height_dp"
     private const val KEY_KEYBOARD_HEIGHT_DP_LANDSCAPE = "keyboard_height_dp_landscape"
     const val DEFAULT_KEYBOARD_HEIGHT_PERCENT = 35
+    /** 传统（三键）导航栏下的默认占比：导航栏本身占掉约 48dp，键盘收一档。 */
+    const val DEFAULT_KEYBOARD_HEIGHT_PERCENT_NAVBAR = 30
     /** 横屏默认高度 = 竖屏高度（长边）× 此百分比。约等于旧值（横屏短边 × 49%），但基数稳定、与竖屏语义统一 */
     const val DEFAULT_KEYBOARD_HEIGHT_PERCENT_LANDSCAPE = 25
 
@@ -1057,9 +1059,28 @@ object SettingsPreferences {
         getPrefs(context).edit().putInt(key, heightDp).apply()
     }
 
+    /**
+     * 键盘默认占屏比例：全面屏手势 35%，传统（三键）导航栏 30%。
+     *
+     * 传统导航栏本身要吃掉约 48dp，若仍按 35% 算，键盘 + 导航栏总高会明显顶到
+     * 输入区；30% + 导航栏的合计占用与手势模式基本一致。
+     */
+    internal fun defaultKeyboardHeightPercent(isGestureNav: Boolean): Int =
+        if (isGestureNav) DEFAULT_KEYBOARD_HEIGHT_PERCENT else DEFAULT_KEYBOARD_HEIGHT_PERCENT_NAVBAR
+
+    /** 是否全面屏手势导航（navigation_mode == 2）；读不到时按手势处理。 */
+    internal fun isGestureNavigation(context: Context): Boolean = runCatching {
+        android.provider.Settings.Secure.getInt(
+            context.contentResolver, "navigation_mode", 2,
+        ) == 2
+    }.getOrDefault(true)
+
     fun getDefaultKeyboardHeightDp(context: Context, isLandscape: Boolean = false): Int {
         val config = context.resources.configuration
-        if (!isLandscape) return config.screenHeightDp * DEFAULT_KEYBOARD_HEIGHT_PERCENT / 100
+        if (!isLandscape) {
+            return config.screenHeightDp *
+                defaultKeyboardHeightPercent(isGestureNavigation(context)) / 100
+        }
         // 横屏以竖屏高度（长边）为基数：横屏短边随宽高比/系统栏波动大，
         // 长边是设备稳定值，且与悬浮模式 fallback（portraitScreenHeightDp × 百分比）语义一致
         val portraitHeightDp = maxOf(config.screenWidthDp, config.screenHeightDp)

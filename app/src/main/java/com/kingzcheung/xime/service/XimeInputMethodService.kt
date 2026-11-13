@@ -486,7 +486,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private val BOTTOM_BAR_MIN_GAP_DP = 24
 
     /** 底部工具条占用的留白带高度（dp）：实测全面屏手势下约 49dp，取 44 留余量。 */
-    private val BOTTOM_BAR_BAND_DP = 44
+    private val BOTTOM_BAR_BAND_DP = 40
 
     /** 底部工具条按钮动作分发。 */
     internal fun onBottomBarAction(action: com.kingzcheung.xime.settings.BottomBarAction) {

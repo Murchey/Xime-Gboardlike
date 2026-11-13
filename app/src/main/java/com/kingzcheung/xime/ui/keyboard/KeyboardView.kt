@@ -143,8 +143,8 @@ fun KeyboardView(
     val candidatePageExpanded by viewModel.candidatePageExpanded.collectAsStateWithLifecycle()
     val singleCharFilter by viewModel.singleCharFilter.collectAsStateWithLifecycle()
 
-    // 候选展开页自动收起：一次选词结束（候选与联想均空）后收起并恢复键盘 UI；
-    // 仍有候选/联想时保持展开，避免长候选选择中选一个字就收起。
+    // 候选展开页自动收起：候选选完（只剩智能推测联想）就收起；
+    // 仍有待选候选时保持展开，避免长候选选择中选一个字就收起。
     LaunchedEffect(
         candidatePageExpanded,
         candidateState.value.candidates.size,
@@ -799,7 +799,11 @@ fun KeyboardView(
                 val gridColumns =
                     if (expandedStyle == SettingsPreferences.EXPANDED_STYLE_GRID) {
                         // 扣掉左右栏（约 86dp）与内边距；关注释时手机 4~5 列
-                        CandidatePageRules.gridColumnsFor(expandedPageWidthDp, showExpandedComments)
+                        CandidatePageRules.gridColumnsFor(
+                            expandedPageWidthDp,
+                            showExpandedComments,
+                            singleCharOnly = singleCharFilter,
+                        )
                     } else 0
                 val candidateRows = remember(
                     allExpanded, singleCharFilter, rowWidthUnits, showExpandedComments, gridColumns

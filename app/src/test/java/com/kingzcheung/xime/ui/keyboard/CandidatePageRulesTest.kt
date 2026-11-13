@@ -35,6 +35,11 @@ class CandidatePageRulesTest {
         assertEquals(3, CandidatePageRules.gridColumnsFor(360, showComments = true))
         assertEquals(4, CandidatePageRules.gridColumnsFor(560, showComments = true))
         assertEquals(4, CandidatePageRules.gridColumnsFor(1000, showComments = true))
+        // 单字筛选：手机上一行 6 个
+        assertEquals(6, CandidatePageRules.gridColumnsFor(360, showComments = false, singleCharOnly = true))
+        assertEquals(6, CandidatePageRules.gridColumnsFor(560, showComments = false, singleCharOnly = true))
+        // 悬浮窄卡片放不下 6 个时退到 4 个
+        assertEquals(4, CandidatePageRules.gridColumnsFor(280, showComments = false, singleCharOnly = true))
     }
 
     @Test
@@ -57,7 +62,8 @@ class CandidatePageRulesTest {
         assertFalse(CandidatePageRules.shouldAutoCollapse(false, 0, 0))
         // 仍有候选或联想时保持展开
         assertFalse(CandidatePageRules.shouldAutoCollapse(true, 1, 0))
-        assertFalse(CandidatePageRules.shouldAutoCollapse(true, 0, 1))
+        // 候选选完、只剩智能推测联想：展开页要收起，把位置让给联想栏
+        assertTrue(CandidatePageRules.shouldAutoCollapse(true, 0, 1))
     }
 
     @Test
