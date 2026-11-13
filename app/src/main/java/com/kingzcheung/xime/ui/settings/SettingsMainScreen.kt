@@ -6,28 +6,20 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.twotone.LibraryBooks
 import androidx.compose.material.icons.twotone.AutoAwesome
 import androidx.compose.material.icons.twotone.AutoFixHigh
 import androidx.compose.material.icons.twotone.Backup
 import androidx.compose.material.icons.twotone.Ballot
-
-import androidx.compose.material.icons.twotone.Build
 import androidx.compose.material.icons.twotone.ContentPaste
 import androidx.compose.material.icons.twotone.Description
 import androidx.compose.material.icons.twotone.Extension
@@ -45,9 +37,9 @@ import androidx.compose.material.icons.twotone.Tune
 import androidx.compose.material.icons.twotone.TypeSpecimen
 import androidx.compose.material.icons.twotone.Vibration
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,9 +51,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusEvent
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -70,12 +59,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kingzcheung.xime.R
 import com.kingzcheung.xime.settings.MarketUpdateChecker
 import com.kingzcheung.xime.settings.SettingsPreferences
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/**
+ * 设置主页面：Google 设置那种「大标题 + 分组白卡」结构。
+ * 每个分组是一张圆角卡片，行尾统一 slot，分隔线由 SettingsCard 自动绘制。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsMainContent(
     onNavigateToSchema: () -> Unit,
@@ -99,24 +88,22 @@ fun SettingsMainContent(
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    // 扩展商店可更新计数：进主页恢复缓存并按节流后台刷新（失败静默），展示在入口角标
     LaunchedEffect(Unit) {
         MarketUpdateChecker.maybeRefresh(context)
     }
     val marketUpdates by MarketUpdateChecker.summary.collectAsStateWithLifecycle()
 
+    val pageColor = settingsPageContainerColor()
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = pageColor,
         topBar = {
-            MediumTopAppBar(
+            LargeTopAppBar(
                 title = { Text(stringResource(R.string.settings_title)) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
-                    navigationIconContentColor = Color.Unspecified,
+                    containerColor = pageColor,
+                    scrolledContainerColor = pageColor,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = Color.Unspecified
                 ),
                 scrollBehavior = scrollBehavior
             )
@@ -127,330 +114,229 @@ fun SettingsMainContent(
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .consumeWindowInsets(innerPadding)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = SettingsDimens.PageHorizontal)
                 .imePadding(),
             contentPadding = innerPadding,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(SettingsDimens.GroupGap)
         ) {
             item {
-                SettingsSection(title = tr(R.string.s_shurufa), content = {
-                    SettingsItem(
-                        icon = Icons.TwoTone.Keyboard,
+                SettingsGroup(title = tr(R.string.s_shurufa)) {
+                    SettingsNavRow(
                         title = tr(R.string.s_qiyongshurufa),
-                        subtitle = tr(R.string.s_zaixitongshezhizhongqiyongxima_44550),
+                        summary = tr(R.string.s_zaixitongshezhizhongqiyongxima_44550),
+                        icon = Icons.TwoTone.Keyboard,
                         onClick = {
-                            val intent = Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)
-                            context.startActivity(intent)
-                        }
+                            context.startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
+                        },
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsItem(
-                        icon = Icons.TwoTone.ToggleOn,
+                    SettingsNavRow(
                         title = tr(R.string.s_xuanzeshurufa),
-                        subtitle = tr(R.string.s_jiangximasheweidangqianshurufa),
+                        summary = tr(R.string.s_jiangximasheweidangqianshurufa),
+                        icon = Icons.TwoTone.ToggleOn,
                         onClick = {
-                            val imm = context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) 
+                            val imm = context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
                                 as InputMethodManager
                             imm.showInputMethodPicker()
-                        }
+                        },
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    var testText by remember { mutableStateOf("") }
-                    var isFocused by remember { mutableStateOf(false) }
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .onFocusEvent { isFocused = it.isFocused }
-                                .clip(RoundedCornerShape(28.dp))
-                                .background(
-                                    if (isFocused) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f)
-                                )
-                                .padding(horizontal = 16.dp, vertical = 14.dp)
-                        ) {
-                            BasicTextField(
-                                value = testText,
-                                onValueChange = { testText = it },
-                                modifier = Modifier.fillMaxWidth(),
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                    color = MaterialTheme.colorScheme.onSurface
-                                ),
-                                singleLine = false,
-                                maxLines = 3,
-                                decorationBox = { innerTextField ->
-                                    Box {
-                                        if (testText.isEmpty() && !isFocused) {
-                                            Text(
-                                                tr(R.string.s_dianjicichukaishishuruceshi),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                            )
-                                        }
-                                        innerTextField()
-                                    }
-                                }
-                            )
-                        }
-                        if (testText.isNotEmpty()) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp),
-                                horizontalArrangement = Arrangement.End
-                            ) {
-                                TextButton(onClick = { testText = "" }) {
-                                    Text(
-                                        tr(R.string.s_qingchu),
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
-                            }
-                        }
-                    }
-                })
+                }
+            }
+
+            // 输入测试单独成卡：不属于设置项，避免和"启用/选择输入法"混在一张卡里
+            item {
+                SettingsCard {
+                    InputTestCard()
+                }
             }
 
             item {
-                SettingsSection(title = stringResource(R.string.settings_section_appearance), content = {
-                    SettingsItem(
-                        icon = Icons.TwoTone.Palette,
+                SettingsGroup(title = stringResource(R.string.settings_section_appearance)) {
+                    SettingsNavRow(
                         title = tr(R.string.s_zhutiyudingzhi),
-                        subtitle = tr(R.string.s_zidingyiwaiguanheyangshi),
+                        summary = tr(R.string.s_zidingyiwaiguanheyangshi),
+                        icon = Icons.TwoTone.Palette,
                         onClick = onNavigateToTheme,
-                        showArrow = true
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsItem(
-                        icon = Icons.TwoTone.TypeSpecimen,
+                    SettingsNavRow(
                         title = tr(R.string.s_zitiguanli),
-                        subtitle = tr(R.string.s_ziti_guanli_fu),
+                        summary = tr(R.string.s_ziti_guanli_fu),
+                        icon = Icons.TwoTone.TypeSpecimen,
                         onClick = onNavigateToFont,
-                        showArrow = true
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsItem(
-                        icon = Icons.TwoTone.Vibration,
+                    SettingsNavRow(
                         title = tr(R.string.s_anjianxiaoguo),
-                        subtitle = tr(R.string.s_anjianyinxiaohezhendongfankui),
+                        summary = tr(R.string.s_anjianyinxiaohezhendongfankui),
+                        icon = Icons.TwoTone.Vibration,
                         onClick = onNavigateToKeyEffect,
-                        showArrow = true
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsItem(
-                        icon = Icons.TwoTone.TableChart,
+                    SettingsNavRow(
                         title = tr(R.string.s_bujuyuxianshi),
-                        subtitle = tr(R.string.s_houxuancixianshi_jianpanbujudeng),
+                        summary = tr(R.string.s_houxuancixianshi_jianpanbujudeng),
+                        icon = Icons.TwoTone.TableChart,
                         onClick = onNavigateToLayoutDisplay,
-                        showArrow = true
                     )
-                })
+                }
             }
 
             item {
-                SettingsSection(title = tr(R.string.s_fanganyuciku), content = {
-                    SettingsItem(
-                        icon = Icons.TwoTone.KeyboardAlt,
+                SettingsGroup(title = tr(R.string.s_fanganyuciku)) {
+                    SettingsNavRow(
                         title = tr(R.string.s_shurufangan),
-                        subtitle = tr(R.string.s_guanlishurufangan),
+                        summary = tr(R.string.s_guanlishurufangan),
+                        icon = Icons.TwoTone.KeyboardAlt,
                         onClick = onNavigateToSchema,
-                        showArrow = true
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsItem(
-                        icon = Icons.TwoTone.Tune,
+                    SettingsNavRow(
                         title = tr(R.string.s_mohuyin),
-                        subtitle = tr(R.string.s_mohuyin_fu),
+                        summary = tr(R.string.s_mohuyin_fu),
+                        icon = Icons.TwoTone.Tune,
                         onClick = onNavigateToFuzzyPinyin,
-                        showArrow = true
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsItem(
-                        icon = Icons.TwoTone.Sort,
+                    SettingsNavRow(
                         title = tr(R.string.s_yufamoxing),
-                        subtitle = tr(R.string.s_yufamoxing_fu),
+                        summary = tr(R.string.s_yufamoxing_fu),
+                        icon = Icons.TwoTone.Sort,
                         onClick = onNavigateToGrammarModel,
-                        showArrow = true
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsItem(
-                        icon = Icons.TwoTone.Ballot,
+                    SettingsNavRow(
                         title = tr(R.string.s_cikuguanli),
-                        subtitle = tr(R.string.s_yonghuciku_kuaijieduanyuyuciti_be6d2),
+                        summary = tr(R.string.s_yonghuciku_kuaijieduanyuyuciti_be6d2),
+                        icon = Icons.TwoTone.Ballot,
                         onClick = onNavigateToDictionary,
-                        showArrow = true
                     )
-                })
+                }
             }
 
             item {
-                SettingsSection(title = tr(R.string.s_kuozhan), content = {
-                    SettingsItem(
-                        icon = Icons.TwoTone.Storefront,
-                        title = tr(R.string.s_kuozhanshangdian),
-                        subtitle = tr(R.string.s_xiazaishurufangan_moxing_chajian),
-                        onClick = onNavigateToMarket,
-                        showArrow = true,
-                        badgeText = marketUpdates.totalUpdates.takeIf { it > 0 }
-                            ?.let { tr(R.string.s_xiangkegengxin, it) }
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsItem(
-                        icon = Icons.TwoTone.Extension,
-                        title = tr(R.string.s_chajianguanli),
-                        subtitle = tr(R.string.s_guanliyianzhuangdechajian),
-                        onClick = onNavigateToPlugins,
-                        showArrow = true
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsItem(
-                        icon = Icons.TwoTone.Straighten,
-                        title = tr(R.string.s_moxingguanli),
-                        subtitle = tr(R.string.s_guanlibendixiazaidezhinengmoxing),
-                        onClick = onNavigateToModelLocal,
-                        showArrow = true
-                    )
-                })
-            }
-
-            item {
-                SettingsSection(title = tr(R.string.s_zhineng), content = {
-                    SettingsItem(
-                        icon = Icons.TwoTone.AutoAwesome,
+                SettingsGroup(title = tr(R.string.s_zhineng)) {
+                    SettingsNavRow(
                         title = tr(R.string.s_zhinenglianxiang),
-                        subtitle = tr(R.string.s_jiyu_ai_moxingdezhinenglianxia_5cce9),
+                        summary = tr(R.string.s_jiyu_ai_moxingdezhinenglianxia_5cce9),
+                        icon = Icons.TwoTone.AutoAwesome,
                         onClick = onNavigateToSmartPrediction,
-                        showArrow = true
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsItem(
-                        icon = Icons.TwoTone.AutoFixHigh,
+                    SettingsNavRow(
                         title = tr(R.string.s_zhinengjiucuo_shiyanxing),
-                        subtitle = tr(R.string.s_ancuoxianglinjianshigeichujiuz_834ec),
+                        summary = tr(R.string.s_ancuoxianglinjianshigeichujiuz_834ec),
+                        icon = Icons.TwoTone.AutoFixHigh,
                         onClick = onNavigateToCorrection,
-                        showArrow = true
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
                     var sttEnabled by remember { mutableStateOf(SettingsPreferences.isSttEnabled(context)) }
-                    SettingsToggleItem(
-                        icon = Icons.TwoTone.GraphicEq,
+                    SettingsSwitchRow(
                         title = tr(R.string.s_yuyinzhuanwenben),
-                        subtitle = tr(R.string.s_zaixian_asr_fuwu_xuanzhuangyuy_74a1a),
+                        summary = tr(R.string.s_zaixian_asr_fuwu_xuanzhuangyuy_74a1a),
+                        icon = Icons.TwoTone.GraphicEq,
                         checked = sttEnabled,
-                        showArrow = true,
-                        onClick = {
-                            if (sttEnabled) onNavigateToSpeechToText()
-                        },
+                        onClick = { if (sttEnabled) onNavigateToSpeechToText() },
                         onCheckedChange = { enabled ->
                             sttEnabled = enabled
                             SettingsPreferences.setSttEnabled(context, enabled)
-                        }
-                    )
-                })
-            }
-
-            item {
-                // 分组含两类"本地数据/数据流向"设置：剪贴板（内容与同步）优先，其后是词典与配置的同步备份
-                SettingsSection(title = tr(R.string.s_shujuyutongbu), content = {
-                    SettingsItem(
-                        icon = Icons.TwoTone.ContentPaste,
-                        title = tr(R.string.s_jiantieban),
-                        subtitle = tr(R.string.s_tupianjilu_tijixianzhi_zhanyon_fa4c6),
-                        onClick = onNavigateToClipboard,
-                        showArrow = true
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                    SettingsItem(
-                        icon = Icons.TwoTone.Backup,
-                        title = tr(R.string.s_tongbuyubeifen),
-                        subtitle = tr(R.string.s_duoshebeicidianhutongyupeizhib_1efa8),
-                        onClick = onNavigateToBackup,
-                        showArrow = true
-                    )
-                })
-            }
-
-            item {
-                SettingsSection(title = tr(R.string.s_guanyu), content = {
-                    SettingsItem(
-                        icon = Icons.TwoTone.Description,
-                        title = tr(R.string.s_shiyongwendang),
-                        subtitle = "ime.ximei.me",
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://ime.ximei.me"))
-                            context.startActivity(intent)
                         },
-                        showArrow = true
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                }
+            }
+
+            item {
+                SettingsGroup(title = tr(R.string.s_kuozhan)) {
+                    SettingsNavRow(
+                        title = tr(R.string.s_kuozhanshangdian),
+                        summary = tr(R.string.s_xiazaishurufangan_moxing_chajian),
+                        icon = Icons.TwoTone.Storefront,
+                        onClick = onNavigateToMarket,
+                        badge = marketUpdates.totalUpdates.takeIf { it > 0 }?.let { count ->
+                            { SettingsBadge(text = tr(R.string.s_xiangkegengxin, count)) }
+                        },
                     )
-                    SettingsItem(
-                        icon = Icons.TwoTone.Info,
+                    SettingsNavRow(
+                        title = tr(R.string.s_chajianguanli),
+                        summary = tr(R.string.s_guanliyianzhuangdechajian),
+                        icon = Icons.TwoTone.Extension,
+                        onClick = onNavigateToPlugins,
+                    )
+                    SettingsNavRow(
+                        title = tr(R.string.s_moxingguanli),
+                        summary = tr(R.string.s_guanlibendixiazaidezhinengmoxing),
+                        icon = Icons.TwoTone.Straighten,
+                        onClick = onNavigateToModelLocal,
+                    )
+                }
+            }
+
+            item {
+                SettingsGroup(title = tr(R.string.s_shujuyutongbu)) {
+                    SettingsNavRow(
+                        title = tr(R.string.s_jiantieban),
+                        summary = tr(R.string.s_tupianjilu_tijixianzhi_zhanyon_fa4c6),
+                        icon = Icons.TwoTone.ContentPaste,
+                        onClick = onNavigateToClipboard,
+                    )
+                    SettingsNavRow(
+                        title = tr(R.string.s_tongbuyubeifen),
+                        summary = tr(R.string.s_duoshebeicidianhutongyupeizhib_1efa8),
+                        icon = Icons.TwoTone.Backup,
+                        onClick = onNavigateToBackup,
+                    )
+                }
+            }
+
+            item {
+                SettingsGroup(title = tr(R.string.s_guanyu)) {
+                    SettingsNavRow(
+                        title = tr(R.string.s_shiyongwendang),
+                        summary = "ime.ximei.me",
+                        icon = Icons.TwoTone.Description,
+                        onClick = {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("https://ime.ximei.me"))
+                            )
+                        },
+                    )
+                    SettingsNavRow(
                         title = tr(R.string.s_guanyuxima),
-                        subtitle = tr(R.string.s_banbenxinxi_kaifazhe_lianxifangshi),
+                        summary = tr(R.string.s_banbenxinxi_kaifazhe_lianxifangshi),
+                        icon = Icons.TwoTone.Info,
                         onClick = onNavigateToAbout,
-                        showArrow = true
                     )
-                })
+                }
+            }
+
+            // 底部留白，最后一张卡片不贴屏底
+            item { Column(modifier = Modifier.padding(bottom = 24.dp)) {} }
+        }
+    }
+}
+
+/** 输入测试区：M3 多行输入框 + 清空按钮。 */
+@Composable
+private fun InputTestCard() {
+    var testText by remember { mutableStateOf("") }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = SettingsDimens.RowHorizontal, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OutlinedTextField(
+            value = testText,
+            onValueChange = { testText = it },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3,
+            maxLines = 5,
+            placeholder = {
+                Text(
+                    text = tr(R.string.s_dianjicichukaishishuruceshi),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+        )
+        if (testText.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = { testText = "" }) {
+                    Text(tr(R.string.s_qingchu), style = MaterialTheme.typography.bodyMedium)
+                }
             }
         }
     }

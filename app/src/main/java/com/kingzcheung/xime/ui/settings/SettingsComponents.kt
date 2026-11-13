@@ -66,17 +66,19 @@ fun SettingsSection(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(modifier = modifier) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 8.dp)
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .padding(start = SettingsDimens.RowHorizontal, bottom = SettingsDimens.HeaderBottom)
+                .padding(top = 4.dp)
         )
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            shape = RoundedCornerShape(SettingsDimens.CardCorner),
+            color = settingsCardContainerColor(),
             shadowElevation = 0.dp
         ) {
             Column(content = content)
@@ -91,66 +93,27 @@ fun SettingsItem(
     subtitle: String,
     onClick: () -> Unit,
     showArrow: Boolean = false,
-    /** 行尾更新角标文案（如 "2 项可更新"）：非空时以高亮胶囊展示，优先于箭头前。 */
     badgeText: String? = null
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // 图标圆角背景
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        if (badgeText != null) {
-            Spacer(modifier = Modifier.width(8.dp))
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = MaterialTheme.colorScheme.errorContainer
-            ) {
-                Text(
-                    text = badgeText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+    SettingsRow(
+        title = title,
+        icon = icon,
+        summary = subtitle,
+        onClick = onClick,
+        trailing = {
+            if (badgeText != null) {
+                SettingsBadge(text = badgeText)
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            if (showArrow) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-        if (showArrow) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+    )
 }
 
 @Composable
@@ -163,73 +126,20 @@ fun SettingsToggleItem(
     onClick: (() -> Unit)? = null,
     showArrow: Boolean = false
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(
-                if (onClick != null) Modifier.clickable(onClick = onClick)
-                else Modifier.clickable { onCheckedChange(!checked) }
-            )
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        if (showArrow) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.primary,
-                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
-            )
-        )
-    }
+    SettingsSwitchRow(
+        title = title,
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        icon = icon,
+        summary = subtitle,
+        onClick = if (onClick != null) {
+            { onClick() }
+        } else if (showArrow) {
+            { onCheckedChange(!checked) }
+        } else null,
+    )
 }
 
-/**
- * 单选列表项（Material 3 单选语义）。
- *
- * 用于"多个插件里挑一个生效"这类设置：右侧是 [RadioButton] 而不是 Switch——Switch 表达
- * 的是"开/关某样东西"，拨动即切换插件会让用户误以为是开关（此前剪贴板同步/备份页就是这样）。
- * 整行是点击目标（`selectable` + role=RadioButton），RadioButton 自身 onClick 置 null，
- * 避免出现两个语义重叠的可点击区域（TalkBack 只报一个单选节点）。
- *
- * `icon` 可为 null（对话框里的紧凑列表用不上图标时省略，避免一排重复图标）：
- * 插件各自的图标请用 `PluginIconView` 渲染，而不是这里的 ImageVector。
- */
 @Composable
 fun SettingsRadioItem(
     title: String,
@@ -238,46 +148,13 @@ fun SettingsRadioItem(
     onSelect: () -> Unit,
     icon: ImageVector? = null,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (icon != null) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = if (selected) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        RadioButton(selected = selected, onClick = null)
-    }
+    SettingsRadioRow(
+        title = title,
+        selected = selected,
+        onClick = onSelect,
+        icon = icon,
+        summary = subtitle,
+    )
 }
 
 /** 单选弹窗的一项（[SettingsSingleChoiceDialog]）。 */
@@ -287,11 +164,6 @@ data class SettingsChoiceOption(
     val subtitle: String = "",
 )
 
-/**
- * 单选弹窗：把"多个服务/插件里挑一个"从页面列表收进弹窗——页面长度不随候选数量增长。
- *
- * 点某项即回调并关闭（不设确认按钮，与 RadioButton 语义一致）；候选多时内容可滚动。
- */
 @Composable
 fun SettingsSingleChoiceDialog(
     title: String,
