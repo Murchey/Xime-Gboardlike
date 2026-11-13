@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 /**
- * 设置分组：分组标题 + 紧贴其下的设置行，直接平铺在页面底色上（GKD 风格）。
+ * 设置分组：分组标题 + 紧贴其下的设置行，直接平铺在页面底色上（Android 原生设置风格）。
  *
  * 不用卡片包裹、不画分隔线：分组靠"主色标题 + 上下间距"区分。
  */
@@ -50,7 +50,7 @@ fun SettingsCard(
     }
 }
 
-/** 卡片底色：M3 标准 Card 容器色（surfaceContainer），GKD 同样用它。 */
+/** 卡片底色：M3 标准 Card 容器色 surfaceContainer。 */
 @Composable
 internal fun settingsCardContainerColor(): androidx.compose.ui.graphics.Color =
     MaterialTheme.colorScheme.surfaceContainer

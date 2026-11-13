@@ -277,7 +277,7 @@ fun SettingsMainContent(
                 }
             }
 
-            // 底部呼吸空间（GKD 的 GkPageBottomSpace 同样 80dp）
+            // 底部呼吸空间：与系统设置一致的 80dp 留白
             item { Column(modifier = Modifier.padding(bottom = 80.dp)) {} }
         }
     }

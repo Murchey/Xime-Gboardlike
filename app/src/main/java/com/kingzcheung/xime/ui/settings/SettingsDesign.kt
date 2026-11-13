@@ -30,7 +30,7 @@ internal fun settingsPageContainerColor() =
     if (androidx.compose.foundation.isSystemInDarkTheme()) SettingsDarkPageColor
     else androidx.compose.material3.MaterialTheme.colorScheme.background
 
-/** 分组标题内边距：上 18 / 下 6，和内容行拉开又贴紧自己的行（GKD 的 titleItemPadding 比例）。 */
+/** 分组标题内边距：上 18 / 下 6，与上一组拉开、与自己的行贴紧（Android 设置的比例）。 */
 internal val SettingsGroupHeaderPadding = androidx.compose.foundation.layout.PaddingValues(
     start = SettingsDimens.RowHorizontal,
     top = 18.dp,
