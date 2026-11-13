@@ -148,6 +148,11 @@ android {
         jniLibs {
             useLegacyPackaging = true
         }
+        // dex 保持压缩：classes.dex 原始 10.0MB、压缩后 4.6MB，省 5.4MB。
+        // 代价是首次启动多一次 dexopt（minSdk 28 起系统会缓存）。
+        dex {
+            useLegacyPackaging = true
+        }
     }
     ndkVersion = "29.0.14206865"
 
