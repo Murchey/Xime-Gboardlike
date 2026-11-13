@@ -377,13 +377,14 @@ fun CandidateBar(
                                 modifier = Modifier
                                     .size(32.dp)
                                     .clip(CircleShape)
-                                    .background(iconButtonContainer)
+                                    // 不铺底色：Gboard 的面板按钮是纯图标，和工具栏其它图标同款
                                     .clickable { callbacks.onLogoClick?.invoke() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 // Gboard 风格的四方块图标：比品牌 logo 更能表达"展开工具面板"
                                 ToolPanelGridIcon(
-                                    tint = visuals.accentColor,
+                                    // 中性色：与工具栏其它图标一致，不用主题蓝抢注意力
+                                    tint = iconButtonTint,
                                     modifier = Modifier.size(20.dp),
                                     contentDescription = tr(R.string.s_dakaigongjumianban),
                                 )

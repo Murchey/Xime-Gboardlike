@@ -109,22 +109,34 @@ private const val TOOLBAR_MAX_ITEMS = 5
 /** 顶部工具栏里「输入方案」槽位的虚拟 id（它不是普通工具栏按钮，单独记位置）。 */
 private const val SCHEMA_SLOT_ID = "sys_schema_slot"
 
+/** 提交顶部栏后的结果：工具栏按钮、方案按钮位置、方案按钮是否还显示。 */
+internal data class StripCommit(
+    val draft: List<String>,
+    val schemaIndex: Int,
+    val schemaVisible: Boolean,
+)
+
+/**
+ * 顶部栏统一提交规则（纯函数）：
+ * - 列表里还有方案槽位 → 记下它的位置，保持显示；
+ * - 拖出栏外后列表里没有它 → 记成隐藏（下次打开也不出现），可从功能池再拖回；
+ * - 功能数超过上限时挤掉最早的。
+ */
+internal fun commitStripSlots(newSlots: List<String>, maxItems: Int): StripCommit {
+    val schemaIndex = newSlots.indexOf(SCHEMA_SLOT_ID)
+    var draft = newSlots.filter { it != SCHEMA_SLOT_ID }
+    while (draft.size > maxItems) draft = draft.drop(1)
+    return StripCommit(
+        draft = draft,
+        schemaIndex = if (schemaIndex >= 0) schemaIndex else draft.size,
+        schemaVisible = schemaIndex >= 0,
+    )
+}
+
 /** 把方案槽位插进工具栏按钮序列（slot < 0 表示放末尾）。 */
 internal fun withSchemaSlot(draft: List<String>, slot: Int): List<String> {
     val index = if (slot < 0) draft.size else slot.coerceIn(0, draft.size)
     return draft.toMutableList().apply { add(index, SCHEMA_SLOT_ID) }
-}
-
-/**
- * 向工具栏加入一项（Gboard FIFO）：已满 5 个时挤掉最早的一个，保持顶部数量恒定。
- */
-private fun addToToolbarFifo(draft: List<String>, id: String): List<String> {
-    val list = draft.filter { it != id }.toMutableList()
-    list.add(id)
-    while (list.size > TOOLBAR_MAX_ITEMS) {
-        list.removeAt(0)
-    }
-    return list
 }
 
 data class MenuBarCallbacks(
@@ -208,21 +220,35 @@ fun MenuBar(
 
     // 「输入方案」作为可拖动槽位参与排序，位置持久化在 menu_schema_slot
     var schemaSlot by remember { mutableIntStateOf(SettingsPreferences.getMenuSchemaSlot(context)) }
+    // 方案按钮可以从工具栏拖出去删除；删掉后它会回到下方功能池，能再拖回来
+    var schemaVisible by remember { mutableStateOf(SettingsPreferences.isMenuSchemaVisible(context)) }
     val schemaTool = MenuTool(
         SCHEMA_SLOT_ID,
         tr(R.string.s_shurufangan),
         rememberVectorPainter(ToolbarButton.SCHEMA.icon),
     ) { callbacks.onSchemaList() }
     val stripTools = remember(allTools, schemaTool) { allTools + schemaTool }
-    val slots = remember(draft, schemaSlot) { withSchemaSlot(draft, schemaSlot) }
+    val slots = remember(draft, schemaSlot, schemaVisible) {
+        if (schemaVisible) withSchemaSlot(draft, schemaSlot) else draft
+    }
 
-    // 统一提交：同时写回工具栏按钮与方案按钮位置，保证拖完立刻生效
+    /** 统一提交：写回工具栏按钮、方案按钮位置与可见性，拖完立刻生效。 */
     fun commitSlots(newSlots: List<String>) {
-        val nextDraft = newSlots.filter { it != SCHEMA_SLOT_ID }
-        draft = nextDraft
-        val nextSlot = newSlots.indexOf(SCHEMA_SLOT_ID).let { if (it < 0) nextDraft.size else it }
-        schemaSlot = nextSlot
-        SettingsPreferences.setMenuSchemaSlot(context, nextSlot)
+        val commit = commitStripSlots(newSlots, TOOLBAR_MAX_ITEMS)
+        draft = commit.draft
+        schemaVisible = commit.schemaVisible
+        SettingsPreferences.setMenuSchemaVisible(context, commit.schemaVisible)
+        if (commit.schemaVisible) {
+            schemaSlot = commit.schemaIndex
+            SettingsPreferences.setMenuSchemaSlot(context, commit.schemaIndex)
+        }
+    }
+
+    /** 把某个功能插到顶部栏指定位置（功能池点按/拖入都走这里）。 */
+    fun addToStrip(id: String, index: Int) {
+        val base = slots.toMutableList()
+        base.add(index.coerceIn(0, base.size), id)
+        commitSlots(base)
     }
 
     val darkLabel = when (state.darkMode) {
@@ -233,7 +259,9 @@ fun MenuBar(
     // 候选栏目功能列表：编辑/普通态一致，含方案设置（简/繁等开关）。
     // 基于 availableTools（未入栏）：拖上工具栏少一个、拖下多一个（动态池）。
     // 再附加系统专属动作（调节/深色/部署，不可入栏，常驻）。
-    val candidateTools = availableTools + buildList {
+    // 方案按钮被拖出删除后回到功能池，可再拖回/点回顶部
+    val candidateTools = (if (schemaVisible) emptyList() else listOf(schemaTool)) +
+        availableTools + buildList {
         if (!state.isFloatingMode && state.canResizeKeyboard) {
             add(MenuTool("sys_resize", tr(R.string.s_jianpandiaojie), rememberVectorPainter(ToolbarButton.EDIT.icon), action = callbacks.onKeyboardResize))
         }
@@ -279,11 +307,12 @@ fun MenuBar(
             if (editing) {
                 ToolbarEditBody(
                     candidateTools = candidateTools,
-                    toolbarableIds = toolbarableIds,
+                    toolbarableIds = toolbarableIds + SCHEMA_SLOT_ID,
                     textColor = textColor,
                     cardColor = cardColor,
                     draft = draft,
                     onDraftChange = { draft = it },
+                    onAddToStrip = ::addToStrip,
                     toolbarStripBounds = toolbarStripBounds,
                     slotCenters = slotCenters,
                     onHoverStrip = { dropActive = it },
@@ -450,8 +479,8 @@ private fun ToolbarStrip(
                                     },
                                     onDragEnd = {
                                         val dragged = currentSlots.getOrNull(dragSlot)
-                                        // 方案按钮是系统动作，拖出去也不移除，只回弹
-                                        if (outOfStrip && dragged != null && dragged != SCHEMA_SLOT_ID) {
+                                        // 拖出栏外即移除（方案按钮同样可以移除，会回到下方功能池）
+                                        if (outOfStrip && dragged != null) {
                                             onSlotsChange(currentSlots.filter { it != dragged })
                                         }
                                         dragSlot = -1
@@ -508,6 +537,8 @@ private fun ToolbarEditBody(
     draft: List<String>,
     onDraftChange: (List<String>) -> Unit,
     toolbarStripBounds: Rect,
+    /** 把功能插到顶部栏指定位置（含方案按钮的恢复）。 */
+    onAddToStrip: (String, Int) -> Unit = { _, _ -> },
     slotCenters: Map<Int, Offset>,
     onHoverStrip: (Boolean) -> Unit = {},
     onDropIndex: (Int) -> Unit = {},
@@ -540,21 +571,14 @@ private fun ToolbarEditBody(
                                 slotCenters = slotCenters,
                                 modifier = Modifier.weight(1f).height(64.dp),
                                 onTap = {
+                                    // 点按加入栏尾（方案按钮被删掉后也从这里回来）
                                     if (tool.id in toolbarableIds && tool.id !in draft) {
-                                        onDraftChange(addToToolbarFifo(draft, tool.id))
+                                        onAddToStrip(tool.id, Int.MAX_VALUE)
                                     }
                                 },
                                 onDragIntoToolbar = { index ->
                                     if (tool.id in toolbarableIds && tool.id !in draft) {
-                                        onDraftChange(
-                                            draft.toMutableList().apply {
-                                                add(index.coerceIn(0, size), tool.id)
-                                            }.let { list ->
-                                                // 顶部最多 TOOLBAR_MAX_ITEMS 个，超出挤掉最早的
-                                                while (list.size > TOOLBAR_MAX_ITEMS) list.removeAt(0)
-                                                list.toList()
-                                            }
-                                        )
+                                        onAddToStrip(tool.id, index)
                                     }
                                 },
                                 onDragMove = { center, isDragging ->

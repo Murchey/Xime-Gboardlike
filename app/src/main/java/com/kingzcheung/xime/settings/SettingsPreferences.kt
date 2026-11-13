@@ -675,6 +675,16 @@ object SettingsPreferences {
         getPrefs(context).edit().putInt(KEY_MENU_SCHEMA_SLOT, slot).apply()
     }
 
+    /** 顶部工具栏是否显示「输入方案」按钮（拖出去删除后为 false，可再从功能池拖回）。 */
+    const val KEY_MENU_SCHEMA_VISIBLE = "menu_schema_visible"
+
+    fun isMenuSchemaVisible(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_MENU_SCHEMA_VISIBLE, true)
+
+    fun setMenuSchemaVisible(context: Context, visible: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_MENU_SCHEMA_VISIBLE, visible).apply()
+    }
+
     /** 默认左「切换输入法」、右「剪贴板」。 */
     const val BOTTOM_BAR_DEFAULT_LEFT = "SWITCH_IME"
     const val BOTTOM_BAR_DEFAULT_RIGHT = "CLIPBOARD"
