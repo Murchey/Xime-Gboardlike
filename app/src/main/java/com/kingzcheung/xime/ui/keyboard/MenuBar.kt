@@ -190,6 +190,8 @@ fun MenuBar(
     var overlayOrigin by remember { mutableStateOf(Offset.Zero) }
 
     val builtin = ToolbarButton.entries.filter {
+        // 输入方案已固定为右端独立槽位，不再作为可拖入的功能重复出现
+        it != ToolbarButton.SCHEMA &&
         isBuiltinToolbarButtonAvailable(
             it,
             state.isSttEnabled,
@@ -230,8 +232,10 @@ fun MenuBar(
         rememberVectorPainter(ToolbarButton.SCHEMA.icon),
     ) { callbacks.onSchemaList() }
     val stripTools = remember(allTools, schemaTool) { allTools + schemaTool }
-    val slots = remember(draft, schemaSlot, schemaVisible) {
-        if (schemaVisible) withSchemaSlot(draft, schemaSlot) else draft
+    val slots = remember(draft, schemaSlot, schemaVisible, byId) {
+        // 过滤失效 id（插件卸载、旧版本残留），方案按钮固定在最右端独立槽位
+        val alive = draft.filter { it in byId }
+        if (schemaVisible) withSchemaSlot(alive, Int.MAX_VALUE) else alive
     }
 
     /** 统一提交：写回工具栏按钮、方案按钮位置与可见性，拖完立刻生效。 */
@@ -390,8 +394,118 @@ private fun ToolbarStrip(
     val currentSlots by rememberUpdatedState(slots)
     val haptics = LocalHapticFeedback.current
 
+    // 「输入方案」固定在右端独立槽位：不参与中间那排的等距分布与互相换位
+    val schemaPinned = slots.lastOrNull() == SCHEMA_SLOT_ID
+    val middleSlots = if (schemaPinned) slots.dropLast(1) else slots
+
     // 槽位中心同步给外部（下方卡片据此算插入位置）
     LaunchedEffect(slots.size, positions.size) { onSlotCenters(positions.toMap()) }
+
+    /**
+     * 单个工具槽位：长按抬起磁贴跟手拖动，经过别的槽位即交换；拖出栏外松手即移出。
+     * 单击语义按模式区分：编辑态移出工具栏，普通态执行该功能。
+     */
+    @Composable
+    fun SlotTile(slot: Int, id: String) {
+        val tool = allTools.firstOrNull { it.id == id } ?: return
+        key(id) {
+            val dragGuard = remember { longArrayOf(0L) }
+            Box(
+                Modifier
+                    .padding(horizontal = 2.dp)
+                    .size(40.dp)
+                    .onGloballyPositioned { c ->
+                        positions[slot] = c.positionInRoot() +
+                            Offset(c.size.width / 2f, c.size.height / 2f)
+                    }
+                    .graphicsLayer {
+                        // 拖动中的槽位本体隐藏：视觉由根层叠加的"磁贴"承担
+                        alpha = if (slot == dragSlot) 0f else 1f
+                    }
+                    .clip(CircleShape)
+                    .background(cardColor)
+                    // 长按拖动放在 clickable 外层：先拿到按下事件，单击仍交给 clickable
+                    .pointerInput(id) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                dragGuard[0] = SystemClock.uptimeMillis()
+                                dragSlot = slot
+                                dragOffset = Offset.Zero
+                                outOfStrip = false
+                                positions[slot]?.let { onDragVisual(tool, it, false) }
+                            },
+                            onDrag = { change, amount ->
+                                change.consume()
+                                dragOffset += amount
+                                val from = dragSlot
+                                val base = positions[from] ?: return@detectDragGesturesAfterLongPress
+                                val dragged = base + dragOffset
+                                // 拖出栏外：就地变回大卡片，松手即移出工具栏
+                                val nowOut = dragOffset.y > outThreshold
+                                if (nowOut != outOfStrip) outOfStrip = nowOut
+                                onDragVisual(tool, dragged, nowOut)
+                                if (nowOut) return@detectDragGesturesAfterLongPress
+                                // 固定槽位只支持拖出移除，不参与换位
+                                if (id == SCHEMA_SLOT_ID) return@detectDragGesturesAfterLongPress
+                                var target = -1
+                                var best = Float.MAX_VALUE
+                                positions.forEach { (i, p) ->
+                                    if (i == from) return@forEach
+                                    val d = (p - dragged).getDistance()
+                                    if (d < best) { best = d; target = i }
+                                }
+                                if (target >= 0 && best < threshold &&
+                                    from in currentSlots.indices && target in currentSlots.indices
+                                ) {
+                                    val toCenter = positions[target]
+                                    val mutable = currentSlots.toMutableList()
+                                    val moved = mutable.removeAt(from)
+                                    mutable.add(target, moved)
+                                    onSlotsChange(mutable)
+                                    // 扣掉新旧槽位中心差，图标留在手指下，才能一路拖过去
+                                    if (toCenter != null) {
+                                        dragOffset = adjustDragOffsetAfterSwap(dragOffset, base, toCenter)
+                                    }
+                                    dragSlot = target
+                                }
+                            },
+                            onDragEnd = {
+                                dragGuard[0] = SystemClock.uptimeMillis()
+                                val dragged = currentSlots.getOrNull(dragSlot)
+                                // 拖出栏外即移除（方案按钮同样可以移除，会回到下方功能池）
+                                if (outOfStrip && dragged != null) {
+                                    onSlotsChange(currentSlots.filter { it != dragged })
+                                }
+                                dragSlot = -1
+                                dragOffset = Offset.Zero
+                                outOfStrip = false
+                                onDragVisual(null, Offset.Zero, false)
+                            },
+                            onDragCancel = {
+                                dragGuard[0] = SystemClock.uptimeMillis()
+                                dragSlot = -1
+                                dragOffset = Offset.Zero
+                                outOfStrip = false
+                                onDragVisual(null, Offset.Zero, false)
+                            },
+                        )
+                    }
+                    .clickable {
+                        // 刚拖完的这一次抬手不要顺带触发单击
+                        if (SystemClock.uptimeMillis() - dragGuard[0] < 300L) return@clickable
+                        if (editing) {
+                            if (id == SCHEMA_SLOT_ID) onSchemaList() else onSlotsChange(slots - id)
+                        } else {
+                            tool.action()
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                ToolIcon(tool, textColor, 22.dp)
+            }
+        }
+    }
 
     Row(
         Modifier.fillMaxWidth().height(52.dp)
@@ -401,7 +515,6 @@ private fun ToolbarStrip(
                 } else Modifier
             )
             .onGloballyPositioned { c -> onStripBounds(c.boundsInRoot()) },
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CircleAction(
@@ -413,113 +526,22 @@ private fun ToolbarStrip(
         ) {
             if (editing) onFinishEdit() else onDismiss()
         }
+        // 中间一排快捷功能：等距铺开
         Row(
             Modifier.weight(1f).padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            slots.forEachIndexed { slot, id ->
+            middleSlots.forEachIndexed { index, id ->
                 // 外部拖入的落点占位：虚线圈提示"松手会插在这里"
-                if (slot == externalDropIndex) DropGhost(textColor)
-                val tool = allTools.firstOrNull { it.id == id } ?: return@forEachIndexed
-                // 以 id 作 key：拖动重排后节点跟着 id 走，手势不会被重组打断
-                key(id) {
-                    val dragGuard = remember { longArrayOf(0L) }
-                    Box(
-                        Modifier
-                            .padding(horizontal = 2.dp)
-                            .size(40.dp)
-                            .onGloballyPositioned { c ->
-                                positions[slot] = c.positionInRoot() +
-                                    Offset(c.size.width / 2f, c.size.height / 2f)
-                            }
-                            .graphicsLayer {
-                                // 拖动中的槽位本体隐藏：视觉由根层叠加的"磁贴"承担
-                                alpha = if (slot == dragSlot) 0f else 1f
-                            }
-                            .clip(CircleShape)
-                            .background(cardColor)
-                            // 长按拖动放在 clickable 外层：先拿到按下事件，单击仍交给 clickable
-                            .pointerInput(id) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = {
-                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        dragGuard[0] = SystemClock.uptimeMillis()
-                                        dragSlot = slot
-                                        dragOffset = Offset.Zero
-                                        outOfStrip = false
-                                        positions[slot]?.let { onDragVisual(tool, it, false) }
-                                    },
-                                    onDrag = { change, amount ->
-                                        change.consume()
-                                        dragOffset += amount
-                                        val from = dragSlot
-                                        val base = positions[from] ?: return@detectDragGesturesAfterLongPress
-                                        val dragged = base + dragOffset
-                                        // 拖出栏外：就地变回大卡片，松手即移出工具栏
-                                        val nowOut = dragOffset.y > outThreshold
-                                        if (nowOut != outOfStrip) outOfStrip = nowOut
-                                        onDragVisual(tool, dragged, nowOut)
-                                        if (nowOut) return@detectDragGesturesAfterLongPress
-                                        var target = -1
-                                        var best = Float.MAX_VALUE
-                                        positions.forEach { (i, p) ->
-                                            if (i == from) return@forEach
-                                            val d = (p - dragged).getDistance()
-                                            if (d < best) { best = d; target = i }
-                                        }
-                                        if (target >= 0 && best < threshold &&
-                                            from in currentSlots.indices && target in currentSlots.indices
-                                        ) {
-                                            val toCenter = positions[target]
-                                            val mutable = currentSlots.toMutableList()
-                                            val moved = mutable.removeAt(from)
-                                            mutable.add(target, moved)
-                                            onSlotsChange(mutable)
-                                            // 扣掉新旧槽位中心差，图标留在手指下，才能一路拖过去
-                                            if (toCenter != null) {
-                                                dragOffset = adjustDragOffsetAfterSwap(dragOffset, base, toCenter)
-                                            }
-                                            dragSlot = target
-                                        }
-                                    },
-                                    onDragEnd = {
-                                        dragGuard[0] = SystemClock.uptimeMillis()
-                                        val dragged = currentSlots.getOrNull(dragSlot)
-                                        // 拖出栏外即移除（方案按钮同样可以移除，会回到下方功能池）
-                                        if (outOfStrip && dragged != null) {
-                                            onSlotsChange(currentSlots.filter { it != dragged })
-                                        }
-                                        dragSlot = -1
-                                        dragOffset = Offset.Zero
-                                        outOfStrip = false
-                                        onDragVisual(null, Offset.Zero, false)
-                                    },
-                                    onDragCancel = {
-                                        dragGuard[0] = SystemClock.uptimeMillis()
-                                        dragSlot = -1
-                                        dragOffset = Offset.Zero
-                                        outOfStrip = false
-                                        onDragVisual(null, Offset.Zero, false)
-                                    },
-                                )
-                            }
-                            .clickable {
-                                // 刚拖完的这一次抬手不要顺带触发单击
-                                if (SystemClock.uptimeMillis() - dragGuard[0] < 300L) return@clickable
-                                if (editing) {
-                                    if (id == SCHEMA_SLOT_ID) onSchemaList() else onSlotsChange(slots - id)
-                                } else {
-                                    tool.action()
-                                }
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        ToolIcon(tool, textColor, 22.dp)
-                    }
-                }
+                if (index == externalDropIndex) DropGhost(textColor)
+                SlotTile(index, id)
             }
-            if (externalDropIndex == slots.size) DropGhost(textColor)
+            if (externalDropIndex == middleSlots.size) DropGhost(textColor)
+        }
+        // 右端独立槽位：输入方案
+        if (schemaPinned) {
+            SlotTile(middleSlots.size, SCHEMA_SLOT_ID)
         }
     }
 }
