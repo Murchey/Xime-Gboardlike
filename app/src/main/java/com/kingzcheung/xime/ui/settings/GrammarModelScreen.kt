@@ -180,7 +180,7 @@ fun GrammarModelSettingsContent(
                     Text(tr(R.string.s_yufamoxing_tingyong))
                 }
                 HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    color = MaterialTheme.colorScheme.outlineVariant,
                 )
             }
 
@@ -235,7 +235,7 @@ fun GrammarModelSettingsContent(
                         }
                     }
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                        color = MaterialTheme.colorScheme.outlineVariant,
                     )
                 }
             }
@@ -275,7 +275,7 @@ fun GrammarModelSettingsContent(
                         )
                     }
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                        color = MaterialTheme.colorScheme.outlineVariant,
                     )
                 }
             }

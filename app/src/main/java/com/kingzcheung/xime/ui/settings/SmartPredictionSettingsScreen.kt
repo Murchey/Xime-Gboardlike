@@ -211,8 +211,8 @@ fun SmartPredictionSettingsContent(
                     if (!uiState.hasModel) {
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 16.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            thickness = SettingsDimens.DividerThickness,
+                            color = MaterialTheme.colorScheme.outlineVariant
                         )
                         Row(
                             modifier = Modifier
@@ -258,8 +258,8 @@ fun SmartPredictionSettingsContent(
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 16.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            thickness = SettingsDimens.DividerThickness,
+                            color = MaterialTheme.colorScheme.outlineVariant
                         )
                         AssociationModeRow(
                             title = tr(R.string.s_lianxulianxiang),
@@ -272,8 +272,8 @@ fun SmartPredictionSettingsContent(
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 16.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            thickness = SettingsDimens.DividerThickness,
+                            color = MaterialTheme.colorScheme.outlineVariant
                         )
                         AssociationModeRow(
                             title = tr(R.string.s_dancilianxiang),
@@ -305,8 +305,8 @@ fun SmartPredictionSettingsContent(
                             if (model != predictionModels.last()) {
                                 HorizontalDivider(
                                     modifier = Modifier.padding(start = 56.dp),
-                                    thickness = 0.5.dp,
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    thickness = SettingsDimens.DividerThickness,
+                                    color = MaterialTheme.colorScheme.outlineVariant
                                 )
                             }
                         }
@@ -430,8 +430,8 @@ fun SmartPredictionSettingsContent(
                     )
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 72.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        thickness = SettingsDimens.DividerThickness,
+                        color = MaterialTheme.colorScheme.outlineVariant
                     )
                     SettingsItem(
                         icon = Icons.Default.Storage,

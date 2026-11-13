@@ -491,8 +491,8 @@ fun AboutContent(
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 72.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            thickness = SettingsDimens.DividerThickness,
+                            color = MaterialTheme.colorScheme.outlineVariant
                         )
                         SettingsItem(
                             icon = Icons.TwoTone.Description,
@@ -501,8 +501,8 @@ fun AboutContent(
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 72.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            thickness = SettingsDimens.DividerThickness,
+                            color = MaterialTheme.colorScheme.outlineVariant
                         )
                         SettingsItem(
                             icon = Icons.TwoTone.BugReport,
@@ -511,8 +511,8 @@ fun AboutContent(
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 72.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            thickness = SettingsDimens.DividerThickness,
+                            color = MaterialTheme.colorScheme.outlineVariant
                         )
                         SettingsItem(
                             icon = Icons.TwoTone.Storage,
@@ -521,8 +521,8 @@ fun AboutContent(
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 72.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            thickness = SettingsDimens.DividerThickness,
+                            color = MaterialTheme.colorScheme.outlineVariant
                         )
                         SettingsItem(
                             icon = Icons.Default.CloudDownload,
@@ -532,8 +532,8 @@ fun AboutContent(
                         if (devUnlocked) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(start = 72.dp),
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                thickness = SettingsDimens.DividerThickness,
+                                color = MaterialTheme.colorScheme.outlineVariant
                             )
                             SettingsItem(
                                 icon = Icons.Default.Code,
@@ -544,8 +544,8 @@ fun AboutContent(
                         if (BuildConfig.DEBUG) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(start = 72.dp),
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                thickness = SettingsDimens.DividerThickness,
+                                color = MaterialTheme.colorScheme.outlineVariant
                             )
                             SettingsItem(
                                 icon = Icons.TwoTone.BugReport,
@@ -566,8 +566,8 @@ fun AboutContent(
                             // release 包仍走开发者选项彩蛋，普通用户看不到。
                             HorizontalDivider(
                                 modifier = Modifier.padding(start = 72.dp),
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                thickness = SettingsDimens.DividerThickness,
+                                color = MaterialTheme.colorScheme.outlineVariant
                             )
                             SettingsItem(
                                 icon = Icons.Default.CloudDownload,

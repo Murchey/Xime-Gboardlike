@@ -308,7 +308,7 @@ fun SchemaSettingsContent(
                             )
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 12.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                color = MaterialTheme.colorScheme.outlineVariant
                             )
                             DropdownMenuItem(
                                 text = { Text(tr(R.string.s_fangancibiao)) },
@@ -324,7 +324,7 @@ fun SchemaSettingsContent(
                             )
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 12.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                color = MaterialTheme.colorScheme.outlineVariant
                             )
                             DropdownMenuItem(
                                 text = { Text(tr(R.string.s_wenjianguanliqi)) },
@@ -340,7 +340,7 @@ fun SchemaSettingsContent(
                             )
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 12.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                color = MaterialTheme.colorScheme.outlineVariant
                             )
                             DropdownMenuItem(
                                 text = { Text(tr(R.string.s_qingchuyibianyineirong)) },
@@ -624,7 +624,7 @@ private fun PackageGroupDrawer(
         )
         HorizontalDivider(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+            color = MaterialTheme.colorScheme.outlineVariant,
         )
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
             item {

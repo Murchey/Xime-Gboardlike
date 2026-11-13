@@ -249,8 +249,8 @@ fun ClipboardSettingsContent(
                     }
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 56.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        thickness = SettingsDimens.DividerThickness,
+                        color = MaterialTheme.colorScheme.outlineVariant
                     )
                     Row(
                         modifier = Modifier
@@ -364,8 +364,8 @@ fun ClipboardSettingsContent(
                     }
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 16.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        thickness = SettingsDimens.DividerThickness,
+                        color = MaterialTheme.colorScheme.outlineVariant
                     )
                     Column(
                         modifier = Modifier.padding(

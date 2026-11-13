@@ -92,8 +92,8 @@ fun DictionaryHubContent(
                 )
                 HorizontalDivider(
                     modifier = Modifier.padding(start = 72.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    thickness = SettingsDimens.DividerThickness,
+                    color = MaterialTheme.colorScheme.outlineVariant
                 )
                 SettingsItem(
                     icon = Icons.TwoTone.DataObject,

@@ -61,7 +61,7 @@ fun StorageOverviewContent(
     StorageTaskPage(tr(R.string.s_tongbuyubeifen), onBack) {
         SettingsSection(tr(R.string.os_section)) {
             StorageLocationRow(state, onConfig)
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             SettingsItem(Icons.TwoTone.Sync, tr(R.string.storage_sync_title), storageSyncSummary(state), onClipboardSync, showArrow = true)
         }
         SettingsSection(tr(R.string.storage_backup_heading)) {
@@ -89,7 +89,7 @@ fun StorageOverviewContent(
         }
         SettingsSection(tr(R.string.s_gengduo)) {
             SettingsItem(Icons.TwoTone.Folder, tr(R.string.storage_local), tr(R.string.storage_local_hint), onLocal, showArrow = true)
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             SettingsItem(Icons.TwoTone.Cloud, tr(R.string.storage_plugin_backup), tr(R.string.storage_other_backup), onPluginBackup, showArrow = true)
         }
     }
