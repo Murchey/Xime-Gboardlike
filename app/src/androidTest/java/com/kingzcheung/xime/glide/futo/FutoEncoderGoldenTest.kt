@@ -15,8 +15,8 @@ import kotlin.math.abs
 /**
  * 真机/模拟器上验证：AAR 推理可用、与桌面参考 top-1 一致、top-64 覆盖不退。
  *
- * 已知差异：g111046-19 在 x86_64 模拟器上的 emissions 与桌面参考差异较大
- * （756/2080 个值 >0.1，top-1 仍一致），疑似 ET Android 后端的某个数值路径；
+ * 已知差异：g111046-19 在 ET Android 后端上的 emissions 与桌面参考差异较大
+ * （x86_64 模拟器与 arm64 真机一致，max-abs 2.268，756/2080 个值 >0.1，top-1 仍一致），
  * 其余 15 条 max-abs ≤1e-2。这里只对该条跳过数值相等断言，保留 top-1/覆盖断言。
  */
 @RunWith(AndroidJUnit4::class)
