@@ -81,6 +81,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -379,11 +381,11 @@ fun CandidateBar(
                                     .clickable { callbacks.onLogoClick?.invoke() },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    painter = painterResource(id = if (visuals.isDarkTheme) R.drawable.logo_dark else R.drawable.logo),
-                                    contentDescription = tr(R.string.s_xima_logo),
-                                    tint = Color.Unspecified,
-                                    modifier = Modifier.size(20.dp)
+                                // Gboard 风格的四方块图标：比品牌 logo 更能表达"展开工具面板"
+                                ToolPanelGridIcon(
+                                    tint = visuals.accentColor,
+                                    modifier = Modifier.size(20.dp),
+                                    contentDescription = tr(R.string.s_dakaigongjumianban),
                                 )
                             }
                         }
@@ -555,34 +557,25 @@ fun CandidateBar(
                     // 显示内联建议时隐藏工具栏按钮区，把宽度让给建议；logo 与
                     // 收起按钮保留，退格回到 idle 时的状态感知不变
                     if (inlineSuggestions.isEmpty()) {
-                        // Gboard AccessPointsBar 排列（对照反编译 onMeasure/onLayout）：
-                        // 每按钮占等宽槽 t = min(((icon+gap)/2 + 宽)/(n+1), 宽/n)，
-                        // 整组水平居中、按钮在槽内居中——等距铺开而非右对齐堆叠
-                        BoxWithConstraints(
+                        // Gboard 式排布：图标在整行内等距铺开（SpaceEvenly 让两端留白与
+                        // 图标间距一致），不再按槽宽把整组挤在中间
+                        Box(
                             modifier = Modifier.weight(1f, fill = true),
                             contentAlignment = Alignment.Center,
                         ) {
-                            val count = toolbarActions.size
-                            if (count > 0) {
-                                val slotBias = 23.dp // (38dp 触区 + 8dp 间距) / 2
-                                val slot = minOf(
-                                    (maxWidth + slotBias) / (count + 1),
-                                    maxWidth / count,
-                                )
+                            if (toolbarActions.isNotEmpty()) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Center,
+                                    horizontalArrangement = Arrangement.SpaceEvenly,
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     toolbarActions.forEach { action ->
                                         val interactionSource = remember { MutableInteractionSource() }
                                         val isPressed by interactionSource.collectIsPressedAsState()
-                                        // 槽位即触区（Gboard 按槽宽测量子视图），
-                                        // 38dp 圆形层只作按压视觉
+                                        // 38dp 圆形既是触区也是按压视觉
                                         Box(
                                             modifier = Modifier
-                                                .width(slot)
-                                                .fillMaxHeight()
+                                                .size(38.dp)
                                                 .tolerantClick(
                                                     showRipple = false,
                                                     interactionSource = interactionSource,
@@ -1051,3 +1044,32 @@ private fun Modifier.drawPreeditBubble(
     }
 }
 
+/**
+ * Gboard 风格的「四个方块」工具面板图标（2×2 圆角方块）。
+ *
+ * 用 Canvas 画而不是内置图标：方块间隙/圆角可按视觉微调，也不依赖扩展图标库。
+ */
+@Composable
+private fun ToolPanelGridIcon(
+    tint: Color,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(
+        modifier = modifier.semantics { this.contentDescription = contentDescription },
+    ) {
+        val gap = size.width * 0.16f
+        val cell = (size.width - gap) / 2f
+        val radius = CornerRadius(cell * 0.26f, cell * 0.26f)
+        for (row in 0..1) {
+            for (col in 0..1) {
+                drawRoundRect(
+                    color = tint,
+                    topLeft = Offset(col * (cell + gap), row * (cell + gap)),
+                    size = Size(cell, cell),
+                    cornerRadius = radius,
+                )
+            }
+        }
+    }
+}

@@ -416,6 +416,7 @@
     <string name="s_huifu">恢复</string>
     <string name="s_huifuneizhifangan">恢复内置方案包</string>
     <string name="s_huifuneizhifangan_fu">从应用内置资源重新安装五笔、拼音等默认方案；不会删除用户词库与自定义短语。</string>
+    <string name="s_dakaigongjumianban">打开工具面板</string>
     <string name="s_yijianhuifubushu">一键恢复内置方案部署</string>
     <string name="s_yijianhuifubushu_fu">把内置方案文件按内容补齐、启用列表重置为内置方案，并清空编译产物重新部署。第三方方案文件、你的词库和自定义短语都会保留。</string>
     <string name="s_huifubushu">恢复部署</string>
