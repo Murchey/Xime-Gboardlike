@@ -27,6 +27,7 @@ fun glideTouchModifier(
     onGestureFinished: () -> Unit = {},
     onGlideCaptured: () -> Unit = {},
     onPreview: (String, List<String>) -> Unit = { _, _ -> },
+    onDecodeStart: () -> Unit = {},
 ): Modifier = Modifier.pointerInput(controller, schemaFingerprint, asciiMode) {
     coroutineScope {
         val scope = this
@@ -68,6 +69,8 @@ fun glideTouchModifier(
                             if (upgraded) {
                                 change.consume()
                                 val request = controller.finishRequest(id, hostToken)
+                                // 先亮 loading 条再进后台：抬手到结果落地之间有可见延迟
+                                if (request != null) onDecodeStart()
                                 if (request != null) finalJob = scope.launch {
                                     var applied = false
                                     try {

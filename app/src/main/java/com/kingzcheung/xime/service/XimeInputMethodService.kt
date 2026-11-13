@@ -476,6 +476,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     /** 候选确认或放弃后，清理候选预览锁并通知 controller 丢弃旧会话。 */
     internal fun clearGlideSession() {
         glidePreviewActive = false
+        candidateState.value = candidateState.value.copy(isGlideDecoding = false)
         glideSessionReset()
     }
 
@@ -505,6 +506,22 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         return prefix
     }
 
+    /**
+     * 抬手后、最终结果确定前：在候选栏底部显示滚动 loading 条。
+     *
+     * 神经解码要跑模型推理 + 约束 beam，抬手到出结果有明显的几十到几百毫秒，
+     * 这段时间候选栏若毫无反馈，用户会以为滑动没被识别。
+     */
+    internal fun beginGlideDecoding() {
+        candidateState.value = candidateState.value.copy(isGlideDecoding = true)
+    }
+
+    /** 结果已确定（无论成功与否）：收起 loading 条。 */
+    private fun endGlideDecoding() {
+        if (!candidateState.value.isGlideDecoding) return
+        candidateState.value = candidateState.value.copy(isGlideDecoding = false)
+    }
+
     /** 滑动中只投影组合预览，抬手后才安装主组合与可确认候选。 */
     internal fun previewGlideCandidates(rawInput: String, texts: List<String>) {
         glidePreviewActive = rawInput.isNotEmpty() || texts.isNotEmpty()
@@ -523,6 +540,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     internal fun applyGlideCandidates(rawInput: String, texts: List<String>) {
         glidePreviewActive = false
+        endGlideDecoding()
         if (texts.isEmpty()) return
         // 把首选编码装进主组合，使引擎有真实组合态：
         // 这样点选候选会走正常 Rime 选词/学习路径，而不是我们的假 isComposing。

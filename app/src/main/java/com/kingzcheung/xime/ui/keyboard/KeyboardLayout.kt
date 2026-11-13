@@ -474,6 +474,7 @@ fun KeyboardLayout(
                     origin = { androidx.compose.ui.geometry.Offset.Zero },
                     onTrailChange = { glideTrail.update(it, android.os.SystemClock.uptimeMillis()) },
                     onPreview = { raw, texts -> callbacks.onGlidePreview?.invoke(raw, texts) },
+                    onDecodeStart = { callbacks.onGlideDecodeStart?.invoke() },
                     onGlideCaptured = {
                         glideBubbleSuppressed = true
                         swipeBubble.update(SwipeState(), androidx.compose.ui.geometry.Rect.Zero)

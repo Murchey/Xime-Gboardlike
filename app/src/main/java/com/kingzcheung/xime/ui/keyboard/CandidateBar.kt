@@ -1,6 +1,13 @@
 package com.kingzcheung.xime.ui.keyboard
 
 import com.kingzcheung.xime.i18n.tr
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 
 import com.kingzcheung.xime.service.PredictionManager
 import android.annotation.SuppressLint
@@ -258,8 +265,18 @@ fun CandidateBar(
     }
     val showPreeditBubble = showInputTextRow && preeditBubbleText.isNotEmpty() && !showInputBoxStyle
 
-    Column(
+    val isLoading = (state as? CandidateBarState.ChineseCandidates)?.isLoading == true
+
+    // 外层 Box：候选栏内容在下，底部叠一条细 loading 条（滑动解码未出结果时滚动）。
+    // 用叠加而不是加高 Column，避免候选栏在滑动中变高导致键盘整体上移。
+    Box(
         modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .background(visuals.backgroundColor),
+    ) {
+    Column(
+        modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
             .drawPreeditBubble(
@@ -270,7 +287,6 @@ fun CandidateBar(
                 textColor = visuals.preeditBubbleTextColor,
                 isDarkTheme = visuals.isDarkTheme,
             )
-            .background(visuals.backgroundColor)
             .padding(horizontal = horizontalPadding),
         verticalArrangement = Arrangement.Center
     ) {
@@ -722,6 +738,63 @@ fun CandidateBar(
                 }
             }
         }
+    }
+
+        // 候选栏顶缘的细 loading 条：仅滑动解码进行中显示。
+        // 放顶缘而不是底缘：候选栏底边紧贴按键区，1.5dp 会被按键背景吃掉；
+        // 顶缘是候选栏与上方应用的天然分界，最不打扰也最容易被看到。
+        if (isLoading) {
+            GlideDecodingBar(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth(),
+                color = visuals.accentColor,
+                trackColor = visuals.dividerColor,
+            )
+        }
+    }
+}
+
+/**
+ * 候选栏顶缘的滑动解码指示条：2dp 高的轨道上有一段高亮在往复滚动。
+ *
+ * 只做视觉提示，不拦截触摸（不挂 clickable/pointerInput），也不改变候选栏高度——
+ * 它叠在候选栏底部像素上，避免滑动过程中键盘整体跳动。
+ */
+@Composable
+private fun GlideDecodingBar(
+    modifier: Modifier = Modifier,
+    color: Color = Color(0xFF1A73E8),
+    trackColor: Color = Color.Transparent,
+    barHeightDp: androidx.compose.ui.unit.Dp = 2.dp,
+) {
+    val transition = rememberInfiniteTransition(label = "glide-decoding")
+    val progress by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "glide-decoding-progress",
+    )
+    Canvas(
+        modifier = modifier
+            .height(barHeightDp)
+            .clipToBounds(),
+    ) {
+        val h = size.height
+        if (trackColor.alpha > 0.01f) {
+            drawRect(color = trackColor.copy(alpha = 0.35f), size = size)
+        }
+        // 高亮段占轨道 35%，从左侧外侧滑入到右侧外侧
+        val segment = size.width * 0.35f
+        val start = (size.width + segment) * progress - segment
+        drawRect(
+            color = color,
+            topLeft = Offset(start, 0f),
+            size = Size(segment, h),
+        )
     }
 }
 

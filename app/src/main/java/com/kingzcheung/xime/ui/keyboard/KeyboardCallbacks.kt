@@ -57,6 +57,8 @@ data class KeyboardCallbacks(
     val onGlideStart: (() -> String)? = null,
     /** 手指未抬起时的组词预览，不提交、不写入 Rime 主组合。 */
     val onGlidePreview: ((rawInput: String, texts: List<String>) -> Unit)? = null,
+    /** 抬手后开始解码：候选栏底部显示滚动 loading 条，直到结果写入。 */
+    val onGlideDecodeStart: (() -> Unit)? = null,
     val onGestureAction: ((GestureAction, String) -> Unit)? = null,
     val onUpdateToolbarButtons: ((List<String>) -> Unit)? = null,
     /**

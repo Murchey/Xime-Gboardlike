@@ -352,6 +352,7 @@ fun KeyboardView(
             )
             val candidateBarState = remember(
                 cs.candidates, cs.candidateComments, cs.inputText, cs.preeditText, cs.isComposing,
+                cs.isGlideDecoding,
                 cs.associationCandidates, cs.pendingEnglishText, cs.isShowingRecentClipboard, cs.hasNextPage,
                 state.isCalculatorMode, handwritingCandidates, handwritingComments, showHandwritingCandidates,
                 railExpanded, cs.preeditCaretPos, state.recentClipboardItems,
@@ -378,6 +379,7 @@ fun KeyboardView(
                         hasNextPage = cs.hasNextPage,
                         isCalculatorActive = state.isCalculatorMode,
                         preeditCaretPos = cs.preeditCaretPos,
+                        isLoading = cs.isGlideDecoding,
                         // 剪贴板态：与 cs.candidates 同序同长，非图片位为 null（展开态数据源不同则不带图片）
                         clipboardImages = if (cs.isShowingRecentClipboard && railExpanded.isEmpty()) {
                             state.recentClipboardItems.map { if (it.isImage) it else null }

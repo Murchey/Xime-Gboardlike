@@ -260,6 +260,7 @@ internal fun rememberImeKeyboardCallbacks(
                 service.applyGlideCandidates(rawInput, texts)
             },
             onGlidePreview = { raw, texts -> service.previewGlideCandidates(raw, texts) },
+            onGlideDecodeStart = { service.beginGlideDecoding() },
             onGlideStart = {
                 // 已有候选时返回其编码作前缀继续累积；否则清空从零开始
                 service.beginGlideComposition()

@@ -15,6 +15,8 @@ sealed interface CandidateBarState {
         val associationCandidates: List<String> = emptyList(),
         /** 编码显示串中的光标偏移（字符，-1 = 末尾/不适用），编码编辑光标可视化用。 */
         val preeditCaretPos: Int = -1,
+        /** 滑动解码进行中：候选栏底部叠加滚动 loading 条。 */
+        val isLoading: Boolean = false,
     ) : CandidateBarState
 
     data class AssociationOnly(
@@ -60,11 +62,16 @@ sealed interface CandidateBarState {
             preeditCaretPos: Int = -1,
             /** 剪贴板展示态下与 [candidates] 等长的图片条目列表（非图片位为 null）。 */
             clipboardImages: List<ClipboardItem?> = emptyList(),
+            /** 滑动解码进行中（候选栏底部滚动 loading 条）。 */
+            isLoading: Boolean = false,
         ): CandidateBarState {
             val hasCandidates = candidates.isNotEmpty()
             val hasAssociations = associationCandidates.isNotEmpty()
             val hasInput = inputText.isNotEmpty()
             return when {
+                // 解码中优先占位：此时可能既无编码也无候选，但用户必须看到反馈
+                isLoading && !hasCandidates && !hasInput ->
+                    ChineseCandidates(isLoading = true)
                 isShowingRecentClipboard && hasCandidates ->
                     ClipboardDisplay(candidates = candidates, images = clipboardImages)
                 isCalculatorActive && hasCandidates ->
@@ -78,6 +85,7 @@ sealed interface CandidateBarState {
                         hasMore = hasCandidates && hasNextPage,
                         associationCandidates = associationCandidates,
                         preeditCaretPos = preeditCaretPos,
+                        isLoading = isLoading,
                     )
                 !isComposing && !hasInput && hasAssociations && !hasCandidates ->
                     AssociationOnly(
@@ -92,6 +100,7 @@ sealed interface CandidateBarState {
                         preeditText = preeditText,
                         hasMore = hasCandidates && hasNextPage,
                         preeditCaretPos = preeditCaretPos,
+                        isLoading = isLoading,
                     )
                 else -> Idle
             }
