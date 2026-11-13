@@ -50,7 +50,7 @@ fun CorrectionSettingsContent(onBack: () -> Unit) {
     remember { CorrectionPriors.engine = engine; true }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = settingsPageContainerColor(),
         topBar = {
             TopAppBar(
                 title = { Text(tr(R.string.s_zhinengjiucuo)) },
@@ -63,7 +63,7 @@ fun CorrectionSettingsContent(onBack: () -> Unit) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = settingsPageContainerColor(),
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 ),
             )

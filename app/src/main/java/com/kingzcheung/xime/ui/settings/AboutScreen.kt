@@ -190,7 +190,7 @@ fun AboutContent(
     }
     
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = settingsPageContainerColor(),
         topBar = {
             TopAppBar(
                 title = { Text(tr(R.string.s_guanyu)) },
@@ -203,7 +203,7 @@ fun AboutContent(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = settingsPageContainerColor(),
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
@@ -671,7 +671,7 @@ fun PrivacyPolicyContent(
     onBack: () -> Unit
 ) {
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = settingsPageContainerColor(),
         topBar = {
             TopAppBar(
                 title = { Text(tr(R.string.s_yinsicelve)) },
@@ -684,7 +684,7 @@ fun PrivacyPolicyContent(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = settingsPageContainerColor(),
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
@@ -781,7 +781,7 @@ fun LicensesContent(
     val uriHandler = LocalUriHandler.current
     
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = settingsPageContainerColor(),
         topBar = {
             TopAppBar(
                 title = { Text(tr(R.string.s_kaiyuanxukezheng)) },
@@ -794,7 +794,7 @@ fun LicensesContent(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = settingsPageContainerColor(),
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )

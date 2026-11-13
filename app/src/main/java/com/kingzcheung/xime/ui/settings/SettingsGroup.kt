@@ -45,11 +45,16 @@ fun SettingsGroup(
     }
 }
 
-/** 卡片底色：浅色用最亮的容器色（白卡），深色用高一级容器色保证对比。 */
+/**
+ * 卡片底色：浅色用纯白（Google 设置那种白卡），深色用高一级容器色。
+ *
+ * 不用 surfaceContainerLowest：它随主题调色板浮动（实测有 239/252 两种），
+ * 换了主题就跟页面底色贴在一起；纯白稳定保证层次。
+ */
 @Composable
 internal fun settingsCardContainerColor() =
     if (isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceContainerHigh
-    else MaterialTheme.colorScheme.surfaceContainerLowest
+    else androidx.compose.ui.graphics.Color.White
 
 /** 圆角卡片容器：负责底色、圆角与子项间的自动分隔线。 */
 @Composable

@@ -86,7 +86,7 @@ internal fun OfflineModelCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = settingsPageContainerColor()
         )
     ) {
         Column(

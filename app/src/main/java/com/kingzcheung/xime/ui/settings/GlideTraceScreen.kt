@@ -111,7 +111,7 @@ fun GlideTraceScreen(onBack: () -> Unit) {
     val unlabeled = entries.count { it.expected.isEmpty() }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = settingsPageContainerColor(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -122,7 +122,7 @@ fun GlideTraceScreen(onBack: () -> Unit) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = settingsPageContainerColor(),
                 ),
             )
         },

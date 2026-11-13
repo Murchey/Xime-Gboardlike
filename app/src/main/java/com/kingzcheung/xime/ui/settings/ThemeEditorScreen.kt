@@ -233,7 +233,7 @@ fun ThemeEditorContent(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = settingsPageContainerColor(),
         topBar = {
             TopAppBar(
                 title = { Text(tr(R.string.s_diaoseban)) },
@@ -246,7 +246,7 @@ fun ThemeEditorContent(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = settingsPageContainerColor(),
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )

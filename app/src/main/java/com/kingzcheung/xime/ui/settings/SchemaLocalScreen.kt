@@ -167,7 +167,7 @@ fun SchemaLocalContent(
     if (showImportWarning) {
         AlertDialog(
             onDismissRequest = { showImportWarning = false },
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = settingsPageContainerColor(),
             title = { Text(tr(R.string.s_daorufanganxuzhi), fontWeight = FontWeight.SemiBold) },
             text = {
                 Column {
@@ -226,7 +226,7 @@ fun SchemaLocalContent(
                 showNameDialog = false
                 pendingArchiveUris = emptyList()
             },
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = settingsPageContainerColor(),
             title = { Text(tr(R.string.s_mingmingdaorufangan), fontWeight = FontWeight.SemiBold) },
             text = {
                 Column {
@@ -269,7 +269,7 @@ fun SchemaLocalContent(
             onDismissRequest = {
                 if (!importUiState.isDownloading) { showUrlDialog = false; urlInput = "" }
             },
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = settingsPageContainerColor(),
             title = { Text(tr(R.string.s_wangluodaoru), fontWeight = FontWeight.SemiBold) },
             text = {
                 Column {
@@ -421,7 +421,7 @@ fun SchemaLocalContent(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = settingsPageContainerColor(),
         topBar = {
             TopAppBar(
                 title = { Text(title) },
@@ -484,7 +484,7 @@ fun SchemaLocalContent(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = settingsPageContainerColor(),
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
                 ),
             )

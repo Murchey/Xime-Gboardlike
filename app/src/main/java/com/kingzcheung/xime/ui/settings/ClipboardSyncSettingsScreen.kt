@@ -90,7 +90,7 @@ fun ClipboardSyncSettingsContent(
     var showServicePicker by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = settingsPageContainerColor(),
         topBar = {
             TopAppBar(
                 title = { Text(tr(R.string.s_jiantiebantongbu)) },
@@ -103,7 +103,7 @@ fun ClipboardSyncSettingsContent(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = settingsPageContainerColor(),
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 ),
             )

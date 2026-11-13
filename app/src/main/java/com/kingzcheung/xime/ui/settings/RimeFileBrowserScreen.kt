@@ -179,7 +179,7 @@ fun RimeFileBrowserContent(onBack: () -> Unit) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = settingsPageContainerColor(),
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
@@ -427,7 +427,7 @@ private fun YamlEditor(file: File, onDeleted: () -> Unit, onBack: () -> Unit) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = settingsPageContainerColor(),
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
@@ -482,7 +482,7 @@ private fun FileEntryRow(entry: FileEntry, onView: () -> Unit, onDelete: () -> U
             .fillMaxWidth()
             .clickable(onClick = onView),
         colors = ListItemDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = settingsPageContainerColor()
         ),
         leadingContent = {
             Box(

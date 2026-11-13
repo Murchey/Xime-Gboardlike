@@ -186,7 +186,7 @@ fun PluginConfigFormScreen(
         }
     } else {
         Scaffold(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = settingsPageContainerColor(),
             topBar = {
                 TopAppBar(
                     title = { Text(pluginName) },
@@ -199,7 +199,7 @@ fun PluginConfigFormScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
+                        containerColor = settingsPageContainerColor(),
                         titleContentColor = MaterialTheme.colorScheme.onSurface
                     ),
                 )

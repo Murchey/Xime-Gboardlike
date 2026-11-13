@@ -72,7 +72,7 @@ fun ObjectStorageSettingsContent(onBack: () -> Unit) {
         )
     }
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = settingsPageContainerColor(),
         topBar = {
             TopAppBar(
                 title = { Text(tr(R.string.os_configure)) },
