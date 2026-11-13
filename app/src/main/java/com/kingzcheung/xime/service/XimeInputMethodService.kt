@@ -1870,8 +1870,17 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 // 导致键面离屏幕底边偏高。开启后按 0 处理，键面落到屏幕底边。
                 // 底部工具条是「嵌入式」的：图标直接画在系统手势条/导航栏让出的那一条
                 // 留白里，不抬高键盘、不额外占高度——键盘总高与关闭时完全一致。
+                // 各类面板/详情页（剪贴板、表情、设置、工具栏详情、候选展开、快捷发送表单）
+                // 会全屏覆盖键盘内容区；此时底部留白属于面板，不能再挂属于主键盘的工具按钮，
+                // 否则按钮会浮在面板上，看起来错位、多余。
+                val panelOrOverlayActive =
+                    page is com.kingzcheung.xime.keyboard.KeyboardPage.Overlay ||
+                    state.toolPanelVisible ||
+                    state.showQuickSendForm ||
+                    keyboardViewModel.candidatePageExpanded.value
                 val bottomBarNeeded = !state.isFloatingMode &&
                     !state.showKeyboardResize &&
+                    !panelOrOverlayActive &&
                     SettingsPreferences.isBottomBarEnabled(this@XimeInputMethodService)
                 val activeBottomDp = if (state.keyboardFlushBottom) 0
                     else if (bottomSpaceDp == 0) minBottomDp else bottomSpaceDp
