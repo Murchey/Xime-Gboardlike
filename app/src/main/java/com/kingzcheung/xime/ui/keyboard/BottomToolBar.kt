@@ -50,21 +50,18 @@ fun BottomToolBar(
     tint: Color,
     onAction: (BottomBarAction) -> Unit,
     modifier: Modifier = Modifier,
-    barHeightDp: Float = 18f,
+    barHeightDp: Float = 24f,
 ) {
-    // 图标尺寸跟随留白：手势条留白通常 8~18dp，图标取留白的 1.15 倍并夹在 12..20dp，
-    // 这样在窄留白里仍然可辨认，宽留白里也不会过大。
-    val iconSize = (barHeightDp * 1.15f).coerceIn(12f, 20f).dp
     Row(
         modifier = modifier
             .fillMaxWidth()
             .fillMaxHeight()
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 18.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BottomBarButton(left, tint, iconSize, onAction)
-        BottomBarButton(right, tint, iconSize, onAction)
+        BottomBarButton(left, tint, onAction)
+        BottomBarButton(right, tint, onAction)
     }
 }
 
@@ -72,7 +69,6 @@ fun BottomToolBar(
 private fun BottomBarButton(
     action: BottomBarAction,
     tint: Color,
-    iconSize: androidx.compose.ui.unit.Dp,
     onAction: (BottomBarAction) -> Unit,
 ) {
     val icon = iconOf(action) ?: return
@@ -80,9 +76,9 @@ private fun BottomBarButton(
     val pressed by interaction.collectIsPressedAsState()
     Box(
         modifier = Modifier
-            .size(iconSize + 10.dp)
+            .size(30.dp)
             .clip(CircleShape)
-            .background(if (pressed) tint.copy(alpha = 0.12f) else Color.Transparent)
+            .background(if (pressed) tint.copy(alpha = 0.16f) else tint.copy(alpha = 0.07f))
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -93,8 +89,8 @@ private fun BottomBarButton(
         Icon(
             imageVector = icon,
             contentDescription = action.name,
-            tint = tint.copy(alpha = 0.8f),
-            modifier = Modifier.size(iconSize),
+            tint = tint.copy(alpha = 0.85f),
+            modifier = Modifier.size(19.dp),
         )
     }
 }

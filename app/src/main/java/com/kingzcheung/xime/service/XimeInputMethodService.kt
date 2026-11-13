@@ -481,8 +481,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
      */
     private val BOTTOM_BAR_MIN_SPACE_DP = 8
 
-    /** 底部工具条为容纳图标额外增加的高度（dp）。 */
-    private val BOTTOM_BAR_ICON_EXTRA_DP = 14
+    /** 底部工具条占用的留白带高度（dp）：实测全面屏手势下约 49dp，取 44 留余量。 */
+    private val BOTTOM_BAR_BAND_DP = 44
+
+    /** 容器底部为系统手势条让出的高度（dp），避免图标与手势条重叠。 */
+    private val BOTTOM_BAR_GESTURE_GAP_DP = 20
 
     /** 底部工具条按钮动作分发。 */
     internal fun onBottomBarAction(action: com.kingzcheung.xime.settings.BottomBarAction) {
@@ -2228,9 +2231,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             // 底部工具条（嵌入式）：画在根 Box 的最后层，位于键盘内容之上，
                             // 只占用系统手势条/导航栏让出的留白，不改变键盘高度。
                             if (bottomBarNeeded && activeBottomDp >= BOTTOM_BAR_MIN_SPACE_DP) {
-                                // 容器高度取「留白 + 图标净高」，让图标能完整落在留白区上方，
-                                // 底边与键盘内容对齐；图标本身仍在留白范围内，不挡按键。
-                                val bottomBarHeightDp = activeBottomDp + BOTTOM_BAR_ICON_EXTRA_DP
+                                // 实测（1080x2400 全面屏手势）：按键区到 y≈2228、手势条在 2376~2384，
+                                // 中间 2228~2376 是一条约 49dp 的留白带。容器铺满这条带子，
+                                // 图标在其中垂直居中并左右分布——看起来才是「安在留白区里」。
+                                val bottomBarBandDp = BOTTOM_BAR_BAND_DP
                                 com.kingzcheung.xime.ui.keyboard.BottomToolBar(
                                     left = com.kingzcheung.xime.settings.BottomBarAction.fromName(
                                         SettingsPreferences.bottomBarLeft(this@XimeInputMethodService)
@@ -2240,12 +2244,12 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     ),
                                     tint = candidateTextCol,
                                     onAction = { action -> onBottomBarAction(action) },
-                                    barHeightDp = activeBottomDp.toFloat(),
+                                    barHeightDp = bottomBarBandDp.toFloat(),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(bottomBarHeightDp.dp)
+                                        .height(bottomBarBandDp.dp)
                                         .align(androidx.compose.ui.Alignment.BottomCenter)
-                                        .padding(bottom = activeBottomDp.dp),
+                                        .padding(bottom = BOTTOM_BAR_GESTURE_GAP_DP.dp),
                                 )
                             }
                             // 悬浮拖到底部的停靠提示光：必须是根 Box 最后一个子级
