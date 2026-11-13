@@ -75,6 +75,7 @@ import com.kingzcheung.xime.settings.ImportManager
 import com.kingzcheung.xime.settings.SchemaManager
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.viewmodel.LocalPackageItem
+import com.kingzcheung.xime.viewmodel.countLocalPackages
 import com.kingzcheung.xime.viewmodel.LocalPackagePhase
 import com.kingzcheung.xime.viewmodel.SchemaLocalViewModel
 import com.kingzcheung.xime.viewmodel.SchemaSettingsViewModel
@@ -523,10 +524,15 @@ fun SchemaLocalContent(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            val installedCount = uiState.packages.count { it.installed }
-                            val downloadedCount = uiState.packages.count { it.downloaded }
+                            // 「可安装」按"还没装上的条目数"算，避免内置包算出负数
+                            val counts = countLocalPackages(uiState.packages)
                             Text(
-                                tr(R.string.s_gong_ge_yianzhuang_keanzhuang, uiState.packages.size, installedCount, downloadedCount - installedCount),
+                                tr(
+                                    R.string.s_gong_ge_yianzhuang_keanzhuang,
+                                    counts.total,
+                                    counts.installed,
+                                    counts.installable,
+                                ),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.outline,
                             )

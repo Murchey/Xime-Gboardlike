@@ -61,6 +61,29 @@ data class LocalPackageItem(
         }
 }
 
+/**
+ * 已导入页顶部计数（共 N 个 / 已安装 / 可安装）。
+ *
+ * 「可安装」= 列表里还没装上的条目数（含已下载的归档包与可恢复的内置包）。
+ * 不能再用「已下载 − 已安装」：内置包已安装但不在 market 目录里（downloaded=false），
+ * 那样会算出负数（曾显示「可安装 -1」）。
+ */
+internal data class LocalPackageCounts(
+    val total: Int,
+    val installed: Int,
+    val installable: Int,
+)
+
+/** 计数纯函数：恒满足 total = installed + installable，且两者都不为负。 */
+internal fun countLocalPackages(items: List<LocalPackageItem>): LocalPackageCounts {
+    val installed = items.count { it.installed }
+    return LocalPackageCounts(
+        total = items.size,
+        installed = installed,
+        installable = items.size - installed,
+    )
+}
+
 /** 本地包操作阶段（安装与部署分开显示）。 */
 enum class LocalPackagePhase { INSTALLING, DEPLOYING }
 
