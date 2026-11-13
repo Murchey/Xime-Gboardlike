@@ -90,11 +90,6 @@ fun DictionaryHubContent(
                     onClick = onNavigateToUserDict,
                     showArrow = true
                 )
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 72.dp),
-                    thickness = SettingsDimens.DividerThickness,
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
                 SettingsItem(
                     icon = Icons.TwoTone.DataObject,
                     title = tr(R.string.s_kuaijieduanyu),

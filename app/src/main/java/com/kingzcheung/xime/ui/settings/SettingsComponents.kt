@@ -70,19 +70,10 @@ fun SettingsSection(
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .padding(start = SettingsDimens.RowHorizontal, bottom = SettingsDimens.HeaderBottom)
-                .padding(top = 4.dp)
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(SettingsGroupHeaderPadding)
         )
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(SettingsDimens.CardCorner),
-            color = settingsCardContainerColor(),
-            shadowElevation = 0.dp
-        ) {
-            Column(content = content)
-        }
+        Column(modifier = Modifier.fillMaxWidth(), content = content)
     }
 }
 

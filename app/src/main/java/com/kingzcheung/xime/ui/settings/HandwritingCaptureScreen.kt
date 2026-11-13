@@ -400,7 +400,6 @@ fun HandwritingCaptureScreen(onBack: () -> Unit) {
             }
 
             currentTarget?.let { target ->
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 HandwritingCaptureEditor(
                     target = target,
                     existingCount = sampleCounts[target] ?: 0,

@@ -306,10 +306,6 @@ fun SchemaSettingsContent(
                                         modifier = Modifier.size(20.dp))
                                 }
                             )
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant
-                            )
                             DropdownMenuItem(
                                 text = { Text(tr(R.string.s_fangancibiao)) },
                                 onClick = {
@@ -322,10 +318,6 @@ fun SchemaSettingsContent(
                                         modifier = Modifier.size(20.dp))
                                 }
                             )
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant
-                            )
                             DropdownMenuItem(
                                 text = { Text(tr(R.string.s_wenjianguanliqi)) },
                                 onClick = {
@@ -337,10 +329,6 @@ fun SchemaSettingsContent(
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp))
                                 }
-                            )
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant
                             )
                             DropdownMenuItem(
                                 text = { Text(tr(R.string.s_qingchuyibianyineirong)) },
@@ -621,10 +609,6 @@ private fun PackageGroupDrawer(
             text = tr(R.string.s_fanganbaolaiyuan),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-        )
-        HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            color = MaterialTheme.colorScheme.outlineVariant,
         )
         LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
             item {

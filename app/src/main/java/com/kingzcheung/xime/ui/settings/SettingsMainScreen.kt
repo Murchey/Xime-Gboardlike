@@ -86,38 +86,19 @@ fun SettingsMainContent(
     onNavigateToBackup: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     LaunchedEffect(Unit) {
         MarketUpdateChecker.maybeRefresh(context)
     }
     val marketUpdates by MarketUpdateChecker.summary.collectAsStateWithLifecycle()
 
-    val pageColor = settingsPageContainerColor()
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = pageColor,
-        topBar = {
-            LargeTopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = pageColor,
-                    scrolledContainerColor = pageColor,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
-                scrollBehavior = scrollBehavior
-            )
-        }
-    ) { innerPadding ->
+    SettingsPageScaffold(title = stringResource(R.string.settings_title)) { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .consumeWindowInsets(innerPadding)
-                .padding(horizontal = SettingsDimens.PageHorizontal)
                 .imePadding(),
             contentPadding = innerPadding,
-            verticalArrangement = Arrangement.spacedBy(SettingsDimens.GroupGap)
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             item {
                 SettingsGroup(title = tr(R.string.s_shurufa)) {
@@ -143,11 +124,7 @@ fun SettingsMainContent(
             }
 
             // 输入测试单独成卡：不属于设置项，避免和"启用/选择输入法"混在一张卡里
-            item {
-                SettingsCard {
-                    InputTestCard()
-                }
-            }
+            item { InputTestCard() }
 
             item {
                 SettingsGroup(title = stringResource(R.string.settings_section_appearance)) {
@@ -300,8 +277,8 @@ fun SettingsMainContent(
                 }
             }
 
-            // 底部留白，最后一张卡片不贴屏底
-            item { Column(modifier = Modifier.padding(bottom = 24.dp)) {} }
+            // 底部呼吸空间（GKD 的 GkPageBottomSpace 同样 80dp）
+            item { Column(modifier = Modifier.padding(bottom = 80.dp)) {} }
         }
     }
 }

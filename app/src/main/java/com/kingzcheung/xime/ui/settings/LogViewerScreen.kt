@@ -258,7 +258,6 @@ private fun LogContentSection(
             }
         }
         
-        HorizontalDivider()
         
         if (logContent.isEmpty()) {
             Box(

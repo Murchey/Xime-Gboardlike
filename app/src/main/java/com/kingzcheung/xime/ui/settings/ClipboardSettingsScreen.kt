@@ -247,11 +247,6 @@ fun ClipboardSettingsContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 56.dp),
-                        thickness = SettingsDimens.DividerThickness,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -362,11 +357,6 @@ fun ClipboardSettingsContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp),
-                        thickness = SettingsDimens.DividerThickness,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
                     Column(
                         modifier = Modifier.padding(
                             start = 16.dp,

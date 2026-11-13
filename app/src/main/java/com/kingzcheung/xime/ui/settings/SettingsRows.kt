@@ -45,8 +45,7 @@ fun SettingsRow(
     role: Role? = null,
     trailing: (@Composable RowScope.() -> Unit)? = null,
 ) {
-    val minHeight = settingsRowMinHeightDp(summary != null).dp
-    val vertical = if (summary == null) SettingsDimens.RowVerticalSingle else SettingsDimens.RowVerticalTwoLine
+    val vertical = SettingsDimens.RowVerticalTwoLine
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -54,7 +53,6 @@ fun SettingsRow(
                 if (onClick != null) Modifier.clickable(enabled = enabled, role = role, onClick = onClick)
                 else Modifier
             )
-            .heightIn(min = minHeight)
             .padding(horizontal = SettingsDimens.RowHorizontal, vertical = vertical),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -179,9 +177,9 @@ fun SettingsRadioRow(
 @Composable
 fun SettingsBadge(text: String, error: Boolean = true) {
     val container = if (error) MaterialTheme.colorScheme.errorContainer
-    else MaterialTheme.colorScheme.secondaryContainer
+    else MaterialTheme.colorScheme.primaryContainer
     val content = if (error) MaterialTheme.colorScheme.onErrorContainer
-    else MaterialTheme.colorScheme.onSecondaryContainer
+    else MaterialTheme.colorScheme.onPrimaryContainer
     Box(
         modifier = Modifier
             .clip(RoundedCornerShapeCompat.Capsule)

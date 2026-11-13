@@ -214,10 +214,6 @@ fun RimeFileBrowserContent(onBack: () -> Unit) {
                             RimeExportManager.shareSingleFile(context, entry.file)
                         }
                     )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 72.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
                 }
             }
         }

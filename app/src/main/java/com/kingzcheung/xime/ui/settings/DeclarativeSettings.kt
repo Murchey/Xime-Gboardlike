@@ -88,14 +88,7 @@ fun DeclarativeSettingItems(
     val visible = specs.filter { it.visibility?.evaluate(localStore) != false }
 
     Column(modifier = modifier) {
-        visible.forEachIndexed { index, spec ->
-            if (index > 0) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = SettingsDimens.RowHorizontal),
-                    thickness = SettingsDimens.DividerThickness,
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-            }
+        visible.forEach { spec ->
             val enabled = spec.enabledWhen?.evaluate(localStore) != false
             when (spec) {
                 is SettingSpec.Switch -> SwitchSettingRow(

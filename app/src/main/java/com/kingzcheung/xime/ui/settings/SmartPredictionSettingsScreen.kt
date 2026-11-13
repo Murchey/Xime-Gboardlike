@@ -209,11 +209,6 @@ fun SmartPredictionSettingsContent(
                     }
 
                     if (!uiState.hasModel) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 16.dp),
-                            thickness = SettingsDimens.DividerThickness,
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -256,11 +251,6 @@ fun SmartPredictionSettingsContent(
                                 SettingsPreferences.setSpaceCommitAssociationEnabled(context, it)
                             }
                         )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 16.dp),
-                            thickness = SettingsDimens.DividerThickness,
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
                         AssociationModeRow(
                             title = tr(R.string.s_lianxulianxiang),
                             subtitle = tr(R.string.s_lianxiangcishangpinghoujixutui_d319f),
@@ -269,11 +259,6 @@ fun SmartPredictionSettingsContent(
                                 singleMode = false
                                 SettingsPreferences.setAssociationSingleMode(context, false)
                             }
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 16.dp),
-                            thickness = SettingsDimens.DividerThickness,
-                            color = MaterialTheme.colorScheme.outlineVariant
                         )
                         AssociationModeRow(
                             title = tr(R.string.s_dancilianxiang),
@@ -303,11 +288,6 @@ fun SmartPredictionSettingsContent(
                                 onOpenInStore = { onNavigateToModelDetail(model.id) }
                             )
                             if (model != predictionModels.last()) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(start = 56.dp),
-                                    thickness = SettingsDimens.DividerThickness,
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
                             }
                         }
                     })
@@ -427,11 +407,6 @@ fun SmartPredictionSettingsContent(
                         subtitle = tr(R.string.s_xuexishuju_fu),
                         onClick = onNavigateToLearningData,
                         showArrow = true
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 72.dp),
-                        thickness = SettingsDimens.DividerThickness,
-                        color = MaterialTheme.colorScheme.outlineVariant
                     )
                     SettingsItem(
                         icon = Icons.Default.Storage,

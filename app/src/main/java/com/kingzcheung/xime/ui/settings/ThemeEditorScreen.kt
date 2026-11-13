@@ -292,11 +292,6 @@ fun ThemeEditorContent(
                 ) {
                     ThemeColorField.entries.forEachIndexed { index, field ->
                         if (index > 0) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 16.dp),
-                                thickness = SettingsDimens.DividerThickness,
-                                color = MaterialTheme.colorScheme.outlineVariant
-                            )
                         }
                         ThemeColorRow(
                             label = tr(field.labelRes),
@@ -409,11 +404,6 @@ fun ThemeEditorContent(
                     } else {
                         schemes.forEachIndexed { index, scheme ->
                             if (index > 0) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(start = 16.dp),
-                                    thickness = SettingsDimens.DividerThickness,
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
                             }
                             SavedSchemeRow(
                                 scheme = scheme,

@@ -179,9 +179,6 @@ fun GrammarModelSettingsContent(
                     Spacer(Modifier.width(12.dp))
                     Text(tr(R.string.s_yufamoxing_tingyong))
                 }
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                )
             }
 
             items(models, key = { it.name }) { model ->
@@ -234,9 +231,6 @@ fun GrammarModelSettingsContent(
                             )
                         }
                     }
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
                 }
             }
 
@@ -274,9 +268,6 @@ fun GrammarModelSettingsContent(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
                 }
             }
 

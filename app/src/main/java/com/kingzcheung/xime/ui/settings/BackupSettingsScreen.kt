@@ -483,7 +483,6 @@ fun BackupSettingsContent(
                         else if (syncError != null) StatusTone.Fail
                         else if (lastSyncAt > 0) StatusTone.Ok else StatusTone.Never,
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHighest)
                     WordCardActions(
                         busyOp = busyOp,
                         blocking = blocking,
@@ -516,7 +515,6 @@ fun BackupSettingsContent(
                         else if (backupError != null) StatusTone.Fail
                         else if (lastBackupAt > 0) StatusTone.Ok else StatusTone.Never,
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHighest)
                     BackupCardActions(
                         busyOp = busyOp,
                         blocking = blocking,

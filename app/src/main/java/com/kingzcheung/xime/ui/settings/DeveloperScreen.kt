@@ -97,20 +97,10 @@ fun DeveloperContent(
                             title = tr(R.string.s_shouxieshujucaiji),
                             onClick = onNavigateToHandwritingCapture
                         )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 72.dp),
-                            thickness = SettingsDimens.DividerThickness,
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
                         SettingsItem(
                             icon = Icons.Default.IosShare,
                             title = tr(R.string.s_huadongguijishuju),
                             onClick = onNavigateToGlideTrace
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 72.dp),
-                            thickness = SettingsDimens.DividerThickness,
-                            color = MaterialTheme.colorScheme.outlineVariant
                         )
                         SettingsItem(
                             icon = Icons.Default.Code,
@@ -141,11 +131,6 @@ fun DeveloperContent(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = 72.dp, end = 16.dp, top = 2.dp, bottom = 12.dp)
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 72.dp),
-                            thickness = SettingsDimens.DividerThickness,
-                            color = MaterialTheme.colorScheme.outlineVariant
                         )
                         SettingsItem(
                             icon = Icons.Default.Code,

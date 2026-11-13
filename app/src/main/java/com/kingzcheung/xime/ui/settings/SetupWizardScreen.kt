@@ -330,13 +330,6 @@ private fun HorizontalStepIndicator(
             }
 
             if (index < steps.size - 1) {
-                HorizontalDivider(
-                    modifier = Modifier
-                        .width(48.dp)
-                        .padding(bottom = 20.dp),
-                    color = if (index < currentIndex) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.surfaceVariant
-                )
             }
         }
     }

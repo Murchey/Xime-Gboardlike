@@ -193,11 +193,6 @@ fun StorageSpaceScreen(
                     ) {
                         Column {
                             if (index > 0) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(start = 52.dp),
-                                    thickness = SettingsDimens.DividerThickness,
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
                             }
                             Row(
                                 modifier = Modifier

@@ -505,7 +505,6 @@ private fun ExtensionItem(
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 
                 if (extension.description.isNotEmpty()) {
                     Text(

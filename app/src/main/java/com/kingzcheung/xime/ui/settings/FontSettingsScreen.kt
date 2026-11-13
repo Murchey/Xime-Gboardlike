@@ -408,11 +408,6 @@ private fun SystemFontDrawer(
                         )
                     }
                 }
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 20.dp),
-                    thickness = SettingsDimens.DividerThickness,
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
             }
         }
     }
@@ -420,11 +415,6 @@ private fun SystemFontDrawer(
 
 @Composable
 private fun FontDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 16.dp),
-        thickness = SettingsDimens.DividerThickness,
-        color = MaterialTheme.colorScheme.outlineVariant
-    )
 }
 
 @Composable

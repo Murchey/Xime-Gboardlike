@@ -21,22 +21,15 @@ internal object SettingsDimens {
     val HeaderBottom = 8.dp
 }
 
-/** 页面底色：比卡片暗一级，卡片才"浮"得出来（浅色 ≈239，卡片 ≈252）。 */
+/** 页面底色：GKD 同款，直接用 colorScheme.background（设置行平铺其上，不再垫卡片）。 */
 @androidx.compose.runtime.Composable
 internal fun settingsPageContainerColor() =
-    androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerLow
+    androidx.compose.material3.MaterialTheme.colorScheme.background
 
-/** 行最小高度（dp）：带摘要的行需要更高，保证两行文字舒适且触达 ≥48dp。 */
-internal fun settingsRowMinHeightDp(hasSummary: Boolean): Int =
-    if (hasSummary) 72 else 56
-
-/** 卡片内分隔线的 y 偏移（px）：每行底部一条，最后一行不画。 */
-internal fun dividerOffsets(heights: List<Int>): List<Int> {
-    var y = 0
-    val out = ArrayList<Int>(heights.size)
-    heights.forEachIndexed { index, h ->
-        y += h
-        if (index != heights.lastIndex) out.add(y)
-    }
-    return out
-}
+/** 分组标题内边距：上 18 / 下 6，和内容行拉开又贴紧自己的行（GKD 的 titleItemPadding 比例）。 */
+internal val SettingsGroupHeaderPadding = androidx.compose.foundation.layout.PaddingValues(
+    start = SettingsDimens.RowHorizontal,
+    top = 18.dp,
+    end = SettingsDimens.RowHorizontal,
+    bottom = 6.dp,
+)

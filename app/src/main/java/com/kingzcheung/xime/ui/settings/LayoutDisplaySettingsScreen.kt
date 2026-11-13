@@ -115,11 +115,6 @@ fun LayoutDisplaySettingsContent(
                     }
                     AnimatedVisibility(visible = glideExpanded) {
                         Column {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 16.dp),
-                                thickness = SettingsDimens.DividerThickness,
-                                color = MaterialTheme.colorScheme.outlineVariant
-                            )
                             DeclarativeSettingItems(
                                 specs = LayoutDisplaySettingsSpecs.glide(),
                                 store = settingsStore,
@@ -138,11 +133,6 @@ fun LayoutDisplaySettingsContent(
                             )
                         }
                     }
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp),
-                        thickness = SettingsDimens.DividerThickness,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
                     DeclarativeSettingItems(
                         specs = androidx.compose.runtime.remember(layoutSpecsSchema) {
                             LayoutDisplaySettingsSpecs.keyboardLayout(layoutSpecsSchema)
@@ -162,11 +152,6 @@ fun LayoutDisplaySettingsContent(
                         },
                     )
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp),
-                        thickness = SettingsDimens.DividerThickness,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
 
                     var keyboardTextScale by remember {
                         mutableStateOf(SettingsPreferences.getKeyboardTextScale(context).toFloat())
@@ -207,11 +192,6 @@ fun LayoutDisplaySettingsContent(
                         )
                     }
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp),
-                        thickness = SettingsDimens.DividerThickness,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
 
                     var doubleSpacePunctuationEnabled by remember {
                         mutableStateOf(SettingsPreferences.isDoubleSpacePunctuationEnabled(context))
@@ -244,11 +224,6 @@ fun LayoutDisplaySettingsContent(
                     }
 
                     if (doubleSpacePunctuationEnabled) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 16.dp),
-                            thickness = SettingsDimens.DividerThickness,
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
                         var punctuation by remember {
                             mutableStateOf(SettingsPreferences.getDoubleSpacePunctuation(context))
                         }
@@ -333,11 +308,6 @@ fun LayoutDisplaySettingsContent(
                         )
                     }
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp),
-                        thickness = SettingsDimens.DividerThickness,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
 
                     var showComments by remember {
                         mutableStateOf(SettingsPreferences.showCandidateComments(context))
@@ -391,11 +361,6 @@ fun LayoutDisplaySettingsContent(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp),
-                        thickness = SettingsDimens.DividerThickness,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
 
                     var inputTextLocation by remember {
                         mutableStateOf(SettingsPreferences.getInputTextLocation(context))
@@ -445,11 +410,6 @@ fun LayoutDisplaySettingsContent(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp),
-                        thickness = SettingsDimens.DividerThickness,
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
 
                     // 立即生效：拖动结束改方案配置并重建 Schema（与会话启动同一条路径）
                     val pageSizeScope = rememberCoroutineScope()

@@ -134,7 +134,6 @@ fun FuzzyPinyinSettingsContent(onBack: () -> Unit) {
                         onCheckedChange = null,
                     )
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
 
             item {

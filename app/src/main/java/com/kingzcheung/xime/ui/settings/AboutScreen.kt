@@ -489,40 +489,20 @@ fun AboutContent(
                             title = tr(R.string.s_yinsicelve),
                             onClick = onNavigateToPrivacy
                         )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 72.dp),
-                            thickness = SettingsDimens.DividerThickness,
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
                         SettingsItem(
                             icon = Icons.TwoTone.Description,
                             title = tr(R.string.s_kaiyuanxukezheng),
                             onClick = onNavigateToLicenses
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 72.dp),
-                            thickness = SettingsDimens.DividerThickness,
-                            color = MaterialTheme.colorScheme.outlineVariant
                         )
                         SettingsItem(
                             icon = Icons.TwoTone.BugReport,
                             title = tr(R.string.s_rizhichakanqi),
                             onClick = onNavigateToLogViewer
                         )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 72.dp),
-                            thickness = SettingsDimens.DividerThickness,
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
                         SettingsItem(
                             icon = Icons.TwoTone.Storage,
                             title = tr(R.string.s_cunchukongjian),
                             onClick = onNavigateToStorageSpace
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 72.dp),
-                            thickness = SettingsDimens.DividerThickness,
-                            color = MaterialTheme.colorScheme.outlineVariant
                         )
                         SettingsItem(
                             icon = Icons.Default.CloudDownload,
@@ -530,11 +510,6 @@ fun AboutContent(
                             onClick = onNavigateToUpdateSettings
                         )
                         if (devUnlocked) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 72.dp),
-                                thickness = SettingsDimens.DividerThickness,
-                                color = MaterialTheme.colorScheme.outlineVariant
-                            )
                             SettingsItem(
                                 icon = Icons.Default.Code,
                                 title = tr(R.string.s_kaifazhexuanxiang),
@@ -542,11 +517,6 @@ fun AboutContent(
                             )
                         }
                         if (BuildConfig.DEBUG) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 72.dp),
-                                thickness = SettingsDimens.DividerThickness,
-                                color = MaterialTheme.colorScheme.outlineVariant
-                            )
                             SettingsItem(
                                 icon = Icons.TwoTone.BugReport,
                                 title = tr(R.string.s_diaoshirizhi),
@@ -564,11 +534,6 @@ fun AboutContent(
                             )
                             // debug 包直接给出滑动轨迹入口，无需连点设备信息解锁；
                             // release 包仍走开发者选项彩蛋，普通用户看不到。
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 72.dp),
-                                thickness = SettingsDimens.DividerThickness,
-                                color = MaterialTheme.colorScheme.outlineVariant
-                            )
                             SettingsItem(
                                 icon = Icons.Default.CloudDownload,
                                 title = tr(R.string.s_huadongguijishuju),
