@@ -474,18 +474,19 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     /**
-     * 嵌入式底部工具条要求的最小留白高度（dp）。
+     * 显示底部工具按钮所需的「真实底部留白」下限（dp）。
      *
-     * 全面屏手势条留白一般 16~18dp，部分机型键盘展开后系统会回退到 8dp；
-     * 低于 12dp 时图标会压到按键下沿造成误触，此时宁可不显示。
+     * 键盘完全贴底（无系统导航栏/手势条留白）时按钮会叠到功能键上，挡住打字。
+     * 因此定一个标准：键盘底边到屏幕底边至少留出这么多真实空间才显示按钮，
+     * 不够就整块隐藏——宁可没有按钮，也不能挡键盘。
+     *
+     * 24dp 的取法：按钮直径按留白的 72% 自适应，24dp 时约 17dp，
+     * 是图标还能辨认、且不会压到下一行功能键的最小值。
      */
-    private val BOTTOM_BAR_MIN_SPACE_DP = 8
+    private val BOTTOM_BAR_MIN_GAP_DP = 24
 
     /** 底部工具条占用的留白带高度（dp）：实测全面屏手势下约 49dp，取 44 留余量。 */
     private val BOTTOM_BAR_BAND_DP = 44
-
-    /** 容器底部为系统手势条让出的高度（dp），避免图标与手势条重叠。 */
-    private val BOTTOM_BAR_GESTURE_GAP_DP = 20
 
     /** 底部工具条按钮动作分发。 */
     internal fun onBottomBarAction(action: com.kingzcheung.xime.settings.BottomBarAction) {
@@ -1890,9 +1891,13 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     state.toolPanelVisible ||
                     state.showQuickSendForm ||
                     keyboardViewModel.candidatePageExpanded.value
+                // 底部工具按钮的实际可用留白：贴底模式直接算 0。
+                // 只有真实留白达到 BOTTOM_BAR_MIN_GAP_DP 才显示，避免叠到功能键上。
+                val bottomBarGapDp = if (state.keyboardFlushBottom) 0 else bottomSpaceDp
                 val bottomBarNeeded = !state.isFloatingMode &&
                     !state.showKeyboardResize &&
                     !panelOrOverlayActive &&
+                    bottomBarGapDp >= BOTTOM_BAR_MIN_GAP_DP &&
                     SettingsPreferences.isBottomBarEnabled(this@XimeInputMethodService)
                 val activeBottomDp = if (state.keyboardFlushBottom) 0
                     else if (bottomSpaceDp == 0) minBottomDp else bottomSpaceDp
@@ -2251,11 +2256,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             }
                             // 底部工具条（嵌入式）：画在根 Box 的最后层，位于键盘内容之上，
                             // 只占用系统手势条/导航栏让出的留白，不改变键盘高度。
-                            if (bottomBarNeeded && activeBottomDp >= BOTTOM_BAR_MIN_SPACE_DP) {
-                                // 实测（1080x2400 全面屏手势）：按键区到 y≈2228、手势条在 2376~2384，
-                                // 中间 2228~2376 是一条约 49dp 的留白带。容器铺满这条带子，
-                                // 图标在其中垂直居中并左右分布——看起来才是「安在留白区里」。
-                                val bottomBarBandDp = BOTTOM_BAR_BAND_DP
+                            if (bottomBarNeeded) {
+                                // 高度严格取真实可用留白（不超过设计上限）：按钮永远落在留白里，
+                                // 不会上溢压到功能键。留白越大按钮越大，但上限 44dp。
+                                val bottomBarBandDp = bottomBarGapDp.coerceAtMost(BOTTOM_BAR_BAND_DP)
                                 com.kingzcheung.xime.ui.keyboard.BottomToolBar(
                                     left = com.kingzcheung.xime.settings.BottomBarAction.fromName(
                                         SettingsPreferences.bottomBarLeft(this@XimeInputMethodService)
@@ -2271,8 +2275,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(bottomBarBandDp.dp)
-                                        .align(androidx.compose.ui.Alignment.BottomCenter)
-                                        .padding(bottom = BOTTOM_BAR_GESTURE_GAP_DP.dp),
+                                        .align(androidx.compose.ui.Alignment.BottomCenter),
                                 )
                             }
                             // 悬浮拖到底部的停靠提示光：必须是根 Box 最后一个子级

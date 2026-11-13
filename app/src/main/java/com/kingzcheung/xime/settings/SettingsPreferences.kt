@@ -663,6 +663,16 @@ object SettingsPreferences {
         getPrefs(context).edit().putString(KEY_BOTTOM_BAR_RIGHT, action).apply()
     }
 
+    /** 顶部工具栏里「输入方案」按钮的位置（-1 = 末尾；用于单独拖动设置该按钮）。 */
+    const val KEY_MENU_SCHEMA_SLOT = "menu_schema_slot"
+
+    fun getMenuSchemaSlot(context: Context): Int =
+        getPrefs(context).getInt(KEY_MENU_SCHEMA_SLOT, -1)
+
+    fun setMenuSchemaSlot(context: Context, slot: Int) {
+        getPrefs(context).edit().putInt(KEY_MENU_SCHEMA_SLOT, slot).apply()
+    }
+
     /** 默认左「切换输入法」、右「剪贴板」。 */
     const val BOTTOM_BAR_DEFAULT_LEFT = "SWITCH_IME"
     const val BOTTOM_BAR_DEFAULT_RIGHT = "CLIPBOARD"

@@ -58,6 +58,9 @@ fun BottomToolBar(
     onCursorMove: (Int) -> Unit = {},
 ) {
     val stepPx = with(LocalDensity.current) { CURSOR_STEP_DP.dp.toPx() }
+    // 按钮与图标跟着留白高度缩放：留白小的时候按钮也要小，否则会压到功能键
+    val buttonSize = (barHeightDp * 0.72f).coerceIn(20f, 30f).dp
+    val iconSize = (buttonSize.value * 0.62f).coerceIn(12f, 19f).dp
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -65,7 +68,7 @@ fun BottomToolBar(
             .padding(horizontal = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BottomBarButton(left, tint, onAction)
+        BottomBarButton(left, tint, buttonSize, iconSize, onAction)
         // 中间留白即光标拖动区：只拦横向拖动，竖向手势继续交给系统
         Box(
             modifier = Modifier
@@ -90,7 +93,7 @@ fun BottomToolBar(
                     )
                 },
         )
-        BottomBarButton(right, tint, onAction)
+        BottomBarButton(right, tint, buttonSize, iconSize, onAction)
     }
 }
 
@@ -101,6 +104,8 @@ private const val CURSOR_STEP_DP = 26f
 private fun BottomBarButton(
     action: BottomBarAction,
     tint: Color,
+    buttonSize: androidx.compose.ui.unit.Dp,
+    iconSize: androidx.compose.ui.unit.Dp,
     onAction: (BottomBarAction) -> Unit,
 ) {
     val icon = iconOf(action) ?: return
@@ -108,7 +113,7 @@ private fun BottomBarButton(
     val pressed by interaction.collectIsPressedAsState()
     Box(
         modifier = Modifier
-            .size(30.dp)
+            .size(buttonSize)
             .clip(CircleShape)
             .background(if (pressed) tint.copy(alpha = 0.16f) else tint.copy(alpha = 0.07f))
             .clickable(
@@ -122,7 +127,7 @@ private fun BottomBarButton(
             imageVector = icon,
             contentDescription = action.name,
             tint = tint.copy(alpha = 0.85f),
-            modifier = Modifier.size(19.dp),
+            modifier = Modifier.size(iconSize),
         )
     }
 }
