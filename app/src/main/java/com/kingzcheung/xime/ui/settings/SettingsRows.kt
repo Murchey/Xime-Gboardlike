@@ -57,10 +57,12 @@ fun SettingsRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
+            // 图标用 Material 主色（浅色蓝、深色亮蓝），与 Android 系统设置一致
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = if (enabled) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
                 modifier = Modifier.size(SettingsDimens.IconSize),
             )
             Spacer(Modifier.width(SettingsDimens.IconGap))

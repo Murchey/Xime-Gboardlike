@@ -21,10 +21,14 @@ internal object SettingsDimens {
     val HeaderBottom = 8.dp
 }
 
-/** 页面底色：GKD 同款，直接用 colorScheme.background（设置行平铺其上，不再垫卡片）。 */
+/** 深色模式页面底色：Material 3 标准深色 surface(#1C1B1F)，不用主题调色后的偏色灰。 */
+private val SettingsDarkPageColor = androidx.compose.ui.graphics.Color(0xFF1C1B1F)
+
+/** 页面底色：浅色用主题 background；深色用 Android 标准灰，避免整屏发蓝/发紫。 */
 @androidx.compose.runtime.Composable
 internal fun settingsPageContainerColor() =
-    androidx.compose.material3.MaterialTheme.colorScheme.background
+    if (androidx.compose.foundation.isSystemInDarkTheme()) SettingsDarkPageColor
+    else androidx.compose.material3.MaterialTheme.colorScheme.background
 
 /** 分组标题内边距：上 18 / 下 6，和内容行拉开又贴紧自己的行（GKD 的 titleItemPadding 比例）。 */
 internal val SettingsGroupHeaderPadding = androidx.compose.foundation.layout.PaddingValues(
