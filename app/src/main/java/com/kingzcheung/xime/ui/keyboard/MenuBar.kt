@@ -61,7 +61,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -150,6 +152,8 @@ fun MenuBar(
     var draft by remember(state.toolbarButtons) { mutableStateOf(state.toolbarButtons) }
     // 顶部工具栏条的屏幕区域：编辑态卡片拖入该区域即加入工具栏（Gboard 拖动到顶部栏目）
     var toolbarStripBounds by remember { mutableStateOf(Rect.Zero) }
+    // 有卡片悬停在顶部栏目上方：栏目描边高亮，提示松手即入栏
+    var dropActive by remember { mutableStateOf(false) }
 
     val builtin = ToolbarButton.entries.filter {
         isBuiltinToolbarButtonAvailable(
@@ -217,6 +221,7 @@ fun MenuBar(
                 },
                 onSchemaList = { callbacks.onSchemaList() },
                 onStripBounds = { toolbarStripBounds = it },
+                dropHighlight = dropActive,
             )
 
             if (editing) {
@@ -228,6 +233,7 @@ fun MenuBar(
                     draft = draft,
                     onDraftChange = { draft = it },
                     toolbarStripBounds = toolbarStripBounds,
+                    onHoverStrip = { dropActive = it },
                     onDone = {
                         callbacks.onUpdateToolbarButtons(draft)
                         editing = false
@@ -262,6 +268,7 @@ private fun ToolbarStrip(
     onFinishEdit: () -> Unit,
     onSchemaList: () -> Unit,
     onStripBounds: (Rect) -> Unit = {},
+    dropHighlight: Boolean = false,
 ) {
     val positions = remember { mutableStateMapOf<Int, Offset>() }
     var dragSlot by remember { mutableStateOf(-1) }
@@ -272,9 +279,15 @@ private fun ToolbarStrip(
     val currentDraft by rememberUpdatedState(draft)
 
     Row(
-        Modifier.fillMaxWidth().height(52.dp).onGloballyPositioned { c ->
-            onStripBounds(c.boundsInRoot())
-        },
+        Modifier.fillMaxWidth().height(52.dp)
+            .then(
+                if (dropHighlight) {
+                    Modifier.border(1.5.dp, textColor.copy(alpha = .55f), RoundedCornerShape(26.dp))
+                } else Modifier
+            )
+            .onGloballyPositioned { c ->
+                onStripBounds(c.boundsInRoot())
+            },
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -297,6 +310,7 @@ private fun ToolbarStrip(
             ids.forEachIndexed { slot, id ->
                 val tool = allTools.firstOrNull { it.id == id } ?: return@forEachIndexed
                 if (editing) {
+                    val haptics = LocalHapticFeedback.current
                     Box(
                         Modifier
                             .padding(horizontal = 2.dp)
@@ -306,19 +320,30 @@ private fun ToolbarStrip(
                                 if (slot == dragSlot) {
                                     translationX = dragOffset.x
                                     translationY = dragOffset.y
-                                    scaleX = 1.15f
-                                    scaleY = 1.15f
-                                    val alpha = if (dragOffset.y > removeDropPx * 0.6f) 0.4f else 1f
-                                    this.alpha = alpha
+                                    // 长按即抬起：放大 + 投影，明确「已选中、正在拖动」
+                                    scaleX = 1.18f
+                                    scaleY = 1.18f
+                                    shadowElevation = 16f
+                                    shape = CircleShape
+                                    alpha = if (dragOffset.y > removeDropPx * 0.6f) 0.45f else 1f
                                 }
                             }
+                            .clip(CircleShape)
+                            .background(cardColor)
+                            .clickable { onDraftChange(draft - id) }
+                            // 拖动手势放在最内层，避免被 clickable 抢走按下事件导致长按不进拖动态
                             .pointerInput(tool.id) {
                                 detectDragGesturesAfterLongPress(
-                                    onDragStart = { dragSlot = slot; dragOffset = Offset.Zero },
+                                    onDragStart = {
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        dragSlot = slot
+                                        dragOffset = Offset.Zero
+                                    },
                                     onDrag = { change, amount ->
                                         change.consume()
                                         dragOffset += amount
-                                        val center = positions[dragSlot]?.plus(dragOffset) ?: return@detectDragGesturesAfterLongPress
+                                        val from = dragSlot
+                                        val base = positions[from] ?: return@detectDragGesturesAfterLongPress
                                         // 下拉出栏一定距离即移除（越界保护：草稿在手势中可能已变化）
                                         if (dragOffset.y > removeDropPx) {
                                             onDraftChange(currentDraft.filter { it != id })
@@ -326,30 +351,32 @@ private fun ToolbarStrip(
                                             dragOffset = Offset.Zero
                                             return@detectDragGesturesAfterLongPress
                                         }
+                                        val dragged = base + dragOffset
                                         var target = -1
                                         var best = Float.MAX_VALUE
                                         positions.forEach { (i, p) ->
-                                            if (i == dragSlot) return@forEach
-                                            val d = (p - center).getDistance()
+                                            if (i == from) return@forEach
+                                            val d = (p - dragged).getDistance()
                                             if (d < best) { best = d; target = i }
                                         }
-                                        if (target >= 0 && best < threshold &&
-                                            dragSlot in currentDraft.indices && target in currentDraft.indices
+                                        if (target >= 0 && best < threshold && from in currentDraft.indices &&
+                                            target in currentDraft.indices
                                         ) {
+                                            val toCenter = positions[target]
                                             val mutable = currentDraft.toMutableList()
-                                            val moved = mutable.removeAt(dragSlot)
+                                            val moved = mutable.removeAt(from)
                                             mutable.add(target, moved)
                                             onDraftChange(mutable)
+                                            // 关键：扣掉新旧槽位中心差，拖动中的图标留在手指下。
+                                            // 不补偿时每次交换后视觉位置跳走，手势只能再挪一格。
+                                            if (toCenter != null) dragOffset = adjustDragOffsetAfterSwap(dragOffset, base, toCenter)
                                             dragSlot = target
                                         }
                                     },
                                     onDragEnd = { dragSlot = -1; dragOffset = Offset.Zero },
                                     onDragCancel = { dragSlot = -1; dragOffset = Offset.Zero },
                                 )
-                            }
-                            .clip(CircleShape)
-                            .background(cardColor)
-                            .clickable { onDraftChange(draft - id) },
+                            },
                         contentAlignment = Alignment.Center,
                     ) {
                         ToolIcon(tool, textColor, 22.dp)
@@ -381,6 +408,7 @@ private fun ToolbarEditBody(
     draft: List<String>,
     onDraftChange: (List<String>) -> Unit,
     toolbarStripBounds: Rect,
+    onHoverStrip: (Boolean) -> Unit = {},
     onDone: () -> Unit,
 ) {
     // 拖动卡片叠加层状态：拖动时卡片跨越布局（不被滚动区裁剪）悬浮到顶部工具栏
@@ -429,6 +457,7 @@ private fun ToolbarEditBody(
                                     dragCenter = center
                                     dragTool = if (isDragging) tool else null
                                 },
+                                onHoverStrip = onHoverStrip,
                             )
                         }
                         if (rowTools.size == 1) Spacer(Modifier.weight(1f))
@@ -625,11 +654,14 @@ private fun DraggableToolCard(
     onTap: () -> Unit,
     onDragIntoToolbar: () -> Unit,
     onDragMove: (center: Offset, isDragging: Boolean) -> Unit = { _, _ -> },
+    onHoverStrip: (Boolean) -> Unit = {},
 ) {
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var dragging by remember { mutableStateOf(false) }
     var cardRootCenter by remember { mutableStateOf(Offset.Zero) }
     var added by remember { mutableStateOf(false) }
+    // 是否正悬停在顶部栏目上方：拖动中只做高亮预览，松手才真正入栏（磁贴手感）
+    var overStrip by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -665,23 +697,31 @@ private fun DraggableToolCard(
                         dragOffset += amount
                         val center = cardRootCenter + dragOffset
                         onDragMove(center, true)
-                        // 拖入顶部工具栏区域 → 入栏（Gboard：拖到顶部栏目）
-                        if (!added &&
-                            toolbarStripBounds != Rect.Zero &&
+                        // 只更新悬停高亮，不在此入栏：卡片继续跟手，松手才吸附
+                        val over = toolbarStripBounds != Rect.Zero &&
                             center.y <= toolbarStripBounds.bottom &&
                             center.x >= toolbarStripBounds.left &&
                             center.x <= toolbarStripBounds.right
-                        ) {
-                            added = true
-                            onDragIntoToolbar()
+                        if (over != overStrip) {
+                            overStrip = over
+                            onHoverStrip(over)
                         }
                     },
                     onDragEnd = {
+                        // 松手时才吸附：悬停在顶部栏目上方即入栏
+                        if (!added && overStrip) {
+                            added = true
+                            onDragIntoToolbar()
+                        }
+                        overStrip = false
+                        onHoverStrip(false)
                         dragging = false
                         dragOffset = Offset.Zero
                         onDragMove(Offset.Zero, false)
                     },
                     onDragCancel = {
+                        overStrip = false
+                        onHoverStrip(false)
                         dragging = false
                         dragOffset = Offset.Zero
                         onDragMove(Offset.Zero, false)
@@ -692,3 +732,17 @@ private fun DraggableToolCard(
         ToolCard(tool, textColor, cardColor, Modifier.fillMaxSize(), onClick = onTap)
     }
 }
+
+
+/**
+ * 交换两个槽位后修正拖动偏移，保证被拖图标仍停在手指下。
+ *
+ * 视觉位置 = 槽位中心 + 偏移。交换后槽位中心从 [fromCenter] 变成 [toCenter]，
+ * 若不补偿，图标会瞬间跳走，后续移动检测不到邻近槽位——
+ * 表现就是长按后「一次只能往前/往后挪一格」。
+ */
+internal fun adjustDragOffsetAfterSwap(
+    dragOffset: Offset,
+    fromCenter: Offset,
+    toCenter: Offset,
+): Offset = dragOffset - (toCenter - fromCenter)

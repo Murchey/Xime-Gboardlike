@@ -122,6 +122,21 @@ sealed interface SettingSpec {
         override val visibility: SettingVisibility? = null,
         override val enabledWhen: SettingVisibility? = null,
     ) : SettingSpec
+
+    /**
+     * 悬浮菜单单选行：点击行弹出悬浮 panel 选择，不在页面上平铺 chips。
+     *
+     * 选项较多（如底部工具条可绑定的功能）时用这种形态，列表更清爽。
+     */
+    data class Menu(
+        override val key: String,
+        override val titleRes: Int,
+        override val descriptionRes: Int? = null,
+        val default: String,
+        val options: List<ChoiceOption>,
+        override val visibility: SettingVisibility? = null,
+        override val enabledWhen: SettingVisibility? = null,
+    ) : SettingSpec
 }
 
 /** 声明对应的默认值。 */
@@ -131,8 +146,12 @@ fun SettingSpec.defaultValue(): SettingValue = when (this) {
     is SettingSpec.Choice -> SettingValue.Text(
         if (options.any { it.value == default }) default else options.first().value
     )
+    is SettingSpec.Menu -> SettingValue.Text(
+        if (options.any { it.value == default }) default else options.first().value
+    )
 }
 
+/** 从存储读取当前值；未设置时回落到声明默认值。 */
 /** 从存储读取当前值；未设置时回落到声明默认值。 */
 fun SettingSpec.read(store: SettingsStore): SettingValue = when (this) {
     is SettingSpec.Switch -> SettingValue.Flag(
@@ -140,6 +159,10 @@ fun SettingSpec.read(store: SettingsStore): SettingValue = when (this) {
     )
     is SettingSpec.Slider -> SettingValue.Number(coerce(store.number(key, coerce(default))))
     is SettingSpec.Choice -> SettingValue.Text(
+        store.text(key, default).takeIf { saved -> options.any { it.value == saved } }
+            ?: (defaultValue() as SettingValue.Text).value
+    )
+    is SettingSpec.Menu -> SettingValue.Text(
         store.text(key, default).takeIf { saved -> options.any { it.value == saved } }
             ?: (defaultValue() as SettingValue.Text).value
     )
@@ -157,6 +180,7 @@ fun SettingSpec.readRaw(store: SettingsStore): SettingValue = when (this) {
     }
     is SettingSpec.Slider -> SettingValue.Number(coerce(store.number(key, coerce(default))))
     is SettingSpec.Choice -> SettingValue.Text(store.text(key, default))
+    is SettingSpec.Menu -> SettingValue.Text(store.text(key, default))
 }
 
 /** 写入存储；滑杆值越界时收敛到声明范围。 */
@@ -169,6 +193,11 @@ fun SettingSpec.write(store: SettingsStore, value: SettingValue) {
         }
         is SettingSpec.Slider -> store.putNumber(key, coerce((value as SettingValue.Number).value))
         is SettingSpec.Choice -> {
+            val text = (value as SettingValue.Text).value
+            check(options.any { it.value == text }) { "unknown choice '$text' for $key" }
+            store.putText(key, text)
+        }
+        is SettingSpec.Menu -> {
             val text = (value as SettingValue.Text).value
             check(options.any { it.value == text }) { "unknown choice '$text' for $key" }
             store.putText(key, text)

@@ -19,12 +19,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.twotone.Straighten
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -65,6 +70,18 @@ fun LayoutDisplaySettingsContent(
     // 双拼开关的可见性依赖当前方案
     val layoutSpecsSchema = SettingsPreferences.getCurrentSchema(context)
 
+    // 滑动输入相关选项收进右侧抽屉，主列表只保留一个入口
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val drawerScope = rememberCoroutineScope()
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            GlideSettingsDrawer(
+                store = settingsStore,
+                onClose = { drawerScope.launch { drawerState.close() } },
+            )
+        },
+    ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
@@ -94,11 +111,54 @@ fun LayoutDisplaySettingsContent(
         ) {
             item {
                 SettingsSection(title = tr(R.string.s_jianpanbuju), content = {
+                    // 滑动输入：相关开关收纳进抽屉，避免主列表被长尾选项占满
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { drawerScope.launch { drawerState.open() } }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = tr(R.string.s_huadongshuru),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = tr(R.string.s_huadongshuru_fu),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 16.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
                     DeclarativeSettingItems(
                         specs = androidx.compose.runtime.remember(layoutSpecsSchema) {
                             LayoutDisplaySettingsSpecs.keyboardLayout(layoutSpecsSchema)
                         },
                         store = settingsStore,
+                        // 打开滑动输入时默认连带打开神经解码；之后仍可单独关闭神经解码
+                        linkedWrites = { spec, value ->
+                            if (spec.key == SettingsPreferences.KEY_GLIDE_TYPING &&
+                                value == SettingValue.Flag(true)
+                            ) {
+                                listOf(
+                                    SettingsPreferences.KEY_GLIDE_NEURAL to SettingValue.Flag(true)
+                                )
+                            } else {
+                                emptyList()
+                            }
+                        },
                     )
 
                     HorizontalDivider(
@@ -431,5 +491,47 @@ fun LayoutDisplaySettingsContent(
                 })
             }
         }
+    }
+    }
+}
+
+/** 滑动输入抽屉：滑动输入 / 神经解码 / 解码进度条三个开关集中在这里。 */
+@Composable
+private fun GlideSettingsDrawer(
+    store: com.kingzcheung.xime.settings.declarative.SettingsStore,
+    onClose: () -> Unit,
+) {
+    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = tr(R.string.s_huadongshuru),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onClose) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = tr(R.string.s_guanbi)
+                )
+            }
+        }
+        DeclarativeSettingItems(
+            specs = LayoutDisplaySettingsSpecs.glide(),
+            store = store,
+            // 打开滑动输入时默认连带打开神经解码；之后仍可单独关闭神经解码
+            linkedWrites = { spec, value ->
+                if (spec.key == SettingsPreferences.KEY_GLIDE_TYPING &&
+                    value == SettingValue.Flag(true)
+                ) {
+                    listOf(SettingsPreferences.KEY_GLIDE_NEURAL to SettingValue.Flag(true))
+                } else {
+                    emptyList()
+                }
+            },
+        )
     }
 }

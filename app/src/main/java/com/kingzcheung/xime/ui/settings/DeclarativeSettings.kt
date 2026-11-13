@@ -9,6 +9,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +58,11 @@ fun DeclarativeSettingItems(
     onChange: ((SettingSpec, SettingValue) -> Unit)? = null,
     /** 滑杆拖动结束回调（用于需要"松手才生效"的副作用，如重建 Schema）。 */
     onChangeFinished: ((SettingSpec, SettingValue) -> Unit)? = null,
+    /**
+     * 联动写入：提交某项时顺带写入其他键（如"打开滑动输入"同时打开"神经解码"）。
+     * 返回值会一并写进存储与本地快照，被联动的那一行界面立即刷新。
+     */
+    linkedWrites: ((SettingSpec, SettingValue) -> List<Pair<String, SettingValue>>)? = null,
 ) {
     val snapshot = remember(specs) {
         mutableStateMapOf<String, SettingValue>().apply {
@@ -58,6 +74,14 @@ fun DeclarativeSettingItems(
     val commit: (SettingSpec, SettingValue) -> Unit = { spec, value ->
         spec.write(store, value)
         snapshot[spec.key] = spec.readRaw(store)
+        linkedWrites?.invoke(spec, spec.read(store))?.forEach { (key, linked) ->
+            when (linked) {
+                is SettingValue.Flag -> store.putFlag(key, linked.value)
+                is SettingValue.Number -> store.putNumber(key, linked.value)
+                is SettingValue.Text -> store.putText(key, linked.value)
+            }
+            snapshot[key] = linked
+        }
         onChange?.invoke(spec, spec.read(store))
     }
 
@@ -95,6 +119,12 @@ fun DeclarativeSettingItems(
                     }
                 )
                 is SettingSpec.Choice -> ChoiceSettingRow(
+                    spec = spec,
+                    selected = localStore.text(spec.key, spec.default),
+                    enabled = enabled,
+                    onSelect = { commit(spec, SettingValue.Text(it)) }
+                )
+                is SettingSpec.Menu -> MenuSettingRow(
                     spec = spec,
                     selected = localStore.text(spec.key, spec.default),
                     enabled = enabled,
@@ -260,5 +290,76 @@ private class SnapshotSettingsStore(
 
     override fun putText(key: String, value: String) {
         values[key] = SettingValue.Text(value)
+    }
+}
+
+/**
+ * 悬浮菜单行：整行可点，点击后在行的锚点处弹出悬浮 panel 选择。
+ *
+ * 相比平铺 chips，选项多时列表更清爽；选中项左侧带勾。
+ */
+@Composable
+private fun MenuSettingRow(
+    spec: SettingSpec.Menu,
+    selected: String,
+    enabled: Boolean,
+    onSelect: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val current = spec.options.firstOrNull { it.value == selected } ?: spec.options.first()
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = enabled) { expanded = true }
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = tr(spec.titleRes),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                spec.descriptionRes?.let {
+                    Text(
+                        text = tr(it),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Text(
+                text = tr(current.labelRes),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.Filled.KeyboardArrowDown,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            spec.options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(tr(option.labelRes)) },
+                    leadingIcon = {
+                        if (option.value == selected) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    },
+                    onClick = {
+                        onSelect(option.value)
+                        expanded = false
+                    },
+                )
+            }
+        }
     }
 }

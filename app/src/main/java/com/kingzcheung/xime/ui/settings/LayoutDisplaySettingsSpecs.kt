@@ -29,13 +29,13 @@ object LayoutDisplaySettingsSpecs {
         ChoiceOption(BottomBarAction.NONE.name, R.string.s_bb_none),
     )
 
-    /** 键盘布局段的纯开关项（按原页面顺序）。 */
-    fun keyboardLayout(currentSchema: String): List<SettingSpec> = listOf(
+    /** 滑动输入相关的开关（收纳在设置页的滑动输入抽屉里）。 */
+    fun glide(): List<SettingSpec> = listOf(
         SettingSpec.Switch(
             key = SettingsPreferences.KEY_GLIDE_TYPING,
             titleRes = R.string.s_huadongshuru,
             descriptionRes = R.string.s_huadongshuru_fu,
-            default = false,
+            default = true,
         ),
         SettingSpec.Switch(
             key = SettingsPreferences.KEY_GLIDE_NEURAL,
@@ -49,20 +49,24 @@ object LayoutDisplaySettingsSpecs {
             descriptionRes = R.string.s_huadongjindutiao_fu,
             default = true,
         ),
+    )
+
+    /** 键盘布局段的纯开关项（按原页面顺序）。 */
+    fun keyboardLayout(currentSchema: String): List<SettingSpec> = listOf(
         SettingSpec.Switch(
             key = SettingsPreferences.KEY_BOTTOM_BAR_ENABLED,
             titleRes = R.string.s_dibugongjulan,
             descriptionRes = R.string.s_dibugongjulan_fu,
             default = false,
         ),
-        SettingSpec.Choice(
+        SettingSpec.Menu(
             key = SettingsPreferences.KEY_BOTTOM_BAR_LEFT,
             titleRes = R.string.s_dibugongjulan_zuo,
             default = BottomBarAction.SWITCH_IME.name,
             options = bottomBarOptions(),
             visibility = SettingVisibility.Flag(SettingsPreferences.KEY_BOTTOM_BAR_ENABLED, true),
         ),
-        SettingSpec.Choice(
+        SettingSpec.Menu(
             key = SettingsPreferences.KEY_BOTTOM_BAR_RIGHT,
             titleRes = R.string.s_dibugongjulan_you,
             default = BottomBarAction.CLIPBOARD.name,

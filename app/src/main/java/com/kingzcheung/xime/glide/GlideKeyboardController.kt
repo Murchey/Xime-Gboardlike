@@ -399,10 +399,11 @@ class GlideKeyboardController(
     fun allowFallbackClick(): Boolean = arbiter.allowFallbackClick()
 
     /**
-     * 先尝试神经假设，失败/为空时回退几何解码。
+     * 先算几何假设；只有「超过三个字」的长词才追加神经解码（失败/为空时仍用几何）。
      *
-     * 预览（final=false）仍走几何，避免每 100ms 都跑一次模型；
-     * 抬手后的最终解码才用神经。
+     * - 预览（final=false）只走几何，避免每 100ms 都跑一次模型；
+     * - 短词几何解码已足够准确，跑模型只是徒增延迟，故按音节数分流；
+     * - 长词以神经结果替换几何结果，回退逻辑保持不变。
      */
     private fun hypothesesFor(
         points: List<GlidePoint>,
@@ -411,13 +412,15 @@ class GlideKeyboardController(
         densityDpi: Float,
         allowNeural: Boolean,
     ): List<GlideGeometryDecoder.Hypothesis> {
-        if (allowNeural) {
-            val neural = runCatching {
-                neuralProvider?.hypotheses(points, geometry, NEURAL_HYPOTHESES, spellings, densityDpi)
-            }.getOrNull()
-            if (!neural.isNullOrEmpty()) return neural
-        }
-        return GlideGeometryDecoder.decode(points, geometry, GLIDE_HYPOTHESES, spellings, densityDpi)
+        val geometric = GlideGeometryDecoder.decode(
+            points, geometry, GLIDE_HYPOTHESES, spellings, densityDpi
+        )
+        if (!allowNeural) return geometric
+        if (!shouldRunNeuralFor(geometric)) return geometric
+        val neural = runCatching {
+            neuralProvider?.hypotheses(points, geometry, NEURAL_HYPOTHESES, spellings, densityDpi)
+        }.getOrNull()
+        return if (!neural.isNullOrEmpty()) neural else geometric
     }
 
     private companion object {
@@ -467,4 +470,35 @@ class GlideKeyboardController(
         activeGeometry = null
         glideSessionStarted = false
     }
+}
+
+
+/**
+ * 估算拼音串的音节数（约等于汉字数）：统计连续元音组的段数。
+ *
+ * 例：nihao -> 2、zhongguo -> 2、jintiantianqi -> 5。
+ * 只用于「短词走几何、长词才跑神经」的分流判断，不要求严格切分。
+ */
+internal fun glideSyllableCount(letters: String): Int {
+    val vowels = "aeiouv"
+    var count = 0
+    var inVowel = false
+    for (ch in letters.lowercase()) {
+        val isVowel = ch in vowels
+        if (isVowel && !inVowel) count++
+        inVowel = isVowel
+    }
+    return count
+}
+
+
+/**
+ * 是否值得为这次滑动跑神经解码：只有「超过三个字」的长词才跑。
+ *
+ * 短词几何解码已足够准，跑模型只会增加上屏延迟。
+ */
+internal fun shouldRunNeuralFor(hypotheses: List<GlideGeometryDecoder.Hypothesis>): Boolean {
+    val letters = hypotheses.firstOrNull()?.letters.orEmpty()
+    return glideSyllableCount(letters) >=
+        com.kingzcheung.xime.settings.SettingsPreferences.GLIDE_NEURAL_MIN_SYLLABLES
 }

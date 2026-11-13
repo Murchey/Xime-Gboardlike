@@ -73,6 +73,8 @@ class XimeApplication : Application(), ImageLoaderFactory {
             override fun onLowMemory() = Unit
         })
 
+        // 安装/升级后一次性把滑动输入与神经解码置为开启（版本号标记，只跑一次）
+        SettingsPreferences.applyGlideDefaultsIfNeeded(this)
         FileLogger.init(this)
         KeyTapLogger.init(this)
         KeyTapLogger.enabled = SettingsPreferences.isKeyTapLogEnabled(this)

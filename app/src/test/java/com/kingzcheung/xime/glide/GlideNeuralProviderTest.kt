@@ -66,30 +66,51 @@ class GlideNeuralProviderTest {
         }
     }
 
-    @Test
-    fun neuralProviderWins() {
-        val lookup = Lookup()
-        val provider = object : GlideHypothesisProvider {
-            override fun hypotheses(
-                points: List<GlidePoint>,
-                geometry: GlideGeometrySnapshot,
-                limit: Int,
-                spellings: Collection<String>?,
-                densityDpi: Float,
-            ): List<GlideGeometryDecoder.Hypothesis> =
-                listOf(GlideGeometryDecoder.Hypothesis("nihao", 0f, GlideHypothesisOrigin.NEURAL))
+    /** 记录是否被调用：用于验证短词根本不会触发模型推理。 */
+    private class RecordingProvider : GlideHypothesisProvider {
+        var called = false
+        override fun hypotheses(
+            points: List<GlidePoint>,
+            geometry: GlideGeometrySnapshot,
+            limit: Int,
+            spellings: Collection<String>?,
+            densityDpi: Float,
+        ): List<GlideGeometryDecoder.Hypothesis> {
+            called = true
+            return listOf(GlideGeometryDecoder.Hypothesis("nihao", 0f, GlideHypothesisOrigin.NEURAL))
         }
+    }
+
+    @Test
+    fun neuralUsedForLongWord() {
+        val lookup = Lookup()
+        val provider = RecordingProvider()
         val controller = GlideKeyboardController(
             registry(), GlideCoordinator(lookup, Committer()),
             glideEnabled = { true }, neuralProvider = provider,
         )
-        swipe(controller, "qwert")
+        // 超过三个字的长词才走神经解码
+        swipe(controller, "jintiantianqi")
         val up = controller.onUp(1, host)
         assertTrue(up is GlideKeyboardController.UpResult.Candidates)
+        assertTrue("长词应当调用神经解码", provider.called)
         assertEquals("nihao", lookup.input)
         assertTrue((up as GlideKeyboardController.UpResult.Candidates).outcome
             is GlideCoordinator.Outcome.ShowCandidates)
     }
+
+    @Test
+    fun shortWordSkipsNeural() {
+        // 短词直接几何解码，不跑模型（按音节数分流，不依赖具体轨迹解码结果）
+        assertTrue(!shouldRunNeuralFor(listOf(hypothesis("nihao"))))
+        assertTrue(!shouldRunNeuralFor(listOf(hypothesis("jintiantian"))))
+        assertTrue(shouldRunNeuralFor(listOf(hypothesis("jintiantianqi"))))
+        // 没有任何几何假设时也不跑模型（跑了也没得比）
+        assertTrue(!shouldRunNeuralFor(emptyList()))
+    }
+
+    private fun hypothesis(letters: String) =
+        GlideGeometryDecoder.Hypothesis(letters, 0f, GlideHypothesisOrigin.GEOMETRY)
 
     @Test
     fun fallsBackToGeometry() {

@@ -460,6 +460,12 @@ object SettingsPreferences {
     const val KEY_GLIDE_NEURAL = "glide_neural"
     /** 滑动解码 loading 条（默认开启）：抬手到结果确定前在候选栏顶缘滚动。 */
     const val KEY_GLIDE_LOADING_BAR = "glide_loading_bar"
+    /** 滑动默认项迁移版本：升到新版本时把滑动输入与神经解码各开启一次。 */
+    const val KEY_GLIDE_DEFAULTS_VERSION = "glide_defaults_version"
+    private const val GLIDE_DEFAULTS_VERSION = 1
+
+    /** 神经解码只用于超过该字数的滑动（短词几何解码已足够，跑模型反而慢）。 */
+    const val GLIDE_NEURAL_MIN_SYLLABLES = 4
 
     /** 键盘底部工具条（默认关闭）：手势条上方的空白区左右各放一个功能按钮。 */
     const val KEY_BOTTOM_BAR_ENABLED = "bottom_bar_enabled"
@@ -585,12 +591,18 @@ object SettingsPreferences {
         getPrefs(context).edit().putBoolean(KEY_CANDIDATE_DIVIDER, show).apply()
     }
 
-    /** 滑动输入：默认关闭。开启后 26 键中文区域的拖动由 glide 接管。 */
+    /** 滑动输入：默认开启。开启后 26 键中文区域的拖动由 glide 接管。 */
     fun isGlideTypingEnabled(context: Context): Boolean =
-        getPrefs(context).getBoolean(KEY_GLIDE_TYPING, false)
+        getPrefs(context).getBoolean(KEY_GLIDE_TYPING, true)
 
+    /**
+     * 开启滑动输入时一并打开神经解码（默认配套）；
+     * 两者不强制绑定——神经解码可以单独关闭，关闭它不影响滑动输入本身。
+     */
     fun setGlideTypingEnabled(context: Context, enabled: Boolean) {
-        getPrefs(context).edit().putBoolean(KEY_GLIDE_TYPING, enabled).apply()
+        val editor = getPrefs(context).edit().putBoolean(KEY_GLIDE_TYPING, enabled)
+        if (enabled) editor.putBoolean(KEY_GLIDE_NEURAL, true)
+        editor.apply()
     }
 
     fun isGlideTrailVisible(context: Context): Boolean =
@@ -598,6 +610,21 @@ object SettingsPreferences {
 
     fun setGlideTrailVisible(context: Context, visible: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_GLIDE_SHOW_TRAIL, visible).apply()
+    }
+
+    /**
+     * 滑动输入默认项迁移：安装/升级后执行一次，把「滑动输入」与「神经滑动解码」都置为开启。
+     *
+     * 用版本号标记保证只跑一次，之后完全尊重用户的开关选择。
+     */
+    fun applyGlideDefaultsIfNeeded(context: Context) {
+        val prefs = getPrefs(context)
+        if (prefs.getInt(KEY_GLIDE_DEFAULTS_VERSION, 0) >= GLIDE_DEFAULTS_VERSION) return
+        prefs.edit()
+            .putBoolean(KEY_GLIDE_TYPING, true)
+            .putBoolean(KEY_GLIDE_NEURAL, true)
+            .putInt(KEY_GLIDE_DEFAULTS_VERSION, GLIDE_DEFAULTS_VERSION)
+            .apply()
     }
 
     fun isGlideNeuralEnabled(context: Context): Boolean =
