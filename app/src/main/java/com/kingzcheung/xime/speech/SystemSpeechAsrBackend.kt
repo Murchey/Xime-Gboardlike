@@ -121,7 +121,6 @@ class SystemSpeechAsrBackend(private val context: Context) : AsrBackend {
         putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
         putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         putExtra(RecognizerIntent.EXTRA_LANGUAGE, RECOGNITION_LANGUAGE)
-        putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
     }
 
     private val listener = object : RecognitionListener {
