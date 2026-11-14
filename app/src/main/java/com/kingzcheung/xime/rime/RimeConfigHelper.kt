@@ -778,22 +778,40 @@ object RimeConfigHelper {
             f.isFile && (f.name.endsWith(".schema.yaml") || f.name.endsWith(".dict.yaml"))
         } ?: return 0
         for (file in candidates) {
-            val rel = file.name
-            // 仍是内置资产 → 由 updateBuiltinAssets 负责，不在此删
-            if (builtin.contains(rel)) continue
-            val pkg = BuiltinPackages.packageFor(rel)
-            // 非内置包（第三方方案）或该包已被用户卸载 → 不碰
-            if (pkg !in builtinPackagesOf(builtin) || pkg in disabled) continue
+            if (!shouldRemoveObsoleteBuiltinFile(file.name, builtin, disabled)) continue
             if (file.delete()) {
                 removed++
-                FileLogger.w(TAG, "Removed obsolete builtin asset: $rel")
+                FileLogger.w(TAG, "Removed obsolete builtin asset: " + file.name)
             }
         }
         return removed
     }
 
-
     /**
+     * 该文件是否属于"已下架的内置方案残留"，可以删（纯函数，便于单测）。
+     *
+     * 关键：第三方方案（万象、雾凇……）都以文件名散落在 rime 根目录，
+     * BuiltinPackages.packageFor 对未知文件兜底返回 SHARED，而 SHARED 本身也是
+     * 内置包之一——早期版本因此把用户装的所有 .schema.yaml / .dict.yaml 当成
+     * "下架内置残留"删掉，方案随即消失，只剩英文直出、空格键显示 Space。
+     */
+    internal fun shouldRemoveObsoleteBuiltinFile(
+        relPath: String,
+        builtinAssets: Set<String>,
+        disabledPackages: Set<String>,
+    ): Boolean {
+        if (builtinAssets.isEmpty()) return false
+        if (relPath in builtinAssets) return false
+        val pkg = BuiltinPackages.packageFor(relPath)
+        // SHARED 是"未知文件"的兜底：用户装的第三方方案全落在这一档，绝不能删
+        if (pkg == BuiltinPackages.SHARED) return false
+        // 该内置包已整体下架或用户主动卸载 → 不碰
+        if (builtinAssets.none { BuiltinPackages.packageFor(it) == pkg }) return false
+        if (pkg in disabledPackages) return false
+        return true
+    }
+
+/**
      * 从用户 `default.custom.yaml` 的 schema_list 移除方案文件已不存在的条目。
      *
      * 运行时 [SchemaManager.getEnabledSchemas] 本就会按 `available()` 过滤，
@@ -827,13 +845,39 @@ object RimeConfigHelper {
                 kept += line
             }
             if (dropped > 0) {
-                file.writeText(kept.joinToString(sep))
+                // 全被剪空：补回仍可用的内置方案，否则 librime 没有方案可用，
+                // 键盘会退化成英文直出、空格键显示 Space
+                val fallback = SchemaManager.BUILTIN_SCHEMAS.filter {
+                    File(targetDir, it + ".schema.yaml").isFile
+                }
+                val refilled = refillSchemaListLines(kept, sep, fallback)
+                if (refilled.size != kept.size) {
+                    Log.w(TAG, "schema_list emptied by prune, refill with " + fallback.size + " builtin schema(s)")
+                }
+                file.writeText(refilled.joinToString(sep))
                 Log.i(TAG, "Pruned $dropped unavailable schema(s) from ${file.name}")
             }
         } catch (e: Exception) {
             FileLogger.w(TAG, "Failed to prune unavailable schemas: ${e.message}")
         }
     }
+    /**
+     * schema_list 被剪空时的兜底（纯函数）：
+     * 若列表里已没有任何 `- schema:` 条目，就用 [fallbackIds] 补回去。
+     *
+     * 补的理由：librime 没有方案可用时不会报错，而是把键盘退化成英文直出，
+     * 空格键显示 Space——用户看到的就是"键盘像没部署方案一样"。
+     */
+    internal fun refillSchemaListLines(
+        kept: List<String>,
+        sep: String,
+        fallbackIds: List<String>,
+    ): List<String> {
+        if (fallbackIds.isEmpty()) return kept
+        if (kept.any { it.trim().startsWith("- schema:") }) return kept
+        return kept + ("    - schema: " + fallbackIds.joinToString(sep + "    - schema: "))
+    }
+
     /** 当前 assets 清单里实际存在文件的内置包集合。 */
     private fun builtinPackagesOf(builtin: Set<String>): Set<String> =
         builtin.mapTo(mutableSetOf()) { BuiltinPackages.packageFor(it) }

@@ -234,7 +234,7 @@ object SchemaManager {
                         zip.entries().asSequence().forEach { entry ->
                             val originalName = entry.name
                             if (entry.isDirectory || isAppleDouble(originalName)) return@forEach
-                            val name = originalName.removePrefix(baseDir)
+                            val name = normalizeImportedEntry(originalName.removePrefix(baseDir))
                             if (isProtectedImportName(name)) return@forEach
                             val hash = zip.getInputStream(entry).use { streamSha256(it) }
                             result[name] = hash
@@ -265,7 +265,7 @@ object SchemaManager {
                                     entry = tarIn.nextEntry
                                     continue
                                 }
-                                val name = originalName.removePrefix(baseDir)
+                                val name = normalizeImportedEntry(originalName.removePrefix(baseDir))
                                 if (isProtectedImportName(name)) {
                                     entry = tarIn.nextEntry
                                     continue
@@ -415,13 +415,19 @@ object SchemaManager {
                 SettingsPreferences.addInstalledMarketId(context, packageId)
             }
 
-            // 至少启用一个新方案，避免 RimeEngine 因 schema_list 为空而挂起。
+            // 启用本包带来的所有新方案（不是只挑第一个）：
+            // 万象/雾凇这类包一次带多个 schema，只启用首个会让用户以为"方案没加载全"。
             // 更新已安装方案时（switchEnabled=false）不强制切换启用列表，保留用户现有方案。
-            val firstSchema = newIds.firstOrNull()
-                ?: targetFiles.firstOrNull { it.endsWith(".schema.yaml") }
-                    ?.removeSuffix(".schema.yaml")
-            if (firstSchema != null && switchEnabled) {
-                setEnabledSchemas(context, listOf(firstSchema))
+            val importedSchemaIds = if (newIds.isNotEmpty()) {
+                newIds
+            } else {
+                targetFiles
+                    .filter { it.endsWith(".schema.yaml") }
+                    .map { it.removeSuffix(".schema.yaml") }
+            }
+            val firstSchema = importedSchemaIds.firstOrNull()
+            if (switchEnabled && importedSchemaIds.isNotEmpty()) {
+                setEnabledSchemas(context, mergeEnabledSchemas(getEnabledSchemas(context), importedSchemaIds))
             }
 
             FileLogger.i(TAG, "installPackageFromMarketDir: success for $packageId, firstSchema=$firstSchema")
@@ -946,6 +952,10 @@ object SchemaManager {
     internal fun builtinSchemasForRestore(availableSchemaIds: Set<String>): List<String> =
         BUILTIN_SCHEMAS.filter { it in availableSchemaIds }
 
+    /** 把新装的方案追加到现有启用列表（纯函数，保序去重）。 */
+    internal fun mergeEnabledSchemas(current: List<String>, imported: List<String>): List<String> =
+        (current + imported).distinct()
+
     internal fun mergeBuiltinSchemas(enabled: List<String>): List<String> {
         val missing = BUILTIN_SCHEMAS.filter { it !in enabled }
         return if (missing.isEmpty()) enabled else enabled + missing
@@ -1376,7 +1386,7 @@ object SchemaManager {
                     var entry = zis.nextEntry
                     while (entry != null) {
                         val originalName = entry.name
-                        val name = originalName.removePrefix(baseDir)
+                        val name = normalizeImportedEntry(originalName.removePrefix(baseDir))
                         if (!entry.isDirectory && !isAppleDouble(originalName) && !isProtectedImportName(name)) {
                             val file = safeChild(targetDir, name)
                             if (file == null) {
@@ -1627,7 +1637,7 @@ object SchemaManager {
                 zip.entries().asSequence().forEach { entry ->
                     val originalName = entry.name
                     if (entry.isDirectory || isAppleDouble(originalName)) return@forEach
-                    val name = originalName.removePrefix(baseDir)
+                    val name = normalizeImportedEntry(originalName.removePrefix(baseDir))
                     val file = if (isProtectedImportName(name)) null else safeChild(targetDir, name)
                     if (file == null) {
                         FileLogger.d(TAG, "Skip protected/unsafe entry: $name")
@@ -1647,6 +1657,23 @@ object SchemaManager {
             FileLogger.e(TAG, "Failed to extract zip file", e)
             false
         }
+    }
+
+    /**
+     * 归档条目路径归一化。
+     *
+     * 万象等方案把补丁放在 `custom/xxx.custom.yaml`，按方案说明需要手动拷到用户根目录；
+     * Rime 只认根目录下的 `*.custom.yaml`，放在 custom/ 子目录里等于没生效
+     * （双拼、模糊音、候选数这些 patch 全部丢失）。这里统一把 custom/ 下的补丁提升到根。
+     */
+    internal fun normalizeImportedEntry(name: String): String {
+        val path = name.removePrefix("./").replace('\\', '/')
+        if (path.startsWith("custom/") && path.endsWith(".custom.yaml") &&
+            path.count { it == '/' } == 1
+        ) {
+            return path.removePrefix("custom/")
+        }
+        return path
     }
 
     internal fun importTarGzFromStream(inputStream: InputStream, targetDir: File): Boolean {
@@ -1694,7 +1721,7 @@ object SchemaManager {
                         entry = tarIn.nextEntry
                         continue
                     }
-                    val name = originalName.removePrefix(baseDir)
+                    val name = normalizeImportedEntry(originalName.removePrefix(baseDir))
                     val file = if (isProtectedImportName(name)) null else safeChild(targetDir, name)
                     if (file == null) {
                     } else {
