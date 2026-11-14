@@ -53,6 +53,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,6 +61,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import com.kingzcheung.xime.ui.keyboard.LocalStretchFactor
 import androidx.compose.ui.text.font.FontWeight
@@ -1861,6 +1864,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 val floatingDragBarHeight = if (state.isFloatingMode) FloatingCardGeometry.DRAG_BAR_HEIGHT_DP else 0
 
                 val density = LocalDensity.current
+                // 实测：根容器底边与键面底边（px，窗口内坐标），用于算底部可用空白
+                var keyboardRootBottomPx by remember { mutableStateOf(0) }
+                var keyboardContentBottomPx by remember { mutableStateOf(0) }
                 // 统一使用 View 层多类型检测的 insets，避免 Compose
                 // navigationBars 恒为手势条高度导致与系统栏（三键导航）差异被抹平。
                 val activeBottomPx = bottomInsetPxState.value
@@ -1893,14 +1899,25 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     keyboardViewModel.candidatePageExpanded.value
                 // 底部工具按钮的实际可用留白：贴底模式直接算 0。
                 // 只有真实留白达到 BOTTOM_BAR_MIN_GAP_DP 才显示，避免叠到功能键上。
-                val bottomBarGapDp = if (state.keyboardFlushBottom) 0 else bottomSpaceDp
+                // 底部可用空白：优先用"实测值"（根容器底 - 键面底），
+                // 因为系统给 IME 窗口的高度常常比我们算的 totalDp 多出一条导航栏，
+                // 用公式估会少算（手势导航下甚至只剩 8dp），工具条因此被判为没地方放而永久隐藏。
+                val activeBottomDp = if (state.keyboardFlushBottom) 0
+                    else if (bottomSpaceDp == 0) minBottomDp else bottomSpaceDp
+                val measuredBottomGapDp = with(density) {
+                    (keyboardRootBottomPx - keyboardContentBottomPx).coerceAtLeast(0).toDp().value.toInt()
+                }
+                // 留白 = 键面下留白（设置项）+ 导航栏让位，再与实测值取大：
+                // 实测只覆盖"内容盒下方"那一条，盒内的 keyBottomPadding 量不到，
+                // 只信实测会在手势导航下得到 8dp → 工具条永不显示。
+                val reservedBottomDp = state.keyboardBottomPaddingDp + activeBottomDp
+                val bottomBarGapDp = if (state.keyboardFlushBottom) 0
+                else maxOf(measuredBottomGapDp, reservedBottomDp)
                 val bottomBarNeeded = !state.isFloatingMode &&
                     !state.showKeyboardResize &&
                     !panelOrOverlayActive &&
                     bottomBarGapDp >= BOTTOM_BAR_MIN_GAP_DP &&
                     SettingsPreferences.isBottomBarEnabled(this@XimeInputMethodService)
-                val activeBottomDp = if (state.keyboardFlushBottom) 0
-                    else if (bottomSpaceDp == 0) minBottomDp else bottomSpaceDp
                 val navBarDp = activeBottomDp.dp
                 val hasNavBar = navBarDp > 0.dp
                 // 左右边衬区：手机上键盘内容（候选栏 logo/收起按钮与按键区）避让挖孔/横屏导航栏；
@@ -1967,7 +1984,13 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 }
 
                 XimeTheme(darkTheme = isDarkTheme, themeId = state.themeId) {
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .onGloballyPositioned { c ->
+                                keyboardRootBottomPx = c.boundsInRoot().bottom.toInt()
+                            },
+                    ) {
                         // Sync FrameLayout height with Compose content height
                         val contentHeight = if (state.showKeyboardResize) state.resizePreviewHeightDp else floatingCardContentHeight + overlayPanelExtra
                         val totalDp = if (state.isCompact || state.isFloatingMode) effectiveScreenH
@@ -2048,6 +2071,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                 .height(if (state.showKeyboardResize) (state.resizePreviewHeightDp + state.keyboardBottomPaddingDp).dp else (floatingCardContentHeight + state.keyboardBottomPaddingDp + overlayPanelExtra).dp)
                                 .align(androidx.compose.ui.Alignment.BottomCenter)
                                 .then(if (state.isFloatingMode) Modifier else Modifier.offset(y = (-activeBottomDp).dp))
+                                .onGloballyPositioned { c ->
+                                    keyboardContentBottomPx = c.boundsInRoot().bottom.toInt()
+                                }
                                 .then(
                                     // 手机：键盘内容整体避入左右边衬区（挖孔/横屏导航栏）；平板不避让。
                                     // 宽度调节的左右边距两种设备都生效（边距为 0 时与原行为一致）
