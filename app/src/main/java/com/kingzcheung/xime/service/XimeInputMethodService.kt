@@ -1009,10 +1009,16 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         // 因此改为：配置已加载过（进程内缓存命中）就直接复用，不再重复同步解析；
         // 首次加载才同步一次，并且只解析一次。
         if (!KeysConfigHelper.isConfigLoaded()) {
+            val configStartAt = android.os.SystemClock.elapsedRealtime()
             runBlocking(Dispatchers.IO) {
                 KeysConfigHelper.loadConfig(this@XimeInputMethodService)
             }
             KeysConfigHelper.markConfigLoaded()
+            // 冷启动性能基线：超过 100ms 说明配置解析/资产读取又想主线程要时间了
+            val configCost = android.os.SystemClock.elapsedRealtime() - configStartAt
+            if (configCost > 100L) {
+                FileLogger.w(TAG, "initRimeEngine: keys config load blocked main thread " + configCost + "ms")
+            }
         }
 
         // 引擎异步就绪前先以持久化方案填充 UI 状态：键盘首帧事件链（InputSessionStarted/
@@ -3546,7 +3552,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     private fun commitTextAndPredict(text: String, isPaste: Boolean) {
         commitTextSilently(text, isPaste)
-        if (isChineseMode) {
+        // 空串上屏不改变上下文，跳过本轮推理。空格/标点仍要进入：预测入口会判定
+        // 上下文无效并清空候选栏（见 PredictionManager.isValidPredictionContext）。
+        if (isChineseMode && text.isNotEmpty()) {
             mainHandler.post {
                 if (!uiState.value.isAsciiMode) {
                     getPredictionFromPlugin(predictionManager.lastCommittedText)

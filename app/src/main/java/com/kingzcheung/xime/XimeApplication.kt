@@ -52,6 +52,16 @@ class XimeApplication : Application(), ImageLoaderFactory {
         @Volatile
         internal var instance: XimeApplication? = null
             private set
+
+        /**
+         * 该进程是否有权预初始化 Rime 引擎：只有主进程能碰 userdb。
+         *
+         * `:inference` / `:asr` 等子进程同样会走 onCreate，子进程抢不到主进程持有的
+         * LevelDB 锁，librime 随即 RepairDB 把正在写的 log 归档进 lost/，自造词与调频
+         * 每次重启都丢（upstream: 137427c7）。
+         */
+        internal fun shouldPreInitializeRime(processName: String?, packageName: String): Boolean =
+            processName == packageName
     }
     
     private val applicationScope = CoroutineScope(Dispatchers.IO)
@@ -180,6 +190,9 @@ class XimeApplication : Application(), ImageLoaderFactory {
     }
     
     private fun preInitializeRimeEngine() {
+        if (!shouldPreInitializeRime(getProcessName(), packageName)) {
+            return
+        }
         if (RimeEngine.isInitialized()) {
             return
         }
