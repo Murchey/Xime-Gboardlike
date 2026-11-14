@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -58,13 +59,17 @@ fun BottomToolBar(
     onCursorMove: (Int) -> Unit = {},
 ) {
     val stepPx = with(LocalDensity.current) { CURSOR_STEP_DP.dp.toPx() }
-    // 按钮与图标跟着留白高度缩放：留白小的时候按钮也要小，否则会压到功能键
-    val buttonSize = (barHeightDp * 0.72f).coerceIn(20f, 30f).dp
-    val iconSize = (buttonSize.value * 0.62f).coerceIn(12f, 19f).dp
+    // 图标跟着留白高度缩放：留白小的时候图标也要小，否则会压到功能键
+    val iconSize = (barHeightDp * 0.68f).coerceIn(26f, 34f).dp
+    // 可点区域比图标大一圈，保证好按
+    val buttonSize = (iconSize.value + 12f).coerceAtMost(44f).dp
     Row(
         modifier = modifier
             .fillMaxWidth()
             .fillMaxHeight()
+            // 光学居中：图标墨迹比图标框略低，且留白底部还有键盘内部的几 dp 间隙，
+            // 直接几何居中会显得偏下，整体上移留白高度的一小部分才在留白里"看"居中。
+            .offset(y = (-barHeightDp * 0.12f).dp)
             .padding(horizontal = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -114,8 +119,8 @@ private fun BottomBarButton(
     Box(
         modifier = Modifier
             .size(buttonSize)
-            .clip(CircleShape)
-            .background(if (pressed) tint.copy(alpha = 0.16f) else tint.copy(alpha = 0.07f))
+            // 底色透明：图标直接落在键盘留白上，按压时才出现很淡的一层反馈
+            .background(if (pressed) tint.copy(alpha = 0.12f) else Color.Transparent, CircleShape)
             .clickable(
                 interactionSource = interaction,
                 indication = null,

@@ -489,7 +489,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private val BOTTOM_BAR_MIN_GAP_DP = 24
 
     /** 底部工具条占用的留白带高度（dp）：实测全面屏手势下约 49dp，取 44 留余量。 */
-    private val BOTTOM_BAR_BAND_DP = 40
+    private val BOTTOM_BAR_BAND_DP = 56
 
     /** 底部工具条按钮动作分发。 */
     internal fun onBottomBarAction(action: com.kingzcheung.xime.settings.BottomBarAction) {
@@ -2285,6 +2285,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             if (bottomBarNeeded) {
                                 // 高度严格取真实可用留白（不超过设计上限）：按钮永远落在留白里，
                                 // 不会上溢压到功能键。留白越大按钮越大，但上限 44dp。
+                                // 用满整条留白（上限 56dp）：工具条与留白同高，图标才会真正居中，
+                                // 而不是贴在留白底部。
                                 val bottomBarBandDp = bottomBarGapDp.coerceAtMost(BOTTOM_BAR_BAND_DP)
                                 com.kingzcheung.xime.ui.keyboard.BottomToolBar(
                                     left = com.kingzcheung.xime.settings.BottomBarAction.fromName(
