@@ -18,6 +18,7 @@ object SettingsRoutes {
     const val Font = "font"
     const val KeyEffect = "key_effect"
     const val LayoutDisplay = "layout_display"
+    const val KeyboardLayoutSettings = "keyboard_layout_settings"
     const val Dictionary = "dictionary"
     const val DictionaryUserDict = "dictionary_user_dict"
     const val DictionaryCustomPhrase = "dictionary_custom_phrase"

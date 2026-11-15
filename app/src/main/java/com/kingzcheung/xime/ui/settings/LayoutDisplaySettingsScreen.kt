@@ -56,7 +56,8 @@ import com.kingzcheung.xime.settings.declarative.SettingValue
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LayoutDisplaySettingsContent(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenKeyboardLayout: () -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -152,6 +153,38 @@ fun LayoutDisplaySettingsContent(
                         },
                     )
 
+
+                    // 键盘布局设置（二级页）：键数 + 字母排列
+                    val layoutSummary = remember(context) {
+                        val preset = SettingsPreferences.getKeyboardLayoutPreset(context)
+                        val order = SettingsPreferences.getKeyboardLetterOrder(context)
+                        preset + " 键 · " + if (order == "abcde") "ABCDE" else "QWERTY"
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenKeyboardLayout() }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = tr(R.string.s_jianpanbujushezhi),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = layoutSummary,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
                     var keyboardTextScale by remember {
                         mutableStateOf(SettingsPreferences.getKeyboardTextScale(context).toFloat())

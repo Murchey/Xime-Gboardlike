@@ -204,8 +204,12 @@ fun SettingsScreen(
         }
         composable(SettingsRoutes.LayoutDisplay) {
             LayoutDisplaySettingsContent(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onOpenKeyboardLayout = { navController.navigate(SettingsRoutes.KeyboardLayoutSettings) },
             )
+        }
+        composable(SettingsRoutes.KeyboardLayoutSettings) {
+            KeyboardLayoutSettingsContent(onBack = { navController.popBackStack() })
         }
         composable(SettingsRoutes.SmartPrediction) {
             SmartPredictionSettingsContent(

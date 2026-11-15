@@ -40,6 +40,12 @@ object SettingsPreferences {
     private const val KEY_THEME_MIX_MATCH = "theme_mix_match"
     
     const val KEY_SMART_PREDICTION_ENABLED = "smart_prediction_enabled"
+
+    /** 键盘布局预设：26 / 14 / 17 / 18 键（[KeyboardLayoutPreset]）。 */
+    const val KEY_KEYBOARD_LAYOUT_PRESET = "keyboard_layout_preset"
+
+    /** 键帽字母排列：qwerty / abcde。 */
+    const val KEY_KEYBOARD_LETTER_ORDER = "keyboard_letter_order"
     private const val KEY_PREDICTION_MODEL_REPO = "prediction_model_repo"
     private const val KEY_PREDICTION_SELECTED_MODEL = "prediction_selected_model"
     private const val KEY_SPACE_COMMIT_ASSOCIATION = "space_commit_association"
@@ -795,6 +801,30 @@ object SettingsPreferences {
         getPrefs(context).edit().putBoolean(KEY_SMART_PREDICTION_ENABLED, enabled).apply()
     }
     
+    // ── 键盘布局预设（设置 → 布局与显示 → 键盘布局设置） ──
+
+    fun getKeyboardLayoutPreset(context: Context): String =
+        KeyboardLayoutPreset.normalizeLayout(
+            getPrefs(context).getString(KEY_KEYBOARD_LAYOUT_PRESET, KeyboardLayoutPreset.LAYOUT_26)
+        )
+
+    fun setKeyboardLayoutPreset(context: Context, layout: String) {
+        getPrefs(context).edit()
+            .putString(KEY_KEYBOARD_LAYOUT_PRESET, KeyboardLayoutPreset.normalizeLayout(layout))
+            .apply()
+    }
+
+    fun getKeyboardLetterOrder(context: Context): String =
+        KeyboardLayoutPreset.normalizeOrder(
+            getPrefs(context).getString(KEY_KEYBOARD_LETTER_ORDER, KeyboardLayoutPreset.ORDER_QWERTY)
+        )
+
+    fun setKeyboardLetterOrder(context: Context, order: String) {
+        getPrefs(context).edit()
+            .putString(KEY_KEYBOARD_LETTER_ORDER, KeyboardLayoutPreset.normalizeOrder(order))
+            .apply()
+    }
+
     fun getPredictionModelRepo(context: Context): String {
         return getPrefs(context).getString(KEY_PREDICTION_MODEL_REPO, "https://www.modelscope.cn/models/bikeand/predictive-text-small") 
             ?: "https://www.modelscope.cn/models/bikeand/predictive-text-small"

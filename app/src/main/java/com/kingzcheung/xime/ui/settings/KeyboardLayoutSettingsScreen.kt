@@ -1,0 +1,162 @@
+package com.kingzcheung.xime.ui.settings
+
+import com.kingzcheung.xime.R
+
+import com.kingzcheung.xime.i18n.tr
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.kingzcheung.xime.settings.KeyboardLayoutPreset
+import com.kingzcheung.xime.settings.SettingsPreferences
+
+/**
+ * 键盘布局设置（二级页）：键数 + 字母排列。
+ *
+ * 只有 26 键在键盘侧已接入；14 / 17 / 18 键的键位映射尚未实现，
+ * 这里如实标注，选中的值仍会保存，后续接入时直接生效。
+ */
+@Composable
+fun KeyboardLayoutSettingsContent(onBack: () -> Unit) {
+    val context = LocalContext.current
+    var layout by remember { mutableStateOf(SettingsPreferences.getKeyboardLayoutPreset(context)) }
+    var order by remember { mutableStateOf(SettingsPreferences.getKeyboardLetterOrder(context)) }
+
+    SettingsPageScaffold(
+        title = tr(R.string.s_jianpanbujushezhi),
+        onBack = onBack,
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = paddingValues,
+            verticalArrangement = Arrangement.spacedBy(SettingsDimens.GroupGap)
+        ) {
+            item {
+                SettingsGroup(title = tr(R.string.s_jianpanjianshu), content = {
+                    Text(
+                        text = tr(R.string.s_jianpanjianshu_fu),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp)
+                    )
+                    LayoutChoiceRow(
+                        title = tr(R.string.s_jianpan_26jian),
+                        subtitle = tr(R.string.s_jianpan_26jian_fu),
+                        selected = layout == KeyboardLayoutPreset.LAYOUT_26,
+                        onClick = {
+                            layout = KeyboardLayoutPreset.LAYOUT_26
+                            SettingsPreferences.setKeyboardLayoutPreset(context, layout)
+                        }
+                    )
+                    listOf(
+                        KeyboardLayoutPreset.LAYOUT_14 to (R.string.s_jianpan_14jian to R.string.s_jianpan_14jian_fu),
+                        KeyboardLayoutPreset.LAYOUT_17 to (R.string.s_jianpan_17jian to R.string.s_jianpan_17jian_fu),
+                        KeyboardLayoutPreset.LAYOUT_18 to (R.string.s_jianpan_18jian to R.string.s_jianpan_18jian_fu),
+                    ).forEach { (id, texts) ->
+                        LayoutChoiceRow(
+                            title = tr(texts.first),
+                            subtitle = tr(texts.second),
+                            selected = layout == id,
+                            onClick = {
+                                layout = id
+                                SettingsPreferences.setKeyboardLayoutPreset(context, id)
+                            }
+                        )
+                    }
+                    Text(
+                        text = tr(R.string.s_jianpanbuju_weijieru),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp)
+                    )
+                })
+            }
+            item {
+                SettingsGroup(title = tr(R.string.s_zimupaile), content = {
+                    Text(
+                        text = tr(R.string.s_zimupaile_fu),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp)
+                    )
+                    LayoutChoiceRow(
+                        title = tr(R.string.s_paile_qwerty),
+                        subtitle = tr(R.string.s_paile_qwerty_fu),
+                        selected = order == KeyboardLayoutPreset.ORDER_QWERTY,
+                        onClick = {
+                            order = KeyboardLayoutPreset.ORDER_QWERTY
+                            SettingsPreferences.setKeyboardLetterOrder(context, order)
+                        }
+                    )
+                    LayoutChoiceRow(
+                        title = tr(R.string.s_paile_abcde),
+                        subtitle = tr(R.string.s_paile_abcde_fu),
+                        selected = order == KeyboardLayoutPreset.ORDER_ABCDE,
+                        onClick = {
+                            order = KeyboardLayoutPreset.ORDER_ABCDE
+                            SettingsPreferences.setKeyboardLetterOrder(context, order)
+                        }
+                    )
+                })
+            }
+        }
+    }
+}
+
+@Composable
+private fun LayoutChoiceRow(
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                color = if (selected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (selected) {
+            Icon(
+                imageVector = Icons.Filled.Check,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}

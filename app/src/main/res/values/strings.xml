@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <string name="app_name">XimeGboard</string>
     <string name="subtype_label_wubi">XimeGboard 输入法</string>
     <string name="subtype_label_pinyin">拼音</string>
@@ -1529,4 +1529,22 @@
     <string name="s_danshou_qiehuan">切换单手模式方向</string>
     <string name="s_tuichudanshou">退出单手模式</string>
     <string name="s_danshou_tiaozhengdaxiao">调整单手键盘大小</string>
+    <string name="s_jianpanbujushezhi">键盘布局设置</string>
+    <string name="s_jianpanjianshu">键数</string>
+    <string name="s_jianpanjianshu_fu">选择键盘的按键数量</string>
+    <string name="s_zimupaile">字母排列</string>
+    <string name="s_zimupaile_fu">键帽上字母的排列顺序</string>
+    <string name="s_jianpan_26jian">26 键</string>
+    <string name="s_jianpan_26jian_fu">标准全键盘，一键一字母</string>
+    <string name="s_jianpan_14jian">14 键</string>
+    <string name="s_jianpan_14jian_fu">紧凑布局，多字母共用键</string>
+    <string name="s_jianpan_17jian">17 键</string>
+    <string name="s_jianpan_17jian_fu">紧凑布局，多字母共用键</string>
+    <string name="s_jianpan_18jian">18 键</string>
+    <string name="s_jianpan_18jian_fu">紧凑布局，多字母共用键</string>
+    <string name="s_paile_qwerty">QWERTY</string>
+    <string name="s_paile_qwerty_fu">q w e r t y u i o p …</string>
+    <string name="s_paile_abcde">ABCDE</string>
+    <string name="s_paile_abcde_fu">a b c d e f g h i j …</string>
+    <string name="s_jianpanbuju_weijieru">14 / 17 / 18 键的键位映射尚未接入，当前只记录选择</string>
 </resources>
