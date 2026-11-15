@@ -89,6 +89,42 @@ class InferenceService : Service() {
             return result
         }
 
+        /**
+         * 一次 IPC 里算完「基础候选 + 续写词」。
+         *
+         * 原来客户端要再发 2 次 predict 才能拿到续写（每次都是一个 binder 往返），
+         * 真机实测整条联想 79ms 里有 60ms 花在这里。现在续写在本进程内完成，
+         * 客户端只付一次往返。
+         */
+        override fun predictWithContinuations(modelId: String, text: String, topK: Int): MutableList<String> {
+            if (modelId != MODEL_PREDICTION) return mutableListOf()
+            if (!NativeOnnxEngine.isInitialized()) {
+                Log.w(TAG, "predictWithContinuations called before model loaded, returning empty")
+                return mutableListOf()
+            }
+            val base = NativeOnnxEngine.predict(text, topK)
+            if (base.isEmpty()) return mutableListOf()
+            val phrases = try {
+                kotlinx.coroutines.runBlocking {
+                    com.kingzcheung.xime.association.AssociationExpander.expand(text, base) { prefix ->
+                        NativeOnnxEngine.predict(
+                            prefix,
+                            com.kingzcheung.xime.association.AssociationExpander.DEFAULT.continuationTopK
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "expand continuations failed", e)
+                emptyList()
+            }
+            val result = mutableListOf<String>()
+            for (c in base + phrases) {
+                result.add(c.text)
+                result.add(c.score.toString())
+            }
+            return result
+        }
+
         override fun recognizeHandwriting(modelId: String, points: FloatArray, strokePointCounts: IntArray, topK: Int): MutableList<String> {
             if (modelId != MODEL_HANDWRITING) return mutableListOf()
             // 模型未加载时（如进程重启后客户端状态未同步）直接返回空，

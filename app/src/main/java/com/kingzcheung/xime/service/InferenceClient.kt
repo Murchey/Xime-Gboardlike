@@ -122,16 +122,20 @@ class InferenceClient(private val context: Context) {
         }
     }
 
+    /** 解析交替的 [word, score, ...] 响应。 */
+    private fun parsePairs(result: List<String>): List<AssociationCandidate> {
+        val candidates = mutableListOf<AssociationCandidate>()
+        for (i in result.indices step 2) {
+            val word = result[i]
+            val score = result.getOrNull(i + 1)?.toFloatOrNull() ?: continue
+            candidates.add(AssociationCandidate(word, score))
+        }
+        return candidates
+    }
+
     suspend fun predict(text: String, topK: Int = 20): List<AssociationCandidate> = withContext(Dispatchers.IO) {
         try {
-            val result = requireService().predict(MODEL_PREDICTION, text, topK)
-            val candidates = mutableListOf<AssociationCandidate>()
-            for (i in result.indices step 2) {
-                val word = result[i]
-                val score = result.getOrNull(i + 1)?.toFloatOrNull() ?: continue
-                candidates.add(AssociationCandidate(word, score))
-            }
-            candidates
+            parsePairs(requireService().predict(MODEL_PREDICTION, text, topK))
         } catch (e: DeadObjectException) {
             // 服务进程已死：重置绑定状态，让上层（OnnxAssociationEngine）感知失联并自愈
             invalidateBinding()
@@ -140,6 +144,27 @@ class InferenceClient(private val context: Context) {
         } catch (e: Exception) {
             FileLogger.e(TAG, "predict failed", e)
             emptyList()
+        }
+    }
+
+    /**
+     * 联想 + 续写词：服务端一次算完，省掉两次 binder 往返。
+     *
+     * 服务端未实现该方法（旧版本）时抛异常，回退到普通 [predict]。
+     */
+    suspend fun predictWithContinuations(
+        text: String,
+        topK: Int = 20,
+    ): List<AssociationCandidate> = withContext(Dispatchers.IO) {
+        try {
+            parsePairs(requireService().predictWithContinuations(MODEL_PREDICTION, text, topK))
+        } catch (e: DeadObjectException) {
+            invalidateBinding()
+            FileLogger.e(TAG, "predictWithContinuations failed: service died", e)
+            emptyList()
+        } catch (e: Exception) {
+            FileLogger.w(TAG, "predictWithContinuations unavailable, falling back: " + e.message)
+            predict(text, topK)
         }
     }
 

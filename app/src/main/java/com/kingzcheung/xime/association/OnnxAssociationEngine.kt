@@ -119,7 +119,8 @@ object OnnxAssociationEngine {
         }
 
         try {
-            client.predict(inputText, topK)
+            // 一次 IPC 同时拿到基础候选与续写词（服务端在 :inference 进程内完成续写）
+            client.predictWithContinuations(inputText, topK)
         } catch (e: Exception) {
             FileLogger.e(TAG, "Prediction failed: ${e.message}", e)
             emptyList()

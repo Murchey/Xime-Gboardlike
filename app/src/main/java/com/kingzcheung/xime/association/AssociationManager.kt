@@ -107,24 +107,19 @@ object AssociationManager {
                 return@withContext emptyList()
             }
 
-            // 模型只出单字，用模型自己续写一个字补成双字候选（「不」→「不错」）。
-            // 额外推理次数由 AssociationExpander.Config.maxSeeds 限制。
-            val phrases = AssociationExpander.expand(contextText, modelCandidates) { prefix ->
-                OnnxAssociationEngine.predict(prefix, AssociationExpander.DEFAULT.continuationTopK)
-            }
-
-            val merged = if (phrases.isEmpty()) modelCandidates else modelCandidates + phrases
+            // 续写词已由推理进程在同一次 IPC 里算好（「不」→「不好」），这里只做融合与后置过滤。
             val fusedCandidates = AssociationPostFilter.groupPhrasesWithSeeds(
                 AssociationPostFilter.dropPunctuation(
-                    fusionEngine.fuseCandidates(merged, contextText)
+                    fusionEngine.fuseCandidates(modelCandidates, contextText)
                 )
             )
 
             val cost = android.os.SystemClock.elapsedRealtime() - started
+            val phrases = modelCandidates.count { it.text.length > 1 }
             FileLogger.d(
                 TAG,
-                "predict: seeds=" + modelCandidates.size +
-                    " phrases=" + phrases.size +
+                "predict: seeds=" + (modelCandidates.size - phrases) +
+                    " phrases=" + phrases +
                     " fused=" + fusedCandidates.size +
                     " cost=" + cost + "ms"
             )
