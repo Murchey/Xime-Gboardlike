@@ -38,13 +38,8 @@ rem ---------------------------------------------------------------
 rem full：打进 app\src\modelAssets 下的联想模型（-PbundleModel=true）
 rem ---------------------------------------------------------------
 echo [1/4] Building FULL release APKs (bundled predictive model)...
-call gradlew.bat assembleRelease -PbundleModel=true --console=plain
-if errorlevel 1 (
-    echo.
-    echo [ERROR] FULL build failed. See the Gradle output above.
-    if not defined CI pause
-    exit /b 1
-)
+call :build_release true FULL
+if errorlevel 1 exit /b 1
 call :collect full
 if errorlevel 1 exit /b 1
 
@@ -54,13 +49,8 @@ rem 两次构建的资产集合不同，Gradle 会重新打包（不会命中 up
 rem ---------------------------------------------------------------
 echo.
 echo [2/4] Building LITE release APKs (no bundled model)...
-call gradlew.bat assembleRelease -PbundleModel=false --console=plain
-if errorlevel 1 (
-    echo.
-    echo [ERROR] LITE build failed. See the Gradle output above.
-    if not defined CI pause
-    exit /b 1
-)
+call :build_release false LITE
+if errorlevel 1 exit /b 1
 call :collect lite
 if errorlevel 1 exit /b 1
 
@@ -86,6 +76,26 @@ echo       Installable locally, but not suitable for app-store publishing.
 echo.
 if not defined CI pause
 endlocal
+exit /b 0
+
+rem ---------------------------------------------------------------
+rem :build_release <true^|false> <标签>
+rem   AGP 的增量打包(state 卡住)偶发失败：清理 release 的打包中间产物后重试一次。
+rem ---------------------------------------------------------------
+:build_release
+call gradlew.bat assembleRelease -PbundleModel=%~1 --console=plain
+if not errorlevel 1 exit /b 0
+echo.
+echo [WARN] %~2 首次打包失败，清理增量产物后重试...
+if exist "app\build\intermediates\apk\release" rmdir /s /q "app\build\intermediates\apk\release"
+if exist "app\build\outputs\apk\release" rmdir /s /q "app\build\outputs\apk\release"
+call gradlew.bat assembleRelease -PbundleModel=%~1 --console=plain
+if errorlevel 1 (
+    echo.
+    echo [ERROR] %~2 build failed. See the Gradle output above.
+    if not defined CI pause
+    exit /b 1
+)
 exit /b 0
 
 rem ---------------------------------------------------------------
