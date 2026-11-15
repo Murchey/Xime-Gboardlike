@@ -44,7 +44,7 @@ fun OneHandedControls(
     // 排布参照 Gboard：退出 → 换边 → 调大小（自上而下）
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         CircleIconButton(
@@ -83,7 +83,7 @@ private fun CircleIconButton(
 ) {
     Box(
         modifier = Modifier
-            .size(44.dp)
+            .size(36.dp)
             .clip(CircleShape)
             .background(tint.copy(alpha = 0.10f))
             .pointerInput(icon, onLongClick) {
@@ -98,7 +98,7 @@ private fun CircleIconButton(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = tint.copy(alpha = 0.85f),
-            modifier = Modifier.size(26.dp),
+            modifier = Modifier.size(20.dp),
         )
     }
 }

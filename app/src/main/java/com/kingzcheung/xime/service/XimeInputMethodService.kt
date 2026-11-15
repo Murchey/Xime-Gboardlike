@@ -1938,6 +1938,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 val density = LocalDensity.current
                 // 实测：根容器底边与键面底边（px，窗口内坐标），用于算底部可用空白
                 var keyboardRootBottomPx by remember { mutableStateOf(0) }
+                var rootHeightPx by remember { mutableStateOf(0) }
+                var keyboardBgTopPx by remember { mutableStateOf(0) }
+                var keyboardBgBottomPx by remember { mutableStateOf(0) }
                 var keyboardContentBottomPx by remember { mutableStateOf(0) }
                 // 统一使用 View 层多类型检测的 insets，避免 Compose
                 // navigationBars 恒为手势条高度导致与系统栏（三键导航）差异被抹平。
@@ -2060,7 +2063,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                         modifier = Modifier
                             .fillMaxSize()
                             .onGloballyPositioned { c ->
-                                keyboardRootBottomPx = c.boundsInRoot().bottom.toInt()
+                                val b = c.boundsInRoot()
+                                keyboardRootBottomPx = b.bottom.toInt()
+                                rootHeightPx = (b.bottom - b.top).toInt()
                             },
                     ) {
                         // Sync FrameLayout height with Compose content height
@@ -2158,6 +2163,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     .height(if (state.showKeyboardResize) (state.resizePreviewHeightDp + state.keyboardBottomPaddingDp + activeBottomDp).dp else (floatingCardContentHeight + state.keyboardBottomPaddingDp + overlayPanelExtra + activeBottomDp).dp)
                                     .padding(start = effectiveMarginStartDp.dp, end = effectiveMarginEndDp.dp)
                                     .align(androidx.compose.ui.Alignment.BottomCenter)
+                                    .onGloballyPositioned { c ->
+                                        val b = c.boundsInRoot()
+                                        keyboardBgTopPx = b.top.toInt()
+                                        keyboardBgBottomPx = b.bottom.toInt()
+                                    }
                                     .keyboardBackground(rootTheme.keyboardBackground, isDark, keyboardBgColor)
                             )
                         }
@@ -2451,41 +2461,55 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                         .align(androidx.compose.ui.Alignment.BottomCenter),
                                 )
                             }
-                            // 单手模式控制钮：四角箭头(退出) 在换边箭头之上，都画在留白里
+                            // 单手模式控制钮：四角箭头(退出)/换边/调大小，画在键盘留白里。
+                            // 垂直居中要排除键盘底部那条留白（设置留白 + 导航栏让位），
+                            // 否则居中会整体偏下；故先铺一个"去底部留白"的全高容器再居中。
                             if (!state.isFloatingMode && !state.showKeyboardResize &&
                                 state.oneHandedMode != com.kingzcheung.xime.settings.OneHandedMode.OFF
                             ) {
                                 val keyboardOnLeft = com.kingzcheung.xime.settings.OneHandedMode
                                     .isKeyboardOnLeft(state.oneHandedMode)
-                                com.kingzcheung.xime.ui.keyboard.OneHandedControls(
-                                    keyboardOnLeft = keyboardOnLeft,
-                                    tint = candidateTextCol,
-                                    onToggleSide = {
-                                        setOneHandedMode(
-                                            com.kingzcheung.xime.settings.OneHandedMode
-                                                .nextSide(state.oneHandedMode)
-                                        )
-                                    },
-                                    onExit = {
-                                        setOneHandedMode(com.kingzcheung.xime.settings.OneHandedMode.OFF)
-                                    },
-                                    onResize = { startOneHandedResize() },
-                                    // 三颗按钮在键盘侧边（留白）垂直居中，而不是贴在键盘底部
+                                // 居中基准 = 键盘背景块（用户看到的那一整块）的垂直中点。
+                                // 根 Box 只是它的一部分（候选栏在根 Box 之上、底部 inset 在其下方），
+                                // 直接按根 Box 居中会随导航方式/候选栏高度偏移。
+                                val oneHandedCenterShiftDp = with(density) {
+                                    val blockCenterPx = (keyboardBgTopPx + keyboardBgBottomPx) / 2f
+                                    // 容器去掉底部留白后才是按钮列的中心
+                                    val padPx = (state.keyboardBottomPaddingDp + activeBottomDp).dp.toPx()
+                                    ((blockCenterPx - rootHeightPx / 2f - padPx / 2f).toDp().value)
+                                }
+                                Box(
                                     modifier = Modifier
-                                        .align(
-                                            if (keyboardOnLeft) androidx.compose.ui.Alignment.CenterEnd
-                                            else androidx.compose.ui.Alignment.CenterStart
-                                        )
+                                        .fillMaxSize()
                                         .padding(
-                                            start = if (keyboardOnLeft) 0.dp else 8.dp,
-                                            end = if (keyboardOnLeft) 8.dp else 0.dp,
+                                            bottom = (state.keyboardBottomPaddingDp + activeBottomDp).dp
                                         )
-                                        // 根 Box 含键盘底部留白（设置留白 + 导航栏让位），
-                                        // 居中要扣掉它的一半，才是键面那块的视觉中心
-                                        .offset(
-                                            y = (-((state.keyboardBottomPaddingDp + activeBottomDp) / 2)).dp
-                                        ),
-                                )
+                                ) {
+                                    com.kingzcheung.xime.ui.keyboard.OneHandedControls(
+                                        keyboardOnLeft = keyboardOnLeft,
+                                        tint = candidateTextCol,
+                                        onToggleSide = {
+                                            setOneHandedMode(
+                                                com.kingzcheung.xime.settings.OneHandedMode
+                                                    .nextSide(state.oneHandedMode)
+                                            )
+                                        },
+                                        onExit = {
+                                            setOneHandedMode(com.kingzcheung.xime.settings.OneHandedMode.OFF)
+                                        },
+                                        onResize = { startOneHandedResize() },
+                                        modifier = Modifier
+                                            .align(
+                                                if (keyboardOnLeft) androidx.compose.ui.Alignment.CenterEnd
+                                                else androidx.compose.ui.Alignment.CenterStart
+                                            )
+                                            .offset(y = oneHandedCenterShiftDp.dp)
+                                            .padding(
+                                                start = if (keyboardOnLeft) 0.dp else 16.dp,
+                                                end = if (keyboardOnLeft) 16.dp else 0.dp,
+                                            ),
+                                    )
+                                }
                             }
                             // 悬浮拖到底部的停靠提示光：必须是根 Box 最后一个子级
                             // （画在键盘内容之上）——第一版画在卡片后面，手势导航设备上
