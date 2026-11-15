@@ -26,6 +26,14 @@ data class InputUIState(
     val keyboardBottomPaddingDp: Int = 0,
     /** 键盘贴底显示：忽略底部系统 inset（隐藏导航栏/手势条时把键盘下移到屏幕底边）。 */
     val keyboardFlushBottom: Boolean = false,
+    /** 单手模式：0 关闭 / 1 左手（键盘靠左）/ 2 右手（键盘靠右），见 [com.kingzcheung.xime.settings.OneHandedMode]。 */
+    val oneHandedMode: Int = 0,
+    /** 单手模式专用键盘高度（dp）：0 = 尚未调整，用常规高度。与横/竖屏常规尺寸分开存。 */
+    val oneHandedHeightDp: Int = 0,
+    /** 单手模式专用键盘宽度（dp）：0 = 尚未调整，用默认 88% 屏宽。 */
+    val oneHandedWidthDp: Int = 0,
+    /** 当前调节层是否在编辑「单手模式尺寸」（确认后只写单手专用值，不动常规尺寸）。 */
+    val oneHandedResize: Boolean = false,
     /** 键盘左边距（dp）：>0 时键盘左缘内收（宽度调节的落盘值，左右独立可偏移）。 */
     val keyboardMarginStartDp: Int = 0,
     /** 键盘右边距（dp）：>0 时键盘右缘内收。 */

@@ -1381,4 +1381,8 @@
     <string name="s_huifubushu_queren">恢復內建方案部署？</string>
     <string name="s_huifubushu_queren_fu">會重新部署並清空編譯快取，期間鍵盤可能短暫沒有候選。第三方方案檔案保留，可稍後重新啟用。</string>
     <string name="s_yihuifuneizhibushu">已恢復內建方案部署</string>
+    <string name="s_danshoumoshi">單手模式</string>
+    <string name="s_danshou_qiehuan">切換單手模式方向</string>
+    <string name="s_tuichudanshou">退出單手模式</string>
+    <string name="s_danshou_tiaozhengdaxiao">調整單手鍵盤大小</string>
 </resources>

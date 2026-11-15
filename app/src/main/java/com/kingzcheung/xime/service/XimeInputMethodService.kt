@@ -497,6 +497,49 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
      */
     private val SELF_WRITE_QUIET_MS = 200L
 
+    /**
+     * 单手模式的「调整键盘大小」：进入和常规调节层同一个界面，只是落盘目标不同——
+     * 确认后写入单手专用高度/宽度，不动横屏/竖屏的常规尺寸。
+     */
+    internal fun startOneHandedResize() {
+        val screenW = resources.configuration.screenWidthDp
+        val mode = uiState.value.oneHandedMode
+        if (mode == com.kingzcheung.xime.settings.OneHandedMode.OFF) return
+        val width = uiState.value.oneHandedWidthDp.takeIf { it > 0 }
+            ?: (screenW * com.kingzcheung.xime.settings.OneHandedMode.WIDTH_RATIO).toInt()
+        val gap = com.kingzcheung.xime.settings.OneHandedMode.gapDpForWidth(screenW, width)
+        val height = uiState.value.oneHandedHeightDp.takeIf { it > 0 } ?: uiState.value.keyboardHeightDp
+        val onLeft = com.kingzcheung.xime.settings.OneHandedMode.isKeyboardOnLeft(mode)
+        FileLogger.i(TAG, "startOneHandedResize: width=$width height=$height onLeft=$onLeft")
+        uiState.value = uiState.value.copy(
+            showKeyboardResize = true,
+            oneHandedResize = true,
+            resizePreviewHeightDp = height,
+            resizePreviewMarginStartDp = if (onLeft) 0 else gap,
+            resizePreviewMarginEndDp = if (onLeft) gap else 0,
+        )
+    }
+
+    /** 工具栏面板的「单手模式」按钮：关闭时进入（默认靠右），已开启时退出。 */
+    internal fun toggleOneHandedMode() {
+        val current = SettingsPreferences.getOneHandedMode(this)
+        setOneHandedMode(
+            if (current == com.kingzcheung.xime.settings.OneHandedMode.OFF) {
+                com.kingzcheung.xime.settings.OneHandedMode.DEFAULT_SIDE
+            } else {
+                com.kingzcheung.xime.settings.OneHandedMode.OFF
+            }
+        )
+    }
+
+    /** 切换单手模式（[com.kingzcheung.xime.settings.OneHandedMode]：0 关闭 / 1 左手 / 2 右手）。 */
+    internal fun setOneHandedMode(mode: Int) {
+        SettingsPreferences.setOneHandedMode(this, mode)
+        if (uiState.value.oneHandedMode != mode) {
+            uiState.value = uiState.value.copy(oneHandedMode = mode)
+        }
+    }
+
     /** 底部工具条按钮动作分发。 */
     internal fun onBottomBarAction(action: com.kingzcheung.xime.settings.BottomBarAction) {
         when (action) {
@@ -795,6 +838,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 .coerceIn(0, maxMargin),
             keyboardMarginEndDp = SettingsPreferences.getKeyboardMarginEndDp(this, isLandscape)
                 .coerceIn(0, maxMargin),
+            oneHandedMode = SettingsPreferences.getOneHandedMode(this),
+            oneHandedHeightDp = SettingsPreferences.getOneHandedHeightDp(this),
+            oneHandedWidthDp = SettingsPreferences.getOneHandedWidthDp(this),
             // 调节进行中的预览值同样收紧（旋转/折叠切换后可能超出新屏宽上限）
             resizePreviewMarginStartDp = uiState.value.resizePreviewMarginStartDp.coerceIn(0, maxMargin),
             resizePreviewMarginEndDp = uiState.value.resizePreviewMarginEndDp.coerceIn(0, maxMargin),
@@ -848,6 +894,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     ) {
                         Thread { AsrBackendFactory.warmup(this@XimeInputMethodService) }.start()
                     }
+                }
+                SettingsPreferences.KEY_ONE_HANDED_MODE -> {
+                    uiState.value = uiState.value.copy(
+                        oneHandedMode = SettingsPreferences.getOneHandedMode(this@XimeInputMethodService),
+                    )
                 }
                 SettingsPreferences.KEY_SMART_PREDICTION_ENABLED -> onPredictionSettingChanged()
                 SettingsPreferences.KEY_CLIPBOARD_SYNC_ENABLED,
@@ -1865,10 +1916,19 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     SettingsPreferences.getKeyboardHeightDp(this@XimeInputMethodService, screenIsLandscape)
                 }
                 val displayHeight = orientationHeight.coerceAtMost((if (state.isFloatingMode) portraitScreenHeightDp else screenHeightDp) * 8 / 10)
+                val oneHandedActive = !state.isFloatingMode &&
+                    state.oneHandedMode != com.kingzcheung.xime.settings.OneHandedMode.OFF
+                // 单手模式有独立的键盘尺寸：未调整过时沿用常规高度，调整过就只认单手值，
+                // 与横屏/竖屏的常规高度互不覆盖。
+                val oneHandedHeightDp = state.oneHandedHeightDp
+                    .takeIf { it > 0 }
+                    ?.coerceIn(screenHeightDp / 4, (screenHeightDp * 3) / 4)
                 val keyboardHeight = if (state.showKeyboardResize) {
                     if (screenIsLandscape) (screenHeightDp * 7) / 10 else displayHeight.coerceAtLeast(screenHeightDp / 2)
                 } else if (isHandwritingMode) {
                     screenHeightDp / 2
+                } else if (oneHandedActive) {
+                    oneHandedHeightDp ?: displayHeight
                 } else {
                     displayHeight
                 }
@@ -2066,12 +2126,37 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                         // （调节进行中用预览值，拖动实时跟随；非调节用已保存值）
                         val keyboardMarginStartDp = if (state.showKeyboardResize) state.resizePreviewMarginStartDp else state.keyboardMarginStartDp
                         val keyboardMarginEndDp = if (state.showKeyboardResize) state.resizePreviewMarginEndDp else state.keyboardMarginEndDp
+                        // 单手模式：把留白集中到另一侧，键盘整体收窄并贴边。
+                        // 调节键盘尺寸时临时不生效，保证调节层按全宽测量、手柄位置不跳。
+                        val oneHandedModeForLayout =
+                            if (state.showKeyboardResize || state.isFloatingMode) {
+                                com.kingzcheung.xime.settings.OneHandedMode.OFF
+                            } else {
+                                state.oneHandedMode
+                            }
+                        // 单手键盘宽度：调整过用专用宽度，否则默认 88% 屏宽
+                        val oneHandedGapDp = if (oneHandedModeForLayout ==
+                            com.kingzcheung.xime.settings.OneHandedMode.OFF
+                        ) {
+                            0
+                        } else {
+                            val width = state.oneHandedWidthDp.takeIf { it > 0 }
+                                ?: (screenWidthDp * com.kingzcheung.xime.settings.OneHandedMode.WIDTH_RATIO).toInt()
+                            com.kingzcheung.xime.settings.OneHandedMode.gapDpForWidth(screenWidthDp, width)
+                        }
+                        val (effectiveMarginStartDp, effectiveMarginEndDp) =
+                            com.kingzcheung.xime.settings.OneHandedMode.marginsWithGap(
+                                mode = oneHandedModeForLayout,
+                                gapDp = oneHandedGapDp,
+                                baseStartDp = keyboardMarginStartDp,
+                                baseEndDp = keyboardMarginEndDp,
+                            )
                         if (!state.isFloatingMode) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(if (state.showKeyboardResize) (state.resizePreviewHeightDp + state.keyboardBottomPaddingDp + activeBottomDp).dp else (floatingCardContentHeight + state.keyboardBottomPaddingDp + overlayPanelExtra + activeBottomDp).dp)
-                                    .padding(start = keyboardMarginStartDp.dp, end = keyboardMarginEndDp.dp)
+                                    .padding(start = effectiveMarginStartDp.dp, end = effectiveMarginEndDp.dp)
                                     .align(androidx.compose.ui.Alignment.BottomCenter)
                                     .keyboardBackground(rootTheme.keyboardBackground, isDark, keyboardBgColor)
                             )
@@ -2091,12 +2176,12 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     // 宽度调节的左右边距两种设备都生效（边距为 0 时与原行为一致）
                                     if (state.isFloatingMode) Modifier
                                     else if (isTabletDevice) Modifier.padding(
-                                        start = keyboardMarginStartDp.dp,
-                                        end = keyboardMarginEndDp.dp,
+                                        start = effectiveMarginStartDp.dp,
+                                        end = effectiveMarginEndDp.dp,
                                     )
                                     else Modifier.padding(
-                                        start = horizontalInsetDp.first + keyboardMarginStartDp.dp,
-                                        end = horizontalInsetDp.second + keyboardMarginEndDp.dp,
+                                        start = horizontalInsetDp.first + effectiveMarginStartDp.dp,
+                                        end = horizontalInsetDp.second + effectiveMarginEndDp.dp,
                                     )
                                 )
                         ) {
@@ -2149,6 +2234,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     inputSessionId = state.inputSessionId,
                                     isInputSessionRestarting = state.isInputSessionRestarting,
                                     isFloatingMode = state.isFloatingMode,
+                                    oneHandedMode = state.oneHandedMode,
                                     isHostConstrained = hostConstrained,
                                     isHandwritingMode = isHandwritingMode,
                                     floatingOffsetX = state.floatingOffsetX,
@@ -2245,6 +2331,23 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                   },
                                   onConfirm = {
                                       val snapshot = uiState.value
+                                      if (snapshot.oneHandedResize) {
+                                          // 单手尺寸单独落盘：不碰横屏/竖屏的常规高度与宽度边距
+                                          val screenW = resources.configuration.screenWidthDp
+                                          val width = (screenW - snapshot.resizePreviewMarginStartDp -
+                                              snapshot.resizePreviewMarginEndDp).coerceAtLeast(1)
+                                          SettingsPreferences.setOneHandedHeightDp(
+                                              this@XimeInputMethodService, snapshot.resizePreviewHeightDp)
+                                          SettingsPreferences.setOneHandedWidthDp(
+                                              this@XimeInputMethodService, width)
+                                          uiState.value = snapshot.copy(
+                                              showKeyboardResize = false,
+                                              oneHandedResize = false,
+                                              oneHandedHeightDp = snapshot.resizePreviewHeightDp,
+                                              oneHandedWidthDp = width,
+                                          )
+                                          return@KeyboardResizeOverlay
+                                      }
                                       schemaController.setKeyboardHeight(snapshot.resizePreviewHeightDp)
                                       SettingsPreferences.setKeyboardBottomPaddingDp(this@XimeInputMethodService, snapshot.keyboardBottomPaddingDp)
                                       SettingsPreferences.setKeyboardMarginStartDp(
@@ -2265,6 +2368,13 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                       )
                                   },
                                   onCancel = {
+                                      if (uiState.value.oneHandedResize) {
+                                          uiState.value = uiState.value.copy(
+                                              showKeyboardResize = false,
+                                              oneHandedResize = false,
+                                          )
+                                          return@KeyboardResizeOverlay
+                                      }
                                       val restoreHeight = SettingsPreferences.getKeyboardHeightDp(this@XimeInputMethodService, isLandscape)
                                       val restoreStart = SettingsPreferences.getKeyboardMarginStartDp(
                                           this@XimeInputMethodService,
@@ -2300,6 +2410,23 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                 // 用满整条留白（上限 56dp）：工具条与留白同高，图标才会真正居中，
                                 // 而不是贴在留白底部。
                                 val bottomBarBandDp = bottomBarGapDp.coerceAtMost(BOTTOM_BAR_BAND_DP)
+                                // 工具条与键盘同宽：单手模式下跟着键盘收窄，不留按钮在留白里
+                                val barOneHandedGapDp = if (state.oneHandedMode ==
+                                    com.kingzcheung.xime.settings.OneHandedMode.OFF
+                                ) {
+                                    0
+                                } else {
+                                    val width = state.oneHandedWidthDp.takeIf { it > 0 }
+                                        ?: (screenWidthDp * com.kingzcheung.xime.settings.OneHandedMode.WIDTH_RATIO).toInt()
+                                    com.kingzcheung.xime.settings.OneHandedMode.gapDpForWidth(screenWidthDp, width)
+                                }
+                                val (bottomBarStartDp, bottomBarEndDp) =
+                                    com.kingzcheung.xime.settings.OneHandedMode.marginsWithGap(
+                                        mode = state.oneHandedMode,
+                                        gapDp = barOneHandedGapDp,
+                                        baseStartDp = state.keyboardMarginStartDp,
+                                        baseEndDp = state.keyboardMarginEndDp,
+                                    )
                                 com.kingzcheung.xime.ui.keyboard.BottomToolBar(
                                     left = com.kingzcheung.xime.settings.BottomBarAction.fromName(
                                         SettingsPreferences.bottomBarLeft(this@XimeInputMethodService)
@@ -2315,7 +2442,39 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(bottomBarBandDp.dp)
+                                        .padding(start = bottomBarStartDp.dp, end = bottomBarEndDp.dp)
                                         .align(androidx.compose.ui.Alignment.BottomCenter),
+                                )
+                            }
+                            // 单手模式控制钮：四角箭头(退出) 在换边箭头之上，都画在留白里
+                            if (!state.isFloatingMode && !state.showKeyboardResize &&
+                                state.oneHandedMode != com.kingzcheung.xime.settings.OneHandedMode.OFF
+                            ) {
+                                val keyboardOnLeft = com.kingzcheung.xime.settings.OneHandedMode
+                                    .isKeyboardOnLeft(state.oneHandedMode)
+                                com.kingzcheung.xime.ui.keyboard.OneHandedControls(
+                                    keyboardOnLeft = keyboardOnLeft,
+                                    tint = candidateTextCol,
+                                    onToggleSide = {
+                                        setOneHandedMode(
+                                            com.kingzcheung.xime.settings.OneHandedMode
+                                                .nextSide(state.oneHandedMode)
+                                        )
+                                    },
+                                    onExit = {
+                                        setOneHandedMode(com.kingzcheung.xime.settings.OneHandedMode.OFF)
+                                    },
+                                    onResize = { startOneHandedResize() },
+                                    modifier = Modifier
+                                        .align(
+                                            if (keyboardOnLeft) androidx.compose.ui.Alignment.BottomEnd
+                                            else androidx.compose.ui.Alignment.BottomStart
+                                        )
+                                        .padding(
+                                            start = if (keyboardOnLeft) 0.dp else 8.dp,
+                                            end = if (keyboardOnLeft) 8.dp else 0.dp,
+                                            bottom = (activeBottomDp + 10).dp,
+                                        ),
                                 )
                             }
                             // 悬浮拖到底部的停靠提示光：必须是根 Box 最后一个子级

@@ -1525,4 +1525,8 @@
     <string name="s_xitongyuyin_keyong">本机已就绪</string>
     <string name="s_neizhifangan">内置方案</string>
     <string name="s_neizhifangan_baohan">包含 %1\$s</string>
+    <string name="s_danshoumoshi">单手模式</string>
+    <string name="s_danshou_qiehuan">切换单手模式方向</string>
+    <string name="s_tuichudanshou">退出单手模式</string>
+    <string name="s_danshou_tiaozhengdaxiao">调整单手键盘大小</string>
 </resources>

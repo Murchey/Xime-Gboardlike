@@ -35,6 +35,8 @@ data class KeyboardCallbacks(
     val onDeleteText: ((Int) -> Unit)? = null,
     val onQuickSend: (() -> Unit)? = null,
     val onKeyboardResize: (() -> Unit)? = null,
+    /** 工具栏面板：进入/退出单手模式。 */
+    val onToggleOneHanded: (() -> Unit)? = null,
     val onReloadConfig: (() -> Unit)? = null,
     val onSettings: (() -> Unit)? = null,
     val onSwitchSchema: ((String) -> Unit)? = null,

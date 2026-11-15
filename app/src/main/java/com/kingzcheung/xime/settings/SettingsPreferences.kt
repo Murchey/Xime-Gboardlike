@@ -1111,6 +1111,42 @@ object SettingsPreferences {
     /** 键盘贴底显示：忽略底部系统 inset，把键盘内容下移到屏幕底边（隐藏导航栏/手势条时使用）。 */
     const val KEY_KEYBOARD_FLUSH_BOTTOM = "keyboard_flush_bottom"
 
+    /** 单手模式：0 关闭 / 1 左手 / 2 右手（见 [OneHandedMode]）。 */
+    const val KEY_ONE_HANDED_MODE = "one_handed_mode"
+
+    /** 单手模式专用尺寸：与常规横/竖屏尺寸独立，互不覆盖。 */
+    const val KEY_ONE_HANDED_HEIGHT_DP = "one_handed_height_dp"
+    const val KEY_ONE_HANDED_WIDTH_DP = "one_handed_width_dp"
+
+    // 以字符串存储：设置页的声明式菜单统一按文本读写，这里保持同一口径
+    fun getOneHandedMode(context: Context): Int = try {
+        getPrefs(context).getString(KEY_ONE_HANDED_MODE, null)
+            ?.toIntOrNull()
+            ?: OneHandedMode.OFF
+    } catch (_: ClassCastException) {
+        OneHandedMode.OFF
+    }
+
+    fun setOneHandedMode(context: Context, mode: Int) {
+        getPrefs(context).edit().putString(KEY_ONE_HANDED_MODE, mode.toString()).apply()
+    }
+
+    /** 单手模式键盘高度（dp）：与横屏/竖屏的常规高度分开存，互不影响。 */
+    fun getOneHandedHeightDp(context: Context): Int =
+        getPrefs(context).getInt(KEY_ONE_HANDED_HEIGHT_DP, 0)
+
+    fun setOneHandedHeightDp(context: Context, heightDp: Int) {
+        getPrefs(context).edit().putInt(KEY_ONE_HANDED_HEIGHT_DP, heightDp).apply()
+    }
+
+    /** 单手模式键盘宽度（dp）：与键盘宽度调节的左右边距分开存。 */
+    fun getOneHandedWidthDp(context: Context): Int =
+        getPrefs(context).getInt(KEY_ONE_HANDED_WIDTH_DP, 0)
+
+    fun setOneHandedWidthDp(context: Context, widthDp: Int) {
+        getPrefs(context).edit().putInt(KEY_ONE_HANDED_WIDTH_DP, widthDp).apply()
+    }
+
     fun isKeyboardFlushBottom(context: Context): Boolean {
         return getPrefs(context).getBoolean(KEY_KEYBOARD_FLUSH_BOTTOM, false)
     }

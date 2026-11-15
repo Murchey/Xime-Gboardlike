@@ -42,6 +42,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.OpenInFull
+import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.twotone.Edit
 import androidx.compose.material.icons.twotone.KeyboardAlt
 import androidx.compose.material3.Icon
@@ -99,6 +101,8 @@ data class MenuBarState(
     val isFloatingMode: Boolean = false,
     val schemaSwitches: List<SchemaSwitchUiState> = emptyList(),
     val canResizeKeyboard: Boolean = true,
+    /** 单手模式当前值（0 关闭 / 1 左手 / 2 右手），决定工具卡片显示"进入"还是"退出"。 */
+    val oneHandedMode: Int = com.kingzcheung.xime.settings.OneHandedMode.OFF,
     val canFloatKeyboard: Boolean = true,
     val toolbarButtons: List<String> = emptyList(),
     val toolbarPluginButtons: List<ToolbarButtonItem.Plugin> = emptyList(),
@@ -146,6 +150,8 @@ data class MenuBarCallbacks(
     val onClipboard: () -> Unit,
     val onQuickSend: () -> Unit,
     val onKeyboardResize: () -> Unit,
+    /** 单手模式开关（进入/退出），由键盘服务实现。 */
+    val onToggleOneHanded: (() -> Unit)? = null,
     val onEmoji: () -> Unit,
     val onReloadConfig: () -> Unit,
     val onSettings: () -> Unit,
@@ -266,7 +272,19 @@ fun MenuBar(
     // 基于 availableTools（未入栏）：拖上工具栏少一个、拖下多一个（动态池）。
     // 再附加系统专属动作（调节/深色/部署，不可入栏，常驻）。
     // 方案按钮被拖出删除后回到功能池，可再拖回/点回顶部
-    val candidateTools = (if (schemaVisible) emptyList() else listOf(schemaTool)) +
+    // 单手模式固定排在功能池第一位（第一页第一个）：键盘收窄靠边是"随时开关"的动作，
+    // 用户不该进设置页找；已开启时同一张卡片变成"退出单手模式"。
+    val oneHandedActive = state.oneHandedMode != com.kingzcheung.xime.settings.OneHandedMode.OFF
+    val oneHandedTool = MenuTool(
+        "sys_one_handed",
+        if (oneHandedActive) tr(R.string.s_tuichudanshou) else tr(R.string.s_danshoumoshi),
+        rememberVectorPainter(
+            if (oneHandedActive) Icons.Filled.OpenInFull else Icons.Rounded.Smartphone
+        ),
+        action = callbacks.onToggleOneHanded ?: {},
+    )
+    val candidateTools = listOf(oneHandedTool) +
+        (if (schemaVisible) emptyList() else listOf(schemaTool)) +
         availableTools + buildList {
         if (!state.isFloatingMode && state.canResizeKeyboard) {
             add(MenuTool("sys_resize", tr(R.string.s_jianpandiaojie), rememberVectorPainter(ToolbarButton.EDIT.icon), action = callbacks.onKeyboardResize))
