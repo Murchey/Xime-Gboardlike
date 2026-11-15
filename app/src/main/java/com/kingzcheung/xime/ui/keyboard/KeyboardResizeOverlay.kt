@@ -85,6 +85,9 @@ fun KeyboardResizeOverlay(
     onReset: () -> Unit,
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
+    /** 是否允许拖左/右边缘调宽：单手模式只调"内侧"那一条，贴边那侧锁死。 */
+    allowMarginStartDrag: Boolean = true,
+    allowMarginEndDrag: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val configuration = LocalConfiguration.current
@@ -168,6 +171,43 @@ fun KeyboardResizeOverlay(
             )
         }
 
+        // 左 / 右｜｜｜手柄：各自独立调所在侧边距（边跟手，往内拖变窄、往外拖变宽）。
+        // 两侧一起变时键盘整体重新居中；只拖一侧则是键盘偏移。
+        // 上限同时受"最小键盘宽"约束：任何一侧都不能把键盘挤到比 MIN_KEYBOARD_WIDTH_DP 还窄。
+        if (allowMarginStartDrag) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .size(HANDLE_TOUCH_DP)
+                    .dragging { dx, _ ->
+                        val limit = (screenWidthDp - KeyboardResizeBounds.MIN_KEYBOARD_WIDTH_DP -
+                            latestMarginEnd).coerceAtLeast(0)
+                        val newStart = (latestMarginStart + dx).roundToInt().coerceIn(0, limit)
+                        latestOnMarginStartChange(newStart)
+                    },
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                VerticalHandlePill(modifier = Modifier.padding(start = 14.dp))
+            }
+        }
+
+        if (allowMarginEndDrag) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .size(HANDLE_TOUCH_DP)
+                    .dragging { dx, _ ->
+                        val limit = (screenWidthDp - KeyboardResizeBounds.MIN_KEYBOARD_WIDTH_DP -
+                            latestMarginStart).coerceAtLeast(0)
+                        val newEnd = (latestMarginEnd - dx).roundToInt().coerceIn(0, limit)
+                        latestOnMarginEndChange(newEnd)
+                    },
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                VerticalHandlePill(modifier = Modifier.padding(end = 14.dp))
+            }
+        }
+
         // 03.jpg：中央整体拖动把手与「重置 / 完成」位于同一操作行。
         // 水平拖动同步调整两侧边距，垂直拖动调整底部留白；键盘整体移动而不改变高度。
         Row(
@@ -200,6 +240,17 @@ fun KeyboardResizeOverlay(
 
 /** 手柄触控区边长（dp）：整条边在遮罩内侧的热区，握点图标贴边居中。 */
 private val HANDLE_TOUCH_DP = 48.dp
+
+/** 左右边距手柄的竖直胶囊：6dp 宽、44dp 高，贴在遮罩内侧边缘。 */
+@Composable
+private fun VerticalHandlePill(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(width = 6.dp, height = 44.dp)
+            .clip(RoundedCornerShape(3.dp))
+            .background(Color(0xFFB3B3B3))
+    )
+}
 
 /** 按钮组总高的一半（56dp 圆 + 6dp 间距 + ~16dp 标签 ≈ 78dp），用于垂直居中。 */
 private const val ACTION_BLOCK_HALF_HEIGHT = 39

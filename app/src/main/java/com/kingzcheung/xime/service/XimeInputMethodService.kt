@@ -2367,6 +2367,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                           keyboardMarginEndDp = snapshot.resizePreviewMarginEndDp,
                                       )
                                   },
+                                  // 单手调节只露出"内侧"边的宽度手柄：贴边那侧锁死，确认后宽度才不会被抹平
+                                  allowMarginStartDrag = !state.oneHandedResize ||
+                                      !com.kingzcheung.xime.settings.OneHandedMode.isKeyboardOnLeft(state.oneHandedMode),
+                                  allowMarginEndDrag = !state.oneHandedResize ||
+                                      com.kingzcheung.xime.settings.OneHandedMode.isKeyboardOnLeft(state.oneHandedMode),
                                   onCancel = {
                                       if (uiState.value.oneHandedResize) {
                                           uiState.value = uiState.value.copy(
