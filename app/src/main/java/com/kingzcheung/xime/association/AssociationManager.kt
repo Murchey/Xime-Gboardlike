@@ -114,7 +114,9 @@ object AssociationManager {
             }
 
             val merged = if (phrases.isEmpty()) modelCandidates else modelCandidates + phrases
-            val fusedCandidates = fusionEngine.fuseCandidates(merged, contextText)
+            val fusedCandidates = AssociationPostFilter.dropPunctuation(
+                fusionEngine.fuseCandidates(merged, contextText)
+            )
 
             val cost = android.os.SystemClock.elapsedRealtime() - started
             FileLogger.d(

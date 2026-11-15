@@ -65,6 +65,10 @@ class AssociationExpanderDeviceTest {
         println("manager 候选=" + list.joinToString("|") { it.text })
         assertTrue("候选不应为空", list.isNotEmpty())
         assertTrue("应至少包含一个双字候选", list.any { it.text.length >= 2 })
+        assertTrue(
+            "联想栏不该出现纯标点候选",
+            list.none { AssociationPostFilter.isPunctuationOnly(it.text) }
+        )
         AssociationManager.release()
     }
 
