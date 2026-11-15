@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.Gesture
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class ToolbarButton(
@@ -47,6 +48,9 @@ enum class ToolbarButton(
     HANDWRITING_LOOKUP("handwriting_lookup", tr(R.string.s_shouxiezhaozi), Icons.Outlined.Gesture),
     EDIT("edit", tr(R.string.s_bianji), Icons.Rounded.Edit),
     VOICE("voice", tr(R.string.s_yuyin), Icons.Rounded.Mic),
+
+    /** 单手模式：点一次进入（默认靠右），再点一次退出；可加入顶部快捷栏。 */
+    ONE_HANDED("one_handed", tr(R.string.s_danshoumoshi), Icons.Rounded.Smartphone),
 
     /** 开发者调试用：一键开关滑动轨迹采集，并在同一面板里标记真实意图。 */
     DEBUG_GLIDE("debug_glide", tr(R.string.s_debug_huadongbiaoj), Icons.Outlined.BugReport);

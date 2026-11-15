@@ -523,6 +523,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     /** 工具栏面板的「单手模式」按钮：关闭时进入（默认靠右），已开启时退出。 */
     internal fun toggleOneHandedMode() {
         val current = SettingsPreferences.getOneHandedMode(this)
+        FileLogger.i(TAG, "toggleOneHandedMode: current=" + current)
         setOneHandedMode(
             if (current == com.kingzcheung.xime.settings.OneHandedMode.OFF) {
                 com.kingzcheung.xime.settings.OneHandedMode.DEFAULT_SIDE

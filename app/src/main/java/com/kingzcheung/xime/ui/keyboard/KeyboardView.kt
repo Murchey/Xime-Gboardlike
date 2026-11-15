@@ -494,6 +494,7 @@ fun KeyboardView(
                     ) {
                         return@mapNotNull null
                     }
+                    android.util.Log.d("ToolbarDbg", "item=" + item.id + " kind=" + item::class.simpleName)
                     val onClick: () -> Unit = when (item) {
                         is ToolbarButtonItem.Builtin -> when (item.button) {
                             ToolbarButton.SETTINGS -> ({ callbacks.onSettings?.invoke() })
@@ -508,6 +509,7 @@ fun KeyboardView(
                             ToolbarButton.HOME -> ({ callbacks.onToolbarEditingAction?.invoke("home") })
                             ToolbarButton.END -> ({ callbacks.onToolbarEditingAction?.invoke("end") })
                             ToolbarButton.FLOAT -> ({ callbacks.onFloatingModeChange?.invoke(!state.isFloatingMode) })
+                            ToolbarButton.ONE_HANDED -> ({ callbacks.onToggleOneHanded?.invoke() })
                             ToolbarButton.HANDWRITING_LOOKUP -> ({ isHandwritingLookup = !isHandwritingLookup })
                             ToolbarButton.EDIT -> ({ viewModel.showOverlay(OverlayRoute.Edit) })
                             ToolbarButton.DEBUG_GLIDE -> ({ toggleGlideRecording(toolbarContext) })
@@ -1523,6 +1525,7 @@ fun KeyboardView(
                                         ToolbarButton.HOME -> callbacks.onToolbarEditingAction?.invoke("home")
                                         ToolbarButton.END -> callbacks.onToolbarEditingAction?.invoke("end")
                                         ToolbarButton.FLOAT -> callbacks.onFloatingModeChange?.invoke(!state.isFloatingMode)
+                                        ToolbarButton.ONE_HANDED -> callbacks.onToggleOneHanded?.invoke()
                                         ToolbarButton.HANDWRITING_LOOKUP -> callbacks.onToolbarEditingAction?.invoke("handwriting_lookup")
                                         ToolbarButton.EDIT -> viewModel.showOverlay(OverlayRoute.Edit)
                                         ToolbarButton.VOICE -> callbacks.onVoiceStickyToggle?.invoke()

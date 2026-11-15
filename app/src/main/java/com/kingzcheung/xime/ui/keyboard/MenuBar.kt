@@ -205,7 +205,14 @@ fun MenuBar(
             isDebugLogEnabled = SettingsPreferences.isVerboseLoggingEnabled(context),
         )
     }.map { b ->
-        MenuTool(b.id, b.label, rememberVectorPainter(b.icon)) {
+        // 单手模式是"开关"：已开启时同一张卡片显示"退出单手模式"，图标换成四角箭头
+        val oneHandedOn = b == ToolbarButton.ONE_HANDED &&
+            state.oneHandedMode != com.kingzcheung.xime.settings.OneHandedMode.OFF
+        MenuTool(
+            b.id,
+            if (oneHandedOn) tr(R.string.s_tuichudanshou) else b.label,
+            rememberVectorPainter(if (oneHandedOn) Icons.Filled.OpenInFull else b.icon),
+        ) {
             callbacks.onToolbarButtonClick(b.id)
         }
     }
@@ -272,20 +279,12 @@ fun MenuBar(
     // 基于 availableTools（未入栏）：拖上工具栏少一个、拖下多一个（动态池）。
     // 再附加系统专属动作（调节/深色/部署，不可入栏，常驻）。
     // 方案按钮被拖出删除后回到功能池，可再拖回/点回顶部
-    // 单手模式固定排在功能池第一位（第一页第一个）：键盘收窄靠边是"随时开关"的动作，
-    // 用户不该进设置页找；已开启时同一张卡片变成"退出单手模式"。
-    val oneHandedActive = state.oneHandedMode != com.kingzcheung.xime.settings.OneHandedMode.OFF
-    val oneHandedTool = MenuTool(
-        "sys_one_handed",
-        if (oneHandedActive) tr(R.string.s_tuichudanshou) else tr(R.string.s_danshoumoshi),
-        rememberVectorPainter(
-            if (oneHandedActive) Icons.Filled.OpenInFull else Icons.Rounded.Smartphone
-        ),
-        action = callbacks.onToggleOneHanded ?: {},
-    )
-    val candidateTools = listOf(oneHandedTool) +
-        (if (schemaVisible) emptyList() else listOf(schemaTool)) +
-        availableTools + buildList {
+    // 功能池顺序：单手模式排第一（第一页第一张），其余保持原序（稳定排序）
+    val orderedTools = availableTools.sortedBy {
+        if (it.id == ToolbarButton.ONE_HANDED.id) 0 else 1
+    }
+    val candidateTools = orderedTools +
+        (if (schemaVisible) emptyList() else listOf(schemaTool)) + buildList {
         if (!state.isFloatingMode && state.canResizeKeyboard) {
             add(MenuTool("sys_resize", tr(R.string.s_jianpandiaojie), rememberVectorPainter(ToolbarButton.EDIT.icon), action = callbacks.onKeyboardResize))
         }
