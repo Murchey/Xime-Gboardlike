@@ -13,6 +13,7 @@ import com.kingzcheung.xime.settings.MarketSchemeItem
 import com.kingzcheung.xime.settings.MarketUpdateChecker
 import com.kingzcheung.xime.settings.MarketVersionStore
 import com.kingzcheung.xime.settings.SchemaManager
+import com.kingzcheung.xime.settings.SchemaManifestManager
 import com.kingzcheung.xime.settings.XimeIndexSource
 import com.kingzcheung.xime.rime.RimeConfigHelper
 import kotlinx.coroutines.Dispatchers
@@ -225,9 +226,88 @@ class SchemaMarketViewModel(application: Application) : AndroidViewModel(applica
                 else -> tr(R.string.s_yixiazai_2, item.scheme.name)
             }
             showToast(toast)
+            // 下载完成即解压安装：市场的按钮是「获取」，下载完列表就显示"已安装"，
+            // 用户不会再去点第二次。只下载不解压，文件只躺在 market/ 里，
+            // 方案永远不进 rime/ —— 用户看到的就是"下载安装了但部署方案里没有"。
+            if (result.success && nowDownloaded) {
+                installDownloaded(item, actualVersion)
+            }
             // 下载成功立即重算可更新计数（Tab 角标与设置主页角标实时刷新）
             if (result.success) MarketUpdateChecker.refreshNow(context)
         }
+    }
+
+    /**
+     * 把已下载的源包解压进 rime/ 并立即部署。
+     *
+     * 是否属"升级"以磁盘上的清单为准（而不是界面上的版本号）：首装要把该包带来的
+     * **全部**方案并入启用列表，否则方案不进 schema_list、部署时不会被编译，
+     * 切换列表里也看不到；升级则保留用户现有启用列表，失败时回滚旧包。
+     */
+    private suspend fun installDownloaded(item: MarketSchemeItem, version: String?) {
+        val packageId = item.scheme.id
+        val resolvedVersion = version ?: item.scheme.currentVersion
+        val isUpgrade = withContext(Dispatchers.IO) {
+            SchemaManifestManager.loadManifest(context, packageId) != null
+        }
+        val install = withContext(Dispatchers.IO) {
+            XimeIndexSource.installFromMarket(
+                context = context,
+                scheme = item.scheme,
+                switchEnabled = !isUpgrade,
+                withRollback = isUpgrade,
+            )
+        }
+        if (!install.success) {
+            if (install.conflicts.isNotEmpty()) {
+                _uiState.update { st ->
+                    st.copy(conflictDetails = install.conflicts, conflictSchemeName = item.scheme.name)
+                }
+            } else {
+                showToast(install.failureReason ?: tr(R.string.s_anzhuangshibai))
+            }
+            return
+        }
+        val deployed = withContext(Dispatchers.IO) { RimeConfigHelper.deployInstalledSchema(context) }
+        if (!deployed) {
+            val rolledBack = withContext(Dispatchers.IO) {
+                val tx = install.transaction
+                if (tx == null) false else {
+                    val ok = tx.rollback()
+                    if (ok) RimeConfigHelper.deployInstalledSchema(context)
+                    ok
+                }
+            }
+            showToast(
+                buildString {
+                    append(tr(R.string.s_bushushibai))
+                    if (rolledBack) append("\n" + tr(R.string.s_yihuigun))
+                }
+            )
+            return
+        }
+        withContext(Dispatchers.IO) { install.transaction?.commit() }
+        withContext(Dispatchers.IO) {
+            MarketVersionStore.setSchemeVersion(context, packageId, resolvedVersion)
+        }
+        _uiState.update { st ->
+            st.copy(
+                schemes = st.schemes.map { s ->
+                    if (s.scheme.id == packageId) s.copy(installedVersion = resolvedVersion) else s
+                },
+            )
+        }
+        val msg = buildString {
+            append(
+                if (isUpgrade) tr(R.string.s_yigengxin, item.scheme.name)
+                else tr(R.string.s_yianzhuang_bingwanchengbushu, item.scheme.name)
+            )
+            if (install.unresolvedDeps.isNotEmpty()) {
+                append("\n" + tr(R.string.s_yilaiweiwanzheng, install.unresolvedDeps.joinToString("、")))
+            }
+        }
+        showToast(msg)
+        MarketUpdateChecker.refreshNow(context)
     }
 
     /**
@@ -264,77 +344,13 @@ class SchemaMarketViewModel(application: Application) : AndroidViewModel(applica
                 return@launch
             }
 
-            // 已安装方案视为升级：安装后立即部署，失败则回滚旧包。
-            val isUpgrade = item.installedVersion != null
-            val install = withContext(Dispatchers.IO) {
-                XimeIndexSource.installFromMarket(
-                    context = context,
-                    scheme = item.scheme,
-                    switchEnabled = false,
-                    withRollback = isUpgrade,
-                )
-            }
-
-            if (install.success && isUpgrade) {
-                val deployed = withContext(Dispatchers.IO) { RimeConfigHelper.deployInstalledSchema(context) }
-                if (!deployed) {
-                    val rolledBack = withContext(Dispatchers.IO) {
-                        val tx = install.transaction
-                        if (tx == null) false else {
-                            val ok = tx.rollback()
-                            if (ok) RimeConfigHelper.deployInstalledSchema(context)
-                            ok
-                        }
-                    }
-                    _uiState.update { it.copy(downloadingId = null, downloadProgress = 0f) }
-                    val msg = buildString {
-                        append(tr(R.string.s_bushushibai))
-                        if (rolledBack) append("\n" + tr(R.string.s_yihuigun))
-                    }
-                    showToast(msg)
-                    return@launch
-                }
-                withContext(Dispatchers.IO) { install.transaction?.commit() }
-            }
-
             val newVersion = selectedVersion ?: item.scheme.resolvedVersion()?.version
                 ?: item.scheme.currentVersion
             _uiState.update { st ->
                 st.copy(downloadingId = null, downloadProgress = 0f)
             }
-
-            if (install.success) {
-                withContext(Dispatchers.IO) {
-                    MarketVersionStore.setSchemeVersion(context, item.scheme.id, newVersion)
-                }
-                _uiState.update { st ->
-                    st.copy(
-                        downloadedVersions = st.downloadedVersions + (item.scheme.id to newVersion),
-                        schemes = st.schemes.map { s ->
-                            if (s.scheme.id == item.scheme.id) s.copy(installedVersion = newVersion)
-                            else s
-                        },
-                    )
-                }
-                val msg = buildString {
-                    append(tr(R.string.s_yigengxin, item.scheme.name))
-                    if (install.unresolvedDeps.isNotEmpty()) {
-                        append("\n" + tr(R.string.s_yilaiweiwanzheng, install.unresolvedDeps.joinToString("、")))
-                    }
-                }
-                showToast(msg)
-                MarketUpdateChecker.refreshNow(context)
-            } else if (install.conflicts.isNotEmpty()) {
-                // 文件冲突：弹对话框展示明细，不再走一行 Toast
-                _uiState.update { st ->
-                    st.copy(
-                        conflictDetails = install.conflicts,
-                        conflictSchemeName = item.scheme.name,
-                    )
-                }
-            } else {
-                showToast(install.failureReason ?: tr(R.string.s_anzhuangshibai))
-            }
+            // 安装/部署与首装走同一条路径（是否升级以磁盘清单为准），避免两套行为分叉
+            installDownloaded(item, newVersion)
         }
     }
 
