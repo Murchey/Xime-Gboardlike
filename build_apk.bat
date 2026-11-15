@@ -55,7 +55,7 @@ call :collect lite
 if errorlevel 1 exit /b 1
 
 echo.
-echo [3/4] Done. APKs:
+echo [3/4] Done. APKs (后缀 -full / -lite 区分两种包):
 for %%D in (full lite) do (
     echo   dist\%%D\
     for %%F in ("dist\%%D\*.apk") do echo     - %%~nxF
@@ -115,6 +115,9 @@ for %%F in ("app\build\outputs\apk\release\*.apk") do (
         ) else (
             set "NEWNAME=!NAME!"
         )
+        rem 文件名后缀标出 full / lite：XimeGboard-<ver>-<abi>-<flavor>.apk
+        set "NEWNAME=!NEWNAME:.apk=!"
+        set "NEWNAME=!NEWNAME!-%FLAVOR%.apk"
         copy /y "!SRC!" "dist\%FLAVOR%\!NEWNAME!" >nul
         endlocal
         set "FOUND=1"
