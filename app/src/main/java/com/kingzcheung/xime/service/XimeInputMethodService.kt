@@ -491,6 +491,12 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     /** 底部工具条占用的留白带高度（dp）：实测全面屏手势下约 49dp，取 44 留余量。 */
     private val BOTTOM_BAR_BAND_DP = 56
 
+    /**
+     * 自身写入（上屏/删除）后的静默窗口：这期间回报的光标位移是宿主对写入的回应，
+     * 不是用户移动光标，不能据此退出联想（否则刚算出的联想会被立刻撤掉）。
+     */
+    private val SELF_WRITE_QUIET_MS = 200L
+
     /** 底部工具条按钮动作分发。 */
     internal fun onBottomBarAction(action: com.kingzcheung.xime.settings.BottomBarAction) {
         when (action) {
@@ -2591,6 +2597,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
                 }
             }
+            // 部分宿主不回报 setSelection 引起的选区变化，这里直接收口一次：
+            // 光标已经离开原位置，联想必须退出（重复调用是幂等的）。
+            dismissAssociations()
         }
     }
 
@@ -2925,7 +2934,20 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             ) {
                 return
             }
-            if (!hasPendingComposition()) return
+            if (!hasPendingComposition()) {
+                // 空闲态移动光标：上屏时那批联想针对的是旧位置，光标一动即失效
+                val sinceWrite = android.os.SystemClock.uptimeMillis() - lastSelfWriteAtMs
+                if (shouldDismissAssociationsOnCaretMove(
+                        oldSelStart, oldSelEnd, newSelStart, newSelEnd,
+                        hasPendingComposition = false,
+                        msSinceSelfWrite = sinceWrite,
+                        quietWindowMs = SELF_WRITE_QUIET_MS,
+                    )
+                ) {
+                    dismissAssociations()
+                }
+                return
+            }
             FileLogger.i(
                 TAG,
                 "onUpdateSelection: 丢弃待上屏组合态 ($oldSelStart,$oldSelEnd)->($newSelStart,$newSelEnd)"
@@ -2933,6 +2955,24 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             breakPendingCompositionForCaretMove(newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         } finally {
             selectionUpdateGate.exit()
+        }
+    }
+
+    /**
+     * 空闲态移动光标后退出联想。
+     *
+     * 上屏时算出的联想针对的是"刚上屏的那个词之后"；光标一移到词句中间，它已经不代表
+     * 当前位置，继续挂着就是错误信息，还会白占一行候选。因此光标一动立即撤掉联想，
+     * 并作废在途结果（[PredictionManager.invalidatePendingPredictions]），
+     * 避免迟到的旧结果又把候选栏填回来；等用户下一次真实输入再重新联想。
+     */
+    private fun dismissAssociations() {
+        predictionManager.invalidatePendingPredictions()
+        val current = candidateState.value
+        val cleared = current.withoutAssociations()
+        if (cleared !== current) {
+            candidateState.value = cleared
+            FileLogger.d(TAG, "caret moved: associations dismissed")
         }
     }
 
@@ -3624,7 +3664,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             return
         }
         // 上屏会让光标前进 text.length，属自身写入
-        selfWriteCaret.noteWrite(text.length, android.os.SystemClock.uptimeMillis())
+        noteSelfWrite(text.length)
         currentInputConnection?.commitText(text, 1)
 
         // text_committed 事件：真实上屏才累计/投递（内部编辑器分支已在上方 return；
@@ -3781,15 +3821,24 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         return replaced
     }
 
+    /** 最近一次自身写入的时间：紧随其后的光标回调不算用户移动光标。 */
+    private var lastSelfWriteAtMs = 0L
+
     /** 登记一次自身写入后的预期光标位移（见 [SelfWriteCaretGuard]），供直写 InputConnection 的路径调用。 */
     internal fun noteSelfWriteCaretDelta(delta: Int) {
-        selfWriteCaret.noteWrite(delta, android.os.SystemClock.uptimeMillis())
+        noteSelfWrite(delta)
+    }
+
+    private fun noteSelfWrite(delta: Int) {
+        val now = android.os.SystemClock.uptimeMillis()
+        lastSelfWriteAtMs = now
+        selfWriteCaret.noteWrite(delta, now)
     }
 
     /** DEL 键回退一个字符，同属自身写入。 */
     override fun sendDownUpKeyEvents(keyEventCode: Int) {
         if (keyEventCode == KeyEvent.KEYCODE_DEL) {
-            selfWriteCaret.noteWrite(-1, android.os.SystemClock.uptimeMillis())
+            noteSelfWrite(-1)
         }
         super.sendDownUpKeyEvents(keyEventCode)
     }

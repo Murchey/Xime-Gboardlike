@@ -294,4 +294,42 @@ class ComposingStartFromRegionEndTest {
         // 光标比编码还靠前：说明宿主内容与本次写入已失同步，宁可不动光标
         assertNull(composingStartFromRegionEnd(2, 5))
     }
+
+    // ── 移动光标退出联想（空闲态）──
+
+    private fun dismissMoved(
+        oldStart: Int = 5,
+        newStart: Int = 3,
+        composing: Boolean = false,
+        sinceWrite: Long = 1_000,
+    ) = shouldDismissAssociationsOnCaretMove(
+        oldSelStart = oldStart,
+        oldSelEnd = oldStart,
+        newSelStart = newStart,
+        newSelEnd = newStart,
+        hasPendingComposition = composing,
+        msSinceSelfWrite = sinceWrite,
+        quietWindowMs = 200,
+    )
+
+    @Test
+    fun 空闲态移动光标应退出联想() {
+        assertTrue(dismissMoved())
+    }
+
+    @Test
+    fun 选区没变化不退出联想() {
+        assertFalse(dismissMoved(oldStart = 4, newStart = 4))
+    }
+
+    @Test
+    fun 组合态不动联想_由编码刷新路径处理() {
+        assertFalse(dismissMoved(composing = true))
+    }
+
+    @Test
+    fun 自身写入刚完成的回调不退出联想() {
+        assertFalse(dismissMoved(sinceWrite = 50))
+        assertTrue(dismissMoved(sinceWrite = 250))
+    }
 }

@@ -29,3 +29,12 @@ data class CandidateState(
     /** 滑动解码进行中（抬手结果确定前为 true）：候选栏底部显示滚动 loading 条。 */
     val isGlideDecoding: Boolean = false,
 )
+
+/**
+ * 撤掉联想候选（其余状态原样保留）。
+ *
+ * 上屏时算出的联想针对的是"刚上屏那个词之后"，光标一移动就不代表当前位置——继续
+ * 挂着是错误信息。空列表时返回自身，避免无意义的状态写入触发重组。
+ */
+internal fun CandidateState.withoutAssociations(): CandidateState =
+    if (associationCandidates.isEmpty()) this else copy(associationCandidates = emptyList())

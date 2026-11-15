@@ -25,6 +25,31 @@ internal fun shouldBreakCompositionOnSelectionChange(
 }
 
 /**
+ * 空闲态的光标/选区变化是否应退出联想。
+ *
+ * 联想是在某个词上屏后算出来的，只对"那个词之后"成立；光标一移动就不代表当前位置，
+ * 继续挂着是错误信息。三条排除项：
+ * - 仍在组合态：编码编辑有自己的候选刷新路径，不在这里处理；
+ * - 选区没有变化；
+ * - 刚发生过自身写入（上屏/删除）：宿主回报的光标位移是对写入的回应，不是用户移动，
+ *   此时撤联想会把刚算好的那批立刻抹掉。
+ */
+internal fun shouldDismissAssociationsOnCaretMove(
+    oldSelStart: Int,
+    oldSelEnd: Int,
+    newSelStart: Int,
+    newSelEnd: Int,
+    hasPendingComposition: Boolean,
+    msSinceSelfWrite: Long,
+    quietWindowMs: Long,
+): Boolean {
+    if (hasPendingComposition) return false
+    if (oldSelStart == newSelStart && oldSelEnd == newSelEnd) return false
+    if (msSinceSelfWrite < quietWindowMs) return false
+    return true
+}
+
+/**
  * onUpdateSelection 的重入闸门。
  *
  * 宿主（如 Compose）会在输入法写完选区后同步回调 updateSelection，
