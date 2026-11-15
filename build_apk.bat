@@ -1,9 +1,12 @@
 @echo off
+chcp 65001 >nul
 setlocal EnableExtensions
 cd /d "%~dp0"
 
 echo ============================================
 echo  XimeGboard - Build signed APKs by ABI
+echo    dist\full : 内置联想模型（开箱即用，体积大）
+echo    dist\lite : 不含模型权重，用户自己装
 echo ============================================
 echo.
 
@@ -27,19 +30,69 @@ if not exist "app\xime-gboard.jks" (
     echo [WARN] app\xime-gboard.jks not found; release APKs may be unsigned.
 )
 
-echo [1/2] Building release APKs...
-call gradlew.bat assembleRelease --console=plain
+if exist "dist" rmdir /s /q "dist"
+mkdir "dist\full"
+mkdir "dist\lite"
+
+rem ---------------------------------------------------------------
+rem full：打进 app\src\modelAssets 下的联想模型（-PbundleModel=true）
+rem ---------------------------------------------------------------
+echo [1/4] Building FULL release APKs (bundled predictive model)...
+call gradlew.bat assembleRelease -PbundleModel=true --console=plain
 if errorlevel 1 (
     echo.
-    echo [ERROR] Build failed. See the Gradle output above.
+    echo [ERROR] FULL build failed. See the Gradle output above.
     if not defined CI pause
     exit /b 1
 )
+call :collect full
+if errorlevel 1 exit /b 1
 
-set "OUT_DIR=dist"
-if exist "%OUT_DIR%" rmdir /s /q "%OUT_DIR%"
-mkdir "%OUT_DIR%"
+rem ---------------------------------------------------------------
+rem lite：不带模型权重（-PbundleModel=false），只保留模型架构与导入入口
+rem 两次构建的资产集合不同，Gradle 会重新打包（不会命中 up-to-date）
+rem ---------------------------------------------------------------
+echo.
+echo [2/4] Building LITE release APKs (no bundled model)...
+call gradlew.bat assembleRelease -PbundleModel=false --console=plain
+if errorlevel 1 (
+    echo.
+    echo [ERROR] LITE build failed. See the Gradle output above.
+    if not defined CI pause
+    exit /b 1
+)
+call :collect lite
+if errorlevel 1 exit /b 1
 
+echo.
+echo [3/4] Done. APKs:
+for %%D in (full lite) do (
+    echo   dist\%%D\
+    for %%F in ("dist\%%D\*.apk") do echo     - %%~nxF
+)
+
+echo.
+echo [4/4] Which file to install:
+echo   dist\full - 内置模型，开箱即有联想
+echo   dist\lite - 不含模型，安装后在「设置 -^> 智能 -^> 智能联想」里导入自己的模型
+echo.
+echo   arm64-v8a  - most modern phones
+echo   armeabi-v7a - older 32-bit ARM phones
+echo   x86_64 / x86 - emulators and x86 tablets
+echo   universal  - works everywhere, larger
+echo.
+echo Note: these APKs use the public community certificate in app\keystore.properties.
+echo       Installable locally, but not suitable for app-store publishing.
+echo.
+if not defined CI pause
+endlocal
+exit /b 0
+
+rem ---------------------------------------------------------------
+rem :collect <full^|lite>  - 把 release 产物拷进 dist\<flavor>，保留旧命名规则
+rem ---------------------------------------------------------------
+:collect
+set "FLAVOR=%~1"
 set "FOUND=0"
 for %%F in ("app\build\outputs\apk\release\*.apk") do (
     if exist "%%~fF" (
@@ -52,30 +105,13 @@ for %%F in ("app\build\outputs\apk\release\*.apk") do (
         ) else (
             set "NEWNAME=!NAME!"
         )
-        copy /y "!SRC!" "%OUT_DIR%\!NEWNAME!" >nul
+        copy /y "!SRC!" "dist\%FLAVOR%\!NEWNAME!" >nul
         endlocal
         set "FOUND=1"
     )
 )
-
 if "%FOUND%"=="0" (
-    echo [ERROR] No release APK was produced.
-    if not defined CI pause
+    echo [ERROR] No release APK was produced for %FLAVOR%.
     exit /b 1
 )
-
-echo.
-echo [2/2] Done. APKs in %CD%\%OUT_DIR%:
-for %%F in ("%OUT_DIR%\*.apk") do echo   - %%~nxF
-echo.
-echo Install the APK matching your device ABI:
-echo   arm64-v8a  - most modern phones
-echo   armeabi-v7a - older 32-bit ARM phones
-echo   x86_64 / x86 - emulators and x86 tablets
-echo   universal  - works everywhere, larger
-echo.
-echo Note: these APKs use the public community certificate in app\keystore.properties.
-echo       Installable locally, but not suitable for app-store publishing.
-echo.
-if not defined CI pause
-endlocal
+exit /b 0

@@ -167,6 +167,12 @@ android {
         getByName("test") {
             resources.srcDirs("src/main/assets")
         }
+        // 内置联想模型（full 包）：默认打进 APK；-PbundleModel=false 出 lite 包——
+        // APK 里不带模型权重，只保留加载/导入架构，用户自己装模型。
+        val bundleModel = project.providers.gradleProperty("bundleModel").orNull?.toBoolean() ?: true
+        if (bundleModel) {
+            getByName("main").assets.srcDir("src/modelAssets")
+        }
     }
     lint {
         checkReleaseBuilds = false
