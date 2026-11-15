@@ -100,14 +100,30 @@ object AssociationManager {
         }
 
         try {
+            val started = android.os.SystemClock.elapsedRealtime()
             val modelCandidates = OnnxAssociationEngine.predict(contextText, topK * 2)
-            
+
             if (modelCandidates.isEmpty()) {
                 return@withContext emptyList()
             }
-            
-            val fusedCandidates = fusionEngine.fuseCandidates(modelCandidates, contextText)
-            
+
+            // 模型只出单字，用模型自己续写一个字补成双字候选（「不」→「不错」）。
+            // 额外推理次数由 AssociationExpander.Config.maxSeeds 限制。
+            val phrases = AssociationExpander.expand(contextText, modelCandidates) { prefix ->
+                OnnxAssociationEngine.predict(prefix, AssociationExpander.DEFAULT.continuationTopK)
+            }
+
+            val merged = if (phrases.isEmpty()) modelCandidates else modelCandidates + phrases
+            val fusedCandidates = fusionEngine.fuseCandidates(merged, contextText)
+
+            val cost = android.os.SystemClock.elapsedRealtime() - started
+            FileLogger.d(
+                TAG,
+                "predict: seeds=" + modelCandidates.size +
+                    " phrases=" + phrases.size +
+                    " fused=" + fusedCandidates.size +
+                    " cost=" + cost + "ms"
+            )
             fusedCandidates.take(topK)
             
         } catch (e: Exception) {
