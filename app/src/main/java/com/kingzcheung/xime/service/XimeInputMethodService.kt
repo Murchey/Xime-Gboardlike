@@ -2465,15 +2465,20 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                         setOneHandedMode(com.kingzcheung.xime.settings.OneHandedMode.OFF)
                                     },
                                     onResize = { startOneHandedResize() },
+                                    // 三颗按钮在键盘侧边（留白）垂直居中，而不是贴在键盘底部
                                     modifier = Modifier
                                         .align(
-                                            if (keyboardOnLeft) androidx.compose.ui.Alignment.BottomEnd
-                                            else androidx.compose.ui.Alignment.BottomStart
+                                            if (keyboardOnLeft) androidx.compose.ui.Alignment.CenterEnd
+                                            else androidx.compose.ui.Alignment.CenterStart
                                         )
                                         .padding(
                                             start = if (keyboardOnLeft) 0.dp else 8.dp,
                                             end = if (keyboardOnLeft) 8.dp else 0.dp,
-                                            bottom = (activeBottomDp + 10).dp,
+                                        )
+                                        // 根 Box 含键盘底部留白（设置留白 + 导航栏让位），
+                                        // 居中要扣掉它的一半，才是键面那块的视觉中心
+                                        .offset(
+                                            y = (-((state.keyboardBottomPaddingDp + activeBottomDp) / 2)).dp
                                         ),
                                 )
                             }
