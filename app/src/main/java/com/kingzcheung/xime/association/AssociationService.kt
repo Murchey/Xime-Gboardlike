@@ -39,7 +39,11 @@ object AssociationService {
         if (inputText.isEmpty()) {
             return@withContext emptyList()
         }
-        
+        // 与自动联想同一口径：空白/标点/表情/数字结尾都不值得推理（见 AssociationContextPolicy）
+        if (!AssociationContextPolicy.isValid(inputText)) {
+            return@withContext emptyList()
+        }
+
         try {
             val candidates = if (isAsciiMode) {
                 getEnglishAssociations(inputText, topK)

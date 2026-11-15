@@ -5,10 +5,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 联想上下文判定：只有末尾是文字/数字时才值得推理。
+ * 联想上下文判定：只有末尾是文字（汉字/字母）时才值得推理。
  *
- * 回归用户反馈「按空格不输入任何内容也会联想」「标点符号也会联想」——
- * 这两类上屏不承载语义，必须拦在推理之前。
+ * 回归用户反馈「按空格不输入任何内容也会联想」「标点符号也会联想」
+ * 「输入号码/金额时也在联想」——这几类上屏不承载可接续的语义，必须拦在推理之前。
  */
 class PredictionContextTest {
 
@@ -47,16 +47,24 @@ class PredictionContextTest {
     }
 
     @Test
-    fun `汉字结尾联想`() {
-        assertTrue(PredictionManager.isValidPredictionContext("你好"))
-        assertTrue(PredictionManager.isValidPredictionContext("今天天气不错"))
+    fun `数字结尾不联想`() {
+        listOf("2024", "第3", "12.5", "13800138000", "版本2", "iPhone 15", "３", "1").forEach {
+            assertFalse("数字结尾[$it]不应触发联想", PredictionManager.isValidPredictionContext(it))
+        }
     }
 
     @Test
-    fun `字母数字结尾联想`() {
+    fun `汉字结尾联想`() {
+        assertTrue(PredictionManager.isValidPredictionContext("你好"))
+        assertTrue(PredictionManager.isValidPredictionContext("今天天气不错"))
+        assertTrue(PredictionManager.isValidPredictionContext("版本二"))
+        assertTrue(PredictionManager.isValidPredictionContext("第3章"))
+    }
+
+    @Test
+    fun `字母结尾联想`() {
         assertTrue(PredictionManager.isValidPredictionContext("hello"))
-        assertTrue(PredictionManager.isValidPredictionContext("iPhone 15"))
-        assertTrue(PredictionManager.isValidPredictionContext("版本2"))
+        assertTrue(PredictionManager.isValidPredictionContext("OK"))
     }
 
     @Test

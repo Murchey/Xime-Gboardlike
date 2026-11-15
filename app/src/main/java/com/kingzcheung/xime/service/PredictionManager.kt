@@ -24,16 +24,18 @@ class PredictionManager(
         const val MAX_ASSOCIATION_COUNT = 20
 
         /**
-         * 联想上下文是否值得推理：最后一个字符必须是文字或数字。
+         * 联想上下文是否值得推理：最后一个字符必须是**文字**（汉字/字母），数字结尾不推理。
          *
          * 空格、标点、表情本身不承载语义——若照常推理，模型对 " "、"，" 这类输入
          * 同样会吐出一批候选，于是空按个空格或刚打完句号，候选栏就凭空冒出与前文
          * 无关的联想词。这类上屏只清空候选栏，不触发推理（upstream: 8cc277e9）。
+         *
+         * 数字结尾同理排除（「2024」「第3」「12.5」）：后面接的通常是单位、量词或下一句，
+         * 字符级模型给的多是虚词，纯属噪音，还会把刚输完的号码/金额候选栏弄乱。
+         * 注意 [Character.isLetter] 对全角数字「１」同样返回 false，无需单独判断。
          */
-        internal fun isValidPredictionContext(text: String): Boolean {
-            val last = text.lastOrNull() ?: return false
-            return Character.isLetterOrDigit(last)
-        }
+        internal fun isValidPredictionContext(text: String): Boolean =
+            com.kingzcheung.xime.association.AssociationContextPolicy.isValid(text)
     }
     
     private var _lastCommittedText = ""
