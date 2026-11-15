@@ -583,7 +583,14 @@ fun KeyboardLayout(
                             modifier = Modifier.weight(0.8f)
                         )
                     } else {
-                        val rows = remember(rowsLayout.rows) { normalizeQwertyRows(rowsLayout.rows) }
+                        // 字母排列（QWERTY / ABCDE）：只换字母行的顺序，键位与输入语义不变
+                        val abcdeOrder = remember {
+                            SettingsPreferences.getKeyboardLetterOrder(context) ==
+                                com.kingzcheung.xime.settings.KeyboardLayoutPreset.ORDER_ABCDE
+                        }
+                        val rows = remember(rowsLayout.rows, abcdeOrder) {
+                            applyLetterOrder(normalizeQwertyRows(rowsLayout.rows), abcdeOrder)
+                        }
                         val columns = rowsLayout.columns ?: rows.firstOrNull()?.keys?.size ?: 10
                         rows.forEach { row ->
                             // 行宽由行声明或键盘级策略决定（[rowWidthFraction]）：显式 width 优先；
@@ -1031,6 +1038,33 @@ internal val DEFAULT_QWERTY_ROWS: List<KeyboardRow> = listOf(
     KeyboardRow(listOf("z", "x", "c", "v", "b", "n", "m")),
     KeyboardRow(listOf("mode_change", "comma", "earth", "space", "period", "enter")),
 )
+
+/**
+ * 按「字母排列」设置替换字母行的顺序（设置 → 布局与显示 → 键盘布局设置）。
+ *
+ * 只在当前字母行**正好是标准 QWERTY** 时替换成字母表顺序（ABCDE）；用户自定义过
+ * 行配置（合并键/特殊布局）一律不动，避免把别人的布局改坏。
+ * 只改字母所在的行，控制行原样保留。
+ */
+internal fun applyLetterOrder(rows: List<KeyboardRow>, abcde: Boolean): List<KeyboardRow> {
+    if (!abcde) return rows
+    // 键盘行里混着 shift/delete/空格等功能键，所以按「字母槽位」替换：
+    // 先把所有单字母键按行序拼起来，只有当它正好是标准 QWERTY 时才换字母表顺序；
+    // 功能键原位不动，键数不变（第三行 7 个字母槽 → t..z 也正好 7 个）。
+    val qwerty = "qwertyuiopasdfghjklzxcvbnm"
+    val letters = rows.joinToString("") { row ->
+        row.keys.filter { it.length == 1 && it[0] in 'a'..'z' }.joinToString("")
+    }
+    if (letters != qwerty) return rows
+    val alphabet = "abcdefghijklmnopqrstuvwxyz"
+    var i = 0
+    return rows.map { row ->
+        val keys = row.keys.map { key ->
+            if (key.length == 1 && key[0] in 'a'..'z') alphabet[i++].toString() else key
+        }
+        if (keys == row.keys) row else row.copy(keys = keys)
+    }
+}
 
 /**
  * 规范化键盘行：按配置取行（最多 [MAX_QWERTY_ROWS] 行），缺失的行用内置默认补齐，
