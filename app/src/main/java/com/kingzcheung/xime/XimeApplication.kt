@@ -203,8 +203,9 @@ class XimeApplication : Application(), ImageLoaderFactory {
                 val engine = RimeEngine.getInstance()
                 engine.initialize(userDataDir, sharedDataDir)
 
-                // 内置语法模型：首次安装默认落盘并启用，patch 在下方部署前写好即一并生效
-                com.kingzcheung.xime.settings.GramBundledModel.ensureDefault(this@XimeApplication)
+                // 随包资源（语法模型 + 联想模型）按版本覆盖：升级 APK 后新资产自动生效，
+                // 用户自己导入过的文件不覆盖。语法模型首次安装时默认启用（patch 在下方部署前写好即生效）。
+                com.kingzcheung.xime.settings.BundledResources.install(this@XimeApplication)
                 // 老版本只写了 2 个 key：升级后补齐全部调参（幂等，仅版本变化时写）
                 com.kingzcheung.xime.settings.GramActivation.ensureProfileMigrated(this@XimeApplication)
 

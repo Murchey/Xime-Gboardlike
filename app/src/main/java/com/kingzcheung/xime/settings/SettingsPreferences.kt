@@ -783,8 +783,12 @@ object SettingsPreferences {
         getPrefs(context).edit().putBoolean("plugin_enabled_$pluginId", enabled).apply()
     }
     
+    /**
+     * 智能联想开关。默认 **开启**：联想模型随 APK 分发（[BundledResources]），
+     * 用户没动过开关时即可直接用；显式关掉过则保持关闭。
+     */
     fun isSmartPredictionEnabled(context: Context): Boolean {
-        return getPrefs(context).getBoolean(KEY_SMART_PREDICTION_ENABLED, false)
+        return getPrefs(context).getBoolean(KEY_SMART_PREDICTION_ENABLED, true)
     }
     
     fun setSmartPredictionEnabled(context: Context, enabled: Boolean) {
