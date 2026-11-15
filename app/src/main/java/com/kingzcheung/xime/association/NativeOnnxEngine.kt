@@ -68,6 +68,7 @@ object NativeOnnxEngine {
     }
 
     fun initVocab(vocab: Map<String, Int>) {
+        if (!nativeLoaded) return
         val keys = vocab.keys.toTypedArray()
         val values = vocab.values.toIntArray()
         nativeInitVocab(keys, values)
@@ -115,6 +116,9 @@ object NativeOnnxEngine {
     }
 
     fun predict(inputText: String, topK: Int = 20): List<AssociationCandidate> {
+        // 库没装载时直接返回空：native 方法会抛 UnsatisfiedLinkError（Error 不是 Exception，
+        // 上层 catch(e: Exception) 接不住，会把联想进程带崩）。
+        if (!nativeLoaded) return emptyList()
         val trimmed = if (inputText.length > MAX_CONTEXT_LENGTH) {
             inputText.takeLast(MAX_CONTEXT_LENGTH)
         } else {
@@ -134,11 +138,13 @@ object NativeOnnxEngine {
     }
 
     fun release() {
+        if (!nativeLoaded) return
         nativeRelease()
     }
 
+    /** 库未装载时返回 false（而不是让 native 调用抛 UnsatisfiedLinkError）。 */
     fun isInitialized(): Boolean {
-        return nativeIsInitialized()
+        return nativeLoaded && nativeIsInitialized()
     }
 
     fun releaseSharedEnv() {
