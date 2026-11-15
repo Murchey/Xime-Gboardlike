@@ -114,8 +114,10 @@ object AssociationManager {
             }
 
             val merged = if (phrases.isEmpty()) modelCandidates else modelCandidates + phrases
-            val fusedCandidates = AssociationPostFilter.dropPunctuation(
-                fusionEngine.fuseCandidates(merged, contextText)
+            val fusedCandidates = AssociationPostFilter.groupPhrasesWithSeeds(
+                AssociationPostFilter.dropPunctuation(
+                    fusionEngine.fuseCandidates(merged, contextText)
+                )
             )
 
             val cost = android.os.SystemClock.elapsedRealtime() - started
