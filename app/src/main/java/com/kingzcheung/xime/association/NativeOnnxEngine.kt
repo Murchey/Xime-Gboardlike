@@ -99,13 +99,29 @@ object NativeOnnxEngine {
         }
     }
 
+    /**
+     * 模型要求的固定输入长度（静态导出），0 表示动态。
+     *
+     * 静态 64 导出的模型只有把 ids 补到 64 才能跑；补在**左侧**，
+     * 末位仍是最后一个真实字符，App 取末位的语义不变。
+     */
+    fun fixedSeqLen(): Int = if (!nativeLoaded || !nativeIsInitialized()) 0 else nativeFixedSeqLen()
+
+    /** 按模型要求把 ids 补到固定长度：超长丢最早的字，不足左侧补 PAD(0)。 */
+    fun padIds(ids: LongArray, fixedLen: Int, padId: Long = 0L): LongArray = when {
+        fixedLen <= 0 || ids.size == fixedLen -> ids
+        ids.size > fixedLen -> ids.copyOfRange(ids.size - fixedLen, ids.size)
+        else -> LongArray(fixedLen - ids.size) { padId } + ids
+    }
+
     fun predict(inputText: String, topK: Int = 20): List<AssociationCandidate> {
         val trimmed = if (inputText.length > MAX_CONTEXT_LENGTH) {
             inputText.takeLast(MAX_CONTEXT_LENGTH)
         } else {
             inputText
         }
-        val inputIds = nativeEncode(trimmed) ?: return emptyList()
+        val encoded = nativeEncode(trimmed) ?: return emptyList()
+        val inputIds = padIds(encoded, fixedSeqLen())
         val result = nativePredict(inputIds, topK) ?: return emptyList()
 
         val candidates = mutableListOf<AssociationCandidate>()
@@ -132,6 +148,7 @@ object NativeOnnxEngine {
 
     private external fun nativeInitVocab(keys: Array<String>, values: IntArray)
     private external fun nativeEncode(text: String): LongArray?
+    private external fun nativeFixedSeqLen(): Int
     private external fun nativeInitialize(modelPath: String): Boolean
     private external fun nativePredict(inputIds: LongArray, topK: Int): Array<String>?
     private external fun nativeRelease()

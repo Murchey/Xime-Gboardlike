@@ -22,6 +22,10 @@ static std::mutex g_onnx_mutex;
 static std::string g_model_path;
 static OrtSession* g_cpu_fallback_session = nullptr;
 
+// 模型输入第 2 维的长度：动态轴记 0，固定轴（例如静态 64 导出的模型）记具体值。
+// App 侧据此决定要不要把 ids 左侧补 PAD 到该长度。
+static int g_fixed_seq_len = 0;
+
 static std::unordered_map<std::string, int64_t> g_vocab;
 static std::vector<std::string> g_id2word;
 static int64_t g_bos_id = 1;
@@ -211,6 +215,37 @@ Java_com_kingzcheung_xime_association_NativeOnnxEngine_nativeEncode(
     return result;
 }
 
+// 读取 input_ids 的第 2 维：>0 表示模型要求固定长度（静态导出），0 表示动态。
+static int ReadInputSeqLen(const OrtApi* api) {
+    if (!g_session) return 0;
+    size_t input_count = 0;
+    if (api->SessionGetInputCount(g_session, &input_count) || input_count == 0) return 0;
+
+    OrtAllocator* allocator = nullptr;
+    if (api->GetAllocatorWithDefaultOptions(&allocator)) return 0;
+
+    char* input_name = nullptr;
+    if (api->SessionGetInputName(g_session, 0, allocator, &input_name)) return 0;
+
+    int seq_len = 0;
+    OrtTypeInfo* type_info = nullptr;
+    if (!api->SessionGetInputTypeInfo(g_session, 0, &type_info)) {
+        const OrtTensorTypeAndShapeInfo* tensor_info = nullptr;
+        if (!api->CastTypeInfoToTensorInfo(type_info, &tensor_info)) {
+            size_t dims_count = 0;
+            if (!api->GetDimensionsCount(tensor_info, &dims_count) && dims_count >= 2) {
+                std::vector<int64_t> dims(dims_count, 0);
+                if (!api->GetDimensions(tensor_info, dims.data(), dims_count) && dims[1] > 0) {
+                    seq_len = static_cast<int>(dims[1]);
+                }
+            }
+        }
+        api->ReleaseTypeInfo(type_info);
+    }
+    allocator->Free(allocator, input_name);
+    return seq_len;
+}
+
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_kingzcheung_xime_association_NativeOnnxEngine_nativeInitialize(
@@ -304,8 +339,17 @@ Java_com_kingzcheung_xime_association_NativeOnnxEngine_nativeInitialize(
 
     env->ReleaseStringUTFChars(model_path, modelPathStr);
 
-    LOGI("ONNX Runtime initialized successfully");
+    g_fixed_seq_len = ReadInputSeqLen(api);
+
+    LOGI("ONNX Runtime initialized successfully (fixed_seq_len=%d, 0=dynamic)", g_fixed_seq_len);
     return JNI_TRUE;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_kingzcheung_xime_association_NativeOnnxEngine_nativeFixedSeqLen(
+    JNIEnv* env, jobject thiz) {
+    return g_fixed_seq_len;
 }
 
 extern "C"
@@ -503,6 +547,7 @@ Java_com_kingzcheung_xime_association_NativeOnnxEngine_nativeRelease(
         LOGD("CPU fallback session released");
     }
     g_model_path.clear();
+    g_fixed_seq_len = 0;
 }
 
 extern "C"

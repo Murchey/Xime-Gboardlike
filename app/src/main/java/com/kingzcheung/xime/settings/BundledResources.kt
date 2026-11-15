@@ -22,7 +22,7 @@ object BundledResources {
     private const val KEY_HASH = "hash_"
 
     /** 资源版本。改动 [ITEMS] 里任何一个资产文件的内容时都必须 +1。 */
-    const val VERSION = 1
+    const val VERSION = 2
 
     private const val MODEL_ID = "predictive-text-small"
     private const val ASSET_MODEL_DIR = "models/$MODEL_ID"
@@ -41,6 +41,8 @@ object BundledResources {
     data class Result(
         val replaced: List<String>,
         val kept: List<String>,
+        /** 这次 APK 里没有带这份资产（lite 包）。 */
+        val absent: List<String>,
         val failed: List<String>,
         val version: Int,
     ) {
@@ -85,15 +87,21 @@ object BundledResources {
         val storedVersion = prefs.getInt(KEY_VERSION, 0)
         val versionChanged = storedVersion < VERSION
         val all = items(context)
-        if (!versionChanged && all.all { it.second.isFile }) {
-            return Result(emptyList(), all.map { it.second.name }, emptyList(), storedVersion)
+        if (!versionChanged && all.all { it.second.isFile || !assetExists(context, it.first) }) {
+            return Result(emptyList(), all.map { it.second.name }, emptyList(), emptyList(), storedVersion)
         }
 
         val replaced = mutableListOf<String>()
         val kept = mutableListOf<String>()
+        val absent = mutableListOf<String>()
         val failed = mutableListOf<String>()
 
         for ((asset, target) in all) {
+            if (!assetExists(context, asset)) {
+                // lite 包不带这份资产：什么都不做，等用户自己装模型
+                absent += target.name
+                continue
+            }
             val storedHash = prefs.getString(KEY_HASH + target.name, null)
             val existsHash = if (target.isFile) sha256(target) else null
             when (decide(!target.isFile, versionChanged, existsHash, storedHash)) {
@@ -120,14 +128,18 @@ object BundledResources {
         Log.i(
             TAG,
             "bundled resources v$storedVersion -> v$VERSION: replaced=" + replaced +
-                " kept=" + kept + " failed=" + failed
+                " kept=" + kept + " absent=" + absent + " failed=" + failed
         )
 
         // 内置语法模型：用户从没配置过时默认落盘并启用（已配置则尊重其开关）
         GramBundledModel.ensureDefault(context)
 
-        return Result(replaced, kept, failed, VERSION)
+        return Result(replaced, kept, absent, failed, VERSION)
     }
+
+    /** 资产是否随包（lite 包不带模型，这里要能安静地跳过）。 */
+    private fun assetExists(context: Context, asset: String): Boolean =
+        runCatching { context.assets.open(asset).close() }.isSuccess
 
     /** 边写边算 hash，避免为了记录 hash 再读一遍 10MB 的模型。 */
     private fun copyAndHash(context: Context, asset: String, target: File): String? = try {
