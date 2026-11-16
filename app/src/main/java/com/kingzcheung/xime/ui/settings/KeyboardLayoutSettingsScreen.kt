@@ -35,8 +35,8 @@ import kotlinx.coroutines.launch
 /**
  * 键盘布局设置（二级页）：键数 + 字母排列。
  *
- * 只有 26 键在键盘侧已接入；14 / 17 / 18 键的键位映射尚未实现，
- * 这里如实标注，选中的值仍会保存，后续接入时直接生效。
+ * 14 / 17 / 18 键以 rime 方案承载：选中时按当前基础方案（全拼或任一内置双拼）
+ * 派生对应的合并键方案并切换，切回 26 键恢复进入合并键布局前的方案。
  */
 @Composable
 fun KeyboardLayoutSettingsContent(onBack: () -> Unit) {

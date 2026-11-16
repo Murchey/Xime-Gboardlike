@@ -3,8 +3,8 @@ package com.kingzcheung.xime.settings
 /**
  * 键盘布局预设（键数 + 字母排列）。
  *
- * 目前只承接设置页的选择与持久化：26 键是既有形态，14/17/18 键的键位映射
- * 还没接入键盘渲染。字母排列（QWERTY / ABCDE）决定键帽上字母的顺序。
+ * 26 键是原生全键盘；14/17/18 键对应运行时派生的 rime 方案（见 GridSchemaGenerator），
+ * 字母排列（QWERTY / ABCDE）决定合并键怎么分组、组码是什么。
  */
 object KeyboardLayoutPreset {
 
