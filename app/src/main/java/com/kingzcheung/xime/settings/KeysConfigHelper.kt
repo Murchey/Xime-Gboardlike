@@ -2547,6 +2547,25 @@ object KeysConfigHelper {
         if (firstAction == GestureAction.SMART_QUOTE || firstAction == GestureAction.SMART_SINGLE_QUOTE) {
             return original
         }
+        // Gboard 风格里带引号的键（x 的 "）也要能左右交替，否则只会重复同一个引号
+        val smartQuoteAction = when (hint) {
+            "\"" -> GestureAction.SMART_QUOTE
+            "'" -> GestureAction.SMART_SINGLE_QUOTE
+            else -> null
+        }
+        if (smartQuoteAction != null) {
+            return LongPressAction(
+                display = original.display,
+                values = listOf(
+                    KeyAction(action = smartQuoteAction, label = hint),
+                ) + original.values.filter {
+                    it.action != null && it.action != GestureAction.COMMIT &&
+                        it.action != GestureAction.SMART_QUOTE &&
+                        it.action != GestureAction.SMART_SINGLE_QUOTE
+                },
+                defaultIndex = original.defaultIndex,
+            )
+        }
         val keep = original.values.filter {
             it.action != null && it.action != GestureAction.COMMIT
         }

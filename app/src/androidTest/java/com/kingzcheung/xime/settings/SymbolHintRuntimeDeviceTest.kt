@@ -64,6 +64,13 @@ class SymbolHintRuntimeDeviceTest {
         assertEquals("_", gboardF)
         assertEquals("、", gboardZ)
         assertEquals(com.kingzcheung.xime.keyboard.GestureAction.COMMIT, action)
+        // Gboard 风格下 x 的长按要是智能引号（能左右交替）
+        val xLongPress = KeysConfigHelper.longPressForStyle("x")
+        println("x longPress=" + xLongPress?.values?.map { it.action?.value ?: it.value })
+        assertEquals(
+            com.kingzcheung.xime.keyboard.GestureAction.SMART_QUOTE,
+            xLongPress?.values?.firstOrNull()?.action,
+        )
         // C 的智能引号动作要在（排在符号后面）
         org.junit.Assert.assertTrue(
             longPress!!.values.drop(1).any { it.action == com.kingzcheung.xime.keyboard.GestureAction.SMART_QUOTE },
