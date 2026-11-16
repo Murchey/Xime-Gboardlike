@@ -74,6 +74,13 @@ object GridSchemaGenerator {
     internal fun codesOf(groups: List<String>): String =
         groups.map { it.first() }.distinct().sorted().joinToString("")
 
+    /** 26 个字母各自的组码（a..z 顺序），供 lua filter 把组码还原成拼音。 */
+    internal fun groupMapOf(groups: List<String>): String {
+        val map = mutableMapOf<Char, Char>()
+        groups.forEach { g -> g.forEach { c -> map[c] = g[0] } }
+        return ('a'..'z').joinToString("") { (map[it] ?: it).toString() }
+    }
+
     /** 组码规则：组内字母 → 组码。 */
     internal fun rulesOf(groups: List<String>): List<String> =
         groups.filter { it.length > 1 }.map { g ->
@@ -125,6 +132,7 @@ object GridSchemaGenerator {
         }
         lines.addAll(lastRule + 1, listOf("    # 合并键：组内字母 → 组码") + rulesOf(groups))
 
+        // 保留拼写提示：lua filter 要读 comment 里的组码才能还原成拼音（滤镜会把它替换掉）
         val commentsIdx = lines.indexOfFirst { it.trim().startsWith("always_show_comments:") }
         if (commentsIdx >= 0) {
             lines[commentsIdx] = "  always_show_comments: false"

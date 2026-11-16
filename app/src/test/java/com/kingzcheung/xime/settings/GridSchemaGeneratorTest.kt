@@ -60,6 +60,25 @@ class GridSchemaGeneratorTest {
     }
 
     @Test
+    fun `组码映射与布局一致`() {
+        // 14 键 QWERTY：q,w→q、e,r→e …… 与 msime 的 GROUP_CODES 同构
+        assertEquals(
+            "abcdedggujjlmbooqeatucqztz",
+            GridSchemaGenerator.groupMapOf(GridSchemaGenerator.groupsOf("14", "qwerty")),
+        )
+        // ABCDE：ab→a、cd→c、ef→e ……
+        assertEquals(
+            "aacceeggijjllnnpprssuuwwyy",
+            GridSchemaGenerator.groupMapOf(GridSchemaGenerator.groupsOf("14", "abcde")),
+        )
+        // 18 键 QWERTY：q、we→w、rt→r、y、u、io→i、p ……
+        assertEquals(
+            "abxswffhijjlmbipqrsruvwxyz",
+            GridSchemaGenerator.groupMapOf(GridSchemaGenerator.groupsOf("18", "qwerty")),
+        )
+    }
+
+    @Test
     fun `派生 id 规则`() {
         assertEquals("rime_ice_14jian", GridSchemaGenerator.derivedId("rime_ice", "14", "qwerty"))
         assertEquals("double_pinyin_flypy_18jian_abcde", GridSchemaGenerator.derivedId("double_pinyin_flypy", "18", "abcde"))
@@ -74,7 +93,11 @@ class GridSchemaGeneratorTest {
         assertTrue("prism 不能和基础方案撞名", out.contains("  prism: rime_ice_14jian"))
         assertTrue(out.contains("  alphabet: abcdegjlmoqtuz"))
         assertTrue(out.contains("  initials: abcdegjlmoqtuz"))
-        assertTrue("always_show_comments 应被关掉", out.contains("  always_show_comments: false"))
+        // 滤镜要读候选里的组码，所以拼写提示必须留着（由滤镜负责替换成拼音）
+        // 组码方案下候选注释没有可用信息（rime 的 GetOriginalSpelling 对代数派生的码返回空），
+        // 先关掉，别给用户看组码
+        assertTrue("always_show_comments 应关闭", out.contains("  always_show_comments: false"))
+        assertFalse("暂不挂拼音提示滤镜", out.contains("lua_filter@*grid_hint"))
     }
 
     @Test
