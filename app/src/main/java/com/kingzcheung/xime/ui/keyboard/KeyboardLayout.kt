@@ -2233,7 +2233,8 @@ fun KeyboardRowWithConfig(
             val hideLetterCornerHint = finalHint == null && key.length == 1 && key[0].isLetter() && !showLetterHintSymbols
             val hideCornerHint = hideMainLabel || hideLetterCornerHint
             // 键面大小写：大写固定 / 小写固定 / 小写跟随 Shift（默认）。
-            val isLetterKey = key.length == 1 && key[0].isLetter()
+            // 合并键（"qw"）同样算字母键：键面大小写设置要作用到它们身上
+        val isLetterKey = key.length in 1..2 && key.all { it.isLetter() }
             val caseSourceText = letterCaseSourceText(
                 isAsciiMode = isAsciiMode,
                 isLetterKey = isLetterKey,

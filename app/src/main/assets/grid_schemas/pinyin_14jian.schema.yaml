@@ -82,7 +82,7 @@ translator:
   dictionary: pinyin_simp
   prism: pinyin_14jian
   spelling_hints: 100
-  always_show_comments: true
+  always_show_comments: false
   comment_format: []
   preedit_format:
     - xlit/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/

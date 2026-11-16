@@ -1509,7 +1509,7 @@ fun KeyboardRow(
             SwipeableKeyButton(
                 text = applyLetterDisplayCase(
                     text = key,
-                    isLetterKey = key.length == 1 && key[0].isLetter(),
+                    isLetterKey = key.length in 1..2 && key.all { it.isLetter() },
                     isShifted = isShifted,
                     setting = LocalLetterCaseSetting.current,
                 ),
