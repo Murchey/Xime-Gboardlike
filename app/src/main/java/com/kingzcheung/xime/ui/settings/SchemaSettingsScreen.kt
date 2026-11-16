@@ -84,6 +84,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kingzcheung.xime.settings.DeployStage
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.settings.WubiSchemas
+import com.kingzcheung.xime.settings.SchemaCategories
+import com.kingzcheung.xime.settings.SchemaCategory
 import com.kingzcheung.xime.settings.SchemaManager
 import com.kingzcheung.xime.settings.SchemaMeta
 import com.kingzcheung.xime.settings.SchemaPackageGroups
@@ -106,6 +108,8 @@ fun SchemaSettingsContent(
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     var showMenu by remember { mutableStateOf(false) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
+    // 方案分类筛选：合并键（14/17/18）单独一类，不和全拼/双拼混在一张长列表里
+    var schemaFilter by remember { mutableStateOf(SchemaCategory.ALL) }
     var showRebuildDialog by remember { mutableStateOf(false) }
 
     if (showClearCacheDialog) {
@@ -429,6 +433,21 @@ fun SchemaSettingsContent(
                 }
 
                 item {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
+                    ) {
+                        items(SchemaCategory.entries) { category ->
+                            FilterChip(
+                                selected = schemaFilter == category,
+                                onClick = { schemaFilter = category },
+                                label = { Text(category.label) },
+                            )
+                        }
+                    }
+                }
+
+                item {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
@@ -463,7 +482,10 @@ fun SchemaSettingsContent(
                     }
                 }
 
-                val enabledSchemas = uiState.visibleSchemas.filter { it.schemaId in uiState.enabledSchemas }
+                val filteredSchemas = uiState.visibleSchemas.filter {
+                    SchemaCategories.matches(it.schemaId, schemaFilter)
+                }
+                val enabledSchemas = filteredSchemas.filter { it.schemaId in uiState.enabledSchemas }
 
                 if (enabledSchemas.isEmpty()) {
                     item {
@@ -505,7 +527,7 @@ fun SchemaSettingsContent(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                val disabledSchemas = uiState.visibleSchemas.filter { it.schemaId !in uiState.enabledSchemas }
+                val disabledSchemas = filteredSchemas.filter { it.schemaId !in uiState.enabledSchemas }
 
                 if (disabledSchemas.isEmpty()) {
                     item {
@@ -825,4 +847,3 @@ private fun SchemaToggleItem(
         }
     }
 }
-
