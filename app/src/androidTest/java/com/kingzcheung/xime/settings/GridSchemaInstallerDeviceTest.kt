@@ -24,6 +24,33 @@ class GridSchemaInstallerDeviceTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
 
     /** ABCDE 排列的派生方案：组键按字母序重排，组码也跟着变。 */
+    /** 组码方案不该给候选挂拼写提示（那是用户看不懂的组码，不是拼音）。 */
+    @Test
+    fun gridCandidatesCarryNoCodeComment() = runBlocking {
+        GridSchemaInstaller.install(context, "rime_ice", "14", "qwerty")
+        val engine = RimeEngine.getInstance()
+        var switched = false
+        for (i in 0 until 20) {
+            if (engine.switchSchema("rime_ice_14jian")) { switched = true; break }
+            Thread.sleep(2000)
+        }
+        assertTrue("切换失败", switched)
+        var cands: Array<com.kingzcheung.xime.rime.RimeCandidate> = emptyArray()
+        for (i in 0 until 20) {
+            engine.clearComposition()
+            for (c in "qo") engine.processKey(c.code, 0)
+            cands = engine.getCandidatesWithComments()
+            if (cands.isNotEmpty()) break
+            Thread.sleep(1000)
+        }
+        println("14 键候选注释 -> " + cands.take(5).joinToString("|") { it.text + ":" + it.comment })
+        assertTrue("应有候选", cands.isNotEmpty())
+        assertTrue(
+            "候选不应挂组码提示：" + cands.take(5).joinToString("|") { it.text + ":" + it.comment },
+            cands.all { it.comment.isBlank() },
+        )
+    }
+
     @Test
     fun derivedDoublePinyinFourteenKeyAbcdeDecodesZhong() = runBlocking {
         RimeConfigHelper.initializeRimeDataAsync(context)
