@@ -955,18 +955,24 @@ object KeysConfigHelper {
      */
     private fun derivedBindings(context: Context): Map<String, String> {
         val out = mutableMapOf<String, String>()
-        // 1) 已启用列表里的派生方案：不依赖文件此刻在不在（启动顺序里加载配置可能早于落盘）
-        for (id in SchemaManager.getEnabledSchemas(context)) {
-            if (!GridSchemaGenerator.isDerived(id)) continue
-            GridSchemaGenerator.sectionOf(id)?.let { out[id] = it }
+        // 两个来源都容错：单测里 Context 是 mock（没有 SharedPreferences、assets 也可能为空），
+        // 任一来源失败都不该让整次 loadConfig 挂掉。
+        runCatching {
+            // 1) 已启用列表里的派生方案：不依赖文件此刻在不在（启动顺序里加载配置可能早于落盘）
+            for (id in SchemaManager.getEnabledSchemas(context)) {
+                if (!GridSchemaGenerator.isDerived(id)) continue
+                GridSchemaGenerator.sectionOf(id)?.let { out[id] = it }
+            }
         }
-        // 2) 磁盘上存在的派生方案（用户手动放进去、尚未启用的也算）
-        val dir = SchemaManager.getRimeDir(context)
-        val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".schema.yaml") } ?: return out
-        for (f in files) {
-            val id = f.name.removeSuffix(".schema.yaml")
-            if (!GridSchemaGenerator.isDerived(id)) continue
-            GridSchemaGenerator.sectionOf(id)?.let { out[id] = it }
+        runCatching {
+            // 2) 磁盘上存在的派生方案（用户手动放进去、尚未启用的也算）
+            val dir = SchemaManager.getRimeDir(context)
+            val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".schema.yaml") } ?: return@runCatching
+            for (f in files) {
+                val id = f.name.removeSuffix(".schema.yaml")
+                if (!GridSchemaGenerator.isDerived(id)) continue
+                GridSchemaGenerator.sectionOf(id)?.let { out[id] = it }
+            }
         }
         return out
     }
