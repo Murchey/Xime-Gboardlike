@@ -2489,6 +2489,25 @@ object KeysConfigHelper {
         return configMap[key.lowercase()]?.swipeUp?.action
     }
 
+    /**
+     * 上滑派发用的动作：Gboard 风格下固定为 COMMIT（原样上屏角标上的符号），
+     * 否则沿用配置里的动作（可能是智能引号/切换语言等）。
+     */
+    fun swipeUpActionForDisplay(key: String, isAsciiMode: Boolean = false): KeyAction? {
+        val ctx = com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext
+        if (ctx != null) {
+            val hint = symbolHintOverride(ctx, key)
+            if (hint != null) {
+                return KeyAction(
+                    action = com.kingzcheung.xime.keyboard.GestureAction.COMMIT,
+                    value = hint,
+                    label = hint,
+                )
+            }
+        }
+        return getKeyGesture(key, isAsciiMode)?.swipeUp
+    }
+
     /** 当前风格下的长按动作：Gboard 时把符号放到第一项，原有非提交类动作保留。 */
     fun longPressForStyle(key: String, isAsciiMode: Boolean = false): LongPressAction? {
         val original = getKeyGesture(key, isAsciiMode)?.longPress ?: return null

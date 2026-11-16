@@ -34,6 +34,21 @@ class SymbolHintRuntimeDeviceTest {
         println("gboard f=" + gboardF + " z=" + gboardZ + " action(n)=" + action +
             " longPress(c)=" + longPress?.values?.map { if (it.label.isNotEmpty()) it.label else it.value })
 
+        // 上滑派发用的动作也必须是 COMMIT（否则会被智能引号/切换语言顶掉）
+        val nSwipe = KeysConfigHelper.swipeUpActionForDisplay("n")
+        val xSwipe = KeysConfigHelper.swipeUpActionForDisplay("x")
+        val bSwipe = KeysConfigHelper.swipeUpActionForDisplay("b")
+        val mSwipe = KeysConfigHelper.swipeUpActionForDisplay("m")
+        println("swipe gboard n=" + nSwipe?.value + " x=" + xSwipe?.value + " b=" + bSwipe?.value + " m=" + mSwipe?.value)
+        assertEquals(com.kingzcheung.xime.keyboard.GestureAction.COMMIT, nSwipe?.action)
+        assertEquals("!", nSwipe?.value)
+        assertEquals(com.kingzcheung.xime.keyboard.GestureAction.COMMIT, xSwipe?.action)
+        assertEquals("\"", xSwipe?.value)
+        assertEquals(com.kingzcheung.xime.keyboard.GestureAction.COMMIT, bSwipe?.action)
+        assertEquals(";", bSwipe?.value)
+        assertEquals(com.kingzcheung.xime.keyboard.GestureAction.COMMIT, mSwipe?.action)
+        assertEquals("?", mSwipe?.value)
+
         assertEquals("_", gboardF)
         assertEquals("、", gboardZ)
         assertEquals(com.kingzcheung.xime.keyboard.GestureAction.COMMIT, action)

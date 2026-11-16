@@ -313,6 +313,16 @@ fun KeyboardLayout(
 
     // 监听手势配置版本号，部署后强制刷新键帽显示
     val cfgVer by KeysConfigHelper.configVersion.collectAsState()
+    // 符号提示风格在设置里一改就重新加载配置：绑定会按新风格重建（角标/上滑/长按一次到位），
+    // 不依赖用户重启输入法。
+    val symbolHintVer = SettingsPreferences.symbolHintStyleVersion.value
+    LaunchedEffect(symbolHintVer) {
+        if (symbolHintVer > 0) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                KeysConfigHelper.loadConfig(context)
+            }
+        }
+    }
     val currentSchemaId = remember(uiState.schemaName) {
         SettingsPreferences.getCurrentSchema(context)
     }
@@ -2271,7 +2281,8 @@ fun KeyboardRowWithConfig(
                 key, swipeUpAction, swipeUpCommitValue, onKeyPress, onCommitText, onGestureAction
             ) {
                 swipeUpHandlerFor(
-                    KeysConfigHelper.getKeyGesture(key, isAsciiMode)?.swipeUp,
+                    // 按当前符号提示风格取动作：Gboard 时一律 COMMIT，避免被原有的智能引号/切换语言顶掉
+                    KeysConfigHelper.swipeUpActionForDisplay(key, isAsciiMode),
                     swipeUpCommitValue, onKeyPress, onCommitText, onGestureAction,
                 )
             }
