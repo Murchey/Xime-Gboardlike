@@ -1812,6 +1812,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     override fun onCreateInputView(): View {
+        ImeLatencyTrace.onCreateInputView()
         keyboardContainer = VoiceKeyboardContainer(
             context = this,
             uiStateProvider = { uiState.value },
@@ -2537,6 +2538,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
         applyWindowBackground()
 
+        ImeLatencyTrace.onCreateInputViewDone()
         return keyboardContainer
     }
 
@@ -2838,6 +2840,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
+        ImeLatencyTrace.onStartInput()
         super.onStartInput(attribute, restarting)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
         loadDarkModePreference()
@@ -3042,6 +3045,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        ImeLatencyTrace.onShown()
         info?.let { updateEnterKeyText(it) }
         hasHardwareKeyboard = SettingsPreferences.isHardwareKeyboardDetectionEnabled(this) &&
             resources.configuration.keyboard != android.content.res.Configuration.KEYBOARD_NOKEYS
