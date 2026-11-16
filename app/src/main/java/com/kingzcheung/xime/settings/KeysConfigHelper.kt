@@ -948,6 +948,23 @@ object KeysConfigHelper {
     }
 
     /** 查询方案声明的键盘 section（任意类型，含代码布局），未声明返回 null。 */
+    /**
+     * 扫描 rime 目录里运行时生成的合并键方案，登记它们的键面段。
+     *
+     * 只认 GridSchemaGenerator 的命名规则，且必须有同名 schema 文件，避免凭空造绑定。
+     */
+    private fun derivedBindings(context: Context): Map<String, String> {
+        val dir = SchemaManager.getRimeDir(context)
+        val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".schema.yaml") } ?: return emptyMap()
+        val out = mutableMapOf<String, String>()
+        for (f in files) {
+            val id = f.name.removeSuffix(".schema.yaml")
+            if (!GridSchemaGenerator.isDerived(id)) continue
+            GridSchemaGenerator.sectionOf(id)?.let { out[id] = it }
+        }
+        return out
+    }
+
     fun boundSectionForSchema(schemaId: String): String? = _schemaSectionBindings[schemaId]
 
     /** 查询方案绑定段的类型（full/t9/stroke/handwriting，显式 type 优先于段名推断），未声明返回 null。 */
@@ -1111,7 +1128,9 @@ object KeysConfigHelper {
             val builtInBindings = builtInText?.let { parseSchemaBindingsYamlText(it) } ?: emptyMap()
             val customBindings = customTextForPanel
                 ?.let { parseSchemaBindingsYamlText(it) } ?: emptyMap()
-            _schemaSectionBindings = builtInBindings + customBindings
+            // 派生合并键方案（{base}_{14|17|18}jian[_abcde]）的绑定由文件名推导登记：
+            // 这类方案是运行时从基础方案生成的，不在 xime.yaml 里逐个声明。
+            _schemaSectionBindings = builtInBindings + customBindings + derivedBindings(context)
             // 段类型声明（keyboard.<section>.type，custom 覆盖 builtIn）：显式声明优先于段名推断
             _sectionTypes = (builtInText?.let { parseSectionTypesYamlText(it) } ?: emptyMap()) +
                 (customTextForPanel?.let { parseSectionTypesYamlText(it) } ?: emptyMap())

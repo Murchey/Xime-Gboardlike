@@ -3,6 +3,7 @@ package com.kingzcheung.xime.settings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -31,6 +32,21 @@ class GridSchemaGeneratorTest {
         val out = GridSchemaGenerator.generate(baseText(base), base, target, "测试方案", groups)
         assertNotNull("$base → $target 生成失败", out)
         return out!!
+    }
+
+    @Test
+    fun `派生 id 的识别与拆解`() {
+        // 8 个内置基础方案 + 6 个随包合并键方案，都能被正确识别/拆解
+        assertTrue(GridSchemaGenerator.isDerived("double_pinyin_flypy_18jian_abcde"))
+        assertEquals("double_pinyin_flypy", GridSchemaGenerator.baseOf("double_pinyin_flypy_18jian_abcde"))
+        assertEquals("qwerty_18_abcde", GridSchemaGenerator.sectionOf("double_pinyin_flypy_18jian_abcde"))
+        assertEquals("qwerty_14", GridSchemaGenerator.sectionOf("rime_ice_14jian"))
+        assertEquals("qwerty_17", GridSchemaGenerator.sectionOf("double_pinyin_17jian"))
+
+        assertFalse(GridSchemaGenerator.isDerived("double_pinyin_flypy"))
+        assertFalse(GridSchemaGenerator.isDerived("rime_ice"))
+        assertEquals("double_pinyin", GridSchemaGenerator.baseOf("double_pinyin"))
+        assertNull(GridSchemaGenerator.sectionOf("double_pinyin"))
     }
 
     @Test

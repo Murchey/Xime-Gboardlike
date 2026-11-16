@@ -32,6 +32,22 @@ object GridSchemaGenerator {
         return baseId + "_" + l + "jian" + suffix
     }
 
+/** 派生 id 是否属于合并键方案。 */
+    fun isDerived(schemaId: String): Boolean = DERIVED.containsMatchIn(schemaId)
+
+    /** 派生 id → 基础方案 id；不是派生 id 时返回它自己。 */
+    fun baseOf(schemaId: String): String = schemaId.replace(DERIVED, "")
+
+    /** 派生 id → 键面段名（qwerty_14 / qwerty_18_abcde）。 */
+    fun sectionOf(schemaId: String): String? {
+        val m = DERIVED.find(schemaId) ?: return null
+        val layout = m.groupValues[1]
+        val abcde = m.groupValues[2]
+        return "qwerty_" + layout + (if (abcde.isNotEmpty()) "_abcde" else "")
+    }
+
+    private val DERIVED = Regex("""_(14|17|18)jian(_abcde)?$""")
+
     /** 合并键分组（键面顺序），来自 [KeyboardGridTables]。 */
     fun groupsOf(layout: String, order: String): List<String> {
         val rows = if (KeyboardLayoutPreset.normalizeOrder(order) == KeyboardLayoutPreset.ORDER_ABCDE) {

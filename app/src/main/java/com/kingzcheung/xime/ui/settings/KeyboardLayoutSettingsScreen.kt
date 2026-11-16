@@ -51,10 +51,10 @@ fun KeyboardLayoutSettingsContent(onBack: () -> Unit) {
         order = newOrder
         SettingsPreferences.setKeyboardLayoutPreset(context, newLayout)
         SettingsPreferences.setKeyboardLetterOrder(context, newOrder)
-        val target = com.kingzcheung.xime.settings.KeyboardLayoutPreset.schemaIdFor(newLayout, newOrder)
+        val explicit = com.kingzcheung.xime.settings.KeyboardLayoutPreset.schemaIdFor(newLayout, newOrder)
         scope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val current = SettingsPreferences.getCurrentSchema(context)
-            if (target == null) {
+            if (explicit == null) {
                 val saved = SettingsPreferences.getSchemaBeforeGrid(context)
                 if (saved.isNotEmpty() && !com.kingzcheung.xime.settings.KeyboardLayoutPreset.isGridSchema(saved)) {
                     if (com.kingzcheung.xime.rime.RimeEngine.isInitialized()) {
@@ -63,8 +63,19 @@ fun KeyboardLayoutSettingsContent(onBack: () -> Unit) {
                     SettingsPreferences.setCurrentSchema(context, saved)
                 }
             } else {
+                // 以"当前基础方案"为准派生：全拼 → rime_ice_14jian，小鹤双拼 → double_pinyin_flypy_14jian
+                val base = com.kingzcheung.xime.settings.GridSchemaGenerator.baseOf(current)
+                    .takeIf { it in com.kingzcheung.xime.settings.GridSchemaGenerator.BASE_SCHEMA_IDS }
+                    ?: "rime_ice"
                 if (current.isNotEmpty() && !com.kingzcheung.xime.settings.KeyboardLayoutPreset.isGridSchema(current)) {
                     SettingsPreferences.setSchemaBeforeGrid(context, current)
+                }
+                val generated = com.kingzcheung.xime.settings.GridSchemaInstaller
+                    .installAndEnable(context, base, newLayout, newOrder)
+                val target = generated ?: explicit
+                if (generated != null) {
+                    // 新生成的方案要等部署编出 prism 才能切过去
+                    com.kingzcheung.xime.rime.RimeConfigHelper.ensureDeployment(context)
                 }
                 if (com.kingzcheung.xime.rime.RimeEngine.isInitialized()) {
                     com.kingzcheung.xime.rime.RimeEngine.getInstance().switchSchema(target)
