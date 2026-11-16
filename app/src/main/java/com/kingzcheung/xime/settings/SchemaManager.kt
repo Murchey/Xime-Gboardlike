@@ -957,7 +957,33 @@ object SchemaManager {
     }
 
     /** 内置方案（保持默认启用顺序）。 */
-    /** 内置方案补齐版本：新增内置方案时 +1（见 `getEnabledSchemas`）。 */
+    /** 编译产物里按方案 id 命名的后缀（数据库级产物不在清理范围）。 */
+private val COMPILED_ARTIFACT_SUFFIXES = listOf(".prism.bin", ".reverse.bin", ".table.bin")
+
+/**
+ * 纯函数：给定 build 目录里的文件名、已启用方案、磁盘上存在的方案 id、以及启用方案依赖的词典名，
+ * 算出哪些编译产物属于"不再使用"、可以删。
+ *
+ * 规则：
+ * - 文件名前缀不是方案 id（如 default.yaml 之类的共享产物）→ 保留；
+ * - 方案仍在启用 → 保留；
+ * - 该名字是某个**启用方案依赖的词典**（`translator/dictionary`）→ 保留（词典是共用的）；
+ * - 其余按后缀判断，只删 prism/reverse/table 这类方案编译产物。
+ */
+internal fun unusedCompiledFiles(
+    files: List<String>,
+    enabledSchemas: Set<String>,
+    schemaIds: Set<String>,
+    protectedDictionaries: Set<String>,
+): List<String> = files.filter { name ->
+    val id = name.substringBefore('.')
+    id in schemaIds &&
+        id !in enabledSchemas &&
+        id !in protectedDictionaries &&
+        COMPILED_ARTIFACT_SUFFIXES.any { name.endsWith(it) }
+}
+
+/** 内置方案补齐版本：新增内置方案时 +1（见 `getEnabledSchemas`）。 */
 internal const val BUILTIN_SCHEMA_MERGE_VERSION = 7
 
 internal val BUILTIN_SCHEMAS = listOf(
@@ -1051,6 +1077,36 @@ internal val BUILTIN_SCHEMAS = listOf(
 
         val fallback = BUILTIN_SCHEMAS.filter { available(it) }
         return fallback
+    }
+
+    /**
+     * 清除**未使用**的编译产物：只为已删除/停用的方案清理 prism/table，已启用的方案与其
+     * 依赖的词典缓存一律保留，因此清完不需要重新部署。返回删除的文件数。
+     */
+    fun clearUnusedCompiledOutputs(context: Context): Int {
+        val rimeDir = getRimeDir(context)
+        val buildDir = File(rimeDir, "build")
+        if (!buildDir.isDirectory) return 0
+        val enabled = getEnabledSchemas(context).toSet()
+        val schemaIds = rimeDir.listFiles { f -> f.isFile && f.name.endsWith(".schema.yaml") }
+            ?.map { it.name.removeSuffix(".schema.yaml") }?.toSet() ?: emptySet()
+        val protectedDicts = enabled.mapNotNull { id ->
+            runCatching {
+                File(rimeDir, "$id.schema.yaml").readText()
+                    .lines()
+                    .firstOrNull { it.trimStart().startsWith("dictionary:") }
+                    ?.substringAfter("dictionary:")?.trim()?.trim('"')
+                    ?.takeIf { it.isNotEmpty() }
+            }.getOrNull()
+        }.toSet()
+        val names = buildDir.listFiles()?.filter { it.isFile }?.map { it.name } ?: return 0
+        val doomed = unusedCompiledFiles(names, enabled, schemaIds, protectedDicts)
+        var removed = 0
+        for (name in doomed) {
+            if (File(buildDir, name).delete()) removed++
+        }
+        if (removed > 0) FileLogger.i("SchemaManager", "cleared " + removed + " unused compiled file(s)")
+        return removed
     }
 
     fun setEnabledSchemas(context: Context, schemaIds: List<String>) {

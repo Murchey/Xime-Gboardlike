@@ -428,8 +428,8 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
     }
 
     /**
-     * 清除已编译内容（rime/build 编译产物与编译日志）释放空间。
-     * 不动词库与自定义配置；清完刷新，让底部按钮回到「部署方案」。
+     * 清除**未使用**的编译产物：只清已删除/停用方案留下的 prism/table，已启用方案
+     * 及其依赖的词典缓存保留，所以清完不需要重新部署。不动词库与自定义配置。
      */
     fun clearCompiledCache() {
         if (_uiState.value.isDeploying) return
@@ -437,15 +437,17 @@ class SchemaSettingsViewModel(application: Application) : AndroidViewModel(appli
             _uiState.update { it.copy(isDeploying = true) }
             val ok = withContext(Dispatchers.IO) {
                 runCatching {
-                    StorageStats.clearCategory(context, StorageStats.ID_SCHEMA_CACHE)
+                    SchemaManager.clearUnusedCompiledOutputs(context)
                 }.getOrNull()
             }
             _uiState.update { it.copy(isDeploying = false) }
             val title = tr(R.string.s_fanganbianyihuancun)
             showToast(
-                when (ok) {
-                    true -> tr(R.string.s_yiqingli, title)
-                    else -> tr(R.string.s_qinglishibai_qingzhongshi, title)
+                when {
+                    ok == null -> tr(R.string.s_qinglishibai_qingzhongshi, title)
+                    // 一个都没删也算成功：说明没有遗留的旧编译产物
+                    ok == 0 -> tr(R.string.s_meiyoukexinqinglideyibian, title)
+                    else -> tr(R.string.s_yiqingli, title) + "（" + ok + "）"
                 }
             )
             refresh()

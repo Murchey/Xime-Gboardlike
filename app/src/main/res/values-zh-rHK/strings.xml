@@ -263,7 +263,7 @@
     <string name="s_bushufangan">部署方案</string>
     <string name="s_chongxinbianyi">重新編譯</string>
     <string name="s_chongxinbianyi_shuoming">將清除編譯快取並重新編譯所有已啟用方案，耗時較長；詞庫與自訂設定不受影響。確定繼續嗎？</string>
-    <string name="s_qingchuyibianyineirong">清除已編譯內容</string>
+    <string name="s_qingchuyibianyineirong">清除未使用的編譯內容</string>
     <string name="s_guanbicaidan">關閉選單</string>
     <string name="s_shezhi">設定</string>
     <string name="s_fanhuizimujianpan">返回字母鍵盤</string>
@@ -944,7 +944,8 @@
     <string name="s_jintongjiyingyongshujumulu_buh_06782">僅統計應用程式資料目錄，不含應用程式本體</string>
     <string name="s_jiangqingkongbendijiantiebanli_c4244">將清空本地剪貼簿歷史記錄與已複製的圖片（保留快捷發送與置頂內容），且無法還原。確定繼續嗎？</string>
     <string name="s_jiangshanchusuoyouyixiazaideli_16cee">將刪除所有已下載的離線模型（聯想 / 手寫 / 語音辨識），對應功能在重新下載模型前不可用。確定繼續嗎？</string>
-    <string name="s_jiangshanchushurufangandebiany_b1f06">將刪除輸入方案的編譯快取與編譯日誌，不會影響詞庫和自訂配置；下次啟動輸入法時會自動重新編譯。確定繼續嗎？</string>
+    <string name="s_jiangshanchushurufangandebiany_b1f06">只清理已刪除或停用的方案留下的編譯產物（prism 等）；目前啟用的方案及其依賴的詞典快取都會保留，所以清理後不需要重新部署。確定繼續嗎？</string>
+    <string name="s_meiyoukexinqinglideyibian">沒有可清理的舊編譯產物</string>
     <string name="s_jiangshanchufanganshichangzhon_72ec1">將刪除方案市場中已下載的安裝檔（內建方案除外）。已安裝的方案不受影響，但重新安裝時需要重新下載。確定繼續嗎？</string>
     <string name="s_jiangshanchulishiyunxingrizhi_83024">將刪除歷史運行日誌（保留當日日誌）。確定繼續嗎？</string>
     <string name="s_jiangshanchutupianyulinshiwenj_f20ba">將刪除圖片與臨時檔案快取，清理後首次載入會稍慢。確定繼續嗎？</string>
