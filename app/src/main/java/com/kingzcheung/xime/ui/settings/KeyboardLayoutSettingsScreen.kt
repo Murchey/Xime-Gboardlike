@@ -45,47 +45,14 @@ fun KeyboardLayoutSettingsContent(onBack: () -> Unit) {
     var order by remember { mutableStateOf(SettingsPreferences.getKeyboardLetterOrder(context)) }
     val scope = rememberCoroutineScope()
 
-    /** 选布局/排列即生效：14/17/18 切到对应 rime 方案，26 键恢复进合并键前的方案。 */
+    /** 选布局/排列即生效：具体动作在 KeyboardLayoutApplier 里（可单测/设备测）。 */
     fun applyLayout(newLayout: String, newOrder: String) {
         layout = newLayout
         order = newOrder
-        SettingsPreferences.setKeyboardLayoutPreset(context, newLayout)
-        SettingsPreferences.setKeyboardLetterOrder(context, newOrder)
-        val explicit = com.kingzcheung.xime.settings.KeyboardLayoutPreset.schemaIdFor(newLayout, newOrder)
         scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            val current = SettingsPreferences.getCurrentSchema(context)
-            if (explicit == null) {
-                val saved = com.kingzcheung.xime.settings.KeyboardLayoutPreset
-                    .restoreTarget(SettingsPreferences.getSchemaBeforeGrid(context))
-                if (saved != null) {
-                    if (com.kingzcheung.xime.rime.RimeEngine.isInitialized()) {
-                        com.kingzcheung.xime.rime.RimeEngine.getInstance().switchSchema(saved)
-                    }
-                    SettingsPreferences.setCurrentSchema(context, saved)
-                }
-            } else {
-                // 以"当前基础方案"为准派生：全拼 → rime_ice_14jian，小鹤双拼 → double_pinyin_flypy_14jian
-                val base = com.kingzcheung.xime.settings.GridSchemaGenerator.baseOf(current)
-                    .takeIf { it in com.kingzcheung.xime.settings.GridSchemaGenerator.BASE_SCHEMA_IDS }
-                    ?: "rime_ice"
-                if (current.isNotEmpty() && !com.kingzcheung.xime.settings.KeyboardLayoutPreset.isGridSchema(current)) {
-                    SettingsPreferences.setSchemaBeforeGrid(context, current)
-                }
-                val generated = com.kingzcheung.xime.settings.GridSchemaInstaller
-                    .installAndEnable(context, base, newLayout, newOrder)
-                val target = generated ?: explicit
-                if (generated != null) {
-                    // 新生成的方案要等部署编出 prism 才能切过去
-                    com.kingzcheung.xime.rime.RimeConfigHelper.ensureDeployment(context)
-                }
-                if (com.kingzcheung.xime.rime.RimeEngine.isInitialized()) {
-                    com.kingzcheung.xime.rime.RimeEngine.getInstance().switchSchema(target)
-                }
-                SettingsPreferences.setCurrentSchema(context, target)
-            }
+            com.kingzcheung.xime.settings.KeyboardLayoutApplier.apply(context, newLayout, newOrder)
         }
     }
-
     SettingsPageScaffold(
         title = tr(R.string.s_jianpanbujushezhi),
         onBack = onBack,
