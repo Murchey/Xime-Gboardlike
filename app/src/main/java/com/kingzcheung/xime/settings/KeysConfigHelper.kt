@@ -954,9 +954,15 @@ object KeysConfigHelper {
      * 只认 GridSchemaGenerator 的命名规则，且必须有同名 schema 文件，避免凭空造绑定。
      */
     private fun derivedBindings(context: Context): Map<String, String> {
-        val dir = SchemaManager.getRimeDir(context)
-        val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".schema.yaml") } ?: return emptyMap()
         val out = mutableMapOf<String, String>()
+        // 1) 已启用列表里的派生方案：不依赖文件此刻在不在（启动顺序里加载配置可能早于落盘）
+        for (id in SchemaManager.getEnabledSchemas(context)) {
+            if (!GridSchemaGenerator.isDerived(id)) continue
+            GridSchemaGenerator.sectionOf(id)?.let { out[id] = it }
+        }
+        // 2) 磁盘上存在的派生方案（用户手动放进去、尚未启用的也算）
+        val dir = SchemaManager.getRimeDir(context)
+        val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".schema.yaml") } ?: return out
         for (f in files) {
             val id = f.name.removeSuffix(".schema.yaml")
             if (!GridSchemaGenerator.isDerived(id)) continue

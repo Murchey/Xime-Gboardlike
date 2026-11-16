@@ -9,6 +9,19 @@ import org.junit.Test
 /** 归档导入路径归一化：万象把补丁放在 custom/ 子目录，Rime 只认根目录。 */
 class ImportedEntryPathTest {
 
+    /** 运行时派生的合并键方案不能当成"下架内置残留"删掉（方案会凭空消失）。 */
+    @Test
+    fun `派生的合并键方案不会被清理`() {
+        val assets = setOf("rime_ice.schema.yaml", "double_pinyin.schema.yaml")
+        listOf(
+            "double_pinyin_14jian.schema.yaml",
+            "double_pinyin_flypy_18jian_abcde.schema.yaml",
+            "rime_ice_17jian.schema.yaml",
+        ).forEach {
+            assertFalse("$it 不应被删除", RimeConfigHelper.shouldRemoveObsoleteBuiltinFile(it, assets, emptySet()))
+        }
+    }
+
     @Test
     fun customPatchIsLiftedToRimeRoot() {
         assertEquals("wanxiang.custom.yaml", SchemaManager.normalizeImportedEntry("custom/wanxiang.custom.yaml"))

@@ -23,6 +23,37 @@ class GridSchemaInstallerDeviceTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
 
+    /** ABCDE 排列的派生方案：组键按字母序重排，组码也跟着变。 */
+    @Test
+    fun derivedDoublePinyinFourteenKeyAbcdeDecodesZhong() = runBlocking {
+        RimeConfigHelper.initializeRimeDataAsync(context)
+        val target = GridSchemaInstaller.installAndEnable(context, "double_pinyin", "14", "abcde")
+        assertNotNull("派生失败", target)
+        assertEquals("double_pinyin_14jian_abcde", target)
+
+        val file = File(SchemaManager.getRimeDir(context), "double_pinyin_14jian_abcde.schema.yaml")
+        assertTrue("文件应已写盘", file.isFile)
+        assertTrue("alphabet 应为 ABCDE 组码", file.readText().contains("  alphabet: acegijlnprsuwy"))
+
+        KeysConfigHelper.loadConfig(context)
+        assertEquals("qwerty_14_abcde", KeysConfigHelper.mergedSectionForSchema("double_pinyin_14jian_abcde"))
+
+        RimeConfigHelper.ensureDeployment(context)
+        val engine = RimeEngine.getInstance()
+        var switched = false
+        for (i in 0 until 20) {
+            if (engine.switchSchema("double_pinyin_14jian_abcde")) { switched = true; break }
+            Thread.sleep(2000)
+        }
+        assertTrue("切换失败（部署未完成？）", switched)
+        engine.clearComposition()
+        // 自然码「中」= vs；ABCDE 14 键：v 属 UV 组（码 u）、s 属 ST 组（码 s）
+        for (c in "us") engine.processKey(c.code, 0)
+        val cands = engine.getCandidates()
+        println("派生双拼14ABC us -> " + cands.take(8).joinToString("|"))
+        assertTrue("「中」应在候选里", cands.any { it.contains("中") })
+    }
+
     @Test
     fun derivedDoublePinyinFourteenKeyDecodesZhong() = runBlocking {
         RimeConfigHelper.initializeRimeDataAsync(context)
@@ -52,9 +83,15 @@ class GridSchemaInstallerDeviceTest {
             Thread.sleep(2000)
         }
         assertTrue("切换失败（部署未完成？）", switched)
-        engine.clearComposition()
-        for (c in "ca") engine.processKey(c.code, 0)
-        val cands = engine.getCandidates()
+        // 刚部署完的方案可能还在编 prism，候选会短暂为空：轮询到出词为止
+        var cands: Array<String> = emptyArray()
+        for (i in 0 until 30) {
+            engine.clearComposition()
+            for (c in "ca") engine.processKey(c.code, 0)
+            cands = engine.getCandidates()
+            if (cands.isNotEmpty()) break
+            Thread.sleep(1000)
+        }
         println("派生双拼14 ca -> " + cands.take(8).joinToString("|"))
         assertTrue("「中」应在候选里：" + cands.take(8).joinToString("|"), cands.any { it.contains("中") })
     }

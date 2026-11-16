@@ -58,6 +58,19 @@ class GridLayoutBindingDeviceTest {
         assertEquals("o", KeysConfigHelper.getKeyGesture("op")?.tap?.value)
     }
 
+    /** 运行时派生的方案：绑定登记 + 行布局切换都要生效（决定键盘画 14 键还是 26 键）。 */
+    @Test
+    fun derivedDoublePinyinSwitchesRows() {
+        // 派生方案由装机时按需生成；这里先确保它在磁盘上（新装机会走同一路径）
+        GridSchemaInstaller.install(context, "double_pinyin", "14", "qwerty")
+        KeysConfigHelper.loadConfig(context)
+        assertEquals("qwerty_14", KeysConfigHelper.mergedSectionForSchema("double_pinyin_14jian"))
+        KeysConfigHelper.setActiveKeyboardSchema("double_pinyin_14jian")
+        val rows = KeysConfigHelper.getRowsLayout(false).rows.map { it.keys }
+        assertEquals(listOf("qw", "er", "ty", "ui", "op"), rows[0])
+        assertEquals("q", KeysConfigHelper.getKeyGesture("qw")?.tap?.value)
+    }
+
     @Test
     fun abcde18RowsAndGroupCodes() {
         assertEquals("qwerty_18_abcde", KeysConfigHelper.mergedSectionForSchema("pinyin_18jian_abcde"))

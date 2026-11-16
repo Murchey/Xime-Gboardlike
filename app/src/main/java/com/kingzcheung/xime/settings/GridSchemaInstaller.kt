@@ -51,6 +51,28 @@ object GridSchemaInstaller {
         }
     }
 
+    /**
+     * 启动时补齐：把已启用列表里的派生方案重新生成到磁盘。
+     *
+     * 旧版本会把这类"不在 assets 清单里的内置包文件"当残留删掉；即使删了，
+     * 只要 schema_list 里还留着条目，下一次启动就应当把它们补回来，否则方案凭空消失。
+     */
+    fun restoreInstalled(context: Context): Int {
+        val enabled = SchemaManager.getEnabledSchemas(context)
+        var restored = 0
+        for (id in enabled) {
+            if (!GridSchemaGenerator.isDerived(id)) continue
+            val m = Regex("""_(14|17|18)jian(_abcde)?$""").find(id) ?: continue
+            val layout = m.groupValues[1]
+            val order = if (m.groupValues[2].isNotEmpty()) KeyboardLayoutPreset.ORDER_ABCDE
+            else KeyboardLayoutPreset.ORDER_QWERTY
+            val base = GridSchemaGenerator.baseOf(id)
+            if (install(context, base, layout, order) != null) restored++
+        }
+        if (restored > 0) FileLogger.i(TAG, "restored " + restored + " derived schema(s)")
+        return restored
+    }
+
     /** 把派生方案登记进启用列表（没有变化时原样返回）。 */
     fun enable(context: Context, targetId: String): Boolean {
         val enabled = SchemaManager.getEnabledSchemas(context)

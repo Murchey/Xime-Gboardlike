@@ -5,6 +5,8 @@ import android.content.Context
 import android.util.Log
 import com.kingzcheung.xime.BuildConfig
 import com.kingzcheung.xime.settings.BuiltinPackages
+import com.kingzcheung.xime.settings.GridSchemaGenerator
+import com.kingzcheung.xime.settings.GridSchemaInstaller
 import com.kingzcheung.xime.settings.BuiltinSeedState
 import com.kingzcheung.xime.settings.PersonalDictManager
 import com.kingzcheung.xime.settings.SchemaConfigHelper
@@ -64,6 +66,9 @@ object RimeConfigHelper {
         copyAssetsToRimeDir(context, rimeDir)
         // 14/17/18 键组码方案随本仓库分发（不在 rime 子模块里），部署前落盘
         SchemaManager.installGridSchemas(context, rimeDir)
+        // 运行时派生的合并键方案（{base}_14jian…）：被旧版本清理掉时在这里补回来
+        runCatching { GridSchemaInstaller.restoreInstalled(context) }
+            .onFailure { Log.w(TAG, "restore derived grid schemas failed", it) }
         // 首次安装/升级后补建内置包的 per-package 清单
         SchemaManifestManager.refreshBuiltinManifest(context)
         // 清理已安装方案的源包（历史版本安装后遗留的 market/*.zip，实测单包可达 40MB+）
@@ -804,6 +809,10 @@ object RimeConfigHelper {
     ): Boolean {
         if (builtinAssets.isEmpty()) return false
         if (relPath in builtinAssets) return false
+        // 运行时派生的合并键方案（{base}_{14|17|18}jian[_abcde]）由 App 自己生成：
+        // 它不在 assets 清单里，但绝不能按"下架内置残留"删掉，否则用户每次升级/重启
+        // 都发现方案没了（schema_list 条目也随后被清）。
+        if (GridSchemaGenerator.isDerived(relPath.removeSuffix(".schema.yaml"))) return false
         val pkg = BuiltinPackages.packageFor(relPath)
         // SHARED 是"未知文件"的兜底：用户装的第三方方案全落在这一档，绝不能删
         if (pkg == BuiltinPackages.SHARED) return false
