@@ -133,6 +133,17 @@ object GridSchemaGenerator {
         lines.addAll(lastRule + 1, listOf("    # 合并键：组内字母 → 组码") + rulesOf(groups))
 
         // 保留拼写提示：lua filter 要读 comment 里的组码才能还原成拼音（滤镜会把它替换掉）
+        // 挂拼音提示滤镜：候选注释由 lua filter 用「文字 + 当前组码 + 读音表」算出来
+        val filtersIdx0 = lines.indexOfFirst { it.trim() == "filters:" }
+        if (filtersIdx0 > 0) {
+            var at = filtersIdx0 + 1
+            for (i in filtersIdx0 + 1 until lines.size) {
+                if (lines[i].startsWith("    - ")) at = i + 1
+                else if (lines[i].isNotBlank() && !lines[i].startsWith("      ")) break
+            }
+            lines.add(at, "    - lua_filter@*grid_hint")
+        }
+
         val commentsIdx = lines.indexOfFirst { it.trim().startsWith("always_show_comments:") }
         if (commentsIdx >= 0) {
             // 只留滤镜算出来的拼音；rime 自己的拼写提示对组码没有意义
@@ -141,6 +152,10 @@ object GridSchemaGenerator {
             val translatorIdx = lines.indexOfFirst { it.trim() == "translator:" }
             if (translatorIdx >= 0) lines.add(translatorIdx + 1, "  always_show_comments: false")
         }
+
+        lines.add("")
+        lines.add("grid_hint:")
+        lines.add("  group_map: \"" + groupMapOf(groups) + "\"")
 
         val out = lines.joinToString("\n")
         if (out.contains("  prism: " + baseId + "\n")) return null

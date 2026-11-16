@@ -21,6 +21,7 @@ object GridSchemaInstaller {
         order: String,
     ): String? {
         val rimeDir = SchemaManager.getRimeDir(context)
+        installHintLua(context, rimeDir)
         val baseFile = File(rimeDir, baseId + ".schema.yaml")
         if (!baseFile.isFile) {
             FileLogger.w(TAG, "install(" + baseId + "): 基础方案不存在")
@@ -113,6 +114,21 @@ object GridSchemaInstaller {
         }
         if (restored > 0) FileLogger.i(TAG, "restored " + restored + " derived schema(s)")
         return restored
+    }
+
+    /** 落盘拼音提示滤镜与读音数据模块（librime-lua 会从 lua/ 里 require 数据模块）。 */
+    private fun installHintLua(context: Context, rimeDir: File) {
+        copyAsset(context, "grid_hint/grid_hint.lua", File(rimeDir, "lua/grid_hint.lua"))
+        copyAsset(context, "grid_hint/grid_pinyin.lua", File(rimeDir, "lua/grid_pinyin.lua"))
+    }
+
+    private fun copyAsset(context: Context, asset: String, target: File) {
+        val bytes = runCatching { context.assets.open(asset).use { it.readBytes() } }.getOrNull() ?: return
+        if (target.isFile && runCatching { target.readBytes().contentEquals(bytes) }.getOrDefault(false)) return
+        runCatching {
+            target.parentFile?.mkdirs()
+            target.writeBytes(bytes)
+        }
     }
 
     /** 把派生方案登记进启用列表（没有变化时原样返回）。 */

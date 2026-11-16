@@ -96,7 +96,10 @@ class GridSchemaGeneratorTest {
         // 滤镜要读候选里的组码，所以拼写提示必须留着（由滤镜负责替换成拼音）
         // 注释只留 lua 滤镜算出来的拼音（rime 自己的拼写提示对组码没意义）
         assertTrue("always_show_comments 应关闭", out.contains("  always_show_comments: false"))
-        assertFalse("拼音提示滤镜暂缓（librime-lua 没有 io，数据没法外置）", out.contains("lua_filter@*grid_hint"))
+        assertTrue("应挂拼音提示滤镜", out.contains("    - lua_filter@*grid_hint"))
+        assertTrue("应写入组码映射", out.contains("  group_map: \"" + GridSchemaGenerator.groupMapOf(
+            GridSchemaGenerator.groupsOf("14", "qwerty"),
+        ) + "\""))
     }
 
     @Test
