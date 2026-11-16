@@ -125,6 +125,9 @@ fun SetupWizardScreen(
                     onNext = {
                         enabledSchemas.value = SchemaManager.getEnabledSchemas(context)
                         if (enabledSchemas.value.isNotEmpty()) {
+                            // 先给一句"正在检查/尚未部署"的提示：isDeploymentComplete 要读大词库，
+                            // 全新安装首次部署可能要几分钟，期间按钮点了没有任何反馈，用户会以为卡死。
+                            deployReminder = tr(R.string.s_fanganyixuanze_danshangweibush_80e59)
                             // isDeploymentComplete 内部计算部署 hash（读取大词库文件），
                             // 移到 IO 线程避免主线程卡顿
                             scope.launch {
