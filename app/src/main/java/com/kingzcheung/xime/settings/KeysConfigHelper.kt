@@ -826,6 +826,11 @@ object KeysConfigHelper {
      * 改字体不会触碰 xime.custom.yaml）；直接重算配置、重载 Typeface 并递增
      * [configVersion] 让键盘重组。
      */
+    /** 符号提示风格变更后让键盘重算角标（不走配置重载，立即重组）。 */
+    fun bumpForSymbolHintStyle() {
+        _configVersion.value++
+    }
+
     fun reloadFonts(context: Context) {
         keyboardFontConfig = FontPreferences.applyOverrides(context, parseKeyboardFontsFromAssets(context))
         com.kingzcheung.xime.ui.keyboard.AppFonts.loadCustomFonts(keyboardFontConfig)
@@ -2504,6 +2509,9 @@ object KeysConfigHelper {
         else -> symbol
     }
 
+    /** 供渲染侧使用：中文模式把 ASCII 符号换成中文标点。 */
+    fun chineseSymbolFor(symbol: String): String = chineseSymbol(symbol)
+
     /** Gboard 风格下该键上屏的值：中文模式用中文标点，其它原样。 */
     private fun symbolHintValue(ctx: Context, key: String, isAsciiMode: Boolean): String? {
         val hint = symbolHintOverride(ctx, key) ?: return null
@@ -2534,6 +2542,11 @@ object KeysConfigHelper {
         val original = getKeyGesture(key, isAsciiMode)?.longPress ?: return null
         val ctx = com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext ?: return original
         val hint = symbolHintOverride(ctx, key) ?: return original
+        // 智能引号（C 的 “”、Z 的 ‘’）保持原样：长按一次开引号、再一次闭引号
+        val firstAction = original.values.firstOrNull()?.action
+        if (firstAction == GestureAction.SMART_QUOTE || firstAction == GestureAction.SMART_SINGLE_QUOTE) {
+            return original
+        }
         val keep = original.values.filter {
             it.action != null && it.action != GestureAction.COMMIT
         }

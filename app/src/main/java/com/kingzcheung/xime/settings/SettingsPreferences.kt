@@ -255,6 +255,8 @@ object SettingsPreferences {
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
                 if (key == KEY_SYMBOL_HINT_STYLE) {
                     symbolHintStyleVersion.value++
+                    // 让键盘立即重组（角标在渲染时按当前偏好现算）
+                    KeysConfigHelper.bumpForSymbolHintStyle()
                     // 标记"下次显示键盘时要重建输入视图"：IME 侧不重启进程也能换风格
                     prefs.edit().putBoolean(KEY_SYMBOL_HINT_PENDING, true).apply()
                 }

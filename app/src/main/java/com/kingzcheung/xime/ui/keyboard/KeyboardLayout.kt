@@ -2161,14 +2161,29 @@ fun KeyboardRowWithConfig(
     val doublePinyinFinals = LocalDoublePinyinFinals.current
     val letterCase = LocalLetterCaseSetting.current
     keys.forEachIndexed { index, key ->
-            val rawSwipeUpLabel = KeysConfigHelper.getSwipeUpLabel(key, isAsciiMode)
+            // Gboard 符号风格：键面角标/上滑值在渲染时按当前偏好现算，不依赖配置缓存
+            val gboardHint = if (localGboardHints) {
+                val baseKey = if (key.length in 1..2 && key.all { it.isLetter() }) {
+                    key.first().toString()
+                } else {
+                    key
+                }
+                com.kingzcheung.xime.settings.SymbolHintStyles.hintFor(
+                    SettingsPreferences.SYMBOL_HINT_GBOARD, baseKey,
+                )
+            } else {
+                null
+            }
+            val rawSwipeUpLabel = gboardHint ?: KeysConfigHelper.getSwipeUpLabel(key, isAsciiMode)
             val swipeUpAction = KeysConfigHelper.getSwipeUpAction(key, isAsciiMode)
             val swipeUpDisplay = KeysConfigHelper.getSwipeUpDisplay(key, isAsciiMode)
             val swipeUpBubble = KeysConfigHelper.getSwipeUpBubble(key, isAsciiMode)
             // 键面提示位置由 display 决定（BUBBLE 用空串压制回退）；运行时气泡由 bubble 决定
             val swipeUpKeyLabel = if (swipeUpDisplay == DisplayMode.BUBBLE) "" else rawSwipeUpLabel
             val swipeUpText = if (swipeUpBubble) rawSwipeUpLabel else null
-            val swipeUpCommitValue = KeysConfigHelper.getSwipeUpCommitValue(key, isAsciiMode)
+            val swipeUpCommitValue = gboardHint?.let {
+                if (isAsciiMode) it else KeysConfigHelper.chineseSymbolFor(it)
+            } ?: KeysConfigHelper.getSwipeUpCommitValue(key, isAsciiMode)
             val swipeDownRaw = KeysConfigHelper.getKeyGesture(key, isAsciiMode)?.swipeDown
             val swipeDownLabel = swipeDownRaw?.label?.takeIf { it.isNotEmpty() }
             val swipeDownAction = swipeDownRaw?.action
@@ -2281,8 +2296,10 @@ fun KeyboardRowWithConfig(
                 key, swipeUpAction, swipeUpCommitValue, onKeyPress, onCommitText, onGestureAction
             ) {
                 swipeUpHandlerFor(
-                    // 按当前符号提示风格取动作：Gboard 时一律 COMMIT，避免被原有的智能引号/切换语言顶掉
-                    KeysConfigHelper.swipeUpActionForDisplay(key, isAsciiMode),
+                    // Gboard 风格：上滑一律 COMMIT 当前符号；否则沿用配置动作
+                    gboardHint?.let {
+                        KeyAction(GestureAction.COMMIT, value = swipeUpCommitValue.orEmpty(), label = it)
+                    } ?: KeysConfigHelper.swipeUpActionForDisplay(key, isAsciiMode),
                     swipeUpCommitValue, onKeyPress, onCommitText, onGestureAction,
                 )
             }
