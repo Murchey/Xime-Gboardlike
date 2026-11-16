@@ -33,9 +33,39 @@ fun SettingsScreen(
         }
     }
     
+    // 二级页用"整页平移推动"（Android 原生设置的手感），不做淡入淡出：
+    // 新页从右侧推入、旧页向左让位一小段；返回时反向。220ms 起步，够利索又不突兀。
+    val pushSpec = androidx.compose.animation.core.tween<androidx.compose.ui.unit.IntOffset>(
+        durationMillis = 220,
+        easing = androidx.compose.animation.core.FastOutSlowInEasing,
+    )
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = startDestination,
+        enterTransition = {
+            androidx.compose.animation.slideInHorizontally(
+                initialOffsetX = { it },
+                animationSpec = pushSpec,
+            )
+        },
+        exitTransition = {
+            androidx.compose.animation.slideOutHorizontally(
+                targetOffsetX = { -it / 4 },
+                animationSpec = pushSpec,
+            )
+        },
+        popEnterTransition = {
+            androidx.compose.animation.slideInHorizontally(
+                initialOffsetX = { -it / 4 },
+                animationSpec = pushSpec,
+            )
+        },
+        popExitTransition = {
+            androidx.compose.animation.slideOutHorizontally(
+                targetOffsetX = { it },
+                animationSpec = pushSpec,
+            )
+        },
     ) {
         composable(SettingsRoutes.Main) {
             SettingsMainContent(
