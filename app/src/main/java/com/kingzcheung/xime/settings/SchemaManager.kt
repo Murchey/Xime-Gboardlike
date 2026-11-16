@@ -855,13 +855,34 @@ object SchemaManager {
     fun getSchemaDisplayName(context: Context, schemaId: String): String? {
         val file = File(getRimeDir(context), "$schemaId.schema.yaml")
         if (!file.exists()) return null
+        val text = file.readText().trimStart('\uFEFF')
         return try {
-            val entry = yaml.decodeFromString(SchemaYaml.serializer(), file.readText().trimStart('\uFEFF')).schema
-            entry.name.ifEmpty { null }
+            val entry = yaml.decodeFromString(SchemaYaml.serializer(), text).schema
+            entry.name.ifEmpty { nameFromText(text) }
         } catch (e: Exception) {
-            try { Log.e(TAG, "Failed to parse schema name for $schemaId", e) } catch (_: Exception) {}
-            null
+            // kaml 会因文件里某些段落（例如标点表里的 tab）整份解析失败，
+            // 这种情况直接抠 schema 块里的 name，别让方案名变成空标签。
+            nameFromText(text)
         }
+    }
+
+    /**
+     * 从 schema 文本里抠方案名（纯函数）：只看 schema 块内、缩进两个空格的 name。
+     *
+     * 兜底用：kaml 整份解析失败时，方案名不能变空（键盘空格键上就是空白）。
+     */
+    internal fun nameFromText(text: String): String? {
+        val lines = text.lines()
+        val start = lines.indexOfFirst { it.trim() == "schema:" }
+        if (start < 0) return null
+        for (i in start + 1 until lines.size) {
+            val line = lines[i]
+            if (line.isNotBlank() && !line.startsWith("  ")) break
+            if (line.startsWith("  name:")) {
+                return line.removePrefix("  name:").trim().trim('"').ifEmpty { null }
+            }
+        }
+        return null
     }
 
     /**

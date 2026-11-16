@@ -32,7 +32,8 @@ object GridSchemaInstaller {
             baseText = baseFile.readText(),
             baseId = baseId,
             targetId = targetId,
-            displayName = baseId + " · " + layout + " 键" +
+            displayName = SchemaManager.getSchemaDisplayName(context, baseId).orEmpty().ifEmpty { baseId } +
+                " · " + layout + " 键" +
                 (if (order == KeyboardLayoutPreset.ORDER_ABCDE) " ABCDE" else ""),
             groups = groups,
         ) ?: run {
