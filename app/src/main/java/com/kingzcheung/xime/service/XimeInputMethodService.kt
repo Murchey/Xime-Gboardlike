@@ -3046,6 +3046,14 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         ImeLatencyTrace.onShown()
+        // 符号提示风格改过：重载配置并重建输入视图，避免"再呼出键盘还是老样式"
+        if (SettingsPreferences.isSymbolHintPending(this)) {
+            SettingsPreferences.clearSymbolHintPending(this)
+            runCatching {
+                KeysConfigHelper.loadConfig(this)
+                setInputView(onCreateInputView())
+            }.onFailure { FileLogger.w(TAG, "rebuild input view for symbol hint failed", it) }
+        }
         info?.let { updateEnterKeyText(it) }
         hasHardwareKeyboard = SettingsPreferences.isHardwareKeyboardDetectionEnabled(this) &&
             resources.configuration.keyboard != android.content.res.Configuration.KEYBOARD_NOKEYS

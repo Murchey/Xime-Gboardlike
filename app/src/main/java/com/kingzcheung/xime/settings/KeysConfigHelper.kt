@@ -2489,6 +2489,27 @@ object KeysConfigHelper {
         return configMap[key.lowercase()]?.swipeUp?.action
     }
 
+    /** 中文模式下把 ASCII 符号换成对应中文标点（键面角标仍显示 ASCII）。 */
+    private fun chineseSymbol(symbol: String): String = when (symbol) {
+        "!" -> "！"
+        "?" -> "？"
+        ";" -> "；"
+        ":" -> "："
+        "(" -> "（"
+        ")" -> "）"
+        "." -> "。"
+        "," -> "，"
+        "\"" -> "\u201C"
+        "'" -> "\u2018"
+        else -> symbol
+    }
+
+    /** Gboard 风格下该键上屏的值：中文模式用中文标点，其它原样。 */
+    private fun symbolHintValue(ctx: Context, key: String, isAsciiMode: Boolean): String? {
+        val hint = symbolHintOverride(ctx, key) ?: return null
+        return if (isAsciiMode) hint else chineseSymbol(hint)
+    }
+
     /**
      * 上滑派发用的动作：Gboard 风格下固定为 COMMIT（原样上屏角标上的符号），
      * 否则沿用配置里的动作（可能是智能引号/切换语言等）。
@@ -2500,7 +2521,7 @@ object KeysConfigHelper {
             if (hint != null) {
                 return KeyAction(
                     action = com.kingzcheung.xime.keyboard.GestureAction.COMMIT,
-                    value = hint,
+                    value = symbolHintValue(ctx, key, isAsciiMode) ?: hint,
                     label = hint,
                 )
             }
@@ -2519,7 +2540,11 @@ object KeysConfigHelper {
         return LongPressAction(
             display = original.display,
             values = listOf(
-                KeyAction(action = GestureAction.COMMIT, value = hint, label = hint),
+                KeyAction(
+                    action = GestureAction.COMMIT,
+                    value = symbolHintValue(ctx, key, isAsciiMode) ?: hint,
+                    label = hint,
+                ),
             ) + keep,
             defaultIndex = original.defaultIndex,
         )
@@ -2556,7 +2581,8 @@ object KeysConfigHelper {
     /** 获取上滑提交值（优先 value，fallback label；仅未配置 swipe_up 时用旧默认表） */
     fun getSwipeUpCommitValue(key: String, isAsciiMode: Boolean = false): String? {
         com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext?.let { ctx ->
-            symbolHintOverride(ctx, key)?.let { return it }
+            // 中文模式下上屏中文标点（键面仍显示 ASCII 符号）
+            symbolHintValue(ctx, key, isAsciiMode)?.let { return it }
         }
         // Gboard 风格：上滑提交值就是符号本身
         val configMap = if (isAsciiMode) _keyGestureConfigEn.value else _keyGestureConfig.value

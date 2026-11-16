@@ -41,6 +41,9 @@ object SettingsPreferences {
     
     const val KEY_SMART_PREDICTION_ENABLED = "smart_prediction_enabled"
 
+    /** 符号提示风格已改、等待重建输入视图。 */
+    private const val KEY_SYMBOL_HINT_PENDING = "symbol_hint_pending"
+
     /** 字母键符号提示排布（fcitx5 / gboard）。 */
     const val KEY_SYMBOL_HINT_STYLE = "symbol_hint_style"
 
@@ -250,7 +253,11 @@ object SettingsPreferences {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         if (symbolHintListener == null) {
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-                if (key == KEY_SYMBOL_HINT_STYLE) symbolHintStyleVersion.value++
+                if (key == KEY_SYMBOL_HINT_STYLE) {
+                    symbolHintStyleVersion.value++
+                    // 标记"下次显示键盘时要重建输入视图"：IME 侧不重启进程也能换风格
+                    prefs.edit().putBoolean(KEY_SYMBOL_HINT_PENDING, true).apply()
+                }
             }
             prefs.registerOnSharedPreferenceChangeListener(listener)
             symbolHintListener = listener
@@ -878,6 +885,14 @@ object SettingsPreferences {
 
     /** 符号提示风格变化计数器：键盘侧观察它来重组，改设置后立即生效，不必重启。 */
     val symbolHintStyleVersion = androidx.compose.runtime.mutableStateOf(0)
+
+    /** 风格改了、输入视图还没重建（IME 在下次显示键盘时处理）。 */
+    fun isSymbolHintPending(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_SYMBOL_HINT_PENDING, false)
+
+    fun clearSymbolHintPending(context: Context) {
+        getPrefs(context).edit().putBoolean(KEY_SYMBOL_HINT_PENDING, false).apply()
+    }
 
     /** 键盘布局设置里选的基础方案（全拼/双拼），部署时按它派生。 */
     fun getKeyboardLayoutBaseSchema(context: Context): String =
