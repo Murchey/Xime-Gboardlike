@@ -478,7 +478,7 @@ keyboard:
       rows:
         - [[q, w], [e, r], [t, y], [u, i], [o, p]]
         - [[a, s], [d, f], [g, h], [j, k], [l]]
-        - [[z, x], [c, v], [b, n], [m]]
+        - [shift, [z, x], [c, v], [b, n], [m], delete]
     keys:
       # swipe_up 数字按行序排布：上排 1-5、中排 6-0
       qw: { tap: { label: "qw", value: "q" }, swipe_up: "1", long_press: { display: "bubble", values: ["q", "w", "Q", "W"] } }
@@ -495,6 +495,8 @@ keyboard:
       cv: { tap: { label: "cv", value: "c" }, swipe_up: "、", long_press: { display: "bubble", values: ["c", "v", "C", "V"] } }
       bn: { tap: { label: "bn", value: "b" }, swipe_up: "!", long_press: { display: "bubble", values: ["b", "n", "B", "N"] } }
       m:  { tap: { label: "m", value: "m" }, swipe_up: "#", long_press: { display: "bubble", values: ["m", "M"] } }
+      shift: { width: 1.1, tap: { action: command, value: shift_single }, double_tap: { action: command, value: shift_caps } }
+      delete: { width: 1.1, tap: { action: delete }, long_press: { values: [ { action: delete, label: "删除" } ] }, swipe_up: { action: clear_all, label: "上滑清空" }, swipe_down: { action: undo_clear, label: "下滑撤回" }, swipe_left: { action: command, value: clear_composition }, swipe_right: { action: command, value: clear_composition } }
       comma: { width: 0.7, tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." }, long_press: { display: "bubble", values: [ { label: "表情", action: switch_route, value: "emoji" }, { label: "悬浮模式", action: toggle_floating }, { label: "设置", action: open_settings } ] } }
       period: { width: 0.7, tap: { label: "。", value: "." }, long_press: { display: bubble, default_index: 14, values: ["^_^", ":)", ":(", ":D", ":P", "&", "$", "^", "%", "_", "：", "；", "、", "！", "……", "？"] } }
       earth: { width: 0.7, tap: { label: "@language", action: "toggle_ascii" }, long_press: { action: command, value: show_ime_picker, bubble: false } }
@@ -509,7 +511,7 @@ keyboard:
       rows:
         - [q, [w, e], [r, t], [y, u], i, [o, p]]
         - [a, [s, d], [f, g], h, [j, k], l]
-        - [z, [x, c], v, [b, n], m]
+        - [shift, z, [x, c], v, [b, n], m, delete]
     keys:
       # swipe_up 数字按行序排布：上排 1-6、中排 7-0
       q:  { tap: { label: "q", value: "q" }, swipe_up: "1", long_press: { display: "bubble", values: ["q", "Q"] } }
@@ -529,6 +531,8 @@ keyboard:
       v:  { tap: { label: "v", value: "v" }, swipe_up: "?", long_press: { display: "bubble", values: ["v", "V"] } }
       bn: { tap: { label: "bn", value: "b" }, swipe_up: "!", long_press: { display: "bubble", values: ["b", "n", "B", "N"] } }
       m:  { tap: { label: "m", value: "m" }, swipe_up: "#", long_press: { display: "bubble", values: ["m", "M"] } }
+      shift: { width: 1.1, tap: { action: command, value: shift_single }, double_tap: { action: command, value: shift_caps } }
+      delete: { width: 1.1, tap: { action: delete }, long_press: { values: [ { action: delete, label: "删除" } ] }, swipe_up: { action: clear_all, label: "上滑清空" }, swipe_down: { action: undo_clear, label: "下滑撤回" }, swipe_left: { action: command, value: clear_composition }, swipe_right: { action: command, value: clear_composition } }
       comma: { width: 0.7, tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." }, long_press: { display: "bubble", values: [ { label: "表情", action: switch_route, value: "emoji" }, { label: "悬浮模式", action: toggle_floating }, { label: "设置", action: open_settings } ] } }
       period: { width: 0.7, tap: { label: "。", value: "." }, long_press: { display: bubble, default_index: 14, values: ["^_^", ":)", ":(", ":D", ":P", "&", "$", "^", "%", "_", "：", "；", "、", "！", "……", "？"] } }
       earth: { width: 0.7, tap: { label: "@language", action: "toggle_ascii" }, long_press: { action: command, value: show_ime_picker, bubble: false } }
@@ -543,7 +547,7 @@ keyboard:
       rows:
         - [q, [w, e], [r, t], y, u, [i, o], p]
         - [a, [s, d], [f, g], h, [j, k], l]
-        - [z, [x, c], v, [b, n], m]
+        - [shift, z, [x, c], v, [b, n], m, delete]
     keys:
       # swipe_up 数字按行序排布：上排 1-7、中排 8-0
       q:  { tap: { label: "q", value: "q" }, swipe_up: "1", long_press: { display: "bubble", values: ["q", "Q"] } }
@@ -564,6 +568,8 @@ keyboard:
       v:  { tap: { label: "v", value: "v" }, swipe_up: "?", long_press: { display: "bubble", values: ["v", "V"] } }
       bn: { tap: { label: "bn", value: "b" }, swipe_up: "!", long_press: { display: "bubble", values: ["b", "n", "B", "N"] } }
       m:  { tap: { label: "m", value: "m" }, swipe_up: "#", long_press: { display: "bubble", values: ["m", "M"] } }
+      shift: { width: 1.1, tap: { action: command, value: shift_single }, double_tap: { action: command, value: shift_caps } }
+      delete: { width: 1.1, tap: { action: delete }, long_press: { values: [ { action: delete, label: "删除" } ] }, swipe_up: { action: clear_all, label: "上滑清空" }, swipe_down: { action: undo_clear, label: "下滑撤回" }, swipe_left: { action: command, value: clear_composition }, swipe_right: { action: command, value: clear_composition } }
       comma: { width: 0.7, tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." }, long_press: { display: "bubble", values: [ { label: "表情", action: switch_route, value: "emoji" }, { label: "悬浮模式", action: toggle_floating }, { label: "设置", action: open_settings } ] } }
       period: { width: 0.7, tap: { label: "。", value: "." }, long_press: { display: bubble, default_index: 14, values: ["^_^", ":)", ":(", ":D", ":P", "&", "$", "^", "%", "_", "：", "；", "、", "！", "……", "？"] } }
       earth: { width: 0.7, tap: { label: "@language", action: "toggle_ascii" }, long_press: { action: command, value: show_ime_picker, bubble: false } }
@@ -577,7 +583,7 @@ keyboard:
       rows:
         - [[a, b], [c, d], [e, f], [g, h], i]
         - [[j, k], [l, m], [n, o], [p, q], r]
-        - [[s, t], [u, v], [w, x], [y, z]]
+        - [shift, [s, t], [u, v], [w, x], [y, z], delete]
     keys:
       ab: { tap: { label: "ab", value: "a" }, swipe_up: "1", long_press: { display: "bubble", values: ["a", "b", "A", "B"] } }
       cd: { tap: { label: "cd", value: "c" }, swipe_up: "2", long_press: { display: "bubble", values: ["c", "d", "C", "D"] } }
@@ -593,6 +599,8 @@ keyboard:
       uv: { tap: { label: "uv", value: "u" }, swipe_up: "、", long_press: { display: "bubble", values: ["u", "v", "U", "V"] } }
       wx: { tap: { label: "wx", value: "w" }, swipe_up: "!", long_press: { display: "bubble", values: ["w", "x", "W", "X"] } }
       yz: { tap: { label: "yz", value: "y" }, swipe_up: "#", long_press: { display: "bubble", values: ["y", "z", "Y", "Z"] } }
+      shift: { width: 1.1, tap: { action: command, value: shift_single }, double_tap: { action: command, value: shift_caps } }
+      delete: { width: 1.1, tap: { action: delete }, long_press: { values: [ { action: delete, label: "删除" } ] }, swipe_up: { action: clear_all, label: "上滑清空" }, swipe_down: { action: undo_clear, label: "下滑撤回" }, swipe_left: { action: command, value: clear_composition }, swipe_right: { action: command, value: clear_composition } }
       comma: { width: 0.7, tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." }, long_press: { display: "bubble", values: [ { label: "表情", action: switch_route, value: "emoji" }, { label: "悬浮模式", action: toggle_floating }, { label: "设置", action: open_settings } ] } }
       period: { width: 0.7, tap: { label: "。", value: "." }, long_press: { display: bubble, default_index: 14, values: ["^_^", ":)", ":(", ":D", ":P", "&", "$", "^", "%", "_", "：", "；", "、", "！", "……", "？"] } }
       earth: { width: 0.7, tap: { label: "@language", action: "toggle_ascii" }, long_press: { action: command, value: show_ime_picker, bubble: false } }
@@ -606,7 +614,7 @@ keyboard:
       rows:
         - [[a, b], [c, d], [e, f], g, h, i]
         - [[j, k], [l, m], [n, o], p, q, r]
-        - [[s, t], [u, v], [w, x], y, z]
+        - [shift, [s, t], [u, v], [w, x], y, z, delete]
     keys:
       ab: { tap: { label: "ab", value: "a" }, swipe_up: "1", long_press: { display: "bubble", values: ["a", "b", "A", "B"] } }
       cd: { tap: { label: "cd", value: "c" }, swipe_up: "2", long_press: { display: "bubble", values: ["c", "d", "C", "D"] } }
@@ -625,6 +633,8 @@ keyboard:
       wx: { tap: { label: "wx", value: "w" }, swipe_up: "@", long_press: { display: "bubble", values: ["w", "x", "W", "X"] } }
       y: { tap: { label: "y", value: "y" }, swipe_up: "-", long_press: { display: "bubble", values: ["y", "Y"] } }
       z: { tap: { label: "z", value: "z" }, swipe_up: "+", long_press: { display: "bubble", values: ["z", "Z"] } }
+      shift: { width: 1.1, tap: { action: command, value: shift_single }, double_tap: { action: command, value: shift_caps } }
+      delete: { width: 1.1, tap: { action: delete }, long_press: { values: [ { action: delete, label: "删除" } ] }, swipe_up: { action: clear_all, label: "上滑清空" }, swipe_down: { action: undo_clear, label: "下滑撤回" }, swipe_left: { action: command, value: clear_composition }, swipe_right: { action: command, value: clear_composition } }
       comma: { width: 0.7, tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." }, long_press: { display: "bubble", values: [ { label: "表情", action: switch_route, value: "emoji" }, { label: "悬浮模式", action: toggle_floating }, { label: "设置", action: open_settings } ] } }
       period: { width: 0.7, tap: { label: "。", value: "." }, long_press: { display: bubble, default_index: 14, values: ["^_^", ":)", ":(", ":D", ":P", "&", "$", "^", "%", "_", "：", "；", "、", "！", "……", "？"] } }
       earth: { width: 0.7, tap: { label: "@language", action: "toggle_ascii" }, long_press: { action: command, value: show_ime_picker, bubble: false } }
@@ -638,7 +648,7 @@ keyboard:
       rows:
         - [[a, b], [c, d], [e, f], g, h, i, j]
         - [[k, l], [m, n], [o, p], q, r, s]
-        - [[t, u], [v, w], x, y, z]
+        - [shift, [t, u], [v, w], x, y, z, delete]
     keys:
       ab: { tap: { label: "ab", value: "a" }, swipe_up: "1", long_press: { display: "bubble", values: ["a", "b", "A", "B"] } }
       cd: { tap: { label: "cd", value: "c" }, swipe_up: "2", long_press: { display: "bubble", values: ["c", "d", "C", "D"] } }
@@ -658,6 +668,8 @@ keyboard:
       x: { tap: { label: "x", value: "x" }, swipe_up: "-", long_press: { display: "bubble", values: ["x", "X"] } }
       y: { tap: { label: "y", value: "y" }, swipe_up: "+", long_press: { display: "bubble", values: ["y", "Y"] } }
       z: { tap: { label: "z", value: "z" }, swipe_up: "/", long_press: { display: "bubble", values: ["z", "Z"] } }
+      shift: { width: 1.1, tap: { action: command, value: shift_single }, double_tap: { action: command, value: shift_caps } }
+      delete: { width: 1.1, tap: { action: delete }, long_press: { values: [ { action: delete, label: "删除" } ] }, swipe_up: { action: clear_all, label: "上滑清空" }, swipe_down: { action: undo_clear, label: "下滑撤回" }, swipe_left: { action: command, value: clear_composition }, swipe_right: { action: command, value: clear_composition } }
       comma: { width: 0.7, tap: { label: "，", value: "," }, swipe_up: { label: "。", value: "." }, long_press: { display: "bubble", values: [ { label: "表情", action: switch_route, value: "emoji" }, { label: "悬浮模式", action: toggle_floating }, { label: "设置", action: open_settings } ] } }
       period: { width: 0.7, tap: { label: "。", value: "." }, long_press: { display: bubble, default_index: 14, values: ["^_^", ":)", ":(", ":D", ":P", "&", "$", "^", "%", "_", "：", "；", "、", "！", "……", "？"] } }
       earth: { width: 0.7, tap: { label: "@language", action: "toggle_ascii" }, long_press: { action: command, value: show_ime_picker, bubble: false } }

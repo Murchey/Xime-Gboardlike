@@ -238,6 +238,16 @@ class KeyboardMergedLayoutTest {
         return source.zip(target).toMap().mapKeys { it.key.lowercaseChar() }
     }
 
+    /** 只保留字母键：合并键布局的第三行两端还有 shift / delete 等功能键。 */
+    private fun letterRows(rows: List<List<String>>): List<List<String>> =
+        rows.map { row ->
+            row.filter { id ->
+                id !in KeysConfigHelper.FUNCTION_KEY_IDS &&
+                    id.length <= 2 &&           // 合并键 id 最多两个字母
+                    id.all { it in 'a'..'z' }
+            }
+        }
+
     /** 从行布局推导合并分组：每个字母 → 所在组 ID 的首字母（代表字母）。 */
     private fun representativeMap(rows: List<List<String>>): Map<Char, Char> =
         rows.flatten().flatMap { id -> id.map { it to id.first() } }.toMap()
@@ -246,24 +256,27 @@ class KeyboardMergedLayoutTest {
     fun `14键前端分组与 Rime xlit 映射一致`() {
         val rows = KeysConfigHelper.parseKeyboardLayoutYamlText(ximeYamlText(), "qwerty_14")
             ?: error("xime.yaml 缺少 qwerty_14 rows")
-        assertEquals(14, rows.flatten().size)
-        assertEquals(representativeMap(rows), xlitMap(schemaExampleText("pinyin_14jian")))
+        val letters = letterRows(rows)
+        assertEquals(14, letters.flatten().size)
+        assertEquals(representativeMap(letters), xlitMap(schemaExampleText("pinyin_14jian")))
     }
 
     @Test
     fun `17键前端分组与 Rime xlit 映射一致`() {
         val rows = KeysConfigHelper.parseKeyboardLayoutYamlText(ximeYamlText(), "qwerty_17")
             ?: error("xime.yaml 缺少 qwerty_17 rows")
-        assertEquals(17, rows.flatten().size)
-        assertEquals(representativeMap(rows), xlitMap(schemaExampleText("pinyin_17jian")))
+        val letters = letterRows(rows)
+        assertEquals(17, letters.flatten().size)
+        assertEquals(representativeMap(letters), xlitMap(schemaExampleText("pinyin_17jian")))
     }
 
     @Test
     fun `18键前端分组与 Rime xlit 映射一致`() {
         val rows = KeysConfigHelper.parseKeyboardLayoutYamlText(ximeYamlText(), "qwerty_18")
             ?: error("xime.yaml 缺少 qwerty_18 rows")
-        assertEquals(18, rows.flatten().size)
-        assertEquals(representativeMap(rows), xlitMap(schemaExampleText("pinyin_18jian")))
+        val letters = letterRows(rows)
+        assertEquals(18, letters.flatten().size)
+        assertEquals(representativeMap(letters), xlitMap(schemaExampleText("pinyin_18jian")))
     }
 
     @Test
@@ -322,6 +335,26 @@ class KeyboardMergedLayoutTest {
         }
     }
 
+    /** 用户实测反馈过「14/17/18 键没有退格键」：功能键必须在行里且有绑定。 */
+    @Test
+    fun `六套合并键布局第三行两端都有 shift 和 delete`() {
+        val yaml = ximeYamlText()
+        for (section in listOf(
+            "qwerty_14", "qwerty_17", "qwerty_18",
+            "qwerty_14_abcde", "qwerty_17_abcde", "qwerty_18_abcde",
+        )) {
+            val rows = KeysConfigHelper.parseKeyboardLayoutYamlText(yaml, section)
+                ?: error("xime.yaml 缺少 $section rows")
+            val last = rows.last()
+            assertEquals("$section 第三行左端应为 shift", "shift", last.first())
+            assertEquals("$section 第三行右端应为 delete", "delete", last.last())
+            val gestures = KeysConfigHelper.parseKeyboardYamlSection(yaml, section)
+                ?: error("xime.yaml 缺少 $section keys")
+            assertTrue("$section 缺少 shift 绑定", gestures.containsKey("shift"))
+            assertTrue("$section 缺少 delete 绑定", gestures.containsKey("delete"))
+        }
+    }
+
     @Test
     fun `三个布局每个字母键都有 swipe_up`() {
         for (section in listOf("qwerty_14", "qwerty_17", "qwerty_18")) {
@@ -330,7 +363,7 @@ class KeyboardMergedLayoutTest {
                 ?: error("xime.yaml 缺少 $section rows")
             val gestures = KeysConfigHelper.parseKeyboardYamlSection(yaml, section)
                 ?: error("xime.yaml 缺少 $section keys")
-            for (key in rows.flatten()) {
+            for (key in letterRows(rows).flatten()) {
                 val swipeUp = gestures[key.lowercase()]?.swipeUp
                 assertTrue(
                     "$section 的按键 $key 缺少 swipe_up 配置",
