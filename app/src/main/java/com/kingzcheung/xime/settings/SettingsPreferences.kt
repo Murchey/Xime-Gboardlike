@@ -41,6 +41,9 @@ object SettingsPreferences {
     
     const val KEY_SMART_PREDICTION_ENABLED = "smart_prediction_enabled"
 
+    /** 字母键符号提示排布（fcitx5 / gboard）。 */
+    const val KEY_SYMBOL_HINT_STYLE = "symbol_hint_style"
+
     /** 键盘布局设置里选的基础方案 id。 */
     private const val KEY_KEYBOARD_LAYOUT_BASE_SCHEMA = "keyboard_layout_base_schema"
 
@@ -849,6 +852,18 @@ object SettingsPreferences {
         getPrefs(context).edit()
             .putInt(KEY_BUILTIN_SCHEMAS_MERGED_VERSION, version)
             .apply()
+    }
+
+    /** 字母键右上角符号提示的排布：fcitx5（默认）或 gboard。 */
+    const val SYMBOL_HINT_FCITX5 = "fcitx5"
+    const val SYMBOL_HINT_GBOARD = "gboard"
+
+    fun getSymbolHintStyle(context: Context): String =
+        getPrefs(context).getString(KEY_SYMBOL_HINT_STYLE, SYMBOL_HINT_FCITX5)
+            ?: SYMBOL_HINT_FCITX5
+
+    fun setSymbolHintStyle(context: Context, style: String) {
+        getPrefs(context).edit().putString(KEY_SYMBOL_HINT_STYLE, style).apply()
     }
 
     /** 键盘布局设置里选的基础方案（全拼/双拼），部署时按它派生。 */

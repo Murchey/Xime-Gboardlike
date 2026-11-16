@@ -1114,8 +1114,8 @@ object KeysConfigHelper {
         try {
             // 键盘手势（从原始 YAML 手动解析）
             val parsed = parseKeyboardFromAssets(context)
-            _keyGestureConfigZhBase = parsed?.first ?: emptyMap()
-            _keyGestureConfigEn.value = parsed?.second ?: emptyMap()
+            _keyGestureConfigZhBase = restyleSymbolHints(context, parsed?.first ?: emptyMap())
+            _keyGestureConfigEn.value = restyleSymbolHints(context, parsed?.second ?: emptyMap())
             // 键盘颜色（从原始 YAML 手动解析）
             keyboardColorsConfig = parseKeyboardColorsFromAssets(context)
             // 键盘阴影（从原始 YAML 手动解析）
@@ -1155,7 +1155,7 @@ object KeysConfigHelper {
             for (section in _schemaSectionBindings.values
                 .filter { sectionKindOf(it, _sectionTypes) == SECTION_TYPE_FULL }.distinct()) {
                 parseRowsLayoutSection(context, section)?.let { mergedLayoutsMap[section] = it }
-                mergedGesturesMap[section] = parseGesturesSection(context, section)
+                mergedGesturesMap[section] = restyleSymbolHints(context, parseGesturesSection(context, section))
                 parseButtonLayoutSection(context, section)?.let { buttonLayoutsBySection[section] = it }
             }
             _mergedLayouts = mergedLayoutsMap
@@ -2388,6 +2388,39 @@ object KeysConfigHelper {
     fun getStrokeKeyGesture(key: String): KeyBinding? = _strokeGestureConfigs[key]
 
     /** 获取某个按键的手势配置。 */
+    /**
+     * 字母键右上角的符号提示换成所选风格（Gboard）：只改 swipe_up 的显示与上屏值，
+     * 其他手势、长按、宽度原样保留。中文标点规则不受影响（那套在标点键/标点开关里）。
+     */
+    private fun restyleSymbolHints(
+        context: Context,
+        map: Map<String, KeyBinding>,
+    ): Map<String, KeyBinding> {
+        val style = SettingsPreferences.getSymbolHintStyle(context)
+        if (style != SettingsPreferences.SYMBOL_HINT_GBOARD) return map
+        return map.mapValues { (key, binding) ->
+            val hint = com.kingzcheung.xime.settings.SymbolHintStyles.hintFor(style, key)
+            if (hint == null) {
+                binding
+            } else {
+                KeyBinding(
+                    tap = binding.tap,
+                    doubleTap = binding.doubleTap,
+                    longPress = binding.longPress,
+                    swipeUp = KeyAction(
+                        action = com.kingzcheung.xime.keyboard.GestureAction.COMMIT,
+                        value = hint,
+                        label = hint,
+                    ),
+                    swipeDown = binding.swipeDown,
+                    swipeLeft = binding.swipeLeft,
+                    swipeRight = binding.swipeRight,
+                    width = binding.width,
+                )
+            }
+        }
+    }
+
     fun getKeyGesture(key: String): KeyBinding? = keyGestureConfig[key.lowercase()]
 
     /** 根据输入模式获取某个按键的手势配置。 */

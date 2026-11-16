@@ -91,6 +91,16 @@ object LayoutDisplaySettingsSpecs {
             descriptionRes = R.string.s_yincangdibudaohanglanhuoshoush_daf00,
             default = false,
         ),
+        // 字母键右上角符号提示的排布：fcitx5（现状）或 Gboard 的键面符号
+        SettingSpec.Choice(
+            key = SettingsPreferences.KEY_SYMBOL_HINT_STYLE,
+            titleRes = R.string.s_fuhaotishibuju,
+            default = SettingsPreferences.SYMBOL_HINT_FCITX5,
+            options = listOf(
+                ChoiceOption(SettingsPreferences.SYMBOL_HINT_FCITX5, R.string.s_fuhaotishi_fcitx5),
+                ChoiceOption(SettingsPreferences.SYMBOL_HINT_GBOARD, R.string.s_fuhaotishi_gboard),
+            ),
+        ),
         SettingSpec.Switch(
             key = SettingsPreferences.KEY_HIDE_KEY_LABELS,
             titleRes = R.string.s_yincanganjianzifu,
