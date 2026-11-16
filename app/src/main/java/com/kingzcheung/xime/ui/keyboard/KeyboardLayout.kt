@@ -2143,6 +2143,8 @@ fun KeyboardRowWithConfig(
     ) {
         val context = LocalContext.current
     val hideKeyLabels = SettingsPreferences.isKeyLabelsHidden(context)
+    val localGboardHints = SettingsPreferences.getSymbolHintStyle(context) ==
+        SettingsPreferences.SYMBOL_HINT_GBOARD
     val showLetterHintSymbols = LocalShowLetterHintSymbols.current
     val doublePinyinFinals = LocalDoublePinyinFinals.current
     val letterCase = LocalLetterCaseSetting.current
@@ -2205,7 +2207,9 @@ fun KeyboardRowWithConfig(
                 ?.let { KeysConfigHelper.longPressDisplayItems(it) }
                 ?.firstOrNull()
                 ?.takeIf { it.isNotBlank() }
-            val cornerHintLabel = if (isAsciiMode) {
+            // Gboard 符号风格下，字母键角标以"上滑能打出的符号"为准（长按仍是原语义，如智能引号）；
+            // fcitx5 风格保持原样：英文看上滑、中文看长按。
+            val cornerHintLabel = if (isAsciiMode || localGboardHints) {
                 swipeUpKeyLabel?.takeIf { it.isNotBlank() } ?: longPressCornerLabel
             } else {
                 longPressCornerLabel ?: swipeUpKeyLabel

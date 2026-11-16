@@ -2410,9 +2410,8 @@ object KeysConfigHelper {
                 KeyBinding(
                     tap = binding.tap,
                     doubleTap = binding.doubleTap,
-                    // 中文模式下键面角标优先取长按首项（见 KeyboardLayout.cornerHintLabel），
-                    // 所以长按的第一项也要跟着换，否则切了风格角标不变。
-                    longPress = com.kingzcheung.xime.settings.KeyBindingFactory.singleBubble(hint),
+                    // 长按保持原语义（C/Z 的智能引号等）；角标在渲染侧改读 swipeUp
+                    longPress = binding.longPress,
                     swipeUp = KeyAction(
                         action = com.kingzcheung.xime.keyboard.GestureAction.COMMIT,
                         value = hint,

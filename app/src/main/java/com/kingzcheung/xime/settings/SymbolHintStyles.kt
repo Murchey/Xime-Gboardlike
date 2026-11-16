@@ -12,9 +12,9 @@ object SymbolHintStyles {
     private val GBOARD = mapOf(
         "q" to "1", "w" to "2", "e" to "3", "r" to "4", "t" to "5",
         "y" to "6", "u" to "7", "i" to "8", "o" to "9", "p" to "0",
-        "a" to "@", "s" to "#", "d" to "\$", "f" to "-", "g" to "&",
+        "a" to "@", "s" to "#", "d" to "\$", "f" to "_", "g" to "&",
         "h" to "-", "j" to "+", "k" to "(", "l" to ")",
-        "z" to "`", "x" to "\"", "c" to "'", "v" to ":", "b" to ";",
+        "z" to "、", "x" to "\"", "c" to ".", "v" to ":", "b" to ";",
         "n" to "!", "m" to "?",
     )
 

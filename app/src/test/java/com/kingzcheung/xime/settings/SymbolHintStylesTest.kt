@@ -20,6 +20,12 @@ class SymbolHintStylesTest {
         assertEquals("#", SymbolHintStyles.hintFor(style, "s"))
         assertEquals("$" + "", SymbolHintStyles.hintFor(style, "d"))
         assertEquals("?", SymbolHintStyles.hintFor(style, "m"))
+        assertEquals("_", SymbolHintStyles.hintFor(style, "f"))
+        assertEquals("、", SymbolHintStyles.hintFor(style, "z"))
+        assertEquals(".", SymbolHintStyles.hintFor(style, "c"))
+        assertEquals("\"", SymbolHintStyles.hintFor(style, "x"))
+        assertEquals(";", SymbolHintStyles.hintFor(style, "b"))
+        assertEquals("!", SymbolHintStyles.hintFor(style, "n"))
     }
 
     @Test
