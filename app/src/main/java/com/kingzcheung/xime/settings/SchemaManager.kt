@@ -936,7 +936,42 @@ object SchemaManager {
     }
 
     /** 内置方案（保持默认启用顺序）。 */
-    internal val BUILTIN_SCHEMAS = listOf("rime_ice", "wubi86", "wubi86_pinyin", "t9_pinyin")
+    /** 内置方案补齐版本：新增内置方案时 +1（见 `getEnabledSchemas`）。 */
+internal const val BUILTIN_SCHEMA_MERGE_VERSION = 2
+
+/** 随包 14/17/18 键组码方案的资产目录（不放进 rime 子模块，那是上游仓库）。 */
+private const val GRID_SCHEMA_ASSETS = "grid_schemas"
+
+/**
+ * 把随包的 14/17/18 键方案落盘到 rime 目录（内容有变化才写）。
+ *
+ * 这三个方案改成由本仓库自己带：`assets/rime` 是指向上游 rime-wubi 的子模块，
+ * 往里加文件会被上游覆盖/丢失。落盘后 librime 部署时会编译它们的 prism。
+ */
+fun installGridSchemas(context: Context, rimeDir: File): Int {
+    val names = runCatching { context.assets.list(GRID_SCHEMA_ASSETS) }.getOrNull() ?: return 0
+    var copied = 0
+    for (name in names.orEmpty().filter { it.endsWith(".schema.yaml") }) {
+        val bytes = runCatching {
+            context.assets.open("$GRID_SCHEMA_ASSETS/$name").use { it.readBytes() }
+        }.getOrNull() ?: continue
+        val target = File(rimeDir, name)
+        if (target.isFile && runCatching { target.readBytes().contentEquals(bytes) }.getOrDefault(false)) continue
+        runCatching {
+            target.parentFile?.mkdirs()
+            target.writeBytes(bytes)
+            copied++
+        }.onFailure { Log.w("SchemaManager", "installGridSchemas($name) failed", it) }
+    }
+    if (copied > 0) FileLogger.i("SchemaManager", "grid schemas installed: $copied")
+    return copied
+}
+
+internal val BUILTIN_SCHEMAS = listOf(
+    "rime_ice", "wubi86", "wubi86_pinyin", "t9_pinyin",
+    // 14/17/18 键（合并键 + 组码解码）：见 KeyboardGridTables 与 xime.yaml 的 qwerty_14/17/18
+    "pinyin_14jian", "pinyin_17jian", "pinyin_18jian",
+)
 
     /**
      * 内置方案补齐（纯函数）：用户启用列表尾部按 [BUILTIN_SCHEMAS] 顺序追加缺失项，
@@ -1003,13 +1038,15 @@ object SchemaManager {
                 if (existing.isNotEmpty()) {
                     // 有内置包被卸载时不再自动补回，避免把用户刚删的包灌回来。
                     if (BuiltinSeedState.disabledPackages(context).isNotEmpty()) return existing
-                    // 内置方案补齐只执行一次（新版本首次运行，治老版本升级残留）。
-                    val merged = if (SettingsPreferences.isBuiltinSchemasMerged(context)) {
+                    // 内置方案补齐按版本执行：v1 是老的布尔标记，v2 起每加一批内置方案 +1，
+                    // 老用户升级后才会把新方案（14/17/18 键）并进 schema_list。
+                    val merged = if (SettingsPreferences.builtinSchemasMergedVersion(context) >= BUILTIN_SCHEMA_MERGE_VERSION) {
                         existing
                     } else {
                         val m = mergeBuiltinSchemas(existing)
                         if (m != existing) setEnabledSchemas(context, m)
                         SettingsPreferences.setBuiltinSchemasMerged(context, true)
+                        SettingsPreferences.setBuiltinSchemasMergedVersion(context, BUILTIN_SCHEMA_MERGE_VERSION)
                         m
                     }
                     return merged

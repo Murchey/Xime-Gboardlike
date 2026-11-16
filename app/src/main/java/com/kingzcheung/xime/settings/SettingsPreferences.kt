@@ -41,6 +41,9 @@ object SettingsPreferences {
     
     const val KEY_SMART_PREDICTION_ENABLED = "smart_prediction_enabled"
 
+    /** 内置方案补齐版本（新增内置方案时 +1，见 [SchemaManager]）。 */
+    private const val KEY_BUILTIN_SCHEMAS_MERGED_VERSION = "builtin_schemas_merged_version"
+
     /** 键盘布局预设：26 / 14 / 17 / 18 键（[KeyboardLayoutPreset]）。 */
     const val KEY_KEYBOARD_LAYOUT_PRESET = "keyboard_layout_preset"
 
@@ -822,6 +825,23 @@ object SettingsPreferences {
     fun setKeyboardLetterOrder(context: Context, order: String) {
         getPrefs(context).edit()
             .putString(KEY_KEYBOARD_LETTER_ORDER, KeyboardLayoutPreset.normalizeOrder(order))
+            .apply()
+    }
+
+    // ── 内置方案补齐版本（新增内置方案后 +1，让老用户再并一次） ──
+
+    fun builtinSchemasMergedVersion(context: Context): Int {
+        val prefs = getPrefs(context)
+        // 老版本只有一个布尔标记：true 视为版本 1
+        if (prefs.contains(KEY_BUILTIN_SCHEMAS_MERGED_VERSION)) {
+            return prefs.getInt(KEY_BUILTIN_SCHEMAS_MERGED_VERSION, 0)
+        }
+        return if (prefs.getBoolean(KEY_BUILTIN_SCHEMAS_MERGED, false)) 1 else 0
+    }
+
+    fun setBuiltinSchemasMergedVersion(context: Context, version: Int) {
+        getPrefs(context).edit()
+            .putInt(KEY_BUILTIN_SCHEMAS_MERGED_VERSION, version)
             .apply()
     }
 

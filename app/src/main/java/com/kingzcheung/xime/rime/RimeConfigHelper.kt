@@ -62,6 +62,8 @@ object RimeConfigHelper {
         }
         
         copyAssetsToRimeDir(context, rimeDir)
+        // 14/17/18 键组码方案随本仓库分发（不在 rime 子模块里），部署前落盘
+        SchemaManager.installGridSchemas(context, rimeDir)
         // 首次安装/升级后补建内置包的 per-package 清单
         SchemaManifestManager.refreshBuiltinManifest(context)
         // 清理已安装方案的源包（历史版本安装后遗留的 market/*.zip，实测单包可达 40MB+）
