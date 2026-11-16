@@ -1047,6 +1047,8 @@ object KeysConfigHelper {
 
     fun markConfigLoaded() { configLoadedOnce = true }
     fun loadConfig(context: Context): KeysConfig {
+        // 取提示符号时要用到 Context（见 SymbolHintRuntime）
+        com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext = context.applicationContext
         loadXimeConfig(context)
         config = config.copy(
             swipeUp = getDefaultSwipeUp(),
@@ -2399,14 +2401,18 @@ object KeysConfigHelper {
         val style = SettingsPreferences.getSymbolHintStyle(context)
         if (style != SettingsPreferences.SYMBOL_HINT_GBOARD) return map
         return map.mapValues { (key, binding) ->
-            val hint = com.kingzcheung.xime.settings.SymbolHintStyles.hintFor(style, key)
+            // 合并键（"as"、"df"）按组内首字母取符号；其它键原样保留
+            val baseKey = if (key.length in 1..2 && key.all { it.isLetter() }) key.first().toString() else key
+            val hint = com.kingzcheung.xime.settings.SymbolHintStyles.hintFor(style, baseKey)
             if (hint == null) {
                 binding
             } else {
                 KeyBinding(
                     tap = binding.tap,
                     doubleTap = binding.doubleTap,
-                    longPress = binding.longPress,
+                    // 中文模式下键面角标优先取长按首项（见 KeyboardLayout.cornerHintLabel），
+                    // 所以长按的第一项也要跟着换，否则切了风格角标不变。
+                    longPress = com.kingzcheung.xime.settings.KeyBindingFactory.singleBubble(hint),
                     swipeUp = KeyAction(
                         action = com.kingzcheung.xime.keyboard.GestureAction.COMMIT,
                         value = hint,
@@ -2464,8 +2470,22 @@ object KeysConfigHelper {
         return configMap[key.lowercase()]?.swipeUp?.action
     }
 
+    /** Gboard 风格下字母键的提示符号（合并键取组内首字母）；没有对应样式返回 null。 */
+    private fun symbolHintOverride(context: Context, key: String): String? {
+        val style = SettingsPreferences.getSymbolHintStyle(context)
+        val base = if (key.length in 1..2 && key.all { it.isLetter() }) key.first().toString() else key
+        return com.kingzcheung.xime.settings.SymbolHintStyles.hintFor(
+            SettingsPreferences.getSymbolHintStyle(context),
+            base,
+        )
+    }
+
     /** 获取上滑显示文本（优先 label，fallback value；仅未配置 swipe_up 时用旧默认表） */
     fun getSwipeUpLabel(key: String, isAsciiMode: Boolean = false): String? {
+        // 符号提示排布：Gboard 风格直接覆盖（不依赖 config 重载时机）
+        com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext?.let { ctx ->
+            symbolHintOverride(ctx, key)?.let { return it }
+        }
         val configMap = if (isAsciiMode) _keyGestureConfigEn.value else _keyGestureConfig.value
         val gesture = configMap[key.lowercase()]?.swipeUp
         if (gesture != null) {
@@ -2480,6 +2500,9 @@ object KeysConfigHelper {
 
     /** 获取上滑提交值（优先 value，fallback label；仅未配置 swipe_up 时用旧默认表） */
     fun getSwipeUpCommitValue(key: String, isAsciiMode: Boolean = false): String? {
+        com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext?.let { ctx ->
+            symbolHintOverride(ctx, key)?.let { return it }
+        }
         val configMap = if (isAsciiMode) _keyGestureConfigEn.value else _keyGestureConfig.value
         val gesture = configMap[key.lowercase()]?.swipeUp
         if (gesture != null) {
