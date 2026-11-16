@@ -102,11 +102,29 @@ Captured on a real device (Android 13) via ADB from this build:
   </tr>
 </table>
 
+Merged-key layouts (14 / 17 / 18 keys), same build:
+
+<table align="center">
+  <tr>
+    <td><img src="docs/screenshots/keyboard-14-qwerty.png" width="180"><br><p align="center">14-key (QWERTY)</p></td>
+    <td><img src="docs/screenshots/keyboard-17-qwerty.png" width="180"><br><p align="center">17-key (QWERTY)</p></td>
+    <td><img src="docs/screenshots/keyboard-18-qwerty.png" width="180"><br><p align="center">18-key (QWERTY)</p></td>
+    <td><img src="docs/screenshots/keyboard-14-abcde.png" width="180"><br><p align="center">14-key (ABCDE)</p></td>
+  </tr>
+</table>
+
+## Recent updates
+
+- **Merged-key layouts** — 14 / 17 / 18 keys (letters grouped, each key sends its group code) × QWERTY / ABCDE, shipped as Rime schemas `pinyin_14jian` / `pinyin_17jian` / `pinyin_18jian` (+ `_abcde`). Pick one in **Layout & display → Keyboard layout**; switching back to 26 keys restores your previous schema.
+- **Built-in association model has its own identity** — the bundled model is `XimeGboard` (id `ximegboard-prediction`) instead of masquerading as the upstream `predictive-text-small`; upstream small/base remain available as importable models.
+- **Association polish** — contexts ending in a digit no longer trigger prediction; continuation words are computed inside the inference process (one IPC instead of three); punctuation is dropped and multi-character phrases stay next to their seed.
+- **Grammar model (gram)** — one 13.8 MB `.gram` re-ranks candidates against the full context, with the same versioned install/override policy as the bundled model.
+
 ## Features
 
+- **Rich Keyboard Layouts** — full QWERTY, **14 / 17 / 18-key merged layouts** (QWERTY or alphabetical), T9 Pinyin, Stroke 9-key, Handwriting, Numpad (with calculator)
 - **Multiple Input Schemas** — All Rime Ice (雾凇拼音) schemas bundled (full Pinyin plus every Shuangpin variant: Xiaohe, Ziranma, MSPY, …), with Wubi 86/98 kept; custom schemas (Stroke, etc.) can be added via the schema marketplace or wireless import
 - **Rime Engine** — Powered by the mature and reliable Rime input method engine for accurate Chinese input
-- **Rich Keyboard Layouts** — QWERTY full keyboard, T9 Pinyin, Stroke 9-key, Handwriting, Numpad (with calculator)
 - **Floating Keyboard** — Floating card style with drag support, semi-transparent rounded design
 - **Voice-to-Text** — Built-in offline models plus **plugin-free built-in online recognition** (Alibaba Bailian / MiMo / MiniMax / OpenAI — just add a key, endpoint editable), with online ASR plugins (FunAsr, Volc, etc.) still supported
 - **AI Enhancement** — Optional predictive text for faster input
