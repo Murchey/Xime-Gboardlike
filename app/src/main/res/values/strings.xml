@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <string name="app_name">XimeGboard</string>
     <string name="subtype_label_wubi">XimeGboard 输入法</string>
     <string name="subtype_label_pinyin">拼音</string>
@@ -1547,6 +1547,10 @@
     <string name="s_paile_abcde">ABCDE</string>
     <string name="s_paile_abcde_fu">a b c d e f g h i j …</string>
     <string name="s_yuyanyujianpan">语言与键盘</string>
+    <string name="s_waiguan">外观</string>
+    <string name="s_anjian">按键</string>
+    <string name="s_shuru">输入</string>
+    <string name="s_jianpanpianhao">键盘偏好</string>
     <string name="s_shuruyulianxiang">输入与联想</string>
     <string name="s_jianpanbuju_weijieru">切换后按当前方案自动生成对应的合并键方案；切回 26 键会恢复原方案</string>
 </resources>

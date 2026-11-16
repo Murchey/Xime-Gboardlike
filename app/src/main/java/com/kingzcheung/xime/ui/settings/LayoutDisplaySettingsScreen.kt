@@ -1,4 +1,4 @@
-package com.kingzcheung.xime.ui.settings
+﻿package com.kingzcheung.xime.ui.settings
 
 import com.kingzcheung.xime.R
 
@@ -73,7 +73,7 @@ fun LayoutDisplaySettingsContent(
     // 滑动输入相关选项：点条目在下方自然展开（不是侧边抽屉）
     var glideExpanded by remember { mutableStateOf(false) }
     SettingsPageScaffold(
-        title = tr(R.string.s_bujuyuxianshi),
+        title = tr(R.string.s_jianpanpianhao),
         onBack = onBack,
     ) { paddingValues ->
         LazyColumn(
@@ -82,7 +82,7 @@ fun LayoutDisplaySettingsContent(
             verticalArrangement = Arrangement.spacedBy(SettingsDimens.GroupGap)
         ) {
             item {
-                SettingsGroup(title = tr(R.string.s_jianpanbuju), content = {
+                SettingsGroup(title = tr(R.string.s_anjian), content = {
                     // 滑动输入：点条目在下方自然展开相关开关（不是侧边抽屉）
                     val chevronRotation by animateFloatAsState(
                         targetValue = if (glideExpanded) 90f else 0f,
@@ -152,40 +152,11 @@ fun LayoutDisplaySettingsContent(
                             }
                         },
                     )
+                })
+            }
 
-
-                    // 键盘布局设置（二级页）：键数 + 字母排列
-                    val layoutSummary = remember(context) {
-                        val preset = SettingsPreferences.getKeyboardLayoutPreset(context)
-                        val order = SettingsPreferences.getKeyboardLetterOrder(context)
-                        preset + " 键 · " + if (order == "abcde") "ABCDE" else "QWERTY"
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenKeyboardLayout() }
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = tr(R.string.s_jianpanbujushezhi),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = layoutSummary,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
+            item {
+                SettingsGroup(title = tr(R.string.s_waiguan)) {
                     var keyboardTextScale by remember {
                         mutableStateOf(SettingsPreferences.getKeyboardTextScale(context).toFloat())
                     }
@@ -224,8 +195,11 @@ fun LayoutDisplaySettingsContent(
                             steps = 9
                         )
                     }
+                }
+            }
 
-
+            item {
+                SettingsGroup(title = tr(R.string.s_shuru)) {
                     var doubleSpacePunctuationEnabled by remember {
                         mutableStateOf(SettingsPreferences.isDoubleSpacePunctuationEnabled(context))
                     }
@@ -306,11 +280,15 @@ fun LayoutDisplaySettingsContent(
                             )
                         }
                     }
-                })
+                }
             }
 
             item {
                 SettingsGroup(title = tr(R.string.s_houxuanci), content = {
+                    DeclarativeSettingItems(
+                        specs = LayoutDisplaySettingsSpecs.candidateDisplay,
+                        store = settingsStore,
+                    )
                     val candidateTextSizePref = SettingsPreferences.getCandidateTextSize(context)
                     var candidateTextSize by remember(candidateTextSizePref) {
                         mutableStateOf(candidateTextSizePref.toFloat())

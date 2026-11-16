@@ -114,12 +114,6 @@ object LayoutDisplaySettingsSpecs {
             },
         ),
         SettingSpec.Switch(
-            key = SettingsPreferences.KEY_CANDIDATE_DIVIDER,
-            titleRes = R.string.s_houxuanfengexian,
-            descriptionRes = R.string.s_houxuanfengexian_fu,
-            default = true,
-        ),
-        SettingSpec.Switch(
             key = SettingsPreferences.KEY_SHOW_DOUBLE_PINYIN_FINALS,
             titleRes = R.string.s_shuangpin_yunmu_tihuan_fuhao,
             descriptionRes = R.string.s_shuangpin_yunmu_tihuan_fuhao_fu,
@@ -163,6 +157,16 @@ object LayoutDisplaySettingsSpecs {
                 ChoiceOption(SettingsPreferences.EXPANDED_STYLE_GRID, R.string.s_wangge),
                 ChoiceOption(SettingsPreferences.EXPANDED_STYLE_FLOW, R.string.s_liushi),
             ),
+        ),
+    )
+
+    /** 候选栏显示项（从「按键」组挪过来，和候选其它设置放一起）。 */
+    val candidateDisplay: List<SettingSpec> = listOf(
+        SettingSpec.Switch(
+            key = SettingsPreferences.KEY_CANDIDATE_DIVIDER,
+            titleRes = R.string.s_houxuanfengexian,
+            descriptionRes = R.string.s_houxuanfengexian_fu,
+            default = true,
         ),
     )
 

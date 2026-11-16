@@ -1,4 +1,4 @@
-package com.kingzcheung.xime.ui.settings
+﻿package com.kingzcheung.xime.ui.settings
 
 import com.kingzcheung.xime.i18n.tr
 
@@ -223,7 +223,7 @@ fun SettingsMainContent(
                         onClick = onNavigateToKeyEffect,
                     )
                     SettingsNavRow(
-                        title = tr(R.string.s_bujuyuxianshi),
+                        title = tr(R.string.s_jianpanpianhao),
                         summary = tr(R.string.s_houxuancixianshi_jianpanbujudeng),
                         icon = Icons.TwoTone.TableChart,
                         onClick = onNavigateToLayoutDisplay,
