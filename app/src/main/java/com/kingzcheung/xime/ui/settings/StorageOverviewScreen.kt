@@ -13,8 +13,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import com.kingzcheung.xime.R
 import com.kingzcheung.xime.i18n.tr
+import com.kingzcheung.xime.settings.RimeStorage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +65,50 @@ fun StorageOverviewContent(
 ) {
     val state by model.state.collectAsStateWithLifecycle()
     var advanced by rememberSaveable { mutableStateOf(false) }
+
+    // ---------- 应用数据存储位置（rime 用户目录） ----------
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var storagePath by remember { mutableStateOf(RimeStorage.currentPath(context)) }
+    var storageBusy by remember { mutableStateOf(false) }
+    val storageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+        }
+        val path = RimeStorage.pathFromTreeUri(uri)
+        if (path == null) {
+            android.widget.Toast.makeText(context, tr(R.string.s_daochushibai, "不支持的目录"), android.widget.Toast.LENGTH_SHORT).show()
+            return@rememberLauncherForActivityResult
+        }
+        storageBusy = true
+        scope.launch(Dispatchers.IO) {
+            val result = RimeStorage.switchTo(context, path)
+            withContext(Dispatchers.Main) {
+                storageBusy = false
+                result.fold(
+                    onSuccess = {
+                        storagePath = RimeStorage.currentPath(context)
+                        android.widget.Toast.makeText(
+                            context,
+                            tr(R.string.s_cunchuweizhi_chongqishengxiao),
+                            android.widget.Toast.LENGTH_LONG,
+                        ).show()
+                    },
+                    onFailure = {
+                        android.widget.Toast.makeText(context, tr(R.string.s_daochushibai, it.message), android.widget.Toast.LENGTH_LONG).show()
+                    },
+                )
+            }
+        }
+    }
+
     StorageTaskPage(tr(R.string.s_tongbuyubeifen), onBack) {
         SettingsSection(tr(R.string.os_section)) {
             StorageLocationRow(state, onConfig)
@@ -86,6 +137,55 @@ fun StorageOverviewContent(
                 title = tr(R.string.storage_full_option), subtitle = tr(R.string.storage_full_hint),
                 checked = state.fullBackup, onCheckedChange = model::setFullBackup)
         }
+        SettingsSection(tr(R.string.s_benjicunchu)) {
+            SettingsItem(
+                Icons.TwoTone.Folder,
+                tr(R.string.s_shuju_cunchu_weizhi),
+                if (storageBusy) tr(R.string.s_zhengzaibushu) else storagePath,
+                onClick = {
+                    if (!RimeStorage.hasAllFilesAccess()) {
+                        RimeStorage.requestAllFilesAccess(context)
+                        android.widget.Toast.makeText(
+                            context,
+                            tr(R.string.s_suoyouwenjianquanxian_tishi),
+                            android.widget.Toast.LENGTH_LONG,
+                        ).show()
+                    } else {
+                        storageLauncher.launch(null)
+                    }
+                },
+                showArrow = true,
+            )
+            if (RimeStorage.isCustom(context)) {
+                SettingsItem(
+                    Icons.TwoTone.Refresh,
+                    tr(R.string.s_huifumoren),
+                    tr(R.string.s_shuju_cunchu_weizhi_fu),
+                    onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            val result = RimeStorage.restoreDefault(context)
+                            withContext(Dispatchers.Main) {
+                                result.fold(
+                                    onSuccess = {
+                                        storagePath = RimeStorage.currentPath(context)
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            tr(R.string.s_cunchuweizhi_chongqishengxiao),
+                                            android.widget.Toast.LENGTH_LONG,
+                                        ).show()
+                                    },
+                                    onFailure = {
+                                        android.widget.Toast.makeText(context, tr(R.string.s_daochushibai, it.message), android.widget.Toast.LENGTH_LONG).show()
+                                    },
+                                )
+                            }
+                        }
+                    },
+                    showArrow = true,
+                )
+            }
+        }
+
         SettingsSection(tr(R.string.s_gengduo)) {
             SettingsItem(Icons.TwoTone.Folder, tr(R.string.storage_local), tr(R.string.storage_local_hint), onLocal, showArrow = true)
             SettingsItem(Icons.TwoTone.Cloud, tr(R.string.storage_plugin_backup), tr(R.string.storage_other_backup), onPluginBackup, showArrow = true)

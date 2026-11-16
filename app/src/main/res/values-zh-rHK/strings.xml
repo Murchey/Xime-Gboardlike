@@ -264,7 +264,8 @@
     <string name="s_chongxinbianyi">重新編譯</string>
     <string name="s_chongxinbianyi_shuoming">將清除編譯快取並重新編譯所有已啟用方案，耗時較長；詞庫與自訂設定不受影響。確定繼續嗎？</string>
     <string name="s_qingchuyibianyineirong">清除未使用的編譯內容</string>
-    <string name="s_guanbicaidan">關閉選單</string>
+    <string name="s_benjicunchu">本機儲存</string>
+    <string name="s_cunchuweizhi_chongqishengxiao">已切換應用資料儲存位置，重新啟動輸入法後生效</string>
     <string name="s_shezhi">設定</string>
     <string name="s_fanhuizimujianpan">返回字母鍵盤</string>
     <string name="s_bianjikuaijiefasong">編輯快捷發送</string>
