@@ -865,9 +865,23 @@ object SettingsPreferences {
         getPrefs(context).edit().putString(KEY_PREDICTION_MODEL_REPO, repo).apply()
     }
     
+    /**
+     * 当前选中的联想模型 id。
+     *
+     * 内置模型换成了独立 id（[com.kingzcheung.xime.model.XimeGboardPredictionModel.ID]），
+     * 老装机里存的还是上游 small 的 id：这里一次性迁到新 id，模型文件由
+     * [com.kingzcheung.xime.model.ModelStorage.migrateLegacyForModel] 一起搬过去。
+     */
     fun getPredictionSelectedModel(context: Context): String {
-        return getPrefs(context).getString(KEY_PREDICTION_SELECTED_MODEL, "predictive-text-small")
-            ?: "predictive-text-small"
+        val stored = getPrefs(context).getString(
+            KEY_PREDICTION_SELECTED_MODEL,
+            com.kingzcheung.xime.model.XimeGboardPredictionModel.ID,
+        ) ?: com.kingzcheung.xime.model.XimeGboardPredictionModel.ID
+        if (stored == com.kingzcheung.xime.model.XimeGboardPredictionModel.LEGACY_ID) {
+            setPredictionSelectedModel(context, com.kingzcheung.xime.model.XimeGboardPredictionModel.ID)
+            return com.kingzcheung.xime.model.XimeGboardPredictionModel.ID
+        }
+        return stored
     }
     
     fun setPredictionSelectedModel(context: Context, modelId: String) {

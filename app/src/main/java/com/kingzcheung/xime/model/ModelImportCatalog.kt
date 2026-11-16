@@ -47,6 +47,25 @@ object ModelImportCatalog {
                 ),
             ),
         )
+        // 内置联想模型：独立标识，不与上游 small/base 混在一起
+        add(
+            ModelInfo(
+                id = XimeGboardPredictionModel.ID,
+                name = XimeGboardPredictionModel.NAME,
+                description = XimeGboardPredictionModel.DESCRIPTION,
+                category = ModelCategory.PREDICTION,
+                size = "7.96 MB",
+                versions = listOf(
+                    ModelVersion(
+                        version = "v5",
+                        files = listOf(
+                            ModelFile("vocab.json", ""),
+                            ModelFile("model_int8_dynamic.onnx", ""),
+                        ),
+                    ),
+                ),
+            ),
+        )
         // 预测模型始终提供导入目标（远程索引未加载时也能导入自训练模型）
         add(
             ModelInfo(

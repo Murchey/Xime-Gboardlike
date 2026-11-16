@@ -24,8 +24,9 @@ object BundledResources {
     /** 资源版本。改动 [ITEMS] 里任何一个资产文件的内容时都必须 +1。 */
     const val VERSION = 2
 
-    private const val MODEL_ID = "predictive-text-small"
-    private const val ASSET_MODEL_DIR = "models/$MODEL_ID"
+    // 内置联想模型用独立 id（见 XimeGboardPredictionModel），资产目录沿用 apk 内的老路径
+    private val MODEL_ID = com.kingzcheung.xime.model.XimeGboardPredictionModel.ID
+    private const val ASSET_MODEL_DIR = "models/predictive-text-small"
 
     /** 随包资源清单：资产路径 → 运行时目标文件。 */
     private fun items(context: Context): List<Pair<String, File>> {

@@ -32,6 +32,8 @@ object ModelStorage {
     private fun legacyDirFor(context: Context, modelId: String): File? {
         return when (modelId) {
             "predictive-text-small" -> context.filesDir
+            // 内置联想模型（新 id）：以前以 small 的身份落在 filesDir 根目录
+            com.kingzcheung.xime.model.XimeGboardPredictionModel.ID -> context.filesDir
             // base 联想模型是新增版本，无旧路径，无需迁移
             "predictive-text-base" -> null
             // 手写模型：旧版在 filesDir 根目录
@@ -52,7 +54,9 @@ object ModelStorage {
      */
     fun migrateLegacyForModel(context: Context, modelId: String): Boolean {
         // 旧版联想 small 与手写模型直接放在 filesDir 根目录，仅迁移其专属文件，避免误移其他数据
-        if (modelId == "predictive-text-small") {
+        if (modelId == "predictive-text-small" ||
+            modelId == com.kingzcheung.xime.model.XimeGboardPredictionModel.ID
+        ) {
             return migrateLegacy(
                 context, modelId,
                 listOf(context.filesDir),
