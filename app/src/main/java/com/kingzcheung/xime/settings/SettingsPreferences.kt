@@ -244,8 +244,18 @@ object SettingsPreferences {
         getPrefs(context).edit().putString(KEY_INPUT_TEXT_LOCATION, location).apply()
     }
 
+    private var symbolHintListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+
     private fun getPrefs(context: Context): SharedPreferences {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (symbolHintListener == null) {
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                if (key == KEY_SYMBOL_HINT_STYLE) symbolHintStyleVersion.value++
+            }
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+            symbolHintListener = listener
+        }
+        return prefs
     }
     
     fun getPrefsPublic(context: Context): SharedPreferences {
@@ -865,6 +875,9 @@ object SettingsPreferences {
     fun setSymbolHintStyle(context: Context, style: String) {
         getPrefs(context).edit().putString(KEY_SYMBOL_HINT_STYLE, style).apply()
     }
+
+    /** 符号提示风格变化计数器：键盘侧观察它来重组，改设置后立即生效，不必重启。 */
+    val symbolHintStyleVersion = androidx.compose.runtime.mutableStateOf(0)
 
     /** 键盘布局设置里选的基础方案（全拼/双拼），部署时按它派生。 */
     fun getKeyboardLayoutBaseSchema(context: Context): String =

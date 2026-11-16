@@ -2143,6 +2143,8 @@ fun KeyboardRowWithConfig(
     ) {
         val context = LocalContext.current
     val hideKeyLabels = SettingsPreferences.isKeyLabelsHidden(context)
+    // 观察版本号：设置里改风格后键盘立即重组，不需要重启
+    SettingsPreferences.symbolHintStyleVersion.value
     val localGboardHints = SettingsPreferences.getSymbolHintStyle(context) ==
         SettingsPreferences.SYMBOL_HINT_GBOARD
     val showLetterHintSymbols = LocalShowLetterHintSymbols.current
@@ -2167,7 +2169,7 @@ fun KeyboardRowWithConfig(
             val swipeDownText = if (swipeDownBubble) swipeDownLabel else null
 
             // 长按选项
-            val longPressConfig = KeysConfigHelper.getKeyGesture(key, isAsciiMode)?.longPress
+            val longPressConfig = KeysConfigHelper.longPressForStyle(key, isAsciiMode)
             val longPressDisplay = longPressConfig?.display ?: DisplayMode.KEY
             val baseLongPressLabels = if (longPressDisplay == DisplayMode.BUBBLE) {
                 longPressConfig?.let { KeysConfigHelper.longPressDisplayItems(it) }

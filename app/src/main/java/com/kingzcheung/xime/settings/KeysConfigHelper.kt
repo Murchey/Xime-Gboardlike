@@ -2407,11 +2407,27 @@ object KeysConfigHelper {
             if (hint == null) {
                 binding
             } else {
+                // 长按气泡：把 Gboard 符号放到第一项（长按即出该符号），
+                // 原有的非"提交固定字符"动作（C/Z 的智能引号等）保留在后面
+                val originalLongPress = binding.longPress
+                val keepValues = originalLongPress?.values
+                    ?.filter { it.action != null && it.action != com.kingzcheung.xime.keyboard.GestureAction.COMMIT }
+                    .orEmpty()
+                val newLongPress = com.kingzcheung.xime.settings.LongPressAction(
+                    display = originalLongPress?.display ?: com.kingzcheung.xime.settings.DisplayMode.BUBBLE,
+                    values = listOf(
+                        KeyAction(
+                            action = com.kingzcheung.xime.keyboard.GestureAction.COMMIT,
+                            value = hint,
+                            label = hint,
+                        ),
+                    ) + keepValues,
+                    defaultIndex = originalLongPress?.defaultIndex,
+                )
                 KeyBinding(
                     tap = binding.tap,
                     doubleTap = binding.doubleTap,
-                    // 长按保持原语义（C/Z 的智能引号等）；角标在渲染侧改读 swipeUp
-                    longPress = binding.longPress,
+                    longPress = newLongPress,
                     swipeUp = KeyAction(
                         action = com.kingzcheung.xime.keyboard.GestureAction.COMMIT,
                         value = hint,
@@ -2465,8 +2481,29 @@ object KeysConfigHelper {
     }
 
     fun getSwipeUpAction(key: String, isAsciiMode: Boolean = false): GestureAction? {
+        // Gboard 风格下上滑一律走 commit（原样上屏符号）
+        com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext?.let { ctx ->
+            if (symbolHintOverride(ctx, key) != null) return GestureAction.COMMIT
+        }
         val configMap = if (isAsciiMode) _keyGestureConfigEn.value else _keyGestureConfig.value
         return configMap[key.lowercase()]?.swipeUp?.action
+    }
+
+    /** 当前风格下的长按动作：Gboard 时把符号放到第一项，原有非提交类动作保留。 */
+    fun longPressForStyle(key: String, isAsciiMode: Boolean = false): LongPressAction? {
+        val original = getKeyGesture(key, isAsciiMode)?.longPress ?: return null
+        val ctx = com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext ?: return original
+        val hint = symbolHintOverride(ctx, key) ?: return original
+        val keep = original.values.filter {
+            it.action != null && it.action != GestureAction.COMMIT
+        }
+        return LongPressAction(
+            display = original.display,
+            values = listOf(
+                KeyAction(action = GestureAction.COMMIT, value = hint, label = hint),
+            ) + keep,
+            defaultIndex = original.defaultIndex,
+        )
     }
 
     /** Gboard 风格下字母键的提示符号（合并键取组内首字母）；没有对应样式返回 null。 */
@@ -2502,6 +2539,7 @@ object KeysConfigHelper {
         com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext?.let { ctx ->
             symbolHintOverride(ctx, key)?.let { return it }
         }
+        // Gboard 风格：上滑提交值就是符号本身
         val configMap = if (isAsciiMode) _keyGestureConfigEn.value else _keyGestureConfig.value
         val gesture = configMap[key.lowercase()]?.swipeUp
         if (gesture != null) {
