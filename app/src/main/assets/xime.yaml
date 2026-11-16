@@ -470,7 +470,7 @@ keyboard:
   #
   # 拼音 14 键：qw/er/ty/ui/op、as/df/gh/jk/l、zx/cv/bn/m（对应方案 pinyin_14jian）
   qwerty_14:
-    schemas: [pinyin_14jian]
+    schemas: []
     button_layout: standard
     layout:
       # 合并键布局按各行键数铺满（行短于首行也不居中），保持既有观感
@@ -503,7 +503,7 @@ keyboard:
 
   # 拼音 17 键：we/rt/yu/op、sd/fg/jk、xc/bn（对应方案 pinyin_17jian）
   qwerty_17:
-    schemas: [pinyin_17jian]
+    schemas: []
     button_layout: standard
     layout:
       # 合并键布局按各行键数铺满（行短于首行也不居中），保持既有观感
@@ -539,7 +539,7 @@ keyboard:
 
   # 拼音 18 键：we/rt/io、sd/fg/jk、xc/bn（对应方案 pinyin_18jian）
   qwerty_18:
-    schemas: [pinyin_18jian]
+    schemas: []
     button_layout: standard
     layout:
       # 合并键布局按各行键数铺满（行短于首行也不居中），保持既有观感
@@ -576,7 +576,7 @@ keyboard:
 
   # 全拼 14 键 · ABCDE 排列（组键按字母表两两合并，对应方案 pinyin_14jian_abcde）
   qwerty_14_abcde:
-    schemas: [pinyin_14jian_abcde]
+    schemas: []
     button_layout: standard
     layout:
       row_align: stretch
@@ -607,7 +607,7 @@ keyboard:
 
   # 全拼 17 键 · ABCDE 排列（组键按字母表两两合并，对应方案 pinyin_17jian_abcde）
   qwerty_17_abcde:
-    schemas: [pinyin_17jian_abcde]
+    schemas: []
     button_layout: standard
     layout:
       row_align: stretch
@@ -641,7 +641,7 @@ keyboard:
 
   # 全拼 18 键 · ABCDE 排列（组键按字母表两两合并，对应方案 pinyin_18jian_abcde）
   qwerty_18_abcde:
-    schemas: [pinyin_18jian_abcde]
+    schemas: []
     button_layout: standard
     layout:
       row_align: stretch

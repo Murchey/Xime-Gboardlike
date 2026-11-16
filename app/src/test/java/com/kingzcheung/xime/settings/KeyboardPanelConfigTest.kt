@@ -125,7 +125,9 @@ class KeyboardPanelConfigTest {
         assertEquals("columns", KeysConfigHelper.sectionKindOf("number", types))
         assertEquals("full", KeysConfigHelper.sectionKindOf("common_symbols", types))
         // 面板段不声明 schemas → 不会被方案绑定进合并键行布局（合并键方案仍解析到自己的段）
-        val bindings = KeysConfigHelper.parseSchemaBindingsYamlText(assetXimeYaml())
+        // 合并键方案不再随包声明（由运行时派生登记），这里显式补一条绑定来验"面板段不进绑定"
+        val bindings = KeysConfigHelper.parseSchemaBindingsYamlText(assetXimeYaml()) +
+            mapOf("pinyin_14jian" to "qwerty_14")
         assertEquals("qwerty_14", KeysConfigHelper.resolveMergedSection("pinyin_14jian", bindings, types))
         assertTrue(
             "面板段不应出现在任何方案的段绑定里",

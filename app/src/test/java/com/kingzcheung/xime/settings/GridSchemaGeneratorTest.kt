@@ -34,6 +34,16 @@ class GridSchemaGeneratorTest {
         return out!!
     }
 
+    /** 随包的 pinyin_14jian 等已删除，老用户要迁移到派生版。 */
+    @Test
+    fun `老 id 迁移到派生 id`() {
+        assertEquals("rime_ice_14jian", GridSchemaGenerator.legacyToDerived("pinyin_14jian"))
+        assertEquals("rime_ice_18jian_abcde", GridSchemaGenerator.legacyToDerived("pinyin_18jian_abcde"))
+        assertNull(GridSchemaGenerator.legacyToDerived("rime_ice_14jian"))
+        assertNull(GridSchemaGenerator.legacyToDerived("double_pinyin_14jian"))
+        assertNull(GridSchemaGenerator.legacyToDerived("rime_ice"))
+    }
+
     @Test
     fun `派生 id 的识别与拆解`() {
         // 8 个内置基础方案 + 6 个随包合并键方案，都能被正确识别/拆解

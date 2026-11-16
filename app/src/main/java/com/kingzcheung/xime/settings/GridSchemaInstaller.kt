@@ -53,6 +53,42 @@ object GridSchemaInstaller {
     }
 
     /**
+     * 老 id 迁移：把随包的 pinyin_14jian 等换成派生的 rime_ice_14jian 等。
+     *
+     * 随包那 6 份方案已经删掉，老用户目录里的启用列表和当前方案还指着它们；
+     * 这里一次性改写并补齐派生文件，避免方案凭空消失。
+     */
+    fun migrateLegacySchemas(context: Context): Int {
+        var changed = 0
+        val enabled = SchemaManager.getEnabledSchemas(context)
+        val mapped = enabled.map { GridSchemaGenerator.legacyToDerived(it) ?: it }.distinct()
+        if (mapped != enabled) {
+            SchemaManager.setEnabledSchemas(context, mapped)
+            changed++
+            FileLogger.i(TAG, "migrated legacy grid schemas: " + (enabled - mapped.toSet()))
+        }
+        val current = SettingsPreferences.getCurrentSchema(context)
+        GridSchemaGenerator.legacyToDerived(current)?.let {
+            SettingsPreferences.setCurrentSchema(context, it)
+            changed++
+            FileLogger.i(TAG, "migrated current schema: " + current + " -> " + it)
+        }
+        if (changed > 0) installAll(context, mapped)
+        return changed
+    }
+
+    /** 给一批派生 id 重新生成文件（不改变启用列表）。 */
+    private fun installAll(context: Context, ids: List<String>) {
+        for (id in ids) {
+            if (!GridSchemaGenerator.isDerived(id)) continue
+            val m = Regex("""_(14|17|18)jian(_abcde)?$""").find(id) ?: continue
+            val order = if (m.groupValues[2].isNotEmpty()) KeyboardLayoutPreset.ORDER_ABCDE
+            else KeyboardLayoutPreset.ORDER_QWERTY
+            install(context, GridSchemaGenerator.baseOf(id), m.groupValues[1], order)
+        }
+    }
+
+    /**
      * 启动时补齐：把已启用列表里的派生方案重新生成到磁盘。
      *
      * 旧版本会把这类"不在 assets 清单里的内置包文件"当残留删掉；即使删了，
@@ -60,8 +96,13 @@ object GridSchemaInstaller {
      */
     fun restoreInstalled(context: Context): Int {
         val enabled = SchemaManager.getEnabledSchemas(context)
+        // 当前方案可能不在启用列表里（配置被重置过）：派生方案至少要保住当前这一个
+        val current = SettingsPreferences.getCurrentSchema(context)
+        if (current !in GridSchemaGenerator.BASE_SCHEMA_IDS && GridSchemaGenerator.isDerived(current) && current !in enabled) {
+            enable(context, current)
+        }
         var restored = 0
-        for (id in enabled) {
+        for (id in (enabled + current).distinct()) {
             if (!GridSchemaGenerator.isDerived(id)) continue
             val m = Regex("""_(14|17|18)jian(_abcde)?$""").find(id) ?: continue
             val layout = m.groupValues[1]

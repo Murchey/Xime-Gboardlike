@@ -48,6 +48,18 @@ object GridSchemaGenerator {
 
     private val DERIVED = Regex("""_(14|17|18)jian(_abcde)?$""")
 
+    /** 早期随包发布的合并键方案（pinyin_14jian 等）→ 现在由派生承载（rime_ice_14jian 等）。 */
+    private val LEGACY = Regex("""^pinyin_(14|17|18)jian(_abcde)?$""")
+
+    /**
+     * 老 id 迁移：随包那 6 份 `pinyin_{14,17,18}jian[_abcde]` 已由运行时派生取代，
+     * 迁移到全拼基础方案的派生版；不是老 id 时返回 null。
+     */
+    fun legacyToDerived(schemaId: String): String? {
+        val m = LEGACY.find(schemaId) ?: return null
+        return "rime_ice_" + m.groupValues[1] + "jian" + m.groupValues[2]
+    }
+
     /** 合并键分组（键面顺序），来自 [KeyboardGridTables]。 */
     fun groupsOf(layout: String, order: String): List<String> {
         val rows = if (KeyboardLayoutPreset.normalizeOrder(order) == KeyboardLayoutPreset.ORDER_ABCDE) {

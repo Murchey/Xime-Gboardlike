@@ -958,43 +958,13 @@ object SchemaManager {
 
     /** 内置方案（保持默认启用顺序）。 */
     /** 内置方案补齐版本：新增内置方案时 +1（见 `getEnabledSchemas`）。 */
-internal const val BUILTIN_SCHEMA_MERGE_VERSION = 5
-
-/** 随包 14/17/18 键组码方案的资产目录（不放进 rime 子模块，那是上游仓库）。 */
-private const val GRID_SCHEMA_ASSETS = "grid_schemas"
-
-/**
- * 把随包的 14/17/18 键方案落盘到 rime 目录（内容有变化才写）。
- *
- * 这三个方案改成由本仓库自己带：`assets/rime` 是指向上游 rime-wubi 的子模块，
- * 往里加文件会被上游覆盖/丢失。落盘后 librime 部署时会编译它们的 prism。
- */
-fun installGridSchemas(context: Context, rimeDir: File): Int {
-    val names = runCatching { context.assets.list(GRID_SCHEMA_ASSETS) }.getOrNull() ?: return 0
-    var copied = 0
-    for (name in names.orEmpty().filter { it.endsWith(".schema.yaml") }) {
-        val bytes = runCatching {
-            context.assets.open("$GRID_SCHEMA_ASSETS/$name").use { it.readBytes() }
-        }.getOrNull() ?: continue
-        val target = File(rimeDir, name)
-        if (target.isFile && runCatching { target.readBytes().contentEquals(bytes) }.getOrDefault(false)) continue
-        runCatching {
-            target.parentFile?.mkdirs()
-            target.writeBytes(bytes)
-            copied++
-        }.onFailure { Log.w("SchemaManager", "installGridSchemas($name) failed", it) }
-    }
-    if (copied > 0) FileLogger.i("SchemaManager", "grid schemas installed: $copied")
-    return copied
-}
+internal const val BUILTIN_SCHEMA_MERGE_VERSION = 7
 
 internal val BUILTIN_SCHEMAS = listOf(
     "rime_ice", "wubi86", "wubi86_pinyin", "t9_pinyin",
-    // 14/17/18 键（合并键 + 组码解码）：见 KeyboardGridTables 与 xime.yaml 的 qwerty_14/17/18
-    "pinyin_14jian", "pinyin_17jian", "pinyin_18jian",
-    // 同三套键面，字母表（ABCDE）排列
-    "pinyin_14jian_abcde", "pinyin_17jian_abcde", "pinyin_18jian_abcde",
 )
+// 14/17/18 键（合并键）不再随包：运行时由 GridSchemaGenerator 按基础方案派生，
+// 启用与键面绑定见 GridSchemaInstaller / KeysConfigHelper.derivedBindings。
 
     /**
      * 内置方案补齐（纯函数）：用户启用列表尾部按 [BUILTIN_SCHEMAS] 顺序追加缺失项，

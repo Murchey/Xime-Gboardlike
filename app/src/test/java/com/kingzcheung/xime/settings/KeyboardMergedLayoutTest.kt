@@ -177,12 +177,22 @@ class KeyboardMergedLayoutTest {
         assertFalse(isT9Schema(""))
     }
 
+    /**
+     * 合并键方案不再随包声明：运行时的 {base}_{14|17|18}jian 由 GridSchemaInstaller 登记，
+     * 所以内置 yaml 的 schemas 绑定应当为空，但三个键面段本身还在（行数据要有）。
+     */
     @Test
-    fun `内置 xime yaml 三个布局均声明 schemas 绑定`() {
-        val bindings = KeysConfigHelper.parseSchemaBindingsYamlText(ximeYamlText())
-        assertEquals("qwerty_14", bindings["pinyin_14jian"])
-        assertEquals("qwerty_17", bindings["pinyin_17jian"])
-        assertEquals("qwerty_18", bindings["pinyin_18jian"])
+    fun `内置 yaml 保留三个键面段但不再声明方案绑定`() {
+        val yaml = ximeYamlText()
+        val bindings = KeysConfigHelper.parseSchemaBindingsYamlText(yaml)
+        assertNull("pinyin_14jian 已移除", bindings["pinyin_14jian"])
+        for ((section, expected) in listOf(
+            "qwerty_14" to 5, "qwerty_17" to 6, "qwerty_18" to 7,
+        )) {
+            val rows = KeysConfigHelper.parseKeyboardLayoutYamlText(yaml, section)
+                ?: error("xime.yaml 缺少 $section rows")
+            assertEquals("$section 首行键数", expected, rows[0].size)
+        }
     }
 
     @Test

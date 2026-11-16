@@ -64,9 +64,9 @@ object RimeConfigHelper {
         }
         
         copyAssetsToRimeDir(context, rimeDir)
-        // 14/17/18 键组码方案随本仓库分发（不在 rime 子模块里），部署前落盘
-        SchemaManager.installGridSchemas(context, rimeDir)
         // 运行时派生的合并键方案（{base}_14jian…）：被旧版本清理掉时在这里补回来
+        runCatching { GridSchemaInstaller.migrateLegacySchemas(context) }
+            .onFailure { Log.w(TAG, "migrate legacy grid schemas failed", it) }
         runCatching { GridSchemaInstaller.restoreInstalled(context) }
             .onFailure { Log.w(TAG, "restore derived grid schemas failed", it) }
         // 首次安装/升级后补建内置包的 per-package 清单
@@ -813,6 +813,9 @@ object RimeConfigHelper {
         // 它不在 assets 清单里，但绝不能按"下架内置残留"删掉，否则用户每次升级/重启
         // 都发现方案没了（schema_list 条目也随后被清）。
         if (GridSchemaGenerator.isDerived(relPath.removeSuffix(".schema.yaml"))) return false
+        // 早期随包的合并键方案（pinyin_14jian 等）已由运行时派生取代：老装机目录里的残留要删掉，
+        // 否则方案列表里会同时出现两套同名合并键方案。
+        if (GridSchemaGenerator.legacyToDerived(relPath.removeSuffix(".schema.yaml")) != null) return true
         val pkg = BuiltinPackages.packageFor(relPath)
         // SHARED 是"未知文件"的兜底：用户装的第三方方案全落在这一档，绝不能删
         if (pkg == BuiltinPackages.SHARED) return false
