@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kingzcheung.xime.settings.KeyboardLayoutPreset
 import com.kingzcheung.xime.settings.SettingsPreferences
+import kotlinx.coroutines.launch
 
 /**
  * 键盘布局设置（二级页）：键数 + 字母排列。
@@ -41,6 +43,36 @@ fun KeyboardLayoutSettingsContent(onBack: () -> Unit) {
     val context = LocalContext.current
     var layout by remember { mutableStateOf(SettingsPreferences.getKeyboardLayoutPreset(context)) }
     var order by remember { mutableStateOf(SettingsPreferences.getKeyboardLetterOrder(context)) }
+    val scope = rememberCoroutineScope()
+
+    /** 选布局/排列即生效：14/17/18 切到对应 rime 方案，26 键恢复进合并键前的方案。 */
+    fun applyLayout(newLayout: String, newOrder: String) {
+        layout = newLayout
+        order = newOrder
+        SettingsPreferences.setKeyboardLayoutPreset(context, newLayout)
+        SettingsPreferences.setKeyboardLetterOrder(context, newOrder)
+        val target = com.kingzcheung.xime.settings.KeyboardLayoutPreset.schemaIdFor(newLayout, newOrder)
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val current = SettingsPreferences.getCurrentSchema(context)
+            if (target == null) {
+                val saved = SettingsPreferences.getSchemaBeforeGrid(context)
+                if (saved.isNotEmpty() && !com.kingzcheung.xime.settings.KeyboardLayoutPreset.isGridSchema(saved)) {
+                    if (com.kingzcheung.xime.rime.RimeEngine.isInitialized()) {
+                        com.kingzcheung.xime.rime.RimeEngine.getInstance().switchSchema(saved)
+                    }
+                    SettingsPreferences.setCurrentSchema(context, saved)
+                }
+            } else {
+                if (current.isNotEmpty() && !com.kingzcheung.xime.settings.KeyboardLayoutPreset.isGridSchema(current)) {
+                    SettingsPreferences.setSchemaBeforeGrid(context, current)
+                }
+                if (com.kingzcheung.xime.rime.RimeEngine.isInitialized()) {
+                    com.kingzcheung.xime.rime.RimeEngine.getInstance().switchSchema(target)
+                }
+                SettingsPreferences.setCurrentSchema(context, target)
+            }
+        }
+    }
 
     SettingsPageScaffold(
         title = tr(R.string.s_jianpanbujushezhi),
@@ -63,10 +95,7 @@ fun KeyboardLayoutSettingsContent(onBack: () -> Unit) {
                         title = tr(R.string.s_jianpan_26jian),
                         subtitle = tr(R.string.s_jianpan_26jian_fu),
                         selected = layout == KeyboardLayoutPreset.LAYOUT_26,
-                        onClick = {
-                            layout = KeyboardLayoutPreset.LAYOUT_26
-                            SettingsPreferences.setKeyboardLayoutPreset(context, layout)
-                        }
+                        onClick = { applyLayout(KeyboardLayoutPreset.LAYOUT_26, order) }
                     )
                     listOf(
                         KeyboardLayoutPreset.LAYOUT_14 to (R.string.s_jianpan_14jian to R.string.s_jianpan_14jian_fu),
@@ -77,10 +106,7 @@ fun KeyboardLayoutSettingsContent(onBack: () -> Unit) {
                             title = tr(texts.first),
                             subtitle = tr(texts.second),
                             selected = layout == id,
-                            onClick = {
-                                layout = id
-                                SettingsPreferences.setKeyboardLayoutPreset(context, id)
-                            }
+                            onClick = { applyLayout(id, order) }
                         )
                     }
                     Text(
@@ -103,19 +129,15 @@ fun KeyboardLayoutSettingsContent(onBack: () -> Unit) {
                         title = tr(R.string.s_paile_qwerty),
                         subtitle = tr(R.string.s_paile_qwerty_fu),
                         selected = order == KeyboardLayoutPreset.ORDER_QWERTY,
-                        onClick = {
-                            order = KeyboardLayoutPreset.ORDER_QWERTY
-                            SettingsPreferences.setKeyboardLetterOrder(context, order)
-                        }
+                        onClick = { applyLayout(layout, KeyboardLayoutPreset.ORDER_QWERTY) }
                     )
+                    // ABCDE 的组键表与方案脚本都已备好，但方案还没在真机验证通过（见 PROGRESS），先置灰
                     LayoutChoiceRow(
                         title = tr(R.string.s_paile_abcde),
                         subtitle = tr(R.string.s_paile_abcde_fu),
                         selected = order == KeyboardLayoutPreset.ORDER_ABCDE,
-                        onClick = {
-                            order = KeyboardLayoutPreset.ORDER_ABCDE
-                            SettingsPreferences.setKeyboardLetterOrder(context, order)
-                        }
+                        enabled = false,
+                        onClick = {}
                     )
                 })
             }
@@ -128,12 +150,13 @@ private fun LayoutChoiceRow(
     title: String,
     subtitle: String,
     selected: Boolean,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

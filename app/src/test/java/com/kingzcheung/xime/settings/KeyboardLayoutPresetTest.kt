@@ -23,11 +23,11 @@ class KeyboardLayoutPresetTest {
     }
 
     @Test
-    fun `目前只有 26 键接入键盘`() {
+    fun `三套合并键都已有对应方案`() {
         assertTrue(KeyboardLayoutPreset.isKeyboardSupported("26"))
-        assertFalse(KeyboardLayoutPreset.isKeyboardSupported("14"))
-        assertFalse(KeyboardLayoutPreset.isKeyboardSupported("17"))
-        assertFalse(KeyboardLayoutPreset.isKeyboardSupported("18"))
+        assertTrue(KeyboardLayoutPreset.isKeyboardSupported("14"))
+        assertTrue(KeyboardLayoutPreset.isKeyboardSupported("17"))
+        assertTrue(KeyboardLayoutPreset.isKeyboardSupported("18"))
     }
 
     @Test

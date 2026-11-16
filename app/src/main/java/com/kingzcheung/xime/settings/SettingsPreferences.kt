@@ -41,6 +41,9 @@ object SettingsPreferences {
     
     const val KEY_SMART_PREDICTION_ENABLED = "smart_prediction_enabled"
 
+    /** 进入合并键布局前使用的方案 id。 */
+    private const val KEY_SCHEMA_BEFORE_GRID = "schema_before_grid"
+
     /** 内置方案补齐版本（新增内置方案时 +1，见 [SchemaManager]）。 */
     private const val KEY_BUILTIN_SCHEMAS_MERGED_VERSION = "builtin_schemas_merged_version"
 
@@ -843,6 +846,14 @@ object SettingsPreferences {
         getPrefs(context).edit()
             .putInt(KEY_BUILTIN_SCHEMAS_MERGED_VERSION, version)
             .apply()
+    }
+
+    /** 进入 14/17/18 合并键布局前用的方案：切回 26 键时恢复，避免用户被留在 pinyin_14jian 上。 */
+    fun getSchemaBeforeGrid(context: Context): String =
+        getPrefs(context).getString(KEY_SCHEMA_BEFORE_GRID, "").orEmpty()
+
+    fun setSchemaBeforeGrid(context: Context, schemaId: String) {
+        getPrefs(context).edit().putString(KEY_SCHEMA_BEFORE_GRID, schemaId).apply()
     }
 
     fun getPredictionModelRepo(context: Context): String {
