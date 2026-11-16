@@ -131,13 +131,11 @@ fun KeyboardLayoutSettingsContent(onBack: () -> Unit) {
                         selected = order == KeyboardLayoutPreset.ORDER_QWERTY,
                         onClick = { applyLayout(layout, KeyboardLayoutPreset.ORDER_QWERTY) }
                     )
-                    // ABCDE 的组键表与方案脚本都已备好，但方案还没在真机验证通过（见 PROGRESS），先置灰
                     LayoutChoiceRow(
                         title = tr(R.string.s_paile_abcde),
                         subtitle = tr(R.string.s_paile_abcde_fu),
                         selected = order == KeyboardLayoutPreset.ORDER_ABCDE,
-                        enabled = false,
-                        onClick = {}
+                        onClick = { applyLayout(layout, KeyboardLayoutPreset.ORDER_ABCDE) }
                     )
                 })
             }

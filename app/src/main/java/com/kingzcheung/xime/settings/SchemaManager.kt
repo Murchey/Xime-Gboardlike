@@ -937,7 +937,7 @@ object SchemaManager {
 
     /** 内置方案（保持默认启用顺序）。 */
     /** 内置方案补齐版本：新增内置方案时 +1（见 `getEnabledSchemas`）。 */
-internal const val BUILTIN_SCHEMA_MERGE_VERSION = 2
+internal const val BUILTIN_SCHEMA_MERGE_VERSION = 5
 
 /** 随包 14/17/18 键组码方案的资产目录（不放进 rime 子模块，那是上游仓库）。 */
 private const val GRID_SCHEMA_ASSETS = "grid_schemas"
@@ -971,6 +971,8 @@ internal val BUILTIN_SCHEMAS = listOf(
     "rime_ice", "wubi86", "wubi86_pinyin", "t9_pinyin",
     // 14/17/18 键（合并键 + 组码解码）：见 KeyboardGridTables 与 xime.yaml 的 qwerty_14/17/18
     "pinyin_14jian", "pinyin_17jian", "pinyin_18jian",
+    // 同三套键面，字母表（ABCDE）排列
+    "pinyin_14jian_abcde", "pinyin_17jian_abcde", "pinyin_18jian_abcde",
 )
 
     /**

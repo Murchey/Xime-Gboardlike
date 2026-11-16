@@ -107,41 +107,37 @@ class SchemaListBlockTest {
     }
 
     // ---- mergeBuiltinSchemas：老版本升级用户的内置方案补齐 ----
+    // 断言写成「结构性质」而不是写死列表：内置方案以后还会加，写死一次就要跟着改一次。
 
     @Test
     fun `老列表缺新内置方案时补到尾部`() {
-        // 老版本只有三个方案：升级后 t9_pinyin 从未部署，切九键静默失败
         val enabled = listOf("wubi86", "wubi86_pinyin", "pinyin_simp")
         val merged = SchemaManager.mergeBuiltinSchemas(enabled)
+        assertEquals("用户原有顺序保持在前", enabled, merged.take(enabled.size))
         assertEquals(
-            listOf(
-                "wubi86", "wubi86_pinyin", "pinyin_simp",
-                "rime_ice", "t9_pinyin", "pinyin_14jian", "pinyin_17jian", "pinyin_18jian",
-            ),
-            merged,
+            "补上的正好是缺失的内置方案，按内置顺序",
+            SchemaManager.BUILTIN_SCHEMAS.filter { it !in enabled },
+            merged.drop(enabled.size),
         )
+        assertTrue("内置方案都在", merged.containsAll(SchemaManager.BUILTIN_SCHEMAS))
+        assertEquals("不重复", merged.size, merged.toSet().size)
     }
 
     @Test
     fun `内置方案齐全时原样返回`() {
-        val enabled = listOf(
-            "rime_ice", "wubi86", "wubi86_pinyin", "pinyin_simp", "t9_pinyin",
-            "pinyin_14jian", "pinyin_17jian", "pinyin_18jian",
-        )
-        assertEquals(enabled, SchemaManager.mergeBuiltinSchemas(enabled))
+        val reversed = SchemaManager.BUILTIN_SCHEMAS.reversed()
+        assertEquals("用户自己的顺序不被改写", reversed, SchemaManager.mergeBuiltinSchemas(reversed))
     }
 
     @Test
     fun `用户顺序与第三方方案保持不变`() {
         val enabled = listOf("my_custom_schema", "pinyin_simp", "wubi86")
         val merged = SchemaManager.mergeBuiltinSchemas(enabled)
+        assertEquals("第三方方案与用户顺序原样保留", enabled, merged.take(enabled.size))
         assertEquals(
-            listOf(
-                "my_custom_schema", "pinyin_simp", "wubi86",
-                "rime_ice", "wubi86_pinyin", "t9_pinyin",
-                "pinyin_14jian", "pinyin_17jian", "pinyin_18jian",
-            ),
-            merged,
+            "缺失的内置方案按内置顺序补在尾部",
+            SchemaManager.BUILTIN_SCHEMAS.filter { it !in enabled },
+            merged.drop(enabled.size),
         )
     }
 
