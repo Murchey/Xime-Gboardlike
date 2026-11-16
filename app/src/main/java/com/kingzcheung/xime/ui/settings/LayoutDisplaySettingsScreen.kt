@@ -99,6 +99,7 @@ fun LayoutDisplaySettingsContent(
                             Text(
                                 text = tr(R.string.s_huadongshuru),
                                 style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
@@ -164,6 +165,7 @@ fun LayoutDisplaySettingsContent(
                         Text(
                             text = tr(R.string.s_jianpanxianshizihao),
                             style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
@@ -213,6 +215,7 @@ fun LayoutDisplaySettingsContent(
                             Text(
                                 text = tr(R.string.s_lianianliangcikonggecharubiaodian),
                                 style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
@@ -246,6 +249,7 @@ fun LayoutDisplaySettingsContent(
                                 Text(
                                     text = tr(R.string.s_charubiaodian),
                                     style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
@@ -300,6 +304,7 @@ fun LayoutDisplaySettingsContent(
                         Text(
                             text = tr(R.string.s_houxuanzidaxiao),
                             style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Medium
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -327,6 +332,7 @@ fun LayoutDisplaySettingsContent(
                     Text(
                         text = tr(R.string.s_bianmazhushi),
                         style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
                     )
@@ -380,6 +386,7 @@ fun LayoutDisplaySettingsContent(
                     Text(
                         text = tr(R.string.s_bianmaxianshi),
                         style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
                     )

@@ -18,44 +18,58 @@ object KeyboardLayoutApplier {
     private const val TAG = "KeyboardLayoutApplier"
 
     /**
-     * 应用一次布局选择，返回最终生效的方案 id；26 键且没有可恢复方案时返回 null。
+     * 应用一次布局选择并部署，返回最终生效的方案 id。
+     *
+     * - 26 键：基础方案就是它自己，直接启用 + 编译 + 切换（替换当前方案）；
+     * - 14/17/18 键：按 [baseSchemaId] 派生合并键方案，部署后**替换当前方案**，
+     *   并把上一套方案的编译产物删掉（同一时间只留一个方案真正在用）。
      */
     suspend fun apply(
         context: Context,
         layout: String,
         order: String,
-        /** 生成新方案后是否立刻等部署（测试里关掉，避免为编 prism 卡几分钟）。 */
+        baseSchemaId: String,
+        /** 测试里关掉，避免为编 prism 卡几分钟。 */
         deployImmediately: Boolean = true,
     ): String? {
         SettingsPreferences.setKeyboardLayoutPreset(context, layout)
         SettingsPreferences.setKeyboardLetterOrder(context, order)
-
-        val explicit = KeyboardLayoutPreset.schemaIdFor(layout, order)
-        val current = SettingsPreferences.getCurrentSchema(context)
-
-        if (explicit == null) {
-            val saved = KeyboardLayoutPreset.restoreTarget(SettingsPreferences.getSchemaBeforeGrid(context))
-            if (saved == null) return null
-            if (RimeEngine.isInitialized()) RimeEngine.getInstance().switchSchema(saved)
-            SettingsPreferences.setCurrentSchema(context, saved)
-            FileLogger.i(TAG, "back to 26 keys, restored " + saved)
-            return saved
+        if (baseSchemaId.isNotEmpty()) {
+            SettingsPreferences.setKeyboardLayoutBaseSchema(context, baseSchemaId)
         }
 
-        val base = GridSchemaGenerator.baseOf(current)
+        val base = baseSchemaId.ifEmpty { GridSchemaGenerator.baseOf(SettingsPreferences.getCurrentSchema(context)) }
             .takeIf { it in GridSchemaGenerator.BASE_SCHEMA_IDS } ?: "rime_ice"
-        if (current.isNotEmpty() && !KeyboardLayoutPreset.isGridSchema(current)) {
-            SettingsPreferences.setSchemaBeforeGrid(context, current)
+
+        val current = SettingsPreferences.getCurrentSchema(context)
+        val isGrid = KeyboardLayoutPreset.normalizeLayout(layout) != KeyboardLayoutPreset.LAYOUT_26
+
+        val target = if (!isGrid) {
+            // 26 键：直接用基础方案本身
+            if (base !in SchemaManager.getEnabledSchemas(context)) {
+                SchemaManager.setEnabledSchemas(context, SchemaManager.getEnabledSchemas(context) + base)
+            }
+            base
+        } else {
+            if (current.isNotEmpty() && !KeyboardLayoutPreset.isGridSchema(current)) {
+                SettingsPreferences.setSchemaBeforeGrid(context, current)
+            }
+            GridSchemaInstaller.installAndEnable(context, base, layout, order)
+                ?: KeyboardLayoutPreset.schemaIdFor(layout, order)
+                ?: return null
         }
-        val generated = GridSchemaInstaller.installAndEnable(context, base, layout, order)
-        val target = generated ?: explicit
-        if (generated != null && deployImmediately) {
-            // 新生成的方案要等部署编出 prism 才能切过去
+
+        // 换方案：上一套不是目标就退休（移出启用列表 + 删编译产物）
+        if (current.isNotEmpty() && current != target) {
+            GridSchemaInstaller.retireScheme(context, current)
+        }
+
+        if (deployImmediately) {
             RimeConfigHelper.ensureDeployment(context)
         }
         if (RimeEngine.isInitialized()) RimeEngine.getInstance().switchSchema(target)
         SettingsPreferences.setCurrentSchema(context, target)
-        FileLogger.i(TAG, "applied " + layout + "/" + order + " -> " + target + " (base=" + base + ")")
+        FileLogger.i(TAG, "applied " + layout + "/" + order + " base=" + base + " -> " + target)
         return target
     }
 }

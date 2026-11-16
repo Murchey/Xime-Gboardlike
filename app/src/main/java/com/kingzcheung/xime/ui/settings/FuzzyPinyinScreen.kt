@@ -122,6 +122,7 @@ fun FuzzyPinyinSettingsContent(onBack: () -> Unit) {
                         Text(
                             text = rule.label,
                             style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = rule.id,

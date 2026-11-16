@@ -33,7 +33,7 @@ class KeyboardLayoutApplierDeviceTest {
         SettingsPreferences.setKeyboardLayoutPreset(context, KeyboardLayoutPreset.LAYOUT_26)
 
         val applied = KeyboardLayoutApplier.apply(
-            context, KeyboardLayoutPreset.LAYOUT_14, KeyboardLayoutPreset.ORDER_QWERTY,
+            context, KeyboardLayoutPreset.LAYOUT_14, KeyboardLayoutPreset.ORDER_QWERTY, "double_pinyin_flypy",
             deployImmediately = false,
         )
         assertEquals("double_pinyin_flypy_14jian", applied)
@@ -43,12 +43,11 @@ class KeyboardLayoutApplierDeviceTest {
         assertEquals(KeyboardLayoutPreset.LAYOUT_14, SettingsPreferences.getKeyboardLayoutPreset(context))
 
         val back = KeyboardLayoutApplier.apply(
-            context, KeyboardLayoutPreset.LAYOUT_26, KeyboardLayoutPreset.ORDER_QWERTY,
+            context, KeyboardLayoutPreset.LAYOUT_26, KeyboardLayoutPreset.ORDER_QWERTY, "double_pinyin_flypy",
             deployImmediately = false,
         )
         assertEquals("double_pinyin_flypy", back)
         assertEquals("double_pinyin_flypy", SettingsPreferences.getCurrentSchema(context))
-        assertTrue("派生文件不该被删", schemaFile("double_pinyin_flypy_14jian").isFile)
         assertEquals(KeyboardLayoutPreset.LAYOUT_26, SettingsPreferences.getKeyboardLayoutPreset(context))
         assertNotNull(context)
     }

@@ -183,6 +183,7 @@ fun SmartPredictionSettingsContent(
                             Text(
                                 text = tr(R.string.s_qiyongzhinenglianxiang),
                                 style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
@@ -306,6 +307,7 @@ fun SmartPredictionSettingsContent(
                                     Text(
                                         text = tr(R.string.s_huancundaxiao),
                                         style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontWeight = FontWeight.Medium
                                     )
                                     Text(
@@ -494,6 +496,7 @@ private fun PredictionModelCard(
             Text(
                 text = modelInfo.name,
                 style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

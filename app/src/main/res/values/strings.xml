@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">XimeGboard</string>
     <string name="subtype_label_wubi">XimeGboard 输入法</string>
     <string name="subtype_label_pinyin">拼音</string>
@@ -1549,6 +1549,10 @@
     <string name="s_yuyanyujianpan">语言与键盘</string>
     <string name="s_waiguan">外观</string>
     <string name="s_anjian">按键</string>
+    <string name="s_jichufangan">基础方案</string>
+    <string name="s_jichufangan_fu">这套键面按哪个方案派生：全拼或任一内置双拼</string>
+    <string name="s_jichufangan_26_fu">26 键直接用这个方案，不派生</string>
+    <string name="s_jichufangan_tishi">将部署：%1$s 键 · %2$s</string>
     <string name="s_shuru">输入</string>
     <string name="s_jianpanpianhao">键盘偏好</string>
     <string name="s_shuruyulianxiang">输入与联想</string>

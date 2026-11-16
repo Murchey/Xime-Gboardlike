@@ -207,6 +207,7 @@ fun GrammarModelSettingsContent(
                             Text(
                                 GramImporter.displayName(model.name),
                                 style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 GramImporter.formatSize(model.sizeBytes),
@@ -250,6 +251,7 @@ fun GrammarModelSettingsContent(
                             Text(
                                 tr(R.string.s_yufamoxing_canshu),
                                 style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 tr(

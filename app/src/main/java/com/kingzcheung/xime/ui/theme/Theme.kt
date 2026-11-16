@@ -180,11 +180,18 @@ fun XimeTheme(
         val typography = remember(uiFontFamily) {
             if (uiFontFamily == null) Typography() else Typography().withFontFamily(uiFontFamily)
         }
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = typography,
-            content = content
-        )
+        // Compose 的 LocalContentColor 默认是黑色，MaterialTheme 不会替我们改它：
+        // 页面里那些没显式写 color 的 Text 在深色模式下就成了黑字（模糊音/智能联想/语法模型/
+        // 智能纠错/键盘偏好都中过招）。这里按主题给全局补上内容色。
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides colorScheme.onBackground
+        ) {
+            MaterialTheme(
+                colorScheme = colorScheme,
+                typography = typography,
+                content = content
+            )
+        }
     }
 }
 

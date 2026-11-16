@@ -131,6 +131,28 @@ object GridSchemaInstaller {
         }
     }
 
+    /**
+     * 换方案时清理上一套：移出启用列表，并删掉它的编译产物（prism/table/reverse）。
+     *
+     * schema 文件本身留着（3KB，切回来可以直接重新编译），只删占空间的编译结果。
+     */
+    fun retireScheme(context: Context, schemaId: String): Boolean {
+        if (schemaId.isBlank()) return false
+        var changed = false
+        val enabled = SchemaManager.getEnabledSchemas(context)
+        if (schemaId in enabled) {
+            SchemaManager.setEnabledSchemas(context, enabled.filterNot { it == schemaId })
+            changed = true
+        }
+        val buildDir = File(SchemaManager.getRimeDir(context), "build")
+        val files = buildDir.listFiles { f -> f.isFile && f.name.startsWith(schemaId + ".") } ?: emptyArray()
+        for (f in files) {
+            if (f.delete()) changed = true
+        }
+        if (changed) FileLogger.i(TAG, "retired scheme " + schemaId)
+        return changed
+    }
+
     /** 把派生方案登记进启用列表（没有变化时原样返回）。 */
     fun enable(context: Context, targetId: String): Boolean {
         val enabled = SchemaManager.getEnabledSchemas(context)
