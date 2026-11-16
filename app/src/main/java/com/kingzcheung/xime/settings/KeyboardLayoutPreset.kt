@@ -35,9 +35,20 @@ object KeyboardLayoutPreset {
         return if (o == ORDER_ABCDE) "pinyin_${l}jian_abcde" else "pinyin_${l}jian"
     }
 
+    /**
+     * 切回 26 键时要恢复的方案：进入合并键布局前存下的那个。
+     *
+     * 空值、或本身又是一个合并键方案时不恢复（否则会在合并键方案之间来回跳），返回 null 表示保持现状。
+     */
+    fun restoreTarget(savedBeforeGrid: String): String? =
+        savedBeforeGrid.trim().takeIf { it.isNotEmpty() && !isGridSchema(it) }
+
     /** 是否是本仓库自带的 14/17/18 键方案（用于「切回 26 键时恢复原方案」）。 */
     fun isGridSchema(schemaId: String): Boolean =
-        schemaId.startsWith("pinyin_14jian") || schemaId.startsWith("pinyin_17jian") ||
+        // 运行时派生的 {base}_{14|17|18}jian[_abcde]（含 rime_ice_/double_pinyin_ 前缀）
+        GridSchemaGenerator.isDerived(schemaId) ||
+            // 早期随包的 id，老装机里可能还留着
+            schemaId.startsWith("pinyin_14jian") || schemaId.startsWith("pinyin_17jian") ||
             schemaId.startsWith("pinyin_18jian")
 
     /** 字母表顺序的 26 键三行（ABCDE 排列）；QWERTY 用键盘现有的兜底行。 */

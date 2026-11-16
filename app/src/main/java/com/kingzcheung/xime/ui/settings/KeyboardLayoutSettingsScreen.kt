@@ -55,8 +55,9 @@ fun KeyboardLayoutSettingsContent(onBack: () -> Unit) {
         scope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val current = SettingsPreferences.getCurrentSchema(context)
             if (explicit == null) {
-                val saved = SettingsPreferences.getSchemaBeforeGrid(context)
-                if (saved.isNotEmpty() && !com.kingzcheung.xime.settings.KeyboardLayoutPreset.isGridSchema(saved)) {
+                val saved = com.kingzcheung.xime.settings.KeyboardLayoutPreset
+                    .restoreTarget(SettingsPreferences.getSchemaBeforeGrid(context))
+                if (saved != null) {
                     if (com.kingzcheung.xime.rime.RimeEngine.isInitialized()) {
                         com.kingzcheung.xime.rime.RimeEngine.getInstance().switchSchema(saved)
                     }
