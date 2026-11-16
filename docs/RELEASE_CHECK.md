@@ -45,11 +45,23 @@
 
 ## 2026-11-16 本次自检记录
 
-- 构建：full + lite 各 5 个 ABI 全部产出；APK 内容核对通过（模型只在 full、无 grid_schemas）。
-- 单测：debug 1913 / 5（基线内）。
-- 装机：release（debug 签名版）在 Redmi 21091116AC 上安装并冷启动成功，设置页、输入方案页渲染正常，
-  分类 chips 可见，方案显示「已编译」。
-- 未完成：**键盘输入链路没在 release 上走完**——全新安装后卡在向导第 2 步：
-  「下一步」要求 `RimeConfigHelper.isDeploymentComplete` 为真，而该机首次部署耗时很长，
-  按钮点了没有反应（也没看到部署提示文案）。release 包不可 debug，`run-as` 读不到 rime 目录，
-  无法从命令行确认部署进度。这条建议发布前在真机上人工过一遍。
+### 构建与产物
+
+- §build_apk.bat§ 跑通：full + lite 各 5 个 ABI。
+- APK 内容核对：模型只在 full；§assets/gram/XimeGboard.gram§ 两种包都有；§assets/grid_schemas/§ 已无（合并键改成运行时派生）。
+- debug 单测 1913 个用例、5 个既有失败（与本次改动无关）。
+
+### 真机（Redmi 21091116AC，Android 13）
+
+- 全新安装会被 MIUI 拦一次：§INSTALL_FAILED_USER_RESTRICTED§，需要在「USB安装提示」点「继续安装」；
+  覆盖安装（同签名）不受影响。
+- release（用 debug 签名 + §-PreleaseDebuggable=true§ 出包，只为验证 release 代码本身）：
+  - 冷启动无崩溃，设置首页 / 输入方案页渲染正常，分类 chips 可见，方案显示「已编译」；
+  - 向导三步能走完（第 2 步要等 §isDeploymentComplete§，首次部署以分钟计）；
+  - 26 键中文输入正常：打 §wo§ 出「我|握|窝|卧|喔|沃」，上屏后联想栏出「们|的|是|不|也|就」——
+    说明 R8 压缩后 JNI、推理子进程、内置联想模型链路都还活着。
+
+### 仍建议人工过一遍的
+
+- 合并键布局在 release 上的切换（debug 上已充分验证：派生、键面、组码解码、切回 26 键恢复方案）；
+- lite 包的「无模型」路径（导入入口、不崩）。

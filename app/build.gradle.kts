@@ -106,6 +106,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // -PreleaseDebuggable=true：只用于发布前真机自检——release 变体打开 debuggable 后
+            // 才能 `run-as` 查看 rime 目录/偏好（否则命令行完全看不到部署进度）。
+            // 分发构建不加此属性，保持不可调试。
+            if (project.findProperty("releaseDebuggable") == "true") {
+                isDebuggable = true
+            }
             // -PuseDebugSigning=true：用 debug 证书签 release 变体——与 Android Studio
             // 日常安装同签名，可 adb install -r 原地覆盖 debug 包（体积按 release 算）；
             // 分发构建不加此属性，仍走社区证书，GitHub Actions 使用自己的签名方式。
