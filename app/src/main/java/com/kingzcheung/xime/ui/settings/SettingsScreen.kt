@@ -45,6 +45,7 @@ fun SettingsScreen(
                 onNavigateToFont = { navController.navigate(SettingsRoutes.Font) },
                 onNavigateToKeyEffect = { navController.navigate(SettingsRoutes.KeyEffect) },
                 onNavigateToLayoutDisplay = { navController.navigate(SettingsRoutes.LayoutDisplay) },
+                onNavigateToKeyboardLayout = { navController.navigate(SettingsRoutes.KeyboardLayoutSettings) },
                 onNavigateToDictionary = { navController.navigate(SettingsRoutes.Dictionary) },
                 onNavigateToPlugins = { navController.navigate(SettingsRoutes.Plugins) },
                 onNavigateToModelLocal = { navController.navigate(SettingsRoutes.ModelLocal) },

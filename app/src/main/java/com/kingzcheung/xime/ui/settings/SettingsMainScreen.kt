@@ -73,6 +73,7 @@ fun SettingsMainContent(
     onNavigateToFont: () -> Unit = {},
     onNavigateToKeyEffect: () -> Unit,
     onNavigateToLayoutDisplay: () -> Unit,
+    onNavigateToKeyboardLayout: () -> Unit = {},
     onNavigateToDictionary: () -> Unit,
     onNavigateToPlugins: () -> Unit,
     onNavigateToModelLocal: () -> Unit = {},
@@ -91,6 +92,17 @@ fun SettingsMainContent(
         MarketUpdateChecker.maybeRefresh(context)
     }
     val marketUpdates by MarketUpdateChecker.summary.collectAsStateWithLifecycle()
+
+    // 一级页只放"入口 + 当前状态"，副标题直接告诉用户现在是什么（对齐 Gboard 的做法）
+    val currentSchemaSummary = remember {
+        val id = SettingsPreferences.getCurrentSchema(context)
+        com.kingzcheung.xime.settings.SchemaManager.getSchemaDisplayName(context, id) ?: id
+    }
+    val keyboardLayoutSummary = remember {
+        val preset = SettingsPreferences.getKeyboardLayoutPreset(context)
+        val order = if (SettingsPreferences.getKeyboardLetterOrder(context) == "abcde") "ABCDE" else "QWERTY"
+        preset + " 键 · " + order
+    }
 
     SettingsPageScaffold(title = stringResource(R.string.settings_title)) { innerPadding ->
         LazyColumn(
@@ -127,6 +139,70 @@ fun SettingsMainContent(
             item { InputTestCard() }
 
             item {
+                SettingsGroup(title = tr(R.string.s_yuyanyujianpan)) {
+                    SettingsNavRow(
+                        title = tr(R.string.s_shurufangan),
+                        summary = currentSchemaSummary,
+                        icon = Icons.TwoTone.KeyboardAlt,
+                        onClick = onNavigateToSchema,
+                    )
+                    SettingsNavRow(
+                        title = tr(R.string.s_jianpanbujushezhi),
+                        summary = keyboardLayoutSummary,
+                        icon = Icons.TwoTone.Keyboard,
+                        onClick = onNavigateToKeyboardLayout,
+                    )
+                    SettingsNavRow(
+                        title = tr(R.string.s_mohuyin),
+                        summary = tr(R.string.s_mohuyin_fu),
+                        icon = Icons.TwoTone.Tune,
+                        onClick = onNavigateToFuzzyPinyin,
+                    )
+                    SettingsNavRow(
+                        title = tr(R.string.s_cikuguanli),
+                        summary = tr(R.string.s_yonghuciku_kuaijieduanyuyuciti_be6d2),
+                        icon = Icons.TwoTone.Ballot,
+                        onClick = onNavigateToDictionary,
+                    )
+                }
+            }
+
+            item {
+                SettingsGroup(title = tr(R.string.s_shuruyulianxiang)) {
+                    SettingsNavRow(
+                        title = tr(R.string.s_zhinenglianxiang),
+                        summary = tr(R.string.s_jiyu_ai_moxingdezhinenglianxia_5cce9),
+                        icon = Icons.TwoTone.AutoAwesome,
+                        onClick = onNavigateToSmartPrediction,
+                    )
+                    SettingsNavRow(
+                        title = tr(R.string.s_yufamoxing),
+                        summary = tr(R.string.s_yufamoxing_fu),
+                        icon = Icons.TwoTone.Sort,
+                        onClick = onNavigateToGrammarModel,
+                    )
+                    SettingsNavRow(
+                        title = tr(R.string.s_zhinengjiucuo_shiyanxing),
+                        summary = tr(R.string.s_ancuoxianglinjianshigeichujiuz_834ec),
+                        icon = Icons.TwoTone.AutoFixHigh,
+                        onClick = onNavigateToCorrection,
+                    )
+                    var sttEnabled by remember { mutableStateOf(SettingsPreferences.isSttEnabled(context)) }
+                    SettingsSwitchRow(
+                        title = tr(R.string.s_yuyinzhuanwenben),
+                        summary = tr(R.string.s_zaixian_asr_fuwu_xuanzhuangyuy_74a1a),
+                        icon = Icons.TwoTone.GraphicEq,
+                        checked = sttEnabled,
+                        onClick = { if (sttEnabled) onNavigateToSpeechToText() },
+                        onCheckedChange = { enabled ->
+                            sttEnabled = enabled
+                            SettingsPreferences.setSttEnabled(context, enabled)
+                        },
+                    )
+                }
+            }
+
+            item {
                 SettingsGroup(title = stringResource(R.string.settings_section_appearance)) {
                     SettingsNavRow(
                         title = tr(R.string.s_zhutiyudingzhi),
@@ -156,59 +232,18 @@ fun SettingsMainContent(
             }
 
             item {
-                SettingsGroup(title = tr(R.string.s_fanganyuciku)) {
+                SettingsGroup(title = tr(R.string.s_shujuyutongbu)) {
                     SettingsNavRow(
-                        title = tr(R.string.s_shurufangan),
-                        summary = tr(R.string.s_guanlishurufangan),
-                        icon = Icons.TwoTone.KeyboardAlt,
-                        onClick = onNavigateToSchema,
+                        title = tr(R.string.s_jiantieban),
+                        summary = tr(R.string.s_tupianjilu_tijixianzhi_zhanyon_fa4c6),
+                        icon = Icons.TwoTone.ContentPaste,
+                        onClick = onNavigateToClipboard,
                     )
                     SettingsNavRow(
-                        title = tr(R.string.s_mohuyin),
-                        summary = tr(R.string.s_mohuyin_fu),
-                        icon = Icons.TwoTone.Tune,
-                        onClick = onNavigateToFuzzyPinyin,
-                    )
-                    SettingsNavRow(
-                        title = tr(R.string.s_yufamoxing),
-                        summary = tr(R.string.s_yufamoxing_fu),
-                        icon = Icons.TwoTone.Sort,
-                        onClick = onNavigateToGrammarModel,
-                    )
-                    SettingsNavRow(
-                        title = tr(R.string.s_cikuguanli),
-                        summary = tr(R.string.s_yonghuciku_kuaijieduanyuyuciti_be6d2),
-                        icon = Icons.TwoTone.Ballot,
-                        onClick = onNavigateToDictionary,
-                    )
-                }
-            }
-
-            item {
-                SettingsGroup(title = tr(R.string.s_zhineng)) {
-                    SettingsNavRow(
-                        title = tr(R.string.s_zhinenglianxiang),
-                        summary = tr(R.string.s_jiyu_ai_moxingdezhinenglianxia_5cce9),
-                        icon = Icons.TwoTone.AutoAwesome,
-                        onClick = onNavigateToSmartPrediction,
-                    )
-                    SettingsNavRow(
-                        title = tr(R.string.s_zhinengjiucuo_shiyanxing),
-                        summary = tr(R.string.s_ancuoxianglinjianshigeichujiuz_834ec),
-                        icon = Icons.TwoTone.AutoFixHigh,
-                        onClick = onNavigateToCorrection,
-                    )
-                    var sttEnabled by remember { mutableStateOf(SettingsPreferences.isSttEnabled(context)) }
-                    SettingsSwitchRow(
-                        title = tr(R.string.s_yuyinzhuanwenben),
-                        summary = tr(R.string.s_zaixian_asr_fuwu_xuanzhuangyuy_74a1a),
-                        icon = Icons.TwoTone.GraphicEq,
-                        checked = sttEnabled,
-                        onClick = { if (sttEnabled) onNavigateToSpeechToText() },
-                        onCheckedChange = { enabled ->
-                            sttEnabled = enabled
-                            SettingsPreferences.setSttEnabled(context, enabled)
-                        },
+                        title = tr(R.string.s_tongbuyubeifen),
+                        summary = tr(R.string.s_duoshebeicidianhutongyupeizhib_1efa8),
+                        icon = Icons.TwoTone.Backup,
+                        onClick = onNavigateToBackup,
                     )
                 }
             }
@@ -239,22 +274,6 @@ fun SettingsMainContent(
                 }
             }
 
-            item {
-                SettingsGroup(title = tr(R.string.s_shujuyutongbu)) {
-                    SettingsNavRow(
-                        title = tr(R.string.s_jiantieban),
-                        summary = tr(R.string.s_tupianjilu_tijixianzhi_zhanyon_fa4c6),
-                        icon = Icons.TwoTone.ContentPaste,
-                        onClick = onNavigateToClipboard,
-                    )
-                    SettingsNavRow(
-                        title = tr(R.string.s_tongbuyubeifen),
-                        summary = tr(R.string.s_duoshebeicidianhutongyupeizhib_1efa8),
-                        icon = Icons.TwoTone.Backup,
-                        onClick = onNavigateToBackup,
-                    )
-                }
-            }
 
             item {
                 SettingsGroup(title = tr(R.string.s_guanyu)) {
