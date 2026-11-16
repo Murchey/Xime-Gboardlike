@@ -94,10 +94,9 @@ class GridSchemaGeneratorTest {
         assertTrue(out.contains("  alphabet: abcdegjlmoqtuz"))
         assertTrue(out.contains("  initials: abcdegjlmoqtuz"))
         // 滤镜要读候选里的组码，所以拼写提示必须留着（由滤镜负责替换成拼音）
-        // 组码方案下候选注释没有可用信息（rime 的 GetOriginalSpelling 对代数派生的码返回空），
-        // 先关掉，别给用户看组码
+        // 注释只留 lua 滤镜算出来的拼音（rime 自己的拼写提示对组码没意义）
         assertTrue("always_show_comments 应关闭", out.contains("  always_show_comments: false"))
-        assertFalse("暂不挂拼音提示滤镜", out.contains("lua_filter@*grid_hint"))
+        assertFalse("拼音提示滤镜暂缓（librime-lua 没有 io，数据没法外置）", out.contains("lua_filter@*grid_hint"))
     }
 
     @Test

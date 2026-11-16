@@ -135,6 +135,7 @@ object GridSchemaGenerator {
         // 保留拼写提示：lua filter 要读 comment 里的组码才能还原成拼音（滤镜会把它替换掉）
         val commentsIdx = lines.indexOfFirst { it.trim().startsWith("always_show_comments:") }
         if (commentsIdx >= 0) {
+            // 只留滤镜算出来的拼音；rime 自己的拼写提示对组码没有意义
             lines[commentsIdx] = "  always_show_comments: false"
         } else {
             val translatorIdx = lines.indexOfFirst { it.trim() == "translator:" }
