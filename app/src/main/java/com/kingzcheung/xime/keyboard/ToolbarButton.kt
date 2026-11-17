@@ -28,15 +28,36 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
+/** 圆角矩形子路径：让自绘图标和 Material Rounded 图标一样是实心、圆角。 */
+private fun PathBuilder.roundedRect(
+    left: Float,
+    top: Float,
+    right: Float,
+    bottom: Float,
+    radius: Float,
+) {
+    moveTo(left + radius, top)
+    lineTo(right - radius, top)
+    quadTo(right, top, right, top + radius)
+    lineTo(right, bottom - radius)
+    quadTo(right, bottom, right - radius, bottom)
+    lineTo(left + radius, bottom)
+    quadTo(left, bottom, left, bottom - radius)
+    lineTo(left, top + radius)
+    quadTo(left, top, left + radius, top)
+    close()
+}
+
 /**
  * 键盘调节图标：中间“工”，左右各一个向外指的三角形。
- * 与文本编辑的铅笔图标区分开，避免工具栏里两个入口看起来一样。
+ *
+ * 全部使用实心圆角块，重量与工具栏里的 Material Rounded 图标一致；
+ * 之前用细描边画“工”会显得比旁边图标轻，像是另一套图标风格。
  */
 private val KeyboardResizeIcon: ImageVector = ImageVector.Builder(
     name = "KeyboardResize",
@@ -45,30 +66,20 @@ private val KeyboardResizeIcon: ImageVector = ImageVector.Builder(
     viewportWidth = 24f,
     viewportHeight = 24f,
 ).apply {
-    // 左右三角形箭头（向外，表示横向调节）
     path(fill = SolidColor(Color.Black)) {
-        moveTo(2.4f, 12f)
-        lineTo(6.2f, 8.6f)
-        lineTo(6.2f, 15.4f)
+        // 中间“工”：上下横杠 + 中间竖杠，实心圆角
+        roundedRect(6.6f, 6.4f, 17.4f, 9.0f, 1.1f)
+        roundedRect(6.6f, 15.0f, 17.4f, 17.6f, 1.1f)
+        roundedRect(10.8f, 6.4f, 13.2f, 17.6f, 1.1f)
+        // 左右向外指的三角形箭头
+        moveTo(1.6f, 12f)
+        lineTo(6.4f, 8f)
+        lineTo(6.4f, 16f)
         close()
-        moveTo(21.6f, 12f)
-        lineTo(17.8f, 8.6f)
-        lineTo(17.8f, 15.4f)
+        moveTo(22.4f, 12f)
+        lineTo(17.6f, 8f)
+        lineTo(17.6f, 16f)
         close()
-    }
-    // 中间“工”字
-    path(
-        stroke = SolidColor(Color.Black),
-        strokeLineWidth = 1.8f,
-        strokeLineCap = StrokeCap.Round,
-        strokeLineJoin = StrokeJoin.Round,
-    ) {
-        moveTo(7.2f, 7.2f)
-        lineTo(16.8f, 7.2f)
-        moveTo(7.2f, 16.8f)
-        lineTo(16.8f, 16.8f)
-        moveTo(12f, 7.2f)
-        lineTo(12f, 16.8f)
     }
 }.build()
 
