@@ -71,9 +71,26 @@ class SymbolHintRuntimeDeviceTest {
             com.kingzcheung.xime.keyboard.GestureAction.SMART_QUOTE,
             xLongPress?.values?.firstOrNull()?.action,
         )
-        // C 的智能引号动作要在（排在符号后面）
+        // C/Z 长按第一项必须与键面角标一致（. / 、），智能引号排在后面
+        val cFirst = longPress?.values?.firstOrNull()
+        assertEquals(com.kingzcheung.xime.keyboard.GestureAction.COMMIT, cFirst?.action)
+        assertEquals(KeysConfigHelper.getSwipeUpLabel("c"), cFirst?.label)
+        assertEquals(".", cFirst?.label)
+        assertEquals("。", cFirst?.value)
         org.junit.Assert.assertTrue(
             longPress!!.values.drop(1).any { it.action == com.kingzcheung.xime.keyboard.GestureAction.SMART_QUOTE },
+        )
+
+        val zLongPress = KeysConfigHelper.longPressForStyle("z")
+        val zFirst = zLongPress?.values?.firstOrNull()
+        assertEquals(com.kingzcheung.xime.keyboard.GestureAction.COMMIT, zFirst?.action)
+        assertEquals(KeysConfigHelper.getSwipeUpLabel("z"), zFirst?.label)
+        assertEquals("、", zFirst?.label)
+        assertEquals("、", zFirst?.value)
+        org.junit.Assert.assertTrue(
+            zLongPress!!.values.drop(1).any {
+                it.action == com.kingzcheung.xime.keyboard.GestureAction.SMART_SINGLE_QUOTE
+            },
         )
     }
 }

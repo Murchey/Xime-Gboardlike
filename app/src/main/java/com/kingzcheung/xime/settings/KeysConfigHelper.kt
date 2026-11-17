@@ -2542,11 +2542,8 @@ object KeysConfigHelper {
         val original = getKeyGesture(key, isAsciiMode)?.longPress ?: return null
         val ctx = com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext ?: return original
         val hint = symbolHintOverride(ctx, key) ?: return original
-        // 智能引号（C 的 “”、Z 的 ‘’）保持原样：长按一次开引号、再一次闭引号
-        val firstAction = original.values.firstOrNull()?.action
-        if (firstAction == GestureAction.SMART_QUOTE || firstAction == GestureAction.SMART_SINGLE_QUOTE) {
-            return original
-        }
+        // 长按第一项必须是键面角标上的符号：配置还没按新风格重载时，C/Z 的第一项
+        // 仍是智能引号（“”/‘’），直接 return 会让长按结果和角标对不上。
         // Gboard 风格里带引号的键（x 的 "）也要能左右交替，否则只会重复同一个引号
         val smartQuoteAction = when (hint) {
             "\"" -> GestureAction.SMART_QUOTE
