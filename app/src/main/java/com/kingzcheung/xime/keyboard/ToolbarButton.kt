@@ -22,10 +22,10 @@ import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.PictureInPicture
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Gesture
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.ZoomOutMap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -54,31 +54,31 @@ private fun PathBuilder.roundedRect(
 }
 
 /**
- * 键盘调节图标：中间“工”，左右各一个向外指的三角形。
+ * 文本选择编辑图标：中间“工”，左右各一个向外指的三角形。
  *
  * 全部使用实心圆角块，重量与工具栏里的 Material Rounded 图标一致；
- * 之前用细描边画“工”会显得比旁边图标轻，像是另一套图标风格。
+ * “工”上下拉高，强调这是文本选择/编辑入口，而不是键盘尺寸调节。
  */
-private val KeyboardResizeIcon: ImageVector = ImageVector.Builder(
-    name = "KeyboardResize",
+private val TextSelectionIcon: ImageVector = ImageVector.Builder(
+    name = "TextSelection",
     defaultWidth = 24.dp,
     defaultHeight = 24.dp,
     viewportWidth = 24f,
     viewportHeight = 24f,
 ).apply {
     path(fill = SolidColor(Color.Black)) {
-        // 中间“工”：上下横杠 + 中间竖杠，实心圆角
-        roundedRect(6.6f, 6.4f, 17.4f, 9.0f, 1.1f)
-        roundedRect(6.6f, 15.0f, 17.4f, 17.6f, 1.1f)
-        roundedRect(10.8f, 6.4f, 13.2f, 17.6f, 1.1f)
+        // 中间“工”：上下横杠 + 中间竖杠，实心圆角；上下拉高
+        roundedRect(6.6f, 4.6f, 17.4f, 7.4f, 1.1f)
+        roundedRect(6.6f, 16.6f, 17.4f, 19.4f, 1.1f)
+        roundedRect(10.8f, 4.6f, 13.2f, 19.4f, 1.1f)
         // 左右向外指的三角形箭头
         moveTo(1.6f, 12f)
-        lineTo(6.4f, 8f)
-        lineTo(6.4f, 16f)
+        lineTo(6.4f, 7.2f)
+        lineTo(6.4f, 16.8f)
         close()
         moveTo(22.4f, 12f)
-        lineTo(17.6f, 8f)
-        lineTo(17.6f, 16f)
+        lineTo(17.6f, 7.2f)
+        lineTo(17.6f, 16.8f)
         close()
     }
 }.build()
@@ -96,15 +96,16 @@ enum class ToolbarButton(
     SYMBOL("symbol", tr(R.string.s_fuhao), Icons.Rounded.Paid),
     FLOAT("float", tr(R.string.s_xuanfu), Icons.Rounded.PictureInPicture),
 
-    /** 键盘尺寸调节：可加入顶部工具栏，与文本编辑的铅笔图标区分。 */
-    KEYBOARD_RESIZE("keyboard_resize", tr(R.string.s_jianpandiaojie), KeyboardResizeIcon),
+    /** 键盘尺寸调节：用缩放箭头图标，和文本选择编辑的“工”字图标区分。 */
+    KEYBOARD_RESIZE("keyboard_resize", tr(R.string.s_jianpandiaojie), Icons.Rounded.ZoomOutMap),
     SELECT_ALL("select_all", tr(R.string.s_quanxuan), Icons.Rounded.SelectAll),
     COPY("copy", tr(R.string.s_fuzhi), Icons.Rounded.ContentCopy),
     PASTE("paste", tr(R.string.s_zhantie), Icons.Rounded.ContentPaste),
     HOME("home", tr(R.string.s_duanshou), Icons.Rounded.FirstPage),
     END("end", tr(R.string.s_duanwei), Icons.AutoMirrored.Rounded.LastPage),
     HANDWRITING_LOOKUP("handwriting_lookup", tr(R.string.s_shouxiezhaozi), Icons.Outlined.Gesture),
-    EDIT("edit", tr(R.string.s_bianji), Icons.Rounded.Edit),
+    /** 文本选择编辑：使用“工 + 左右三角”的专用图标。 */
+    EDIT("edit", tr(R.string.s_bianji), TextSelectionIcon),
     VOICE("voice", tr(R.string.s_yuyin), Icons.Rounded.Mic),
 
     /** 单手模式：点一次进入（默认靠右），再点一次退出；可加入顶部快捷栏。 */

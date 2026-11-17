@@ -50,6 +50,12 @@ class ToolbarButtonAvailabilityTest {
     }
 
     @Test
+    fun `工字图标用于文本选择编辑而不是键盘调节`() {
+        assertEquals("TextSelection", ToolbarButton.EDIT.icon.name)
+        assertEquals("Rounded.ZoomOutMap", ToolbarButton.KEYBOARD_RESIZE.icon.name)
+    }
+
+    @Test
     fun `键盘调节按钮可以从工具栏偏好解析`() {
         assertEquals(ToolbarButton.KEYBOARD_RESIZE, ToolbarButton.fromId("keyboard_resize"))
     }
