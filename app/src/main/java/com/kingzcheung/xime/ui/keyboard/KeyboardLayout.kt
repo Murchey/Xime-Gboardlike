@@ -2182,7 +2182,7 @@ fun KeyboardRowWithConfig(
             val swipeUpKeyLabel = if (swipeUpDisplay == DisplayMode.BUBBLE) "" else rawSwipeUpLabel
             val swipeUpText = if (swipeUpBubble) rawSwipeUpLabel else null
             val swipeUpCommitValue = gboardHint?.let {
-                if (isAsciiMode) it else KeysConfigHelper.chineseSymbolFor(it)
+                KeysConfigHelper.symbolCommitValue(key, it, isAsciiMode)
             } ?: KeysConfigHelper.getSwipeUpCommitValue(key, isAsciiMode)
             val swipeDownRaw = KeysConfigHelper.getKeyGesture(key, isAsciiMode)?.swipeDown
             val swipeDownLabel = swipeDownRaw?.label?.takeIf { it.isNotEmpty() }

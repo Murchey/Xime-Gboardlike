@@ -2509,13 +2509,23 @@ object KeysConfigHelper {
         else -> symbol
     }
 
-    /** 供渲染侧使用：中文模式把 ASCII 符号换成中文标点。 */
-    fun chineseSymbolFor(symbol: String): String = chineseSymbol(symbol)
+    /**
+     * Gboard 符号的中文模式上屏值。
+     *
+     * c 键的句号是例外：用户明确要求 c 键使用英文句号，即使中文模式也保持 `.`；
+     * 其余符号仍按中文标点规则转换（n→！、m→？、b→；等）。
+     */
+    fun symbolCommitValue(key: String, hint: String, isAsciiMode: Boolean): String =
+        if (isAsciiMode || (hint == "." && key.firstOrNull()?.lowercaseChar() == 'c')) {
+            hint
+        } else {
+            chineseSymbol(hint)
+        }
 
-    /** Gboard 风格下该键上屏的值：中文模式用中文标点，其它原样。 */
+    /** Gboard 风格下该键上屏的值：中文模式用中文标点，c 的句号保持英文。 */
     private fun symbolHintValue(ctx: Context, key: String, isAsciiMode: Boolean): String? {
         val hint = symbolHintOverride(ctx, key) ?: return null
-        return if (isAsciiMode) hint else chineseSymbol(hint)
+        return symbolCommitValue(key, hint, isAsciiMode)
     }
 
     /**

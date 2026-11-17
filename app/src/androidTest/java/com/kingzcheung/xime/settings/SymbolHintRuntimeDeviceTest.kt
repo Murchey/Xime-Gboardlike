@@ -76,7 +76,10 @@ class SymbolHintRuntimeDeviceTest {
         assertEquals(com.kingzcheung.xime.keyboard.GestureAction.COMMIT, cFirst?.action)
         assertEquals(KeysConfigHelper.getSwipeUpLabel("c"), cFirst?.label)
         assertEquals(".", cFirst?.label)
-        assertEquals("。", cFirst?.value)
+        // c 键的句号按用户要求保持英文半角，不参与中文标点转换
+        assertEquals(".", cFirst?.value)
+        assertEquals(".", KeysConfigHelper.getSwipeUpCommitValue("c", false))
+        assertEquals(".", KeysConfigHelper.swipeUpActionForDisplay("c")?.value)
         org.junit.Assert.assertTrue(
             longPress!!.values.drop(1).any { it.action == com.kingzcheung.xime.keyboard.GestureAction.SMART_QUOTE },
         )
