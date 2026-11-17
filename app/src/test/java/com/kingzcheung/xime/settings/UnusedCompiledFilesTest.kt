@@ -38,4 +38,28 @@ class UnusedCompiledFilesTest {
         )
         assertEquals(emptyList<String>(), doomed)
     }
+
+    @Test
+    fun removesDictionaryTableWhenNoEnabledSchemaMentionsIt() {
+        // t9 停用后，pinyin_simp 没有 schema 文件，旧规则永远删不掉它的 table
+        val doomed = SchemaManager.unusedDictionaryArtifacts(
+            files = listOf("pinyin_simp.table.bin", "pinyin_simp.reverse.bin", "rime_ice.table.bin"),
+            dictionaryIds = setOf("pinyin_simp", "rime_ice"),
+            enabledSchemas = setOf("rime_ice"),
+            enabledSchemaText = "dictionary: rime_ice",
+        )
+        assertEquals(listOf("pinyin_simp.table.bin", "pinyin_simp.reverse.bin"), doomed)
+    }
+
+    @Test
+    fun keepsDictionaryTableMentionedByEnabledSchema() {
+        val files = listOf("pinyin_simp.table.bin", "melt_eng.table.bin")
+        val doomed = SchemaManager.unusedDictionaryArtifacts(
+            files = files,
+            dictionaryIds = setOf("pinyin_simp", "melt_eng"),
+            enabledSchemas = setOf("t9_pinyin", "rime_ice"),
+            enabledSchemaText = "dictionary: pinyin_simp\nmelt_eng:\n  dictionary: melt_eng",
+        )
+        assertEquals(emptyList<String>(), doomed)
+    }
 }

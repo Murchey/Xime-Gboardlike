@@ -315,6 +315,12 @@ object RimeConfigHelper {
             ?.map { it.name.removeSuffix(".schema.yaml") }
             ?.filter { it !in enabled && !enabledText.contains(it) }
             .orEmpty()
+        val dictionaryIds = rimeDir.listFiles { f -> f.isFile && f.name.endsWith(".dict.yaml") }
+            ?.map { it.name.removeSuffix(".dict.yaml") }?.toSet() ?: emptySet()
+        val buildNames = buildDir.listFiles()?.filter { it.isFile }?.map { it.name }.orEmpty()
+        val staleDictionaryArtifacts = SchemaManager.unusedDictionaryArtifacts(
+            buildNames, dictionaryIds, enabled, enabledText,
+        ).toSet()
         var freed = 0L
         var removed = 0
         for (name in stale) {
@@ -324,6 +330,14 @@ object RimeConfigHelper {
                     freed += len
                     removed++
                 }
+            }
+        }
+        for (name in staleDictionaryArtifacts) {
+            val f = File(buildDir, name)
+            val len = f.length()
+            if (f.delete()) {
+                freed += len
+                removed++
             }
         }
         if (removed > 0) {

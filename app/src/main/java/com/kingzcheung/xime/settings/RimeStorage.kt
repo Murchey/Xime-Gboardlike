@@ -21,6 +21,7 @@ object RimeStorage {
 
     private const val PREFS = "rime_storage"
     private const val KEY_CUSTOM_DIR = "custom_dir"
+    private const val BACKUP_PREFIX = "rime_default_backup_"
 
     fun defaultDir(context: Context): File = File(context.filesDir, "rime")
 
@@ -108,6 +109,8 @@ object RimeStorage {
         }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(KEY_CUSTOM_DIR, dest.absolutePath).apply()
+        // 符号链接已经生效，切换期间暂存的私有目录副本不再需要；留着会白占几十 MB。
+        deleteBackupDirs(context.filesDir)
     }
 
     @Synchronized
@@ -124,6 +127,50 @@ object RimeStorage {
         Files.deleteIfExists(default.toPath())
         if (!temp.renameTo(default)) error("恢复默认目录失败")
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY_CUSTOM_DIR).apply()
+        // 已成功回到私有目录，历史切换备份同样失去用途。
+        deleteBackupDirs(context.filesDir)
+    }
+
+    /**
+     * 清理数据目录切换时留在私有目录的旧副本（`rime_default_backup_*`）。
+     *
+     * 只在 `files/rime` 确实是指向可用目录的符号链接时执行：若链接缺失或目标不可用，
+     * 备份可能仍是唯一可恢复的数据，不能删。启动时调用一次即可覆盖旧版本遗留。
+     *
+     * @return 删除的备份目录数。
+     */
+    fun cleanupDefaultBackups(context: Context): Int {
+        val default = defaultDir(context)
+        val linkValid = Files.isSymbolicLink(default.toPath()) && default.isDirectory
+        if (!linkValid) return 0
+        return deleteBackupDirs(context.filesDir)
+    }
+
+    /** 列出可删除的切换备份目录；[linkValid] 为 false 时一个都不能删。 */
+    internal fun backupDirsToDelete(filesDir: File, linkValid: Boolean): List<File> {
+        if (!linkValid || !filesDir.isDirectory) return emptyList()
+        return filesDir.listFiles { f -> f.isDirectory && f.name.startsWith(BACKUP_PREFIX) }
+            ?.sortedBy { it.name }
+            .orEmpty()
+    }
+
+    private fun deleteBackupDirs(filesDir: File): Int {
+        var removed = 0
+        var freed = 0L
+        for (dir in backupDirsToDelete(filesDir, linkValid = true)) {
+            val size = dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+            if (dir.deleteRecursively()) {
+                removed++
+                freed += size
+            }
+        }
+        if (removed > 0) {
+            com.kingzcheung.xime.util.FileLogger.i(
+                "RimeStorage",
+                "removed " + removed + " stale rime backup dir(s), freed " + freed / 1024 / 1024 + "MB",
+            )
+        }
+        return removed
     }
 
     private fun copyTree(source: File, dest: File) {

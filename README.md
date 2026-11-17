@@ -185,7 +185,8 @@ Merged-key layouts (14 / 17 / 18 keys), same build:
    - **arm64-v8a**: Modern phones (recommended for most users)
    - **armeabi-v7a**: Older 32-bit phones
    - **x86_64**: Emulators
-   - **universal**: All architectures (larger file size)
+
+   > Universal APKs are no longer shipped: with native libraries kept uncompressed in the APK, a universal package would be more than twice the size of a per-ABI one. The four ABIs above cover real devices and emulators.
 
 2. Install the application
 3. Enable XimeGboard in system input method settings
@@ -196,7 +197,7 @@ Merged-key layouts (14 / 17 / 18 keys), same build:
 The APK is also distributed on Gitee, which is faster and more reliable from mainland China:
 
 - Repository: [https://gitee.com/Murchey/Xime-Gboardlike](https://gitee.com/Murchey/Xime-Gboardlike)
-- APKs: open the **Releases** page of that repository and download the latest build for your ABI (arm64-v8a / armeabi-v7a / x86_64 / universal), same choices as above.
+- APKs: open the **Releases** page of that repository and download the latest build for your ABI (arm64-v8a / armeabi-v7a / x86_64), same choices as above.
 
 GitHub and Gitee releases carry the same content — use whichever is easier to reach. If neither is stable for you, build from source below.
 

@@ -983,6 +983,26 @@ internal fun unusedCompiledFiles(
         COMPILED_ARTIFACT_SUFFIXES.any { name.endsWith(it) }
 }
 
+/**
+ * 纯函数：没有 schema 文件的"纯词典"编译产物（`pinyin_simp.table.bin` 之类）。
+ *
+ * 这类产物不归 [unusedCompiledFiles] 管：它只认 `*.schema.yaml` 的方案 id，
+ * 所以 t9 停用后 `pinyin_simp.table.bin` 会一直留着（实测 18.7MB）。
+ * 判定保守：词典名只要还出现在任一启用方案的 yaml 文本里就保留。
+ */
+internal fun unusedDictionaryArtifacts(
+    files: List<String>,
+    dictionaryIds: Set<String>,
+    enabledSchemas: Set<String>,
+    enabledSchemaText: String,
+): List<String> = files.filter { name ->
+    val id = name.substringBefore('.')
+    id in dictionaryIds &&
+        id !in enabledSchemas &&
+        !enabledSchemaText.contains(id) &&
+        (name.endsWith(".table.bin") || name.endsWith(".reverse.bin"))
+}
+
 /** 内置方案补齐版本：新增内置方案时 +1（见 `getEnabledSchemas`）。 */
 internal const val BUILTIN_SCHEMA_MERGE_VERSION = 7
 
@@ -1090,6 +1110,12 @@ internal val BUILTIN_SCHEMAS = listOf(
         val enabled = getEnabledSchemas(context).toSet()
         val schemaIds = rimeDir.listFiles { f -> f.isFile && f.name.endsWith(".schema.yaml") }
             ?.map { it.name.removeSuffix(".schema.yaml") }?.toSet() ?: emptySet()
+        val enabledText = buildString {
+            for (id in enabled) {
+                val f = File(rimeDir, "$id.schema.yaml")
+                if (f.isFile) runCatching { append(f.readText()) }
+            }
+        }
         val protectedDicts = enabled.mapNotNull { id ->
             runCatching {
                 File(rimeDir, "$id.schema.yaml").readText()
@@ -1099,8 +1125,11 @@ internal val BUILTIN_SCHEMAS = listOf(
                     ?.takeIf { it.isNotEmpty() }
             }.getOrNull()
         }.toSet()
+        val dictionaryIds = rimeDir.listFiles { f -> f.isFile && f.name.endsWith(".dict.yaml") }
+            ?.map { it.name.removeSuffix(".dict.yaml") }?.toSet() ?: emptySet()
         val names = buildDir.listFiles()?.filter { it.isFile }?.map { it.name } ?: return 0
-        val doomed = unusedCompiledFiles(names, enabled, schemaIds, protectedDicts)
+        val doomed = unusedCompiledFiles(names, enabled, schemaIds, protectedDicts) +
+            unusedDictionaryArtifacts(names, dictionaryIds, enabled, enabledText)
         var removed = 0
         for (name in doomed) {
             if (File(buildDir, name).delete()) removed++

@@ -199,6 +199,8 @@ class XimeApplication : Application(), ImageLoaderFactory {
         
         applicationScope.launch {
             try {
+                // 旧版本切换数据目录后会留下整份私有副本（实测 69MB），链接有效时已无用途
+                com.kingzcheung.xime.settings.RimeStorage.cleanupDefaultBackups(this@XimeApplication)
                 val (userDataDir, sharedDataDir) = RimeConfigHelper.initializeRimeDataAsync(this@XimeApplication)
                 val engine = RimeEngine.getInstance()
                 engine.initialize(userDataDir, sharedDataDir)

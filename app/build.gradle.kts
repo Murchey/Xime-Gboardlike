@@ -62,13 +62,12 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // NDK 配置：与下面的 splits 共用 -PximeAbi，否则两者不一致会配置失败
+        // 只在单架构构建（-PximeAbi）时显式给 ndk.abiFilters；
+        // 多架构走下面的 splits，两者同时设置会被 AGP 判定为冲突。
         val ximeAbiOnly = project.providers.gradleProperty("ximeAbi").orNull
-        ndk {
-            abiFilters += if (ximeAbiOnly.isNullOrBlank()) {
-                listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-            } else {
-                ximeAbiOnly.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        if (!ximeAbiOnly.isNullOrBlank()) {
+            ndk {
+                abiFilters += ximeAbiOnly.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             }
         }
 
@@ -151,8 +150,11 @@ android {
 
     // 打包配置
     packaging {
+        // 原生库不再解压到 /data/app/.../lib：安装后只保留 APK 内一份。
+        // 代价是 APK 里的 .so 不压缩（arm64 包约 +16MB 下载体积），
+        // 但按 ABI 安装时整体占用反而少一份解压副本（约 -16MB），且省去安装解压时间。
         jniLibs {
-            useLegacyPackaging = true
+            useLegacyPackaging = false
         }
         // dex 保持压缩：classes.dex 原始 10.0MB、压缩后 4.6MB，省 5.4MB。
         // 代价是首次启动多一次 dexopt（minSdk 28 起系统会缓存）。
@@ -196,7 +198,9 @@ android {
             isEnable = project.providers.gradleProperty("ximeAbi").orNull.isNullOrBlank()
             reset()
             include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-            isUniversalApk = true
+            // 不再产出 universal：.so 不压缩后 universal 会到 200MB+，
+            // 安装体积比按 ABI 的包多一倍；四个 ABI 已覆盖真机与模拟器。
+            isUniversalApk = false
         }
     }
 }
@@ -204,7 +208,12 @@ android {
 android.applicationVariants.all {
     val appName = "XimeGboard"
     outputs.all {
-        val abi = filters.find { it.filterType.toString() == "ABI" }?.identifier ?: "universal"
+        // -PximeAbi 单架构构建时 splits 关闭、output 上没有 ABI filter，
+        // 用构建属性补出真实架构名，避免把 arm64 包命名成 universal。
+        val abi = filters.find { it.filterType.toString() == "ABI" }?.identifier
+            ?: project.providers.gradleProperty("ximeAbi").orNull
+                ?.split(',')?.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+            ?: "universal"
         (this as BaseVariantOutputImpl).outputFileName = "$appName-$versionName-$abi.apk"
     }
 }

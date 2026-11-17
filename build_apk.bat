@@ -69,7 +69,7 @@ echo.
 echo   arm64-v8a  - most modern phones
 echo   armeabi-v7a - older 32-bit ARM phones
 echo   x86_64 / x86 - emulators and x86 tablets
-echo   universal  - works everywhere, larger
+echo   universal 已取消：四个 ABI 已覆盖真机与模拟器
 echo.
 echo Note: these APKs use the public community certificate in app\keystore.properties.
 echo       Installable locally, but not suitable for app-store publishing.

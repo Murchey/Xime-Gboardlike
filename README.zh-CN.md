@@ -167,7 +167,8 @@
    - **arm64-v8a**: 适用于大多数现代手机（**绝大部分人的手机都是这个**）
    - **armeabi-v7a**: 适用于旧款32位手机
    - **x86_64**: 适用于模拟器
-   - **universal**: 包含所有架构，体积较大
+
+   > 不再提供 universal 包：原生库改为安装时不再解压后，universal 会比单架构包大出一倍多；四个 ABI 已覆盖真机与模拟器。
 
 2. 安装应用
 3. 在系统设置中启用 XimeGboard 输入法
@@ -178,7 +179,7 @@
 本分支在 Gitee 同步分发安装包，国内访问更快、更稳定：
 
 - 仓库：[https://gitee.com/Murchey/Xime-Gboardlike](https://gitee.com/Murchey/Xime-Gboardlike)
-- 安装包：到该仓库的 **发行版（Releases）** 页面下载与设备架构匹配的最新 APK，选择方式同上（arm64-v8a / armeabi-v7a / x86_64 / universal）。
+- 安装包：到该仓库的 **发行版（Releases）** 页面下载与设备架构匹配的最新 APK，选择方式同上（arm64-v8a / armeabi-v7a / x86_64）。
 
 GitHub 与 Gitee 的 Release 内容一致，任选其一即可；若两边都下载不稳定，也可以[从源码构建](#从源码构建)后自行安装。
 

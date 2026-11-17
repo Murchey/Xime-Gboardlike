@@ -5,7 +5,7 @@
 ## 1. 构建产物
 
 - [ ] `build_apk.bat` 两个包都出：`dist/full/XimeGboard-<ver>-<abi>-full.apk`、`dist/lite/...-lite.apk`
-- [ ] 两种包各自 5 个 ABI（arm64-v8a / armeabi-v7a / universal / x86 / x86_64）
+- [ ] 两种包各自 4 个 ABI（arm64-v8a / armeabi-v7a / x86 / x86_64；universal 已取消）
 - [ ] 检查 APK 内容：
   - `assets/models/predictive-text-small/` 只在 **full** 里出现；
   - `assets/gram/XimeGboard.gram` 两种包都有；
