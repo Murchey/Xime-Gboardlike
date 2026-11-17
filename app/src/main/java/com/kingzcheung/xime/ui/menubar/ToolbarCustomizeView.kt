@@ -72,6 +72,8 @@ fun ToolbarCustomizeView(
     /** 方案开关按钮（含导入方案自带开关），同样参与拖动排布。 */
     switchItems: List<ToolbarButtonItem.SchemaSwitch> = emptyList(),
     isSttEnabled: Boolean = true,
+    /** 浮动键盘 / 独立 IME 面板下键盘调节不可用，定制列表与候选栏同一口径隐藏。 */
+    canResizeKeyboard: Boolean = true,
     keyTextColor: Color,
     backgroundColor: Color,
     accentColor: Color,
@@ -90,6 +92,7 @@ fun ToolbarCustomizeView(
                 isSttEnabled = isSttEnabled,
                 hasHandwritingModel = { com.kingzcheung.xime.handwriting.HandwritingEngine.hasModel(context) },
                 isDebugLogEnabled = SettingsPreferences.isVerboseLoggingEnabled(context),
+                canResizeKeyboard = canResizeKeyboard,
             )
         }
         .map { ToolbarButtonItem.Builtin(it) }

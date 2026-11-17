@@ -203,6 +203,7 @@ fun MenuBar(
             state.isSttEnabled,
             { com.kingzcheung.xime.handwriting.HandwritingEngine.hasModel(context) },
             isDebugLogEnabled = SettingsPreferences.isVerboseLoggingEnabled(context),
+            canResizeKeyboard = state.canResizeKeyboard && !state.isFloatingMode,
         )
     }.map { b ->
         // 单手模式是"开关"：已开启时同一张卡片显示"退出单手模式"，图标换成四角箭头
@@ -285,9 +286,6 @@ fun MenuBar(
     }
     val candidateTools = orderedTools +
         (if (schemaVisible) emptyList() else listOf(schemaTool)) + buildList {
-        if (!state.isFloatingMode && state.canResizeKeyboard) {
-            add(MenuTool("sys_resize", tr(R.string.s_jianpandiaojie), rememberVectorPainter(ToolbarButton.EDIT.icon), action = callbacks.onKeyboardResize))
-        }
         add(MenuTool("sys_dark", darkLabel, rememberVectorPainter(ToolbarButton.SYMBOL.icon), action = callbacks.onToggleDarkMode))
         add(MenuTool("sys_deploy", tr(R.string.s_bushufangan), rememberVectorPainter(ToolbarButton.SCHEMA.icon), action = callbacks.onReloadConfig))
     }

@@ -1,5 +1,6 @@
 package com.kingzcheung.xime.keyboard
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -48,15 +49,32 @@ class ToolbarButtonAvailabilityTest {
         assertTrue(available(ToolbarButton.DEBUG_GLIDE, isSttEnabled = false, hasModel = false, debugLog = true))
     }
 
+    @Test
+    fun `键盘调节按钮可以从工具栏偏好解析`() {
+        assertEquals(ToolbarButton.KEYBOARD_RESIZE, ToolbarButton.fromId("keyboard_resize"))
+    }
+
+    @Test
+    fun `键盘调节按钮在可调节时可用`() {
+        assertTrue(available(ToolbarButton.KEYBOARD_RESIZE, canResize = true))
+    }
+
+    @Test
+    fun `键盘调节按钮在浮动或受限面板下不可用`() {
+        assertFalse(available(ToolbarButton.KEYBOARD_RESIZE, canResize = false))
+    }
+
     private fun available(
         button: ToolbarButton,
         isSttEnabled: Boolean = true,
         hasModel: Boolean = true,
         debugLog: Boolean = false,
+        canResize: Boolean = true,
     ) = isBuiltinToolbarButtonAvailable(
         button,
         isSttEnabled = isSttEnabled,
         hasHandwritingModel = { hasModel },
         isDebugLogEnabled = debugLog,
+        canResizeKeyboard = canResize,
     )
 }

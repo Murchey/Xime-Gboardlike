@@ -26,7 +26,51 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.unit.dp
+
+/**
+ * 键盘调节图标：中间“工”，左右各一个向外指的三角形。
+ * 与文本编辑的铅笔图标区分开，避免工具栏里两个入口看起来一样。
+ */
+private val KeyboardResizeIcon: ImageVector = ImageVector.Builder(
+    name = "KeyboardResize",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+).apply {
+    // 左右三角形箭头（向外，表示横向调节）
+    path(fill = SolidColor(Color.Black)) {
+        moveTo(2.4f, 12f)
+        lineTo(6.2f, 8.6f)
+        lineTo(6.2f, 15.4f)
+        close()
+        moveTo(21.6f, 12f)
+        lineTo(17.8f, 8.6f)
+        lineTo(17.8f, 15.4f)
+        close()
+    }
+    // 中间“工”字
+    path(
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 1.8f,
+        strokeLineCap = StrokeCap.Round,
+        strokeLineJoin = StrokeJoin.Round,
+    ) {
+        moveTo(7.2f, 7.2f)
+        lineTo(16.8f, 7.2f)
+        moveTo(7.2f, 16.8f)
+        lineTo(16.8f, 16.8f)
+        moveTo(12f, 7.2f)
+        lineTo(12f, 16.8f)
+    }
+}.build()
 
 enum class ToolbarButton(
     val id: String,
@@ -40,6 +84,9 @@ enum class ToolbarButton(
     QUICK_PHRASE("quick_phrase", tr(R.string.s_kuaijiefasong), Icons.Rounded.Quickreply),
     SYMBOL("symbol", tr(R.string.s_fuhao), Icons.Rounded.Paid),
     FLOAT("float", tr(R.string.s_xuanfu), Icons.Rounded.PictureInPicture),
+
+    /** 键盘尺寸调节：可加入顶部工具栏，与文本编辑的铅笔图标区分。 */
+    KEYBOARD_RESIZE("keyboard_resize", tr(R.string.s_jianpandiaojie), KeyboardResizeIcon),
     SELECT_ALL("select_all", tr(R.string.s_quanxuan), Icons.Rounded.SelectAll),
     COPY("copy", tr(R.string.s_fuzhi), Icons.Rounded.ContentCopy),
     PASTE("paste", tr(R.string.s_zhantie), Icons.Rounded.ContentPaste),
@@ -79,10 +126,13 @@ fun isBuiltinToolbarButtonAvailable(
     hasHandwritingModel: () -> Boolean,
     /** 调试日志总开关：关着时调试类按钮（滑动标记）不出现，避免误触日常使用。 */
     isDebugLogEnabled: Boolean = false,
+    /** 浮动键盘 / 独立 IME 面板等场景不能进入键盘调节，定制与显示都过滤掉。 */
+    canResizeKeyboard: Boolean = true,
 ): Boolean = when (button) {
     ToolbarButton.HANDWRITING_LOOKUP -> hasHandwritingModel()
     ToolbarButton.VOICE -> isSttEnabled
     ToolbarButton.DEBUG_GLIDE -> isDebugLogEnabled
+    ToolbarButton.KEYBOARD_RESIZE -> canResizeKeyboard
     else -> true
 }
 

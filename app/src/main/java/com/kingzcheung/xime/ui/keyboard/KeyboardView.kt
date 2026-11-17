@@ -490,6 +490,7 @@ fun KeyboardView(
                                 com.kingzcheung.xime.handwriting.HandwritingEngine.hasModel(toolbarContext)
                             },
                             isDebugLogEnabled = SettingsPreferences.isVerboseLoggingEnabled(toolbarContext),
+                            canResizeKeyboard = !state.isFloatingMode && !state.isHostConstrained,
                         )
                     ) {
                         return@mapNotNull null
@@ -509,6 +510,7 @@ fun KeyboardView(
                             ToolbarButton.HOME -> ({ callbacks.onToolbarEditingAction?.invoke("home") })
                             ToolbarButton.END -> ({ callbacks.onToolbarEditingAction?.invoke("end") })
                             ToolbarButton.FLOAT -> ({ callbacks.onFloatingModeChange?.invoke(!state.isFloatingMode) })
+                            ToolbarButton.KEYBOARD_RESIZE -> ({ callbacks.onKeyboardResize?.invoke() })
                             ToolbarButton.ONE_HANDED -> ({ callbacks.onToggleOneHanded?.invoke() })
                             ToolbarButton.HANDWRITING_LOOKUP -> ({ isHandwritingLookup = !isHandwritingLookup })
                             ToolbarButton.EDIT -> ({ viewModel.showOverlay(OverlayRoute.Edit) })
@@ -1525,6 +1527,7 @@ fun KeyboardView(
                                         ToolbarButton.HOME -> callbacks.onToolbarEditingAction?.invoke("home")
                                         ToolbarButton.END -> callbacks.onToolbarEditingAction?.invoke("end")
                                         ToolbarButton.FLOAT -> callbacks.onFloatingModeChange?.invoke(!state.isFloatingMode)
+                                        ToolbarButton.KEYBOARD_RESIZE -> callbacks.onKeyboardResize?.invoke()
                                         ToolbarButton.ONE_HANDED -> callbacks.onToggleOneHanded?.invoke()
                                         ToolbarButton.HANDWRITING_LOOKUP -> callbacks.onToolbarEditingAction?.invoke("handwriting_lookup")
                                         ToolbarButton.EDIT -> viewModel.showOverlay(OverlayRoute.Edit)
@@ -1606,6 +1609,7 @@ fun KeyboardView(
                         pluginButtons = state.toolbarPluginButtons,
                         switchItems = state.schemaSwitches.map { it.asToolbarItem() },
                         isSttEnabled = state.isSttEnabled,
+                        canResizeKeyboard = !state.isFloatingMode && !state.isHostConstrained,
                         keyTextColor = keyTextColor,
                         backgroundColor = keyboardBgColor,
                         accentColor = accentColor,
