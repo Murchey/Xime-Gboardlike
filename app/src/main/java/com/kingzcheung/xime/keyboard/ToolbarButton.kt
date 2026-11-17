@@ -67,18 +67,19 @@ private val TextSelectionIcon: ImageVector = ImageVector.Builder(
     viewportHeight = 24f,
 ).apply {
     path(fill = SolidColor(Color.Black)) {
-        // 中间“工”：上下横杠 + 中间竖杠，实心圆角；上下拉高
-        roundedRect(6.6f, 4.6f, 17.4f, 7.4f, 1.1f)
-        roundedRect(6.6f, 16.6f, 17.4f, 19.4f, 1.1f)
-        roundedRect(10.8f, 4.6f, 13.2f, 19.4f, 1.1f)
-        // 左右向外指的三角形箭头
+        // 中间“工”：上下横杠 + 中间竖杠，实心圆角；整体比上一版细 1dp
+        // 横杠 2.8 → 1.8，竖杠 2.4 → 1.4，外轮廓高度保持不变
+        roundedRect(6.6f, 4.6f, 17.4f, 6.4f, 0.9f)
+        roundedRect(6.6f, 17.6f, 17.4f, 19.4f, 0.9f)
+        roundedRect(11.3f, 4.6f, 12.7f, 19.4f, 0.7f)
+        // 左右向外指的三角形箭头，高度同步收 1dp
         moveTo(1.6f, 12f)
-        lineTo(6.4f, 7.2f)
-        lineTo(6.4f, 16.8f)
+        lineTo(6.4f, 7.7f)
+        lineTo(6.4f, 16.3f)
         close()
         moveTo(22.4f, 12f)
-        lineTo(17.6f, 7.2f)
-        lineTo(17.6f, 16.8f)
+        lineTo(17.6f, 7.7f)
+        lineTo(17.6f, 16.3f)
         close()
     }
 }.build()
