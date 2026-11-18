@@ -161,7 +161,14 @@ class VoiceRecognitionHandler(
         val providerName = resolveProviderName()
         onStateChanged(getState().copy(voicePluginName = providerName))
 
-        speechRecognitionManager.startRecognition()
+        val started = speechRecognitionManager.startRecognition()
+        if (!started) {
+            // 管理器判定"上一段还在跑"而没接受请求：立刻恢复键盘，避免面板停在"正在聆听"
+            // 却没有任何识别（用户感知就是"再按没反应"）。
+            android.util.Log.w(TAG, "startRecognition rejected by manager, restoring keyboard")
+            onVoiceComplete()
+            return false
+        }
         return true
     }
 

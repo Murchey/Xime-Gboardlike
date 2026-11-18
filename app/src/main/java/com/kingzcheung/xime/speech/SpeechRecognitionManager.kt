@@ -87,8 +87,13 @@ class SpeechRecognitionManager(private val context: Context) {
     private var preStartedRecord: AudioRecord? = null
     private val preStartTimeoutRunnable = Runnable { cancelPreStart() }
 
+    /** 上一段录音线程仍在收尾时的重试计数与间隔（zipformer 收尾解码可能持续数秒）。 */
+    private var deferRetries = 0
+    private val DEFER_DELAY_MS = 250L
+    private val MAX_DEFER_RETRIES = 40
+
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    fun startRecognition() {
+    fun startRecognition(): Boolean {
         // 有界等待：加载线程若异常退出而没复位 isPreloading，无限 wait 会把调用线程
         // （主线程）永久卡住，整块键盘表现为"按什么都没反应"，只能杀进程恢复。
         var waited = 0L
@@ -98,7 +103,7 @@ class SpeechRecognitionManager(private val context: Context) {
                     preloadLock.wait(200L)
                 } catch (_: InterruptedException) {
                     Thread.currentThread().interrupt()
-                    return
+                    return false
                 }
                 waited += 200L
             }
@@ -106,14 +111,28 @@ class SpeechRecognitionManager(private val context: Context) {
         if (isPreloading) {
             FileLogger.w(TAG, "preload still running after " + PRELOAD_WAIT_MS + "ms, defer start")
             mainHandler.postDelayed({ if (!isPreloading) startRecognition() }, 300L)
-            return
+            return true
         }
         // 线程已结束但引用没清（早期 AudioRecord/后端失败路径）：按"未在运行"处理并复位，
         // 否则后续每次 start 都会被判成 alreadyRunning 永远忽略（症状：只能语音一次）。
         val thread = recordingThread
         if (thread != null && !thread.isAlive) {
-            FileLogger.w(TAG, "stale recording thread cleared")
+            Log.w(TAG, "stale recording thread cleared")
             recordingThread = null
+        } else if (thread != null && thread.stopRequested) {
+            // 上一段录音线程还在收尾（zipformer 解码器 stop 可能持续数秒）。
+            // 直接忽略会把这次"再按"永久丢掉，面板停在"正在聆听"却没有任何识别结果。
+            if (deferRetries < MAX_DEFER_RETRIES) {
+                deferRetries++
+                Log.i(TAG, "previous session stopping, defer start (retry=" + deferRetries + ")")
+                mainHandler.postDelayed({ startRecognition() }, DEFER_DELAY_MS)
+                return true
+            }
+            Log.w(TAG, "previous session still stopping after retries, superseding")
+            recordingThread = null
+            deferRetries = 0
+        } else {
+            deferRetries = 0
         }
 
         // 系统引擎不建录音线程（recordingThread 恒为 null），
@@ -123,14 +142,15 @@ class SpeechRecognitionManager(private val context: Context) {
         } else {
             recordingThread != null
         }
-        FileLogger.i(
+        Log.i(
             TAG,
             "startRecognition: thread=" + (recordingThread?.isAlive == true) +
+                ", stopping=" + (recordingThread?.stopRequested == true) +
                 ", backend=" + (backend != null) + ", preloading=" + isPreloading
         )
         if (alreadyRunning) {
-            FileLogger.w(TAG, "Recognition already running, ignoring start request")
-            return
+            Log.w(TAG, "Recognition already running, ignoring start request")
+            return false
         }
 
         FileLogger.i(TAG, "Starting speech recognition")
@@ -141,9 +161,11 @@ class SpeechRecognitionManager(private val context: Context) {
             FileLogger.i(TAG, "ASR backend not loaded, loading on demand")
             synchronized(preloadLock) {
                 if (loadingInProgress) {
-                    // 已有加载进行中（如设置开启触发的预加载），等待其完成
+                    // 已有加载进行中（如设置开启触发的预加载）：加载结束后再启动录音，
+                    // 不能直接 return——那会让面板停在"正在聆听"却永远没有录音线程。
                     loadingCancelled = false
-                    return
+                    mainHandler.postDelayed({ if (!isPreloading) startRecognition() }, 200L)
+                    return true
                 }
                 loadingInProgress = true
                 loadingCancelled = false
@@ -176,10 +198,11 @@ class SpeechRecognitionManager(private val context: Context) {
                     }
                 }
             }.start()
-            return
+            return true
         }
 
         startRecording()
+        return true
     }
 
     private fun startRecording() {
