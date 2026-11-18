@@ -126,8 +126,8 @@ data class KeyboardColorScheme(
      * 已选中的用户仍能正常使用（getThemeById 可解析），只是选择器里不再重复出现。
      */
     val hidden: Boolean = false,
-    /** 是否显著标注第一个候选词；自定义配色可关闭。 */
-    val highlightFirstCandidate: Boolean = true,
+    /** 是否显著标注第一个候选词；所有内置主题默认关闭。 */
+    val highlightFirstCandidate: Boolean = false,
 )
 
 object KeyboardThemes {
@@ -170,8 +170,8 @@ object KeyboardThemes {
         light: ThemePalette,
         dark: ThemePalette,
         hidden: Boolean = false,
-        /** 是否显著标注第一个候选词；Gboard 系列关闭。 */
-        highlightFirstCandidate: Boolean = true,
+        /** 是否显著标注第一个候选词；所有内置主题默认关闭。 */
+        highlightFirstCandidate: Boolean = false,
     ): KeyboardColorScheme {
         // 功能键取主题的 tinted container：既有品牌色相，又不会像高饱和 accent 那样刺眼。
         val lightSpecial = light.container ?: light.specialKey
