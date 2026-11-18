@@ -6,9 +6,9 @@ import androidx.compose.ui.unit.dp
 /** 设置页统一尺寸令牌：所有页面共用，避免各页各写一套 padding。 */
 internal object SettingsDimens {
     val PageHorizontal = 16.dp
-    val GroupGap = 12.dp
+    val GroupGap = 16.dp
     val SectionGap = 24.dp
-    val CardCorner = 20.dp
+    val CardCorner = 24.dp
     val RowHorizontal = 16.dp
     val RowVerticalSingle = 14.dp
     val RowVerticalTwoLine = 12.dp

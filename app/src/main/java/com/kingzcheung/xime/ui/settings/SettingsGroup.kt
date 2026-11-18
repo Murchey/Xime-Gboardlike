@@ -12,9 +12,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 /**
- * 设置分组：分组标题 + 紧贴其下的设置行，直接平铺在页面底色上（Android 原生设置风格）。
+ * 设置分组：分组标题 + 一张大圆角卡片（Gboard 新版设置风格）。
  *
- * 不用卡片包裹、不画分隔线：分组靠"主色标题 + 上下间距"区分。
+ * 行不再平铺在页面底色上：整组包进 surfaceContainer 卡片，圆角取 [SettingsDimens.CardCorner]，
+ * 分组之间靠 GroupGap 拉开；标题仍是主色小字，贴在卡片上方。
  */
 @Composable
 fun SettingsGroup(
@@ -31,7 +32,13 @@ fun SettingsGroup(
                 modifier = Modifier.padding(SettingsGroupHeaderPadding),
             )
         }
-        Column(modifier = Modifier.fillMaxWidth(), content = { content() })
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(SettingsDimens.CardCorner),
+            color = settingsCardContainerColor(),
+        ) {
+            Column(modifier = Modifier.fillMaxWidth(), content = { content() })
+        }
     }
 }
 
@@ -43,7 +50,7 @@ fun SettingsCard(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(SettingsDimens.CardCorner),
         color = settingsCardContainerColor(),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) { content() }
