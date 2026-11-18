@@ -884,6 +884,16 @@ object SettingsPreferences {
         getPrefs(context).edit().putString(KEY_GRID_DEPLOY_HISTORY, ids.joinToString(",")).apply()
     }
 
+    /** 用户词库合并（多本 → 一本）迁移标记版本，0 = 未迁移。 */
+    const val KEY_USER_DICT_MERGE_VERSION = "user_dict_merge_version"
+
+    fun getUserDictMergeVersion(context: Context): Int =
+        getPrefs(context).getInt(KEY_USER_DICT_MERGE_VERSION, 0)
+
+    fun setUserDictMergeVersion(context: Context, version: Int) {
+        getPrefs(context).edit().putInt(KEY_USER_DICT_MERGE_VERSION, version).apply()
+    }
+
     /** 记录为多本词库（保留开关，默认关；当前版本不生效，词库始终记录为一本）。 */
     const val KEY_USER_DICT_MULTI_BOOK = "user_dict_multi_book"
 

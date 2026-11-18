@@ -122,6 +122,7 @@ import com.kingzcheung.xime.settings.SchemaConfigHelper
 import com.kingzcheung.xime.settings.SchemaManager
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.settings.SyncManager
+import com.kingzcheung.xime.settings.UserDictMigration
 import com.kingzcheung.xime.settings.WubiSchemas
 import com.kingzcheung.xime.ui.keyboard.KeyboardView
 import com.kingzcheung.xime.ui.keyboard.isT9Schema
@@ -1134,6 +1135,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     FileLogger.w(TAG, "initRimeEngine: Session not ready after 60s, continuing in background")
                 }
                 notifyDeploymentStatus(false, "")
+
+                // 升级到「用户词库记录为一本」后的首次启动：把旧的多本 userdb 合并进统一词库
+                runCatching { UserDictMigration.migrateIfNeeded(this@XimeInputMethodService) }
+                    .onFailure { FileLogger.w(TAG, "user dict migration failed", it) }
 
                 // 恢复备份时若引擎未就绪，自造词快照只落了盘没合并：此处补做一次
                 // （librime 按时间戳合并，不会吃掉本机新词）。失败保留标记，下次引擎就绪再试。
