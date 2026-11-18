@@ -165,10 +165,16 @@ data class KeyboardUiState(
 internal fun symbolBackSkipsPanel(
     route: com.kingzcheung.xime.keyboard.OverlayRoute,
     behind: com.kingzcheung.xime.keyboard.KeyboardPage,
+    keyboardState: KeyboardLayoutState,
     enabled: Boolean,
-): Boolean = enabled &&
-    route is com.kingzcheung.xime.keyboard.OverlayRoute.Symbol &&
-    behind is com.kingzcheung.xime.keyboard.KeyboardPage.Panel
+): Boolean {
+    if (!enabled || route !is com.kingzcheung.xime.keyboard.OverlayRoute.Symbol) return false
+    // 数字/符号键盘有两种入口：面板页（?123 面板）和主键盘分支的 Number/CommonSymbol 布局。
+    // 两种都要识别，否则从后者进入符号页时返回仍落在数字键盘上。
+    if (behind is com.kingzcheung.xime.keyboard.KeyboardPage.Panel) return true
+    return behind is com.kingzcheung.xime.keyboard.KeyboardPage.Main &&
+        (keyboardState is KeyboardLayoutState.Number || keyboardState is KeyboardLayoutState.CommonSymbol)
+}
 
 class KeyboardViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -675,14 +681,21 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
             val skipPanel = symbolBackSkipsPanel(
                 route = current.route,
                 behind = current.behind,
+                keyboardState = _keyboardState.value,
                 enabled = SettingsPreferences.isSymbolCancelSecondBack(getApplication()),
             )
             _page.value = current.behind
-            if (skipPanel) {
-                // 符号页是从数字/符号键盘进的：直接回主键盘，不留在数字/符号键盘（二次返回）
-                exitPanel()
-            } else {
-                _syncViewState()
+            when {
+                // 符号页从面板页进入：exitPanel 恢复进面板前的主布局
+                skipPanel && current.behind is KeyboardPage.Panel -> exitPanel()
+                // 符号页从「主键盘分支的数字/符号布局」进入：切回字母主布局
+                skipPanel -> {
+                    val saved = _savedKbStateBeforePanel ?: _lastMainLayout.value
+                    _savedKbStateBeforePanel = null
+                    _keyboardState.value = saved
+                    _syncViewState()
+                }
+                else -> _syncViewState()
             }
         }
     }
