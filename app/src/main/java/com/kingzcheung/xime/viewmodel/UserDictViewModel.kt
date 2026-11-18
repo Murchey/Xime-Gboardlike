@@ -10,6 +10,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.kingzcheung.xime.settings.DictEntry
 import com.kingzcheung.xime.settings.SchemaManager
+import com.kingzcheung.xime.settings.UserDictBookManager
 import com.kingzcheung.xime.settings.UserDictIoManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,7 +41,14 @@ data class UserDictUiState(
     /** 多选模式：词条行左侧出现勾选框，点击整行切换选中而不触发删除。 */
     val isSelectionMode: Boolean = false,
     /** 已选词条的身份键（词 + 编码），切词库/刷新时清空。 */
-    val selectedKeys: Set<String> = emptySet()
+    val selectedKeys: Set<String> = emptySet(),
+    /** 当前记录词库（所有方案共用这一本）。 */
+    val activeBook: String = "",
+    /** 词库本管理操作进行中（新建/删除/切换都涉及引擎与部署）。 */
+    val isBookBusy: Boolean = false,
+    /** 词库本管理的一次性提示。 */
+    val bookMessage: String? = null,
+    val bookMessageIsError: Boolean = false
 )
 
 /**
@@ -66,17 +74,23 @@ class UserDictViewModel(application: Application) : AndroidViewModel(application
             if (_uiState.value.dicts.isEmpty()) {
                 _uiState.update { it.copy(isLoading = true) }
             }
-            val (dicts, defaultDict) = withContext(Dispatchers.IO) {
+            val (dicts, defaultDict, activeBook) = withContext(Dispatchers.IO) {
                 val listed = UserDictIoManager.list(context)
                 // 默认看当前方案引用的词典（wubi86 方案 → wubi86.userdb），取不到就用列表第一本
                 val preferred = SchemaManager.getEnabledSchemas(context).firstOrNull()
                     ?.let { SchemaManager.getReferencedDictName(context, it) }
-                listed to UserDictIoManager.pickDefaultDict(listed.map { it.name }, preferred)
+                Triple(
+                    listed,
+                    UserDictIoManager.pickDefaultDict(listed.map { it.name }, preferred),
+                    UserDictBookManager.active(context),
+                )
             }
             val current = _uiState.value.selectedDict
             val keep = current?.takeIf { name -> dicts.any { it.name == name } }
             val target = keep ?: defaultDict
-            _uiState.update { it.copy(dicts = dicts, isLoading = false, selectedDict = target) }
+            _uiState.update {
+                it.copy(dicts = dicts, isLoading = false, selectedDict = target, activeBook = activeBook)
+            }
             if (target != current) readEntries(target)
         }
     }
@@ -306,6 +320,37 @@ class UserDictViewModel(application: Application) : AndroidViewModel(application
     }
 
     /** 关掉导出/导入的结果提示。 */
+    // ── 词库本管理（新建 / 删除 / 指定当前记录词库）──
+
+    fun createBook(name: String) = runBookAction { UserDictBookManager.create(context, name).getOrThrow() }
+
+    fun deleteBook(name: String) = runBookAction { UserDictBookManager.delete(context, name).getOrThrow() }
+
+    fun setActiveBook(name: String) =
+        runBookAction { UserDictBookManager.setActive(context, name).getOrThrow() }
+
+    fun dismissBookMessage() {
+        _uiState.update { it.copy(bookMessage = null) }
+    }
+
+    private fun runBookAction(block: () -> Unit) {
+        if (_uiState.value.isBookBusy) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isBookBusy = true, bookMessage = null) }
+            val result = withContext(Dispatchers.IO) { runCatching { block() } }
+            val active = withContext(Dispatchers.IO) { UserDictBookManager.active(context) }
+            _uiState.update {
+                it.copy(
+                    isBookBusy = false,
+                    activeBook = active,
+                    bookMessage = result.exceptionOrNull()?.message ?: "词库已更新",
+                    bookMessageIsError = result.isFailure,
+                )
+            }
+            refresh()
+        }
+    }
+
     fun dismissMessage() {
         _uiState.update { it.copy(message = null) }
     }

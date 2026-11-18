@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -40,6 +42,9 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -100,6 +105,7 @@ fun UserDictContent(onBack: () -> Unit) {
         if (uri != null) viewModel.importFrom(uri)
     }
     var showMenu by remember { mutableStateOf(false) }
+    var showBooksSheet by remember { mutableStateOf(false) }
     var showAddSheet by remember { mutableStateOf(false) }
     var entryToDelete by remember { mutableStateOf<DictEntry?>(null) }
     var showBatchDeleteDialog by remember { mutableStateOf(false) }
@@ -134,6 +140,9 @@ fun UserDictContent(onBack: () -> Unit) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showBooksSheet = true }) {
+                        Icon(Icons.Default.MenuBook, contentDescription = tr(R.string.s_cikuguanli))
+                    }
                     if (uiState.isTransferring) {
                         CircularProgressIndicator(
                             modifier = Modifier.padding(end = 16.dp).size(20.dp),
@@ -365,6 +374,151 @@ fun UserDictContent(onBack: () -> Unit) {
             },
             onDismiss = { entryToDelete = null }
         )
+    }
+
+    // 词库本管理：新建 / 删除 / 指定当前记录词库
+    if (showBooksSheet) {
+        ModalBottomSheet(onDismissRequest = { showBooksSheet = false }) {
+            UserDictBooksSheet(
+                uiState = uiState,
+                onCreate = viewModel::createBook,
+                onSetActive = viewModel::setActiveBook,
+                onDelete = viewModel::deleteBook,
+                onDismissMessage = viewModel::dismissBookMessage,
+            )
+        }
+    }
+}
+
+/**
+ * 词库本管理弹层：列出本机全部词库，可新建、删除、指定「当前记录词库」。
+ *
+ * 指定后所有方案都会把新词写进这一本（见 UserDictBookManager.setActive）。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UserDictBooksSheet(
+    uiState: UserDictUiState,
+    onCreate: (String) -> Unit,
+    onSetActive: (String) -> Unit,
+    onDelete: (String) -> Unit,
+    onDismissMessage: () -> Unit,
+) {
+    var newName by remember { mutableStateOf("") }
+    // 行内二次确认：避免弹窗与底部弹层抢同一手势（点删除的那一下会把确认框一起点掉）
+    var confirmDelete by remember { mutableStateOf<String?>(null) }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 24.dp),
+    ) {
+        Text(tr(R.string.s_cikuguanli), style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            tr(R.string.s_dangqianjilu_ciku, uiState.activeBook),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(16.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = newName,
+                onValueChange = { newName = it },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                enabled = !uiState.isBookBusy,
+                label = { Text(tr(R.string.s_cikumincheng)) },
+            )
+            Spacer(Modifier.width(8.dp))
+            TextButton(
+                onClick = {
+                    onCreate(newName.trim())
+                    newName = ""
+                },
+                enabled = newName.isNotBlank() && !uiState.isBookBusy,
+            ) { Text(tr(R.string.s_chuangjian)) }
+        }
+        uiState.bookMessage?.let { message ->
+            Spacer(Modifier.height(8.dp))
+            SettingsMessageBanner(
+                message = message,
+                isError = uiState.bookMessageIsError,
+                onDismiss = onDismissMessage,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider()
+        if (uiState.isBookBusy) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+        LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+            items(uiState.dicts, key = { it.name }) { dict ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !uiState.isBookBusy && dict.name != uiState.activeBook) {
+                            onSetActive(dict.name)
+                        }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(
+                        selected = dict.name == uiState.activeBook,
+                        onClick = {
+                            if (dict.name != uiState.activeBook) onSetActive(dict.name)
+                        },
+                        enabled = !uiState.isBookBusy,
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(dict.name, style = MaterialTheme.typography.bodyLarge)
+                        if (dict.name == uiState.activeBook) {
+                            Text(
+                                tr(R.string.s_shiyongzhong_ciku),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    if (confirmDelete == dict.name) {
+                        TextButton(
+                            onClick = {
+                                onDelete(dict.name)
+                                confirmDelete = null
+                            },
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                        ) {
+                            Text(
+                                tr(R.string.s_shanchu),
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
+                        TextButton(
+                            onClick = { confirmDelete = null },
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                        ) {
+                            Text(tr(R.string.s_quxiao), style = MaterialTheme.typography.labelLarge)
+                        }
+                    } else {
+                        IconButton(
+                            onClick = { confirmDelete = dict.name },
+                            enabled = !uiState.isBookBusy && dict.name != uiState.activeBook,
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = tr(R.string.s_shanchu),
+                                tint = if (dict.name == uiState.activeBook) {
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                } else {
+                                    MaterialTheme.colorScheme.error
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

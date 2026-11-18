@@ -894,6 +894,17 @@ object SettingsPreferences {
         getPrefs(context).edit().putInt(KEY_USER_DICT_MERGE_VERSION, version).apply()
     }
 
+    /** 当前把新词记录到哪一本词库（所有方案共用；默认 rime_ice）。 */
+    const val KEY_USER_DICT_ACTIVE = "user_dict_active"
+
+    fun getUserDictActive(context: Context): String =
+        getPrefs(context).getString(KEY_USER_DICT_ACTIVE, "")
+            ?.trim()?.takeIf { it.isNotEmpty() } ?: "rime_ice"
+
+    fun setUserDictActive(context: Context, name: String) {
+        getPrefs(context).edit().putString(KEY_USER_DICT_ACTIVE, name.trim()).apply()
+    }
+
     /** 记录为多本词库（保留开关，默认关；当前版本不生效，词库始终记录为一本）。 */
     const val KEY_USER_DICT_MULTI_BOOK = "user_dict_multi_book"
 

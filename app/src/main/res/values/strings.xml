@@ -1553,6 +1553,13 @@
     <string name="s_fuhaotishibuju">符号提示排布</string>
     <string name="s_jiluweiduobenciku">记录为多本词库</string>
     <string name="s_bushu_jindu_tishi">正在部署方案，首次编译可能需要几十秒，请勿退出设置。</string>
+    <string name="s_dangqianjilu_ciku">当前记录到：%1$s</string>
+    <string name="s_xinjianciku">新建词库</string>
+    <string name="s_cikumincheng">词库名称</string>
+    <string name="s_chuangjian">创建</string>
+    <string name="s_sheweidangqianjilu">设为当前记录</string>
+    <string name="s_shanchuciku_queren">删除词库「%1$s」？其中的词条会一起删除。</string>
+    <string name="s_shiyongzhong_ciku">使用中</string>
     <string name="s_jiluweiduobenciku_fu">保留开关（默认关闭）：当前版本不生效，用户词库统一记录为一本。</string>
     <string name="s_fuhaojianpan_quxiao_erci_fanhui">符号键盘取消二次返回</string>
     <string name="s_fuhaojianpan_quxiao_erci_fanhui_fu">从符号页面返回时直接回到主键盘，不再回到数字/符号键盘页面。</string>

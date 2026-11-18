@@ -35,13 +35,22 @@ class UnifiedUserDictPatchTest {
     }
 
     @Test
-    fun `用户已配置user_dict时不覆盖`() {
+    fun `已是目标词库时不改动`() {
         assertNull(
             RimeConfigHelper.applyUnifiedUserDictPatch(
-                "patch:\n  \"translator/user_dict\": my_dict\n",
+                "patch:\n  \"translator/user_dict\": rime_ice\n",
                 "rime_ice",
             )
         )
+    }
+
+    @Test
+    fun `已有不同值时就地替换`() {
+        val src = "patch:\n  \"translator/user_dict\": old_book\n"
+        val out = RimeConfigHelper.applyUnifiedUserDictPatch(src, "new_book")!!
+        assertTrue(out.contains("\"translator/user_dict\": new_book"))
+        assertTrue(!out.contains("old_book"))
+        assertEquals(1, Regex("(?m)^patch:").findAll(out).count())
     }
 
     @Test
