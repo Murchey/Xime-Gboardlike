@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -208,6 +209,25 @@ fun KeyboardLayoutSettingsContent(onBack: () -> Unit) {
                     }
                 })
             }
+        }
+
+        // 部署进度窗口：编译 prism 可能几十秒，期间给出明确的模态进度，而不是只有按钮转圈
+        if (deploying) {
+            AlertDialog(
+                onDismissRequest = { },
+                confirmButton = { },
+                title = { Text(tr(R.string.s_bushuzhong)) },
+                text = {
+                    Column {
+                        CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
+                        Text(
+                            text = tr(R.string.s_bushu_jindu_tishi),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 12.dp),
+                        )
+                    }
+                },
+            )
         }
     }
 }
