@@ -1,4 +1,4 @@
-﻿package com.kingzcheung.xime.ui.settings
+package com.kingzcheung.xime.ui.settings
 
 import com.kingzcheung.xime.i18n.tr
 
@@ -39,7 +39,8 @@ import androidx.compose.material.icons.twotone.Vibration
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,6 +55,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kingzcheung.xime.R
@@ -309,15 +312,25 @@ private fun InputTestCard() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = SettingsDimens.RowHorizontal, vertical = 12.dp),
+            .padding(vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        OutlinedTextField(
+        // 与设置卡片同一套观感：surfaceContainer 底色 + 24dp 大圆角，不要描边
+        TextField(
             value = testText,
             onValueChange = { testText = it },
             modifier = Modifier.fillMaxWidth(),
             minLines = 3,
             maxLines = 5,
+            shape = RoundedCornerShape(SettingsDimens.CardCorner),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = settingsCardContainerColor(),
+                unfocusedContainerColor = settingsCardContainerColor(),
+                disabledContainerColor = settingsCardContainerColor(),
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+            ),
             placeholder = {
                 Text(
                     text = tr(R.string.s_dianjicichukaishishuruceshi),
