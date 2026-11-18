@@ -256,6 +256,15 @@ class SpeechRecognitionManager(private val context: Context) {
         Log.d(TAG, "Stopping recognition")
         val thread = recordingThread
         if (thread == null) {
+            // 系统引擎自己采集音频、没有录音线程：必须显式停掉后端并清 recognitionActive，
+            // 否则 (1) 系统语音对话框不会关闭，盖住键盘； (2) 下一次 startRecognition 会因
+            // alreadyRunning=true 被永久忽略 —— 症状就是"第一段说完就再也进不去语音"。
+            if (backend?.capturesAudioItself == true) {
+                recognitionActive = false
+                runCatching { backend?.stop() }
+                mainHandler.post { setState(RecognitionState.IDLE) }
+                return
+            }
             // 模型仍在后台加载中：标记取消，加载完成后不再启动录音
             if (loadingInProgress) {
                 loadingCancelled = true
@@ -343,6 +352,7 @@ class SpeechRecognitionManager(private val context: Context) {
         synchronized(preloadLock) {
             if (recordingThread != null) return
             val b = backend ?: return
+            if (b.capturesAudioItself) recognitionActive = false
             runCatching { b.cancel() }
         }
     }

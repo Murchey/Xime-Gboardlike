@@ -34,6 +34,9 @@ class SystemSpeechAsrBackend(private val context: Context) : AsrBackend {
          * 已在错误映射里给出可读提示。
          */
         private const val RECOGNITION_LANGUAGE = "zh-CN"
+
+        /** stopListening 后等待最终结果的兜底时长：超时就销毁 recognizer 关闭系统对话框。 */
+        private const val SYSTEM_STOP_FALLBACK_MS = 1_500L
     }
 
     /** 系统引擎自己持有麦克风，故为 true：录音线程会跳过 AudioRecord。 */
@@ -142,12 +145,14 @@ class SystemSpeechAsrBackend(private val context: Context) : AsrBackend {
 
         override fun onError(error: Int) {
             running = false
+            releaseRecognizer()
             stateCallback?.invoke(RecognitionState.ERROR)
             errorCallback?.invoke(describeError(error))
         }
 
         override fun onResults(results: Bundle?) {
             running = false
+            releaseRecognizer()
             val text = firstText(results)
             if (text.isEmpty()) {
                 // 无识别结果不算错误：用户可能只是没说话或环境太吵。
@@ -179,7 +184,16 @@ class SystemSpeechAsrBackend(private val context: Context) : AsrBackend {
     override fun stop() {
         running = false
         main.post {
-            runCatching { recognizer?.stopListening() }
+            val rec = recognizer ?: return@post
+            runCatching { rec.stopListening() }
+            // 兜底：部分系统引擎 stopListening 后不给 onResults（或对话框不消失），
+            // 延迟销毁 recognizer 关闭对话框，否则它会一直盖在键盘上，让下一次长按落空。
+            main.postDelayed({
+                if (recognizer === rec) {
+                    releaseRecognizer()
+                    stateCallback?.invoke(RecognitionState.IDLE)
+                }
+            }, SYSTEM_STOP_FALLBACK_MS)
         }
     }
 
