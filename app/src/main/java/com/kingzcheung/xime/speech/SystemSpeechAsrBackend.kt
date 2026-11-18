@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -35,8 +36,11 @@ class SystemSpeechAsrBackend(private val context: Context) : AsrBackend {
          */
         private const val RECOGNITION_LANGUAGE = "zh-CN"
 
-        /** stopListening 后等待最终结果的兜底时长：超时就销毁 recognizer 关闭系统对话框。 */
-        private const val SYSTEM_STOP_FALLBACK_MS = 1_500L
+        /**
+         * stopListening 后等待最终结果的兜底时长：超时就销毁 recognizer 关闭系统对话框。
+         * 取 3.2s，略大于收尾超时（FINISH_TIMEOUT_MS=3s），保证最终结果有机会先送达。
+         */
+        private const val SYSTEM_STOP_FALLBACK_MS = 3_200L
     }
 
     /** 系统引擎自己持有麦克风，故为 true：录音线程会跳过 AudioRecord。 */
@@ -103,7 +107,7 @@ class SystemSpeechAsrBackend(private val context: Context) : AsrBackend {
                 return@post
             }
             recognizer = rec
-            rec.setRecognitionListener(listener)
+            rec.setRecognitionListener(listenerFor(rec))
             stateCallback?.invoke(RecognitionState.LISTENING)
             try {
                 rec.startListening(buildIntent())
@@ -126,9 +130,15 @@ class SystemSpeechAsrBackend(private val context: Context) : AsrBackend {
         putExtra(RecognizerIntent.EXTRA_LANGUAGE, RECOGNITION_LANGUAGE)
     }
 
-    private val listener = object : RecognitionListener {
+    /**
+     * 为单次会话创建监听器，并带身份守卫：旧 recognizer 被 destroy/cancel 时仍可能
+     * 回调 onError(ERROR_CLIENT)，若不忽略会把「客户端出错」弹给用户，且状态被旧会话污染。
+     */
+    private fun listenerFor(rec: SpeechRecognizer): RecognitionListener = object : RecognitionListener {
+        private fun alive(): Boolean = recognizer === rec
+
         override fun onReadyForSpeech(params: Bundle?) {
-            stateCallback?.invoke(RecognitionState.LISTENING)
+            if (alive()) stateCallback?.invoke(RecognitionState.LISTENING)
         }
 
         override fun onBeginningOfSpeech() = Unit
@@ -140,17 +150,29 @@ class SystemSpeechAsrBackend(private val context: Context) : AsrBackend {
         override fun onBufferReceived(buffer: ByteArray?) = Unit
 
         override fun onEndOfSpeech() {
-            stateCallback?.invoke(RecognitionState.PROCESSING)
+            if (alive()) stateCallback?.invoke(RecognitionState.PROCESSING)
         }
 
         override fun onError(error: Int) {
+            if (!alive()) {
+                Log.d(TAG, "ignore stale onError(" + error + ")")
+                return
+            }
             running = false
             releaseRecognizer()
+            if (error == SpeechRecognizer.ERROR_CLIENT) {
+                // 会话刚结束就收到 CLIENT 错误属于生命周期噪音（destroy/cancel 竞态），
+                // 回 IDLE 即可，不把「客户端出错」弹给用户。
+                Log.d(TAG, "ERROR_CLIENT ignored as lifecycle noise")
+                stateCallback?.invoke(RecognitionState.IDLE)
+                return
+            }
             stateCallback?.invoke(RecognitionState.ERROR)
             errorCallback?.invoke(describeError(error))
         }
 
         override fun onResults(results: Bundle?) {
+            if (!alive()) return
             running = false
             releaseRecognizer()
             val text = firstText(results)
@@ -164,6 +186,7 @@ class SystemSpeechAsrBackend(private val context: Context) : AsrBackend {
         }
 
         override fun onPartialResults(partialResults: Bundle?) {
+            if (!alive()) return
             val text = firstText(partialResults)
             if (text.isNotEmpty()) partialResultCallback?.invoke(text)
         }
@@ -212,8 +235,9 @@ class SystemSpeechAsrBackend(private val context: Context) : AsrBackend {
     }
 
     private fun releaseRecognizer() {
-        runCatching { recognizer?.destroy() }
+        val rec = recognizer
         recognizer = null
+        runCatching { rec?.destroy() }
     }
 
     /** AOSP 错误码 → 可读中文；[SpeechRecognizer.ERROR_NO_MATCH] 不当作错误吓用户。 */
