@@ -20,6 +20,12 @@ object GridSchemaInstaller {
         layout: String,
         order: String,
     ): String? {
+        // 异体键盘（14/17/18）只允许从内置基础方案派生：
+        // 导入方案的结构（词库/棱镜/拼写规则）不可控，派生出来的方案往往编不出可用 prism。
+        if (baseId !in GridSchemaGenerator.BASE_SCHEMA_IDS) {
+            FileLogger.w(TAG, "install(" + baseId + "): 异体键盘只支持内置基础方案，已拒绝导入方案")
+            return null
+        }
         val rimeDir = SchemaManager.getRimeDir(context)
         installHintLua(context, rimeDir)
         val baseFile = File(rimeDir, baseId + ".schema.yaml")

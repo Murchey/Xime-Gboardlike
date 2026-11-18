@@ -38,11 +38,17 @@ object KeyboardLayoutApplier {
             SettingsPreferences.setKeyboardLayoutBaseSchema(context, baseSchemaId)
         }
 
+        val isGrid = KeyboardLayoutPreset.normalizeLayout(layout) != KeyboardLayoutPreset.LAYOUT_26
+        // 26 键直接用当前/所选方案（可以是导入的）；异体键盘只能用内置基础方案派生，
+        // 显式传入导入方案时拒绝，而不是悄悄换成 rime_ice 让用户以为生效了。
+        if (isGrid && baseSchemaId.isNotEmpty() && baseSchemaId !in GridSchemaGenerator.BASE_SCHEMA_IDS) {
+            FileLogger.w(TAG, "apply(" + layout + "/" + order + "): 基础方案 " + baseSchemaId + " 不是内置方案，拒绝派生异体键盘")
+            return null
+        }
         val base = baseSchemaId.ifEmpty { GridSchemaGenerator.baseOf(SettingsPreferences.getCurrentSchema(context)) }
             .takeIf { it in GridSchemaGenerator.BASE_SCHEMA_IDS } ?: "rime_ice"
 
         val current = SettingsPreferences.getCurrentSchema(context)
-        val isGrid = KeyboardLayoutPreset.normalizeLayout(layout) != KeyboardLayoutPreset.LAYOUT_26
 
         val target = if (!isGrid) {
             // 26 键：直接用基础方案本身

@@ -50,9 +50,12 @@ import java.io.File
 @Composable
 fun KeyboardLayoutSettingsContent(onBack: () -> Unit) {
     val context = LocalContext.current
+    // 异体键盘只从内置基础方案派生：导入方案（哪怕正在使用）不作为基础方案初值
     val savedBase = SettingsPreferences.getKeyboardLayoutBaseSchema(context)
-        .ifEmpty { SettingsPreferences.getCurrentSchema(context) }
-        .ifEmpty { "rime_ice" }
+        .takeIf { it in GridSchemaGenerator.BASE_SCHEMA_IDS }
+        ?: SettingsPreferences.getCurrentSchema(context)
+            .takeIf { it in GridSchemaGenerator.BASE_SCHEMA_IDS }
+        ?: "rime_ice"
 
     var layout by remember { mutableStateOf(SettingsPreferences.getKeyboardLayoutPreset(context)) }
     var order by remember { mutableStateOf(SettingsPreferences.getKeyboardLetterOrder(context)) }
