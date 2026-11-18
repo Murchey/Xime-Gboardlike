@@ -86,6 +86,10 @@ class VoiceKeyboardContainer(
         // 面板还在"正在识别…"（未在录音）：这次按下立即收尾并恢复键盘。
         // 否则面板会盖住键盘 1~3s，期间所有"按住说话"都落在面板上，表现为"再按没反应"。
         if (isVoiceMode && !isRecording()) {
+            com.kingzcheung.xime.util.FileLogger.i(
+                "VoiceContainer",
+                "down while voice panel visible (not recording): force finish"
+            )
             post(finishNowRunnable)
         }
 

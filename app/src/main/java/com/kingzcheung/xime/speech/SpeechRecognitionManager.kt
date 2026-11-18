@@ -89,17 +89,33 @@ class SpeechRecognitionManager(private val context: Context) {
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun startRecognition() {
+        // 有界等待：加载线程若异常退出而没复位 isPreloading，无限 wait 会把调用线程
+        // （主线程）永久卡住，整块键盘表现为"按什么都没反应"，只能杀进程恢复。
+        var waited = 0L
         synchronized(preloadLock) {
-            while (isPreloading) {
+            while (isPreloading && waited < PRELOAD_WAIT_MS) {
                 try {
-                    preloadLock.wait()
+                    preloadLock.wait(200L)
                 } catch (_: InterruptedException) {
                     Thread.currentThread().interrupt()
                     return
                 }
+                waited += 200L
             }
         }
-        
+        if (isPreloading) {
+            FileLogger.w(TAG, "preload still running after " + PRELOAD_WAIT_MS + "ms, defer start")
+            mainHandler.postDelayed({ if (!isPreloading) startRecognition() }, 300L)
+            return
+        }
+        // 线程已结束但引用没清（早期 AudioRecord/后端失败路径）：按"未在运行"处理并复位，
+        // 否则后续每次 start 都会被判成 alreadyRunning 永远忽略（症状：只能语音一次）。
+        val thread = recordingThread
+        if (thread != null && !thread.isAlive) {
+            FileLogger.w(TAG, "stale recording thread cleared")
+            recordingThread = null
+        }
+
         // 系统引擎不建录音线程（recordingThread 恒为 null），
         // 因此"是否已在识别"改由后端自身状态判断，避免重复 start 或漏判。
         val alreadyRunning = if (backend?.capturesAudioItself == true) {
@@ -107,6 +123,11 @@ class SpeechRecognitionManager(private val context: Context) {
         } else {
             recordingThread != null
         }
+        FileLogger.i(
+            TAG,
+            "startRecognition: thread=" + (recordingThread?.isAlive == true) +
+                ", backend=" + (backend != null) + ", preloading=" + isPreloading
+        )
         if (alreadyRunning) {
             FileLogger.w(TAG, "Recognition already running, ignoring start request")
             return
@@ -371,43 +392,35 @@ class SpeechRecognitionManager(private val context: Context) {
     private var isPreloading = false
     private val preloadLock = Object()
 
+    /** 等待其它线程加载模型的上限：超过就延后重试，绝不在主线程无限等待。 */
+    private val PRELOAD_WAIT_MS = 5_000L
+
     fun preload(): Boolean {
         synchronized(preloadLock) {
             if (backend != null) return true
+            if (isPreloading) return false
             isPreloading = true
         }
-        
-        val newBackend = createBackend()
-        if (newBackend == null) {
+        return try {
+            val newBackend = createBackend() ?: return false
+            newBackend.setCallbacks(
+                onResult = { text -> handleResult(text) },
+                onPartialResult = { text -> handlePartialResult(text) },
+                onStateChange = { state -> setState(state) },
+                onError = { error -> handleError(error) }
+            )
+            if (!newBackend.initialize()) return false
+            synchronized(preloadLock) { backend = newBackend }
+            true
+        } catch (t: Throwable) {
+            FileLogger.w(TAG, "preload failed: " + t.message)
+            false
+        } finally {
             synchronized(preloadLock) {
                 isPreloading = false
                 preloadLock.notifyAll()
             }
-            return false
         }
-
-        newBackend.setCallbacks(
-            onResult = { text -> handleResult(text) },
-            onPartialResult = { text -> handlePartialResult(text) },
-            onStateChange = { state -> setState(state) },
-            onError = { error -> handleError(error) }
-        )
-
-        if (!newBackend.initialize()) {
-            synchronized(preloadLock) {
-                isPreloading = false
-                preloadLock.notifyAll()
-            }
-            return false
-        }
-
-        synchronized(preloadLock) {
-            backend = newBackend
-            isPreloading = false
-            preloadLock.notifyAll()
-        }
-
-        return true
     }
 
     /**
@@ -501,6 +514,18 @@ class SpeechRecognitionManager(private val context: Context) {
         private var audioRecord: AudioRecord? = null
 
         override fun run() {
+            try {
+                runRecording()
+            } finally {
+                // 线程自行退出（麦克风/后端失败、对端断开）时同样复位引用：否则
+                // startRecognition 永远判成"正在识别"，后续语音全部被忽略、只能杀进程恢复
+                synchronized(preloadLock) {
+                    if (recordingThread === this) recordingThread = null
+                }
+            }
+        }
+
+        private fun runRecording() {
             val audioRecord = preStarted ?: (createAudioRecord() ?: run {
                 mainHandler.post {
                     errorCallback?.invoke(tr(R.string.s_wufaqidongluyin), false)

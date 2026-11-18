@@ -96,6 +96,24 @@ class VoiceRecognitionHandlerFinishNowTest {
     }
 
     @Test
+    fun `面板残留语音态时按下也能恢复`() {
+        val stuckHandler = VoiceRecognitionHandler(
+            context = mockContext,
+            onStateChanged = {},
+            getState = { InputUIState(isVoiceMode = true) },
+            getInputConnection = { mockInputConnection },
+            onVoiceComplete = { voiceCompleteCount++ },
+            managerFactory = { mockManager },
+            mainHandler = mockMainHandler,
+        )
+        stuckHandler.initialize()
+
+        assertTrue(stuckHandler.finishPendingNow())
+        verify(mockManager).cancelInFlightSession()
+        assertEquals(1, voiceCompleteCount)
+    }
+
+    @Test
     fun `无已识别文本时按下不处理`() {
         handler.finishRecognition()
         assertFalse(handler.finishPendingNow())

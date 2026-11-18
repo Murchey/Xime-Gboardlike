@@ -320,7 +320,14 @@ class VoiceRecognitionHandler(
     @Synchronized
     fun finishPendingNow(): Boolean {
         if (!::speechRecognitionManager.isInitialized) return false
-        if (!finishing && lastPartialText.isEmpty()) return false
+        // 三种"面板还挂着"的情况都要能收尾：等最终结果（finishing）、有部分结果待提交，
+        // 或 UI 仍处于语音态（面板没退出，用户表现为"再按没反应"）。漏掉最后一种时，
+        // 上一段会话已经收干净但面板残留，后续每次按下都进不来，只能杀进程恢复。
+        val uiStillInVoice = getState().isVoiceMode || getState().voiceSticky
+        if (!finishing && lastPartialText.isEmpty() && !uiStillInVoice) return false
+        if (!finishing && lastPartialText.isEmpty()) {
+            Log.w(TAG, "finishPendingNow: panel stuck without pending text, restoring")
+        }
         finishing = false
         mainHandler.removeCallbacks(finishTimeoutRunnable)
         // 提交已识别的部分结果（与超时兜底同一路径），并把迟到最终结果一并丢弃
