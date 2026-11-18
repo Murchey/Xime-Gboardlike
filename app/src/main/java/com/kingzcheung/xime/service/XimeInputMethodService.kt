@@ -1825,6 +1825,14 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             },
             isRecording = { voiceRecordingStarted },
             setRecording = { voiceRecordingStarted = it },
+            onVoiceFinishNow = {
+                // 面板停在"正在识别…"时再次按下：立即收尾（提交已识别文本、丢弃迟到结果、恢复键盘）。
+                // 键盘回来后用户再长按就是一段干净的新会话；不在这里直接开录，
+                // 避免提交文本触发宿主 restartInput 打断触摸流、抬手收不到导致麦克风不关。
+                val ok = voiceRecognitionHandler.finishPendingNow()
+                if (ok) FileLogger.i(TAG, "voiceFinishEarly: pending utterance committed, keyboard restored")
+                ok
+            },
             onVoiceDismiss = {
                 val action = pendingVoiceAction
                 pendingVoiceAction = null

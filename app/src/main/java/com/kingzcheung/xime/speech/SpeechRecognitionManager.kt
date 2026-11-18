@@ -288,6 +288,21 @@ class SpeechRecognitionManager(private val context: Context) {
         }.start()
     }
 
+    /**
+     * 「正在识别…」阶段重新按住时调用：关闭后端上仍在等待最终结果的旧会话。
+     *
+     * 旧会话的最终结果会经同一套回调回来；若直接开始新会话，它会落进新会话
+     * （表现为上一句重复上屏）。这里在后端层面关掉旧连接/任务，从源头上断掉迟到结果；
+     * 后端实例本身保留，新会话仍走 [startRecognition] 复用（免重建模型/连接）。
+     */
+    fun cancelInFlightSession() {
+        synchronized(preloadLock) {
+            if (recordingThread != null) return
+            val b = backend ?: return
+            runCatching { b.cancel() }
+        }
+    }
+
     fun getState(): RecognitionState = currentState
 
     private fun setState(state: RecognitionState) {

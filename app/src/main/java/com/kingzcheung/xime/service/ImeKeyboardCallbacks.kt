@@ -205,7 +205,15 @@ internal fun rememberImeKeyboardCallbacks(
                         service.feedbackManager.performVibration()
                     }
                     service.endVoiceSession()
-                } else if (SettingsPreferences.isSttEnabled(service) && !service.uiState.value.isVoiceMode) {
+                } else if (!SettingsPreferences.isSttEnabled(service)) {
+                    FileLogger.i(XimeInputMethodService.TAG, "voiceEnter ignored: stt disabled")
+                } else if (service.uiState.value.isVoiceMode) {
+                    // 上一次会话仍在收尾（等引擎最终结果）：长按被吞掉，用户感知为"按了没反应"
+                    FileLogger.i(
+                        XimeInputMethodService.TAG,
+                        "voiceEnter ignored: still in voice mode (recording=" + service.voiceRecordingStarted + ")"
+                    )
+                } else {
                     service.uiState.value = service.uiState.value.copy(
                         isVoiceMode = true,
                         voiceSticky = false,

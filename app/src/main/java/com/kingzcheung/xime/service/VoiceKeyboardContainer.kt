@@ -17,10 +17,16 @@ class VoiceKeyboardContainer(
     private val isRecording: () -> Boolean,
     private val setRecording: (Boolean) -> Unit,
     private val onVoiceDismiss: () -> Unit = {},
+    /**
+     * 「正在识别…」（收尾等待最终结果）阶段再次按下：立即收尾并恢复键盘。
+     * 返回 true 表示确实收尾了一段会话。
+     */
+    private val onVoiceFinishNow: () -> Boolean = { false },
     private val onTouchCancel: () -> Unit = {},
 ) : FrameLayout(context) {
 
     private var isTrackingVoiceButtons = false
+    private val finishNowRunnable = Runnable { onVoiceFinishNow() }
     private var lastLeftActive = false
     private var lastRightActive = false
 
@@ -51,11 +57,13 @@ class VoiceKeyboardContainer(
                 }
 
                 MotionEvent.ACTION_UP -> {
+                    removeCallbacks(finishNowRunnable)
                     handleActionUp()
                 }
                 MotionEvent.ACTION_CANCEL -> {
                     // 系统手势（如三指截图）截走触摸流时，IME 收不到 UP，Compose 手势也不会被取消。
                     // 这里把 cancel 上抛，触发活动键盘 remount 来取消所有进行中的手势协程。
+                    removeCallbacks(finishNowRunnable)
                     handleActionUp()
                     onTouchCancel()
                 }
@@ -73,6 +81,13 @@ class VoiceKeyboardContainer(
 
         lastLeftActive = false
         lastRightActive = false
+        removeCallbacks(finishNowRunnable)
+
+        // 面板还在"正在识别…"（未在录音）：这次按下立即收尾并恢复键盘。
+        // 否则面板会盖住键盘 1~3s，期间所有"按住说话"都落在面板上，表现为"再按没反应"。
+        if (isVoiceMode && !isRecording()) {
+            post(finishNowRunnable)
+        }
 
         if (isVoiceMode) {
             val yThreshold = height * 0.6f

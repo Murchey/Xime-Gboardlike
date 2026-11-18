@@ -1033,6 +1033,7 @@ internal fun buildVoiceRequest(
 ): () -> Unit = {
     if (isSttEnabled) {
         if (!PermissionHelper.hasRecordAudioPermission(context)) {
+            FileLogger.i("XimeKeyboard", "voice request rejected: no RECORD_AUDIO permission")
             Toast.makeText(context, tr(R.string.s_xuyaomaikefengquanxiancainengs_3b6e4), Toast.LENGTH_SHORT).show()
             PermissionHelper.requestRecordAudioPermission(context)
         } else {

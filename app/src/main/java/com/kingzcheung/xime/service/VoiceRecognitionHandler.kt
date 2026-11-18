@@ -132,7 +132,8 @@ class VoiceRecognitionHandler(
         }
     }
 
-    fun startRecognition() {
+    /** 开始一段录音；返回 false 表示没开起来（管理器未初始化 / 引擎不可用，提示已给出）。 */
+    fun startRecognition(): Boolean {
         if (!::speechRecognitionManager.isInitialized) {
             Log.e(TAG, "speechRecognitionManager not initialized")
             onStateChanged(getState().copy(
@@ -140,12 +141,12 @@ class VoiceRecognitionHandler(
                 voiceSticky = false,
                 voiceRecognitionState = RecognitionState.ERROR
             ))
-            return
+            return false
         }
 
         // 开录前先解析引擎：不可用时给出"去干什么"的具体提示，而不是等后端造不出来
         // 再报一句含糊的"无法初始化语音引擎"（用户没法据此自行修复）。
-        if (rejectUnavailableEngine()) return
+        if (rejectUnavailableEngine()) return false
 
         // 上一次会话若还在收尾等待中（快速再次开始），直接废弃收尾状态
         finishing = false
@@ -161,6 +162,7 @@ class VoiceRecognitionHandler(
         onStateChanged(getState().copy(voicePluginName = providerName))
 
         speechRecognitionManager.startRecognition()
+        return true
     }
 
     fun stopRecognition() {
@@ -225,11 +227,15 @@ class VoiceRecognitionHandler(
      */
     private fun rejectUnavailableEngine(): Boolean {
         val engine = SettingsPreferences.getSttEngine(context)
+        // 插件框架尚未就绪（早期启动/单元测试）时按"没有插件"处理，不能让引擎解析抛异常
+        val pluginIds = runCatching {
+            ExtensionManager.getEnabledAsrPlugins(context).map { it.first }
+        }.getOrDefault(emptyList())
         val resolution = SttEngineResolver.resolve(
             preferred = engine,
             localAvailable = AsrBackendFactory.getLocalName(context) != null,
             builtinConfigured = AsrBackendFactory.isBuiltinConfigured(context),
-            enabledPluginIds = ExtensionManager.getEnabledAsrPlugins(context).map { it.first },
+            enabledPluginIds = pluginIds,
             systemAvailable = AsrBackendFactory.isSystemAvailable(context),
         )
         if (resolution.isAvailable) return false
@@ -297,6 +303,32 @@ class VoiceRecognitionHandler(
         mainHandler.removeCallbacks(finishTimeoutRunnable)
         commitPendingOnRelease()
         suppressDuplicateFinal = true
+    }
+
+    /**
+     * 收尾等待期间（面板显示"正在识别…"）用户再次按下：立即收尾并恢复键盘。
+     *
+     * 为什么需要：在线引擎松手后要等最终结果（通常 1~2s，超时 [FINISH_TIMEOUT_MS]），
+     * 这段时间语音面板不退出、盖住整个键盘——下一次"按住说话"落在面板上，
+     * 既不会开始新录音，也没有任何反馈，真机表现为"再按没反应 / 只能用一次"。
+     * 本方法把这段等待收成一次明确的收尾：提交已识别文本、丢弃迟到的最终结果、
+     * 让宿主恢复键盘；用户随即再长按就是一段干净的新会话。
+     *
+     * 不在本次按下里直接开新录音：提交文本/切换布局可能让宿主 restartInput 并打断
+     * 正在进行的触摸流，抬手收不到就会留下"麦克风不关"的尾巴。
+     */
+    @Synchronized
+    fun finishPendingNow(): Boolean {
+        if (!::speechRecognitionManager.isInitialized) return false
+        if (!finishing && lastPartialText.isEmpty()) return false
+        finishing = false
+        mainHandler.removeCallbacks(finishTimeoutRunnable)
+        // 提交已识别的部分结果（与超时兜底同一路径），并把迟到最终结果一并丢弃
+        commitPendingOnRelease()
+        speechRecognitionManager.cancelInFlightSession()
+        // 恢复键盘：面板退出后，下一次长按落在空格键上即可正常开始
+        onVoiceComplete()
+        return true
     }
 
     // 语音按钮长按抬起时调用：立即提交当前已识别的文本（不依赖可能被断连竞态吞掉的异步最终结果）
