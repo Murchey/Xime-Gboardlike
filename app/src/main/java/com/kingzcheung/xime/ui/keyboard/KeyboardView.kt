@@ -1356,6 +1356,11 @@ fun KeyboardView(
                     )
 
                 }
+                // 面板键盘与主键盘共用同一份底部留白：数字输入框直接进数字面板时，
+                // 不再因为缺这段 Spacer 而贴着屏幕底边（与主键盘 ?123 进入的面板高度不一致）。
+                if (state.keyboardBottomPaddingDp > 0) {
+                    Spacer(modifier = Modifier.height(state.keyboardBottomPaddingDp.dp))
+                }
             }
             } // candidatePageExpanded else
 

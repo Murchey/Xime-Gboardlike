@@ -693,11 +693,12 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
         _candidatePageExpanded.value = false
         KeysConfigHelper.setActiveKeyboardSchema(schemaId)
         if (forceNumberPanel) {
-            // 数字输入框自动进入数字面板：记录默认主布局，供面板"abc"返回键恢复
-            // （exitPanel 对 FULL returnTo 优先用 _savedKbStateBeforePanel）
+            // 数字输入框自动进入数字键盘：走主键盘分支（与 ?123 的「切布局」同一条路），
+            // 不再从面板分支起——面板分支不沿用主键盘的底部留白，键盘会贴着屏幕底边。
+            // 记录主布局，供 "abc" 返回键恢复（returnToMain 看到 page 是 Main 时切回字母布局）。
             _keyboardState.value = KeyboardLayoutState.Number
             _savedKbStateBeforePanel = initialKeyboardLayoutState(isAsciiMode, schemaId)
-            _page.value = KeyboardPage.Panel(PanelType.NUMBER, MainType.FULL)
+            _page.value = KeyboardPage.Main(MainType.FULL)
         } else {
             _keyboardState.value = initialKeyboardLayoutState(isAsciiMode, schemaId)
             if (_page.value !is KeyboardPage.Main) {
