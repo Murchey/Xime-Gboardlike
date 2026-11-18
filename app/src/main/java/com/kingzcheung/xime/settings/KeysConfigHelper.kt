@@ -2578,45 +2578,97 @@ object KeysConfigHelper {
         return getKeyGesture(key, isAsciiMode)?.swipeUp
     }
 
-    /** 当前风格下的长按动作：Gboard 时把符号放到第一项，原有非提交类动作保留。 */
+    /**
+     * 当前风格下的长按动作：Gboard 时把符号放到第一项、原有非提交类动作保留；
+     * 任何风格下单字母键都会补上大小写与注音/变音变体（[LetterLongPressVariants]）。
+     */
     fun longPressForStyle(key: String, isAsciiMode: Boolean = false): LongPressAction? {
-        val original = getKeyGesture(key, isAsciiMode)?.longPress ?: return null
-        val ctx = com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext ?: return original
-        val hint = symbolHintOverride(ctx, key) ?: return original
-        // 长按第一项必须是键面角标上的符号：配置还没按新风格重载时，C/Z 的第一项
-        // 仍是智能引号（“”/‘’），直接 return 会让长按结果和角标对不上。
-        // Gboard 风格里带引号的键（x 的 "）也要能左右交替，否则只会重复同一个引号
-        val smartQuoteAction = when (hint) {
-            "\"" -> GestureAction.SMART_QUOTE
-            "'" -> GestureAction.SMART_SINGLE_QUOTE
-            else -> null
-        }
-        if (smartQuoteAction != null) {
-            return LongPressAction(
-                display = original.display,
-                values = listOf(
-                    KeyAction(action = smartQuoteAction, label = hint),
-                ) + original.values.filter {
+        val original = getKeyGesture(key, isAsciiMode)?.longPress
+        val ctx = com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext
+        val hint = ctx?.let { symbolHintOverride(it, key) }
+        val styled: LongPressAction? = if (hint == null) {
+            original
+        } else {
+            // 长按第一项必须是键面角标上的符号：配置还没按新风格重载时，C/Z 的第一项
+            // 仍是智能引号（“”/‘’），直接 return 会让长按结果和角标对不上。
+            // Gboard 风格里带引号的键（x 的 "）也要能左右交替，否则只会重复同一个引号
+            val smartQuoteAction = when (hint) {
+                "\"" -> GestureAction.SMART_QUOTE
+                "'" -> GestureAction.SMART_SINGLE_QUOTE
+                else -> null
+            }
+            val keep = if (smartQuoteAction != null) {
+                original?.values.orEmpty().filter {
                     it.action != null && it.action != GestureAction.COMMIT &&
                         it.action != GestureAction.SMART_QUOTE &&
                         it.action != GestureAction.SMART_SINGLE_QUOTE
-                },
-                defaultIndex = original.defaultIndex,
-            )
-        }
-        val keep = original.values.filter {
-            it.action != null && it.action != GestureAction.COMMIT
-        }
-        return LongPressAction(
-            display = original.display,
-            values = listOf(
+                }
+            } else {
+                original?.values.orEmpty().filter {
+                    it.action != null && it.action != GestureAction.COMMIT
+                }
+            }
+            val first = if (smartQuoteAction != null) {
+                KeyAction(action = smartQuoteAction, label = hint)
+            } else {
                 KeyAction(
                     action = GestureAction.COMMIT,
-                    value = symbolHintValue(ctx, key, isAsciiMode) ?: hint,
+                    value = symbolHintValue(ctx!!, key, isAsciiMode) ?: hint,
                     label = hint,
-                ),
-            ) + keep,
-            defaultIndex = original.defaultIndex,
+                )
+            }
+            LongPressAction(
+                display = original?.display ?: DisplayMode.BUBBLE,
+                values = listOf(first) + keep,
+                defaultIndex = original?.defaultIndex,
+            )
+        }
+        return withLetterVariants(key, isAsciiMode, styled)
+    }
+
+    private fun withLetterVariants(key: String, isAsciiMode: Boolean, base: LongPressAction?): LongPressAction? {
+        if (!LetterLongPressVariants.supports(key)) return base
+        val current = base?.values.orEmpty().toMutableList()
+        // 长按首项若只是这个字母本身（如英文键盘的 ["q","Q"]），换成该键的符号：
+        // 与 fcitx5 的长按弹窗一致（首项是键面角标上的符号），否则长按 = 再打一遍同一个字母。
+        val first = current.firstOrNull()
+        if (first != null && first.action == GestureAction.COMMIT &&
+            (first.value.equals(key, ignoreCase = true) || first.label.equals(key, ignoreCase = true))
+        ) {
+            val symbol = getSwipeUpCommitValue(key, isAsciiMode)
+            if (!symbol.isNullOrBlank() && !symbol.equals(key, ignoreCase = true)) {
+                current[0] = KeyAction(
+                    action = GestureAction.COMMIT,
+                    value = symbol,
+                    label = getSwipeUpLabel(key, isAsciiMode) ?: symbol,
+                )
+            }
+        }
+        val room = MAX_LONG_PRESS_VALUES - current.size
+        if (room <= 0) {
+            return if (current == base?.values) base else LongPressAction(
+                display = base?.display ?: DisplayMode.BUBBLE,
+                values = current,
+                defaultIndex = base?.defaultIndex,
+            )
+        }
+        val existing = HashSet<String>()
+        current.forEach {
+            if (it.value.isNotEmpty()) existing.add(it.value)
+            if (it.label.isNotEmpty()) existing.add(it.label)
+        }
+        val extra = LetterLongPressVariants.forLetter(key[0])
+            .asSequence()
+            .filter { it.isNotEmpty() && it != key && it !in existing }
+            .map { KeyAction(action = GestureAction.COMMIT, value = it, label = it) }
+            .take(room)
+            .toList()
+        val values = current + extra
+        if (values == base?.values) return base
+        return LongPressAction(
+            display = base?.display ?: DisplayMode.BUBBLE,
+            values = values,
+            defaultIndex = base?.defaultIndex,
         )
     }
 
