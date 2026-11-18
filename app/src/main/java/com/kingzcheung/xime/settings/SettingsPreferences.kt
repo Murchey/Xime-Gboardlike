@@ -873,6 +873,24 @@ object SettingsPreferences {
             .apply()
     }
 
+    /** 最近部署的异体键盘（新→旧最多保留三项，供部署时清理旧键盘）。 */
+    const val KEY_GRID_DEPLOY_HISTORY = "grid_deploy_history"
+
+    fun getGridDeployHistory(context: Context): List<String> =
+        getPrefs(context).getString(KEY_GRID_DEPLOY_HISTORY, "")
+            .orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }
+
+    fun setGridDeployHistory(context: Context, ids: List<String>) {
+        getPrefs(context).edit().putString(KEY_GRID_DEPLOY_HISTORY, ids.joinToString(",")).apply()
+    }
+
+    /** 从符号页面返回时跳过数字/符号键盘，直接回主键盘（默认开）。 */
+    const val KEY_SYMBOL_CANCEL_SECOND_BACK = "symbol_cancel_second_back"
+
+    /** 符号键盘取消二次返回：符号页 → 主键盘（不开则回数字/符号键盘）。 */
+    fun isSymbolCancelSecondBack(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_SYMBOL_CANCEL_SECOND_BACK, true)
+
     /** 字母键右上角符号提示的排布：fcitx5（默认）或 gboard。 */
     const val SYMBOL_HINT_FCITX5 = "fcitx5"
     const val SYMBOL_HINT_GBOARD = "gboard"

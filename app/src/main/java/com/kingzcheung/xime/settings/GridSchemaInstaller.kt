@@ -159,6 +159,24 @@ object GridSchemaInstaller {
         return changed
     }
 
+    /**
+     * 彻底删除一套派生键盘：移出启用列表，并删掉 schema 文件与全部编译产物。
+     *
+     * 部署保留最近三次，更早的走这里清掉；未被启用的派生键盘在清理编译缓存时也走这里。
+     */
+    fun purgeScheme(context: Context, schemaId: String): Boolean {
+        if (schemaId.isBlank() || schemaId == SettingsPreferences.getCurrentSchema(context)) return false
+        retireScheme(context, schemaId)
+        val rimeDir = SchemaManager.getRimeDir(context)
+        var removed = false
+        for (name in listOf(schemaId + ".schema.yaml", schemaId + ".custom.yaml")) {
+            val f = File(rimeDir, name)
+            if (f.isFile && f.delete()) removed = true
+        }
+        if (removed) FileLogger.i(TAG, "purged scheme " + schemaId)
+        return removed
+    }
+
     /** 把派生方案登记进启用列表（没有变化时原样返回）。 */
     fun enable(context: Context, targetId: String): Boolean {
         val enabled = SchemaManager.getEnabledSchemas(context)

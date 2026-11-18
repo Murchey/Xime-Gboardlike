@@ -323,12 +323,25 @@ object RimeConfigHelper {
         ).toSet()
         var freed = 0L
         var removed = 0
+        val current = SettingsPreferences.getCurrentSchema(context)
         for (name in stale) {
             buildDir.listFiles { f -> f.isFile && f.name.startsWith("$name.") }?.forEach { f ->
                 val len = f.length()
                 if (f.delete()) {
                     freed += len
                     removed++
+                }
+            }
+            // 未启用的异体键盘（派生方案）连方案文件一起删掉：只留编译产物的清理等于
+            // "键盘还在、点开却用不了"，用户要的是没用过的整套直接删。
+            if (name != current && com.kingzcheung.xime.settings.GridSchemaGenerator.isDerived(name)) {
+                for (suffix in listOf(".schema.yaml", ".custom.yaml")) {
+                    val f = File(rimeDir, name + suffix)
+                    val len = f.length()
+                    if (f.isFile && f.delete()) {
+                        freed += len
+                        removed++
+                    }
                 }
             }
         }

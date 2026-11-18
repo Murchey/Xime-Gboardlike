@@ -60,9 +60,7 @@ object KeyboardLayoutApplier {
             if (current.isNotEmpty() && !KeyboardLayoutPreset.isGridSchema(current)) {
                 SettingsPreferences.setSchemaBeforeGrid(context, current)
             }
-            GridSchemaInstaller.installAndEnable(context, base, layout, order)
-                ?: KeyboardLayoutPreset.schemaIdFor(layout, order)
-                ?: return null
+            GridSchemaInstaller.installAndEnable(context, base, layout, order) ?: return null
         }
 
         // 换方案：上一套不是目标就退休（移出启用列表 + 删编译产物）
@@ -73,9 +71,51 @@ object KeyboardLayoutApplier {
         if (deployImmediately) {
             RimeConfigHelper.ensureDeployment(context)
         }
-        if (RimeEngine.isInitialized()) RimeEngine.getInstance().switchSchema(target)
+        // 先落当前方案：部署会销毁会话，下面的重建会话要按这个值切回来
         SettingsPreferences.setCurrentSchema(context, target)
+        // 新派生的方案文件刚落盘：重新解析键面绑定，否则键盘还按旧绑定（新方案不生效）
+        runCatching { KeysConfigHelper.loadConfig(context) }
+            .onFailure { FileLogger.w(TAG, "reload config failed: " + it.message) }
+        KeysConfigHelper.setActiveKeyboardSchema(target)
+        if (RimeEngine.isInitialized()) {
+            val engine = RimeEngine.getInstance()
+            // 部署/维护结束后 librime 会销毁会话：不重建就切不动，引擎会停在旧方案上
+            // （现象：设置里已换成新布局，键盘仍旧布局、候选也还是旧方案）
+            engine.recreateSession()
+            val switched = engine.switchSchema(target)
+            FileLogger.i(TAG, "switch " + target + " -> " + switched + ", current=" + engine.getCurrentSchema())
+        }
+        // 异体键盘部署只保留最近三次，更早的整套（schema 文件 + 编译产物 + 启用项）清掉
+        if (isGrid) {
+            val (keep, evicted) = trimGridHistory(
+                history = SettingsPreferences.getGridDeployHistory(context),
+                target = target,
+                keep = GRID_DEPLOY_KEEP,
+            )
+            SettingsPreferences.setGridDeployHistory(context, keep)
+            for (id in evicted) {
+                GridSchemaInstaller.purgeScheme(context, id)
+            }
+        }
         FileLogger.i(TAG, "applied " + layout + "/" + order + " base=" + base + " -> " + target)
         return target
+    }
+
+    /** 异体键盘最多保留的部署套数。 */
+    private const val GRID_DEPLOY_KEEP = 3
+
+    /**
+     * 部署历史裁剪：重复部署同一套会提到最新位；只保留最近 [keep] 套。
+     *
+     * @return first = 保留的（旧→新），second = 需要整套删除的
+     */
+    internal fun trimGridHistory(
+        history: List<String>,
+        target: String,
+        keep: Int,
+    ): Pair<List<String>, List<String>> {
+        val all = history.filter { it != target } + target
+        val n = keep.coerceAtLeast(1)
+        return all.takeLast(n) to all.dropLast(n)
     }
 }
