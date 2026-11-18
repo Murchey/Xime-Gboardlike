@@ -157,13 +157,11 @@ fun SettingsMainContent(
                     )
                     SettingsNavRow(
                         title = tr(R.string.s_mohuyin),
-                        summary = tr(R.string.s_mohuyin_fu),
                         icon = Icons.TwoTone.Tune,
                         onClick = onNavigateToFuzzyPinyin,
                     )
                     SettingsNavRow(
                         title = tr(R.string.s_cikuguanli),
-                        summary = tr(R.string.s_yonghuciku_kuaijieduanyuyuciti_be6d2),
                         icon = Icons.TwoTone.Ballot,
                         onClick = onNavigateToDictionary,
                     )

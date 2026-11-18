@@ -63,7 +63,7 @@ fun SettingsPageScaffold(
         topBar = {
             if (size == SettingsTopBarSize.Large) {
                 LargeTopAppBar(
-                    title = { Text(title) },
+                    title = { Text(title, modifier = Modifier.padding(top = 8.dp)) },
                     navigationIcon = navIcon,
                     actions = actions,
                     colors = colors,

@@ -6,9 +6,9 @@ import androidx.compose.ui.unit.dp
 /** 设置页统一尺寸令牌：所有页面共用，避免各页各写一套 padding。 */
 internal object SettingsDimens {
     val PageHorizontal = 16.dp
-    val GroupGap = 16.dp
+    val GroupGap = 24.dp
     val SectionGap = 24.dp
-    val CardCorner = 32.dp
+    val CardCorner = 24.dp
     val RowHorizontal = 16.dp
     val RowVerticalSingle = 14.dp
     val RowVerticalTwoLine = 12.dp
@@ -23,7 +23,7 @@ internal object SettingsDimens {
 }
 
 /** 深色模式页面底色：Material 3 标准深色 surface(#1C1B1F)，不用主题调色后的偏色灰。 */
-private val SettingsDarkPageColor = androidx.compose.ui.graphics.Color(0xFF1C1B1F)
+private val SettingsDarkPageColor = androidx.compose.ui.graphics.Color(0xFF18191E)
 
 /**
  * 页面底色：浅色用主题 background；深色用 Android 标准灰，避免整屏发蓝/发紫。
@@ -38,10 +38,10 @@ internal fun settingsPageContainerColor(): androidx.compose.ui.graphics.Color {
     return if (background.luminance() < 0.5f) SettingsDarkPageColor else background
 }
 
-/** 分组标题内边距：上 18 / 下 6，与上一组拉开、与自己的行贴紧（Android 设置的比例）。 */
+/** 分组标题内边距：上 12 / 下 4（Gboard 新版：灰字小标题，贴着自己的卡片）。 */
 internal val SettingsGroupHeaderPadding = androidx.compose.foundation.layout.PaddingValues(
     start = SettingsDimens.RowHorizontal,
-    top = 18.dp,
+    top = 12.dp,
     end = SettingsDimens.RowHorizontal,
-    bottom = 6.dp,
+    bottom = 4.dp,
 )

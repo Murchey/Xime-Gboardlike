@@ -45,10 +45,12 @@ fun SettingsRow(
     role: Role? = null,
     trailing: (@Composable RowScope.() -> Unit)? = null,
 ) {
-    val vertical = SettingsDimens.RowVerticalTwoLine
+    val hasSummary = summary != null
+    val vertical = if (hasSummary) SettingsDimens.RowVerticalTwoLine else SettingsDimens.RowVerticalSingle
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .heightIn(min = if (hasSummary) SettingsDimens.RowMinHeightTwoLine else SettingsDimens.RowMinHeightSingle)
             .then(
                 if (onClick != null) Modifier.clickable(enabled = enabled, role = role, onClick = onClick)
                 else Modifier
@@ -61,8 +63,9 @@ fun SettingsRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (enabled) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
+                // Gboard 新版设置：单色灰图标，不用主题蓝
+                tint = if (enabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                 modifier = Modifier.size(SettingsDimens.IconSize),
             )
             Spacer(Modifier.width(SettingsDimens.IconGap))
