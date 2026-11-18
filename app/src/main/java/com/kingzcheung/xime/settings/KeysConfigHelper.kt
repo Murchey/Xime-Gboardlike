@@ -826,8 +826,28 @@ object KeysConfigHelper {
      * 改字体不会触碰 xime.custom.yaml）；直接重算配置、重载 Typeface 并递增
      * [configVersion] 让键盘重组。
      */
-    /** 符号提示风格变更后让键盘重算角标（不走配置重载，立即重组）。 */
+    /**
+     * 符号提示风格变更后立即生效：用原始手势表按当前风格重算缓存，再让键盘重组。
+     *
+     * 此前只递增版本号、不重算：Gboard 风格在解析期就改写了缓存里的 swipe_up/long_press，
+     * 切回 fcitx5 时缓存仍是 Gboard 那套（键面角标 @ . 3 & … 不变、上滑也上屏 Gboard 符号），
+     * 用户看到的就是"切了风格键位没变 / 按键不对"。
+     */
     fun bumpForSymbolHintStyle() {
+        val ctx = com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext
+        if (ctx != null) {
+            _keyGestureConfigZhBase = restyleSymbolHints(ctx, _rawKeyGestureZh)
+            _keyGestureConfigEn.value = restyleSymbolHints(ctx, _rawKeyGestureEn)
+            _mergedGestureConfigs = _rawMergedGestureConfigs.mapValues { (_, raw) ->
+                restyleSymbolHints(ctx, raw)
+            }
+            val merged = _activeMergedSection
+            _keyGestureConfig.value = if (merged != null) {
+                _mergedGestureConfigs[merged] ?: emptyMap()
+            } else {
+                _keyGestureConfigZhBase
+            }
+        }
         _configVersion.value++
     }
 
@@ -867,6 +887,11 @@ object KeysConfigHelper {
     // 标准 26 键的基线缓存（合并键布局切换退出时恢复）
     private var _zhLayoutBase: KeyboardRowsLayout = KeyboardRowsLayout(DEFAULT_ZH_ROWS.map { KeyboardRow(it) })
     private var _keyGestureConfigZhBase: Map<String, KeyBinding> = emptyMap()
+    // 未按符号风格改写过的原始手势表：风格切换时以它为基准重算，
+    // 否则 Gboard 风格改写后的结果会留在缓存里（切回 fcitx5 后角标/上滑仍是 Gboard 那套）。
+    private var _rawKeyGestureZh: Map<String, KeyBinding> = emptyMap()
+    private var _rawKeyGestureEn: Map<String, KeyBinding> = emptyMap()
+    private var _rawMergedGestureConfigs: Map<String, Map<String, KeyBinding>> = emptyMap()
 
     // 合并键布局缓存：section（qwerty_14/17/18 及 custom 新增）→ 行布局 / 手势配置
     private var _mergedLayouts: Map<String, KeyboardRowsLayout> = emptyMap()
@@ -1121,8 +1146,10 @@ object KeysConfigHelper {
         try {
             // 键盘手势（从原始 YAML 手动解析）
             val parsed = parseKeyboardFromAssets(context)
-            _keyGestureConfigZhBase = restyleSymbolHints(context, parsed?.first ?: emptyMap())
-            _keyGestureConfigEn.value = restyleSymbolHints(context, parsed?.second ?: emptyMap())
+            _rawKeyGestureZh = parsed?.first ?: emptyMap()
+            _rawKeyGestureEn = parsed?.second ?: emptyMap()
+            _keyGestureConfigZhBase = restyleSymbolHints(context, _rawKeyGestureZh)
+            _keyGestureConfigEn.value = restyleSymbolHints(context, _rawKeyGestureEn)
             // 键盘颜色（从原始 YAML 手动解析）
             keyboardColorsConfig = parseKeyboardColorsFromAssets(context)
             // 键盘阴影（从原始 YAML 手动解析）
@@ -1158,15 +1185,19 @@ object KeysConfigHelper {
             // （button_layout 同理：仅全键盘段支持，九键/笔画段不解析）
             val mergedLayoutsMap = mutableMapOf<String, KeyboardRowsLayout>()
             val mergedGesturesMap = mutableMapOf<String, Map<String, KeyBinding>>()
+            val rawMergedGesturesMap = mutableMapOf<String, Map<String, KeyBinding>>()
             val buttonLayoutsBySection = mutableMapOf<String, ButtonLayout>()
             for (section in _schemaSectionBindings.values
                 .filter { sectionKindOf(it, _sectionTypes) == SECTION_TYPE_FULL }.distinct()) {
                 parseRowsLayoutSection(context, section)?.let { mergedLayoutsMap[section] = it }
-                mergedGesturesMap[section] = restyleSymbolHints(context, parseGesturesSection(context, section))
+                val rawGestures = parseGesturesSection(context, section)
+                rawMergedGesturesMap[section] = rawGestures
+                mergedGesturesMap[section] = restyleSymbolHints(context, rawGestures)
                 parseButtonLayoutSection(context, section)?.let { buttonLayoutsBySection[section] = it }
             }
             _mergedLayouts = mergedLayoutsMap
             _mergedGestureConfigs = mergedGesturesMap
+            _rawMergedGestureConfigs = rawMergedGesturesMap
             _buttonLayoutBySection = buttonLayoutsBySection
             // 代码布局按段装载：绑定的代码布局段 + 内置保留名（未绑定时配置仍可用），
             // 各段独立解析；方案切换时由 setActiveKeyboardSchema 换入活动单例
