@@ -1551,6 +1551,8 @@
     <string name="s_waiguan">外观</string>
     <string name="s_anjian">按键</string>
     <string name="s_fuhaotishibuju">符号提示排布</string>
+    <string name="s_jiluweiduobenciku">记录为多本词库</string>
+    <string name="s_jiluweiduobenciku_fu">保留开关（默认关闭）：当前版本不生效，用户词库统一记录为一本。</string>
     <string name="s_fuhaojianpan_quxiao_erci_fanhui">符号键盘取消二次返回</string>
     <string name="s_fuhaojianpan_quxiao_erci_fanhui_fu">从符号页面返回时直接回到主键盘，不再回到数字/符号键盘页面。</string>
     <string name="s_fuhaotishi_fcitx5">fcitx5 风格</string>

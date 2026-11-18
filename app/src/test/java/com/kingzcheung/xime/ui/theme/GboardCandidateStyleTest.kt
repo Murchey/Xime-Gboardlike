@@ -25,11 +25,9 @@ class GboardCandidateStyleTest {
     }
 
     @Test
-    fun `非 Gboard 主题仍强调第一个候选词`() {
-        // 抽查几个非 Gboard 主题，确认没有误伤
-        for (id in listOf("wechat", "x", "github", "material_you")) {
-            val theme = KeyboardThemes.getThemeById(id)
-            assertTrue("$id 应保留首候选强调", theme.highlightFirstCandidate)
+    fun `所有内置主题都不强调第一个候选词`() {
+        for (theme in KeyboardThemes.themes) {
+            assertFalse(theme.id + " 应关闭首候选强调", theme.highlightFirstCandidate)
         }
     }
 

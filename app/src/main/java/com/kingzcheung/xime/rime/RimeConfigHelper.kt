@@ -50,6 +50,61 @@ object RimeConfigHelper {
     /** 部署互斥：Application 预初始化与输入法服务初始化可能并发触发部署，串行化避免重复/并发全量编译。 */
     private val deploymentLock = Any()
     
+    /** 统一用户词库名：所有方案共用一本（沿用 rime_ice，保留全拼已积累的词）。 */
+    internal const val UNIFIED_USER_DICT_NAME = "rime_ice"
+
+    /**
+     * 把「统一用户词库」补丁合并进一份 custom.yaml 文本。
+     *
+     * - 已配置 translator/user_dict：返回 null（尊重用户已有配置）；
+     * - 没有 patch 块：追加顶层 patch；
+     * - 有 patch 块：插到块末尾（保持在同一个 patch 之下）。
+     */
+    internal fun applyUnifiedUserDictPatch(text: String, name: String): String? {
+        val existing = Regex("""(?m)^\s*"?translator/user_dict"?\s*:""")
+        if (existing.containsMatchIn(text)) return null
+        val patchLine = "  \"translator/user_dict\": " + name
+        if (text.isBlank()) return "patch:\n" + patchLine + "\n"
+        val lines = text.lines().toMutableList()
+        if (lines.isNotEmpty() && lines.last().isEmpty()) lines.removeAt(lines.lastIndex)
+        val patchIdx = lines.indexOfFirst { it.trimEnd() == "patch:" }
+        if (patchIdx < 0) {
+            lines += ""
+            lines += "patch:"
+            lines += patchLine
+        } else {
+            var end = patchIdx + 1
+            var i = patchIdx + 1
+            while (i < lines.size) {
+                val line = lines[i]
+                if (line.isBlank()) { i++; continue }
+                if (line.startsWith(" ") || line.startsWith("\t")) { end = i + 1; i++; continue }
+                break
+            }
+            lines.add(end, patchLine)
+        }
+        return lines.joinToString("\n") + "\n"
+    }
+
+    /** 给所有已启用方案补统一用户词库补丁；返回实际改动的方案数。 */
+    private fun ensureUnifiedUserDict(context: Context): Int {
+        val rimeDir = SchemaManager.getRimeDir(context)
+        var changed = 0
+        for (id in SchemaManager.getEnabledSchemas(context)) {
+            if (!File(rimeDir, id + ".schema.yaml").isFile) continue
+            val custom = File(rimeDir, id + ".custom.yaml")
+            val text = if (custom.isFile) runCatching { custom.readText() }.getOrDefault("") else ""
+            val updated = applyUnifiedUserDictPatch(text, UNIFIED_USER_DICT_NAME) ?: continue
+            runCatching {
+                custom.parentFile?.mkdirs()
+                custom.writeText(updated)
+                changed++
+            }.onFailure { FileLogger.w(TAG, "unify user dict patch failed for " + id + ": " + it.message) }
+        }
+        if (changed > 0) FileLogger.i(TAG, "unified user dict patches: " + changed + " schema(s)")
+        return changed
+    }
+
     suspend fun initializeRimeDataAsync(context: Context): Pair<String, String> {
         val rimeDir = SchemaManager.getRimeDir(context)
         
@@ -118,6 +173,8 @@ object RimeConfigHelper {
             // assets 补建可能把用户 schema 覆盖回内置版本，这里再自愈一次才算真正生效
             val healed = neutraliseMissingGrammars(context)
             if (healed > 0) SettingsPreferences.setDeploymentHash(context, "")
+            // 用户词库统一记录为一本：给每个已启用方案补 translator/user_dict（已有配置不动）
+            if (ensureUnifiedUserDict(context) > 0) SettingsPreferences.setDeploymentHash(context, "")
             // 全局模型可能早于这些方案启用；补齐配置后再计算 hash，不能因旧版本标记跳过。
             val gramFailures = com.kingzcheung.xime.settings.GramActivation.syncConfigured(context)
             if (gramFailures > 0) FileLogger.w(TAG, "Grammar patch sync failed for $gramFailures schema(s)")

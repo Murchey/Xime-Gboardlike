@@ -102,6 +102,12 @@ object LayoutDisplaySettingsSpecs {
             ),
         ),
         SettingSpec.Switch(
+            key = SettingsPreferences.KEY_USER_DICT_MULTI_BOOK,
+            titleRes = R.string.s_jiluweiduobenciku,
+            descriptionRes = R.string.s_jiluweiduobenciku_fu,
+            default = false,
+        ),
+        SettingSpec.Switch(
             key = SettingsPreferences.KEY_SYMBOL_CANCEL_SECOND_BACK,
             titleRes = R.string.s_fuhaojianpan_quxiao_erci_fanhui,
             descriptionRes = R.string.s_fuhaojianpan_quxiao_erci_fanhui_fu,

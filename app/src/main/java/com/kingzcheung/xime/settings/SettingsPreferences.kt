@@ -884,6 +884,12 @@ object SettingsPreferences {
         getPrefs(context).edit().putString(KEY_GRID_DEPLOY_HISTORY, ids.joinToString(",")).apply()
     }
 
+    /** 记录为多本词库（保留开关，默认关；当前版本不生效，词库始终记录为一本）。 */
+    const val KEY_USER_DICT_MULTI_BOOK = "user_dict_multi_book"
+
+    fun isUserDictMultiBook(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_USER_DICT_MULTI_BOOK, false)
+
     /** 从符号页面返回时跳过数字/符号键盘，直接回主键盘（默认开）。 */
     const val KEY_SYMBOL_CANCEL_SECOND_BACK = "symbol_cancel_second_back"
 
