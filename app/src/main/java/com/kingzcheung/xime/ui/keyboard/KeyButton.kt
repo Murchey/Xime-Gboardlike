@@ -348,15 +348,15 @@ internal fun longPressIndexAt(
     val effectiveCell = (bodyWidth / columns).coerceAtLeast(1f)
     val bodyLeft = longPressBodyLeft(anchorX, bodyWidth, columns, keyboardWidthPx, marginPx)
     val col = ((touchXInRoot - bodyLeft) / effectiveCell).toInt().coerceIn(0, columns - 1)
-    // 气泡第一行画在最上方、第二行靠近按键；向上进入气泡先命中第二行，再回第一行。
+    // 气泡画在按键上方：最下面一行贴着按键、最上面一行离手指最远。
+    // 手指一移动就按它到气泡底部的距离算行号——向下移动（离气泡更远）落在最近的一行，
+    // 继续向上移动逐行上移；只有手指完全没动时才用初始行，
+    // 否则「向下滑想选第二行」会被判成没动、一直停在第 0 行。
     val row = if (rows > 1 && rowHeightPx > 0f) {
-        val upward = -deltaY
-        if (initialRow != null && upward < bubbleGapPx) {
-            initialRow.coerceIn(0, rows - 1)
-        } else if (upward < bubbleGapPx) {
-            0
+        if (deltaY == 0f) {
+            initialRow?.coerceIn(0, rows - 1) ?: 0
         } else {
-            val fromBottom = ((upward - bubbleGapPx) / rowHeightPx).toInt()
+            val fromBottom = (maxOf(-deltaY - bubbleGapPx, 0f) / rowHeightPx).toInt()
                 .coerceIn(0, rows - 1)
             rows - 1 - fromBottom
         }

@@ -1871,7 +1871,7 @@ private fun PeriodCell(env: QwertyRowEnv, modifier: Modifier) {
         modifier = modifier,
         a11yDescription = tapLabel,
         longPressItems = longPressItems,
-        longPressDefaultIndex = longPressConfig?.defaultIndex,
+        longPressDefaultIndex = longPressConfig?.defaultIndex ?: 0,
         onLongPressSelect = longPressItems?.let {
             { label ->
                 dispatchLongPressSelection(
@@ -2213,10 +2213,11 @@ fun KeyboardRowWithConfig(
             val symbolWasPrepended = asciiLongPressSymbol != null &&
                 baseLongPressLabels != null &&
                 baseLongPressLabels.firstOrNull() != asciiLongPressSymbol
-            // 英文长按补入上滑符号后，默认选中第一项（符号）。否则气泡按手指列定位，
-            // 右端 k/l 的初始高亮会落在中间的字母上，长按直接上屏 k 而不是半角括号。
+            // 默认选中第一项（键面角标上的符号）：显式 default_index（如句号 14）优先。
+            // 不给默认值时气泡按手指列定位，右端 m/v/n/l/k/y/u/i/o/p 的初始高亮会落在
+            // 中间的格子上，长按上屏的不是角标符号，甚至直接上屏别的字符。
             val effectiveLongPressDefaultIndex =
-                if (symbolWasPrepended) 0 else longPressConfig?.defaultIndex
+                if (symbolWasPrepended) 0 else (longPressConfig?.defaultIndex ?: 0)
             val baseLongPressGestureMap = if (longPressDisplay == DisplayMode.BUBBLE) {
                 longPressConfig?.let { KeysConfigHelper.longPressActionMap(it) }
             } else null
