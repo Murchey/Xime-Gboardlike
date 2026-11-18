@@ -8,7 +8,7 @@ internal object SettingsDimens {
     val PageHorizontal = 16.dp
     val GroupGap = 16.dp
     val SectionGap = 24.dp
-    val CardCorner = 24.dp
+    val CardCorner = 32.dp
     val RowHorizontal = 16.dp
     val RowVerticalSingle = 14.dp
     val RowVerticalTwoLine = 12.dp
