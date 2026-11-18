@@ -102,6 +102,12 @@ object LayoutDisplaySettingsSpecs {
             ),
         ),
         SettingSpec.Switch(
+            key = SettingsPreferences.KEY_SYMBOL_CANCEL_SECOND_BACK,
+            titleRes = R.string.s_fuhaojianpan_quxiao_erci_fanhui,
+            descriptionRes = R.string.s_fuhaojianpan_quxiao_erci_fanhui_fu,
+            default = true,
+        ),
+        SettingSpec.Switch(
             key = SettingsPreferences.KEY_HIDE_KEY_LABELS,
             titleRes = R.string.s_yincanganjianzifu,
             descriptionRes = R.string.s_yincanganjianzifu_fu,

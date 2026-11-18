@@ -157,6 +157,19 @@ data class KeyboardUiState(
     val clipboardSyncEnabled: Boolean = false,
 )
 
+/**
+ * 符号页返回时是否跳过数字/符号键盘直接回主键盘。
+ *
+ * 仅作用于「符号覆盖页 + 背后是数字/符号面板」这一种组合；从主键盘打开的符号页照旧返回主键盘。
+ */
+internal fun symbolBackSkipsPanel(
+    route: com.kingzcheung.xime.keyboard.OverlayRoute,
+    behind: com.kingzcheung.xime.keyboard.KeyboardPage,
+    enabled: Boolean,
+): Boolean = enabled &&
+    route is com.kingzcheung.xime.keyboard.OverlayRoute.Symbol &&
+    behind is com.kingzcheung.xime.keyboard.KeyboardPage.Panel
+
 class KeyboardViewModel(application: Application) : AndroidViewModel(application) {
 
     val clipboardManager = ClipboardManager.getInstance(application)
@@ -659,8 +672,18 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
     fun closeOverlay() {
         val current = _page.value
         if (current is KeyboardPage.Overlay) {
+            val skipPanel = symbolBackSkipsPanel(
+                route = current.route,
+                behind = current.behind,
+                enabled = SettingsPreferences.isSymbolCancelSecondBack(getApplication()),
+            )
             _page.value = current.behind
-            _syncViewState()
+            if (skipPanel) {
+                // 符号页是从数字/符号键盘进的：直接回主键盘，不留在数字/符号键盘（二次返回）
+                exitPanel()
+            } else {
+                _syncViewState()
+            }
         }
     }
 
