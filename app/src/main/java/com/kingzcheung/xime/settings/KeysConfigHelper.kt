@@ -1076,6 +1076,15 @@ object KeysConfigHelper {
     fun isConfigLoaded(): Boolean = configLoadedOnce
 
     fun markConfigLoaded() { configLoadedOnce = true }
+
+    /**
+     * 部署刚写了新的派生方案文件：让下一次 loadConfig 重新解析。
+     *
+     * 派生方案的绑定来自 rime 目录列举（derivedBindings），而 loadXimeConfig 只按
+     * xime.custom.yaml 的 mtime/size 缓存；部署写的不是这个文件，不失效就会一直拿旧绑定，
+     * 表现为「部署完成、方案也切了，键盘还是旧布局/旧键序」。
+     */
+    internal fun invalidateConfigCache() { _loadedCustomStamp = null }
     fun loadConfig(context: Context): KeysConfig {
         // 取提示符号时要用到 Context（见 SymbolHintRuntime）
         com.kingzcheung.xime.ui.keyboard.SymbolHintRuntime.appContext = context.applicationContext

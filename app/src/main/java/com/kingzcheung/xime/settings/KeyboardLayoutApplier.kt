@@ -74,6 +74,7 @@ object KeyboardLayoutApplier {
         // 先落当前方案：部署会销毁会话，下面的重建会话要按这个值切回来
         SettingsPreferences.setCurrentSchema(context, target)
         // 新派生的方案文件刚落盘：重新解析键面绑定，否则键盘还按旧绑定（新方案不生效）
+        KeysConfigHelper.invalidateConfigCache()
         runCatching { KeysConfigHelper.loadConfig(context) }
             .onFailure { FileLogger.w(TAG, "reload config failed: " + it.message) }
         KeysConfigHelper.setActiveKeyboardSchema(target)
