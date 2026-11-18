@@ -2495,11 +2495,9 @@ private fun ShiftCapsKeyButton(
             .then(shadowModifier)
             .clip(keyClipShape)
             .background(
-                // 按下统一为键盘背景色（与字母键一致），不再提亮
+                // 按下统一为键盘背景色（与字母键一致），不再提亮。
+                // 激活态也不再给键帽提亮：大写/大写锁定只靠箭头形态（空心 → 实心 → 底部横条）区分。
                 if (isPressed) LocalKeyPressedBackgroundColor.current ?: pressOverlay(backgroundColor)
-                // 激活态提亮（Gboard：shift 开启后键帽变亮），CAPS 靠右上角圆点区分
-                else if (shiftMode == ShiftMode.CAPS) pressOverlay(backgroundColor)
-                else if (shiftMode == ShiftMode.SINGLE) pressOverlay(backgroundColor)
                 else backgroundColor
             )
             .keySemantics(
@@ -2514,27 +2512,32 @@ private fun ShiftCapsKeyButton(
             },
         contentAlignment = Alignment.Center
     ) {
-        // Gboard 的 shift 图标：未激活为描边箭头，激活后填充；CAPS 由右上角小圆点提示
+        // shift 图标：未激活为空心描边箭头；单次点击填充实心；
+        // 双击锁定（CAPS）在实心箭头底部加一根横条。
         val painter = when (shiftMode) {
             ShiftMode.OFF -> rememberVectorPainter(Icons.Outlined.ArrowUpward)
             else -> rememberVectorPainter(Icons.Filled.ArrowUpward)
         }
-        Icon(
-            painter = painter,
-            contentDescription = null,
-            tint = iconColor,
-            modifier = Modifier.size(20.dp)
-        )
-
-        if (shiftMode == ShiftMode.CAPS) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(3.dp)
-                    .size(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(iconColor)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                painter = painter,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(20.dp)
             )
+            if (shiftMode == ShiftMode.CAPS) {
+                Spacer(modifier = Modifier.height(3.dp))
+                Box(
+                    modifier = Modifier
+                        .width(14.dp)
+                        .height(2.dp)
+                        .clip(RoundedCornerShape(1.dp))
+                        .background(iconColor)
+                )
+            }
         }
     }
 }
