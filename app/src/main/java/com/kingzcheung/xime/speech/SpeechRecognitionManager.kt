@@ -41,6 +41,16 @@ class SpeechRecognitionManager(private val context: Context) {
     }
 
     private var backend: AsrBackend? = null
+
+    /**
+     * 本进程创建过的全部后端（含被替换掉的旧引擎实例）。
+     *
+     * 系统语音引擎的 recognizer 一旦 startListening 就会**持续占用麦克风**，
+     * 只丢引用不 release 会留下"僵尸识别器"：内置/本地引擎拿不到声音，表现为
+     * 语音面板能开但永远没识别结果，且只能杀进程恢复。创建新后端时必须把
+     * 其余实例全部释放。
+     */
+    private val liveBackends = mutableSetOf<AsrBackend>()
     private var recordingThread: RecordingThread? = null
 
     /** 系统引擎（capturesAudioItself）没有录音线程，用它跟踪"正在识别"。 */
@@ -113,6 +123,7 @@ class SpeechRecognitionManager(private val context: Context) {
             mainHandler.postDelayed({ if (!isPreloading) startRecognition() }, 300L)
             return true
         }
+        releaseStaleBackends()
         // 线程已结束但引用没清（早期 AudioRecord/后端失败路径）：按"未在运行"处理并复位，
         // 否则后续每次 start 都会被判成 alreadyRunning 永远忽略（症状：只能语音一次）。
         val thread = recordingThread
@@ -412,7 +423,7 @@ class SpeechRecognitionManager(private val context: Context) {
         val b = synchronized(preloadLock) {
             val tmp = backend
             backend = null
-            tmp
+            tmp?.also { liveBackends.remove(it) }
         }
         if (b != null) {
             // release() 含跨进程 IPC，放到后台线程执行，避免阻塞主线程（onDestroy 等场景）
@@ -450,7 +461,19 @@ class SpeechRecognitionManager(private val context: Context) {
                 onError = { error -> handleError(error) }
             )
             if (!newBackend.initialize()) return false
-            synchronized(preloadLock) { backend = newBackend }
+            val stale = synchronized(preloadLock) {
+                backend = newBackend
+                val olds = liveBackends.filter { it !== newBackend }
+                liveBackends.clear()
+                liveBackends.add(newBackend)
+                olds
+            }
+            // 旧引擎（尤其系统语音引擎）必须显式 release：只丢引用会让它的
+            // recognizer 一直录着麦克风，新引擎就再也收不到音频了。
+            stale.forEach { old ->
+                Log.w(TAG, "releasing stale backend: " + old.name)
+                runCatching { old.release() }
+            }
             true
         } catch (t: Throwable) {
             FileLogger.w(TAG, "preload failed: " + t.message)
@@ -492,12 +515,30 @@ class SpeechRecognitionManager(private val context: Context) {
         synchronized(preloadLock) {
             val old = backend
             backend = null
-            if (old != null && old.capturesAudioItself) runCatching { old.release() }
+            if (old != null) {
+                liveBackends.remove(old)
+                if (old.capturesAudioItself) runCatching { old.release() }
+            }
         }
         return if (target == SttEngine.LOCAL) {
             localName ?: tr(R.string.s_yinqing_bendimoxing)
         } else {
             AsrBackendFactory.getBuiltinName(context)
+        }
+    }
+
+    /** 释放所有"非当前"的历史后端实例（系统引擎僵尸 recognizer 会一直占用麦克风）。 */
+    private fun releaseStaleBackends() {
+        val stale = synchronized(preloadLock) {
+            val current = backend
+            val olds = liveBackends.filter { it !== current }
+            liveBackends.removeAll(olds.toSet())
+            olds
+        }
+        if (stale.isEmpty()) return
+        stale.forEach { old ->
+            Log.w(TAG, "releasing stale backend before start: " + old.name)
+            runCatching { old.release() }
         }
     }
 
