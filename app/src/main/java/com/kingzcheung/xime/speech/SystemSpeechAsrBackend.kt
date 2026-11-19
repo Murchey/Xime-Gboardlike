@@ -46,6 +46,9 @@ class SystemSpeechAsrBackend(private val context: Context) : AsrBackend {
     /** 系统引擎自己持有麦克风，故为 true：录音线程会跳过 AudioRecord。 */
     override val capturesAudioItself: Boolean = true
 
+    /** 宿主（SpeechRecognitionManager）注入的降级回调；返回替代引擎显示名或 null。 */
+    override var onRecoverableEngineFailure: (() -> String?)? = null
+
     override val name: String
         get() {
             val title = tr(R.string.s_xitongyuyin)
@@ -165,6 +168,20 @@ class SystemSpeechAsrBackend(private val context: Context) : AsrBackend {
                 // 回 IDLE 即可，不把「客户端出错」弹给用户。
                 Log.d(TAG, "ERROR_CLIENT ignored as lifecycle noise")
                 stateCallback?.invoke(RecognitionState.IDLE)
+                return
+            }
+            // 厂商服务不可达：这不是"你的网络不好"，系统引擎本身依赖厂商云服务。
+            // 先尝试降级到本地/内置在线（宿主决定），再给用户可执行的提示。
+            if (error == SpeechRecognizer.ERROR_NETWORK_TIMEOUT || error == SpeechRecognizer.ERROR_SERVER) {
+                val replacement = onRecoverableEngineFailure?.invoke()
+                stateCallback?.invoke(RecognitionState.ERROR)
+                errorCallback?.invoke(
+                    if (replacement != null) {
+                        tr(R.string.s_xitongyuyin_yijiangong, replacement)
+                    } else {
+                        tr(R.string.s_xitongyuyin_lianbushang)
+                    }
+                )
                 return
             }
             stateCallback?.invoke(RecognitionState.ERROR)

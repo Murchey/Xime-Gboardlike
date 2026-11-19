@@ -428,6 +428,13 @@ class SpeechRecognitionManager(private val context: Context) {
     /** 等待其它线程加载模型的上限：超过就延后重试，绝不在主线程无限等待。 */
     private val PRELOAD_WAIT_MS = 5_000L
 
+    /**
+     * 本次进程内的临时引擎覆盖：系统语音引擎连不上厂商服务时，临时切到本地/内置在线，
+     * 让后续长按可用（不改写用户在设置里的选择，重启后恢复原选择）。
+     */
+    @Volatile
+    private var engineOverride: SttEngine? = null
+
     fun preload(): Boolean {
         synchronized(preloadLock) {
             if (backend != null) return true
@@ -463,9 +470,40 @@ class SpeechRecognitionManager(private val context: Context) {
      * 不再静默换到别的引擎——回退规则集中在 [SttEngineResolver]，只在"插件不可用
      * 但内置在线已配置"这一种明确场景下降级，避免"以为在跑 A 其实在跑 B"。
      */
+    /**
+     * 系统语音引擎连不上厂商服务时的临时降级：优先本地模型，其次内置在线。
+     *
+     * 只做**进程内**覆盖（不改设置项），返回替代引擎显示名；无替代返回 null。
+     * 同时把当前系统后端摘掉，让下一次 startRecognition 用新引擎重建。
+     */
+    private fun fallbackForSystemEngineFailure(): String? {
+        if (engineOverride != null) return null
+        val localName = AsrBackendFactory.getLocalName(context)
+        val target: SttEngine = when {
+            localName != null -> SttEngine.LOCAL
+            AsrBackendFactory.isBuiltinConfigured(context) -> SttEngine.BUILTIN_ONLINE
+            else -> return null
+        }
+        engineOverride = target
+        if (target == SttEngine.LOCAL) {
+            runCatching { AsrBackendFactory.warmup(context) }
+        }
+        Log.w(TAG, "system engine unavailable, temporary engine -> " + target)
+        synchronized(preloadLock) {
+            val old = backend
+            backend = null
+            if (old != null && old.capturesAudioItself) runCatching { old.release() }
+        }
+        return if (target == SttEngine.LOCAL) {
+            localName ?: tr(R.string.s_yinqing_bendimoxing)
+        } else {
+            AsrBackendFactory.getBuiltinName(context)
+        }
+    }
+
     private fun createBackend(): AsrBackend? {
         val enabledPlugins = ExtensionManager.getEnabledAsrPlugins(context).map { it.first }
-        val engine = SettingsPreferences.getSttEngine(context)
+        val engine = engineOverride ?: SettingsPreferences.getSttEngine(context)
         val resolution = SttEngineResolver.resolve(
             preferred = engine,
             localAvailable = AsrBackendFactory.getLocalName(context) != null,
@@ -479,7 +517,11 @@ class SpeechRecognitionManager(private val context: Context) {
             SttEngine.BUILTIN_ONLINE -> AsrBackendFactory.createBuiltinOnline(context)
             SttEngine.PLUGIN -> createOnlineAsrBackend()
             // 系统引擎自己录音（见 SystemSpeechAsrBackend），录音线程会据此跳过 AudioRecord
-            SttEngine.SYSTEM -> AsrBackendFactory.createSystem(context)
+            SttEngine.SYSTEM -> AsrBackendFactory.createSystem(context).also { sys ->
+                // 厂商服务不可达时（ERROR_NETWORK_TIMEOUT / ERROR_SERVER）临时降级，
+                // 避免用户在"系统语音引擎"上反复撞墙
+                sys.onRecoverableEngineFailure = { fallbackForSystemEngineFailure() }
+            }
         }
     }
 

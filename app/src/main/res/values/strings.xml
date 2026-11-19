@@ -1513,6 +1513,8 @@
     <string name="s_xitongyuyin_chuangjian">无法创建系统语音识别服务</string>
     <string name="s_xitongyuyin_bukeyong_shuoming">本机未安装或未启用系统语音识别服务，请改用其他识别引擎</string>
     <string name="s_xitongyuyin_zhengzai">正在使用系统语音引擎</string>
+    <string name="s_xitongyuyin_lianbushang">系统语音引擎连不上厂商服务（与你的网络无关），请改用「本地模型」或「内置在线」引擎</string>
+    <string name="s_xitongyuyin_yijiangong">系统语音引擎不可用，已临时改用「%1$s」，请再长按一次</string>
     <string name="s_yuyin_audioerror">录音出错</string>
     <string name="s_yuyin_clienterror">识别客户端出错</string>
     <string name="s_yuyin_quanxian">缺少录音权限，请在系统设置中授权</string>

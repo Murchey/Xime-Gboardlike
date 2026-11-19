@@ -21,6 +21,15 @@ interface AsrBackend {
         onError: (String) -> Unit
     )
     
+    /**
+     * 引擎级可恢复失败（如系统语音引擎连不上厂商服务）回调：宿主可借此临时切到
+     * 本地/内置在线引擎，返回替代引擎的显示名（null = 无可用替代）。
+     * 默认 null，只有需要降级提示的后端实现它。
+     */
+    var onRecoverableEngineFailure: (() -> String?)?
+        get() = null
+        set(_) {}
+
     fun initialize(): Boolean
     fun start(): Boolean
     fun processAudioChunk(buffer: ByteArray)
