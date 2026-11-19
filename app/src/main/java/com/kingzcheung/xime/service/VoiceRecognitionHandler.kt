@@ -172,6 +172,18 @@ class VoiceRecognitionHandler(
         return true
     }
 
+    /**
+     * 用户在设置里切换了识别引擎（引擎/本地开关/在线插件）：立即释放当前后端。
+     *
+     * 引擎常驻（keep-alive）时后端不会自然过期，不释放就会出现「设置里换了引擎、
+     * 实际还在跑旧的」，下一段语音的表现与设置不符。
+     */
+    fun onEngineChanged() {
+        if (!::speechRecognitionManager.isInitialized) return
+        Log.i(TAG, "engine preference changed, releasing current backend")
+        runCatching { speechRecognitionManager.release() }
+    }
+
     fun stopRecognition() {
         if (::speechRecognitionManager.isInitialized) {
             speechRecognitionManager.stopRecognition()

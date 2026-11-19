@@ -889,6 +889,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     }
                 }
                 SettingsPreferences.KEY_STT_ENGINE -> {
+                    // 引擎切换要立刻生效：释放当前后端（引擎常驻时 backend 不会自己过期，
+                    // 不释放就会出现"设置里换了引擎、实际还在用旧的"），下一次长按按新选择重建。
+                    voiceRecognitionHandler.onEngineChanged()
                     // 切到本地引擎时预热，避免第一句语音现加载模型丢掉开头
                     if (SettingsPreferences.getSttEngine(this@XimeInputMethodService) ==
                         com.kingzcheung.xime.speech.SttEngine.LOCAL &&
@@ -896,6 +899,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     ) {
                         Thread { AsrBackendFactory.warmup(this@XimeInputMethodService) }.start()
                     }
+                }
+                SettingsPreferences.KEY_STT_USE_LOCAL,
+                SettingsPreferences.KEY_STT_ONLINE_PLUGIN_ID -> {
+                    // 本地模型开关/在线插件选择同样影响实际引擎：释放旧后端，下次按新配置重建
+                    voiceRecognitionHandler.onEngineChanged()
                 }
                 SettingsPreferences.KEY_ONE_HANDED_MODE -> {
                     uiState.value = uiState.value.copy(
