@@ -138,7 +138,11 @@ fun EmojiKeyboardLayout(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            // 玻璃下表情面板不另画底色，透出键盘同一张磨砂底
+            .background(
+                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) Color.Transparent
+                else backgroundColor
+            )
     ) {
         // 导航区：返回按钮 + 顶层 Tab（Emoji / 插件）
         Box(
