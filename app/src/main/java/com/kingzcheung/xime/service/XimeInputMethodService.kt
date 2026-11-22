@@ -3425,8 +3425,16 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         ).also { glassBlurWindows[name] = it }
         val cfg = com.kingzcheung.xime.settings.FrostedGlassPreferences.read(this, isDarkTheme())
         val density = resources.displayMetrics.density
-        // 参考实现：键盘模糊 16dp 圆角（顶部直角/导航条时用 0，这里先统一 16dp）
-        win.configure(true, (cfg.blurRadiusDp * density).toInt(), 16f * density)
+        // 模糊窗口的圆角与键盘背景一致：顶部「圆角」或底部圆角时才有圆角，否则直角；
+        // 否则模糊矩形会在键盘圆角外侧露出一块方的磨砂，圆角看起来就不明显
+        val roundCorner = com.kingzcheung.xime.ui.theme.KeyboardTopStyles.current ==
+            com.kingzcheung.xime.ui.theme.KeyboardTopStyle.ROUNDED ||
+            SettingsPreferences.roundedKeyboardBottom(this)
+        win.configure(
+            true,
+            (cfg.blurRadiusDp * density).toInt(),
+            if (roundCorner) 14f * density else 0f,
+        )
         win.setRegion(rect, glassAnchorOrigin())
         // 参考实现里模糊跟着"键盘整体透明度"（glassOpacity）走，不是背板不透明度；
         // 背板 0.2 时模糊仍是满强度，否则会露出清晰的应用画面
