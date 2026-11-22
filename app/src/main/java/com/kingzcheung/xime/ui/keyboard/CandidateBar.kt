@@ -279,7 +279,11 @@ fun CandidateBar(
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
-            .background(visuals.backgroundColor),
+            // 玻璃下候选栏不另画底色，直接透出键盘同一张磨砂底（与参考实现的面板一致）
+            .background(
+                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) Color.Transparent
+                else visuals.backgroundColor
+            ),
     ) {
     Column(
         modifier = Modifier
