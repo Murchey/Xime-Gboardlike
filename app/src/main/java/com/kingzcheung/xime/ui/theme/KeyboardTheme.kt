@@ -283,6 +283,46 @@ object KeyboardThemes {
                 accentKeyBg = Color(0xFF8CA8F5), accentKeyText = Color(0xFF10151C),
             ),
         ),
+        // 靛蓝：冷调靛蓝强调，浅色中性底色、深色近黑
+        buildTheme(
+            id = "indigo", name = "靛蓝",
+            light = ThemePalette(
+                background = Color(0xFFE7EAF2), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF1A1C22), candidateText = Color(0xFF101218),
+                accent = Color(0xFF3D4CD1), selectedText = Color(0xFF2E3AB0), container = Color(0xFFE3E6F2),
+                specialKey = Color(0xFFE3E6F2),
+                functionKey = Color(0xFFE3E6F2),
+                accentKeyBg = Color(0xFF3D4CD1), accentKeyText = Color(0xFFFFFFFF),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF14161C), key = Color(0xFF2A2E38),
+                keyText = Color(0xFFEDEFF4), candidateText = Color(0xFFFFFFFF),
+                accent = Color(0xFF9AA8F7), selectedText = Color(0xFFBFC8FF), container = Color(0xFF21252F),
+                specialKey = Color(0xFF21252F),
+                functionKey = Color(0xFF21252F),
+                accentKeyBg = Color(0xFF9AA8F7), accentKeyText = Color(0xFF10131A),
+            ),
+        ),
+        // 暖砂：暖中性底色 + 陶土色强调，浅色像纸张、深色像夜色木纹
+        buildTheme(
+            id = "warm_sand", name = "暖砂",
+            light = ThemePalette(
+                background = Color(0xFFEBE4D8), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF241F18), candidateText = Color(0xFF17130D),
+                accent = Color(0xFFA34F1F), selectedText = Color(0xFF813D14), container = Color(0xFFE8E0D2),
+                specialKey = Color(0xFFE8E0D2),
+                functionKey = Color(0xFFE8E0D2),
+                accentKeyBg = Color(0xFFA34F1F), accentKeyText = Color(0xFFFFFFFF),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF1B1712), key = Color(0xFF2F2A23),
+                keyText = Color(0xFFF0EAE0), candidateText = Color(0xFFFFFFFF),
+                accent = Color(0xFFE0A06A), selectedText = Color(0xFFF0C39A), container = Color(0xFF272119),
+                specialKey = Color(0xFF272119),
+                functionKey = Color(0xFF272119),
+                accentKeyBg = Color(0xFFE0A06A), accentKeyText = Color(0xFF1A120A),
+            ),
+        ),
         // 参照 Gboard 黑（浅：白键 + 灰功能键 + Google 蓝回车；深：纯黑底 + 浅灰键）
         buildTheme(
             id = "gboard_black", name = "Gboard 黑",
