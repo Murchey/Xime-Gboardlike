@@ -3474,6 +3474,29 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         }
     }
 
+    /**
+     * 分体键盘：左右两半各一块模糊，中缝保持清晰；任一为空表示未分体，恢复整块模糊。
+     */
+    internal fun updateGlassSplit(
+        left: androidx.compose.ui.geometry.Rect?,
+        right: androidx.compose.ui.geometry.Rect?,
+    ) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return
+        if (left == null || right == null) {
+            updateGlassSurface("keyboard-left", null)
+            updateGlassSurface("keyboard-right", null)
+            glassBlurRect?.let(::updateGlassBlur)
+            return
+        }
+        val nav = SettingsPreferences.roundedKeyboardBottom(this)
+        fun androidRect(r: androidx.compose.ui.geometry.Rect) = android.graphics.Rect(
+            r.left.toInt(), r.top.toInt(), r.right.toInt(), r.bottom.toInt(),
+        ).apply { if (nav) bottom = resources.displayMetrics.heightPixels }
+        updateGlassSurface("keyboard", null)
+        updateGlassSurface("keyboard-left", androidRect(left))
+        updateGlassSurface("keyboard-right", androidRect(right))
+    }
+
     private fun setGlassSurfacesVisible(visible: Boolean) {
         glassBlurWindows.values.forEach { win ->
             if (visible) {

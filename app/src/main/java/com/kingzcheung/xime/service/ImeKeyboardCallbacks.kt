@@ -133,6 +133,7 @@ internal fun rememberImeKeyboardCallbacks(
                 }
             },
             onCommitText = { text -> service.textCommit.commitClipboardText(text) },
+            onGlassSplitChanged = { left, right -> service.updateGlassSplit(left, right) },
             onDeleteText = { count -> service.textCommit.deleteClipboardChars(count) },
             onHandwritingAutoCommit = { newTail, expectedTail ->
                 if (expectedTail.isEmpty()) {

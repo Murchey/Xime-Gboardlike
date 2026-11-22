@@ -32,6 +32,8 @@ data class KeyboardCallbacks(
      */
     val onClipboardImageSelect: ((com.kingzcheung.xime.clipboard.ClipboardItem) -> Unit)? = null,
     val onCommitText: ((String) -> Unit)? = null,
+    /** 分体键盘左右两半在窗口里的矩形（用于把模糊面拆成左右两块、中缝保持清晰）；未分体时为 null/null。 */
+    val onGlassSplitChanged: ((androidx.compose.ui.geometry.Rect?, androidx.compose.ui.geometry.Rect?) -> Unit)? = null,
     val onDeleteText: ((Int) -> Unit)? = null,
     val onQuickSend: (() -> Unit)? = null,
     val onKeyboardResize: (() -> Unit)? = null,
