@@ -20,11 +20,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kingzcheung.xime.settings.FrostedGlassPreferences
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.ui.theme.KeyShape
 import com.kingzcheung.xime.ui.theme.KeyboardTopStyle
@@ -68,6 +71,11 @@ fun ThemeAppearanceSection() {
     var liquidStrength by remember { mutableStateOf(SettingsPreferences.getLiquidGlassStrength(context)) }
     var topStyle by remember { mutableStateOf(SettingsPreferences.getKeyboardTopStyle(context)) }
     var roundedBottom by remember { mutableStateOf(SettingsPreferences.roundedKeyboardBottom(context)) }
+    // 玻璃材质参数：按当前深浅读取，滑块直接写回 FrostedGlassPreferences
+    val glassDark = MaterialTheme.colorScheme.surface.luminance() < .5f
+    var keyOpacity by remember(glassDark) {
+        mutableFloatStateOf(FrostedGlassPreferences.read(context, glassDark).keyOpacity)
+    }
 
     // 预览键使用的"键面"颜色：与设置页一致的浅色/深色中性色
     val keyColor = MaterialTheme.colorScheme.surfaceVariant
@@ -166,6 +174,22 @@ fun ThemeAppearanceSection() {
                 // 玻璃效果本身也画一个示例键：半透明键面 + 玻璃高光/亮边
                 Spacer(Modifier.height(8.dp))
                 GlassPreviewSample(enabled = glassOn, keyColor = keyColor, keyText = keyText, accent = accent)
+                if (glassOn) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "键面不透明度 ${(keyOpacity * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Slider(
+                        value = keyOpacity,
+                        onValueChange = { v ->
+                            keyOpacity = v
+                            FrostedGlassPreferences.writeOpacities(context, glassDark, keyOpacity = v)
+                        },
+                        valueRange = 0f..1f,
+                    )
+                }
 
                 Spacer(Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
