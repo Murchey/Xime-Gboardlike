@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -28,10 +29,12 @@ fun ToolbarButtonIcon(
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
     fontSize: TextUnit = 16.sp,
+    /** 状态化图标覆盖（如隐私输入开启后用划掉的眼睛），null 时用按钮默认图标。 */
+    iconOverride: ImageVector? = null,
 ) {
     when (item) {
         is ToolbarButtonItem.Builtin -> Icon(
-            imageVector = item.button.icon,
+            imageVector = iconOverride ?: item.button.icon,
             contentDescription = contentDescription ?: item.label,
             tint = tint,
             modifier = modifier,

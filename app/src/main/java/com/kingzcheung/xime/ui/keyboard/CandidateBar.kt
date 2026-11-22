@@ -598,6 +598,7 @@ fun CandidateBar(
                                                     item = action.item,
                                                     tint = if (isPressed) iconButtonTint.copy(alpha = 0.6f) else iconButtonTint,
                                                     modifier = Modifier.size(24.dp),
+                                                    iconOverride = action.iconOverride,
                                                 )
                                             }
                                         }

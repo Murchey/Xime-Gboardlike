@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.twotone.Edit
 import androidx.compose.material.icons.twotone.KeyboardAlt
@@ -221,7 +222,8 @@ fun MenuBar(
         }
         val icon = when {
             oneHandedOn -> Icons.Filled.OpenInFull
-            privacyOn -> Icons.Rounded.Visibility
+            // 隐私已开启：划掉的眼睛（输入已隐藏/不再记录）
+            privacyOn -> Icons.Rounded.VisibilityOff
             else -> b.icon
         }
         MenuTool(b.id, label, rememberVectorPainter(icon)) {

@@ -116,9 +116,11 @@ enum class ToolbarButton(
 
     /**
      * 隐私输入：一次开关同时关掉用户词库学习与联想记录（见 [com.kingzcheung.xime.settings.PrivacyInput]）。
-     * 开启后卡片文字换成「退出隐私输入」、图标换成睁眼，与单手模式同一套"开关卡片"表达。
+     *
+     * 图标语义统一为「眼睛＝输入可见/正在学习，划掉的眼睛＝已隐藏/不记录」：
+     * 关闭隐私（默认）用睁眼，开启隐私后用划掉的眼；工具栏条与菜单卡片同一口径。
      */
-    PRIVACY("privacy", tr(R.string.s_yinsishuru), Icons.Rounded.VisibilityOff),
+    PRIVACY("privacy", tr(R.string.s_yinsishuru), Icons.Rounded.Visibility),
 
     /** 开发者调试用：一键开关滑动轨迹采集，并在同一面板里标记真实意图。 */
     DEBUG_GLIDE("debug_glide", tr(R.string.s_debug_huadongbiaoj), Icons.Outlined.BugReport);
@@ -159,5 +161,7 @@ fun isBuiltinToolbarButtonAvailable(
 
 data class ToolbarAction(
     val item: ToolbarButtonItem,
-    val onClick: () -> Unit
+    val onClick: () -> Unit,
+    /** 状态化图标（隐私输入开启时用划掉的眼睛）；null = 用按钮默认图标。 */
+    val iconOverride: ImageVector? = null,
 )

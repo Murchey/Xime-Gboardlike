@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -579,10 +580,18 @@ fun KeyboardView(
                                 ?.let { sw -> callbacks.onToggleSchemaSwitch?.invoke(sw) }
                         })
                     }
-                    ToolbarAction(item) {
-                        onHapticFeedback?.invoke()
-                        onClick()
-                    }
+                    // 隐私输入是开关：开启时工具栏条也要显示「已隐藏」的划眼图标，
+                    // 否则按钮在不同状态下长得一样，看不出当前处于哪种模式。
+                    val privacyActive = item is ToolbarButtonItem.Builtin &&
+                        item.button == ToolbarButton.PRIVACY && state.privacyInputEnabled
+                    ToolbarAction(
+                        item = item,
+                        onClick = {
+                            onHapticFeedback?.invoke()
+                            onClick()
+                        },
+                        iconOverride = if (privacyActive) Icons.Rounded.VisibilityOff else null,
+                    )
                 },
                 visuals = CandidateBarVisuals(
                     backgroundColor = Color.Transparent,
