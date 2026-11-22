@@ -65,6 +65,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalView
 import com.kingzcheung.xime.ui.keyboard.LocalStretchFactor
 import androidx.compose.ui.text.font.FontWeight
@@ -2220,6 +2221,15 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                         val b = c.boundsInRoot()
                                         keyboardBgTopPx = b.top.toInt()
                                         keyboardBgBottomPx = b.bottom.toInt()
+                                        // 玻璃：键盘背后那块系统模糊面按"窗口坐标"跟键盘矩形走
+                                        val origin = c.positionInWindow()
+                                        val size = c.size
+                                        updateGlassBlur(
+                                            android.graphics.Rect(
+                                                origin.x.toInt(), origin.y.toInt(),
+                                                origin.x.toInt() + size.width, origin.y.toInt() + size.height,
+                                            )
+                                        )
                                     }
                                     // 键盘顶部样式：圆角档裁上两角；柔化档在背景之上叠一层上沿渐变
                                     .clip(
@@ -3352,6 +3362,31 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             com.kingzcheung.xime.i18n.UiText.init(AppLocale.wrap(this))
             if (isInputViewShown) setInputView(onCreateInputView())
         }
+    }
+
+    /** 键盘背后与键盘等大的系统模糊面（安卓 12+，玻璃开启时才有）。 */
+    private var glassBlurWindow: ImeGlassBlurWindow? = null
+
+    /**
+     * 玻璃效果的系统模糊：只覆盖键盘矩形（子窗口），不会糊到键盘以外的画面。
+     * 关闭玻璃时把模糊窗口撤掉，退回透明背板。
+     */
+    internal fun updateGlassBlur(rect: android.graphics.Rect) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return
+        val enabled = com.kingzcheung.xime.ui.theme.GlassEffect.enabled
+        val win = glassBlurWindow ?: if (enabled) {
+            ImeGlassBlurWindow(this).also { glassBlurWindow = it }
+        } else {
+            return
+        }
+        val cfg = com.kingzcheung.xime.settings.FrostedGlassPreferences.read(this, isDarkTheme())
+        val density = resources.displayMetrics.density
+        // 参考实现：键盘模糊 16dp 圆角（顶部直角/导航条时用 0，这里先统一 16dp）
+        win.configure(enabled, (cfg.blurRadiusDp * density).toInt(), 16f * density)
+        win.setRegion(if (enabled) rect else null)
+        win.setOpacity(1f)
+        win.setVisible(enabled && isInputViewShown)
+        win.update(window?.window?.decorView, window?.window?.decorView?.windowToken)
     }
 
     internal fun applyWindowBackground() {
