@@ -3570,9 +3570,13 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                         win.isNavigationBarContrastEnforced = false
                     }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        // 底部直角时导航栏跟键盘同色（底部圆角才用透明导航栏，露出键盘底图）
+                        // 底部圆角或玻璃效果时导航栏透明：键盘底图/磨砂层自己延伸到屏幕底，
+                        // 不能用主题主色兜底（图片主题的主色在浅色下会是一条亮青色）
                         win.setNavigationBarColor(
-                            if (SettingsPreferences.roundedKeyboardBottom(this@XimeInputMethodService)) {
+                            if (SettingsPreferences.roundedKeyboardBottom(this@XimeInputMethodService) ||
+                                com.kingzcheung.xime.ui.theme.GlassEffect.enabled ||
+                                theme.keyboardBackground?.type == "image"
+                            ) {
                                 android.graphics.Color.TRANSPARENT
                             } else {
                                 argb
