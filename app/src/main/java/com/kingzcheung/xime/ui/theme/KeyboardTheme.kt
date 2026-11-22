@@ -263,6 +263,26 @@ object KeyboardThemes {
                 accentKeyBg = Color(0xFF3B4956), accentKeyText = Color(0xFFDCE6F5),
             ),
         ),
+        // 雾青：低饱和蓝灰，浅色偏冷白、深色接近午夜蓝；强调色只在功能键/选中处出现
+        buildTheme(
+            id = "mist_blue", name = "雾青",
+            light = ThemePalette(
+                background = Color(0xFFEEF1F5), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF1B2430), candidateText = Color(0xFF111820),
+                accent = Color(0xFF4C6EF5), selectedText = Color(0xFF2F4FD8), container = Color(0xFFDDE4EC),
+                specialKey = Color(0xFFDDE4EC),
+                functionKey = Color(0xFFDDE4EC),
+                accentKeyBg = Color(0xFF4C6EF5), accentKeyText = Color(0xFFFFFFFF),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF1B1F26), key = Color(0xFF2C333D),
+                keyText = Color(0xFFE6EAF0), candidateText = Color(0xFFFFFFFF),
+                accent = Color(0xFF8CA8F5), selectedText = Color(0xFFB9CCFF), container = Color(0xFF232A33),
+                specialKey = Color(0xFF232A33),
+                functionKey = Color(0xFF232A33),
+                accentKeyBg = Color(0xFF8CA8F5), accentKeyText = Color(0xFF10151C),
+            ),
+        ),
         // 参照 Gboard 黑（浅：白键 + 灰功能键 + Google 蓝回车；深：纯黑底 + 浅灰键）
         buildTheme(
             id = "gboard_black", name = "Gboard 黑",
