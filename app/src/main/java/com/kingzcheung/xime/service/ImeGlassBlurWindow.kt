@@ -24,11 +24,17 @@ import com.kingzcheung.xime.util.FileLogger
  * 不截图、不冻结位图、不用隐藏 API。
  */
 @RequiresApi(Build.VERSION_CODES.S)
-internal class ImeGlassBlurWindow(private val context: Context, private val role: String = "keyboard") {
+internal class ImeGlassBlurWindow(
+    private val context: Context,
+    private val role: String = "keyboard",
+    /** 现在键盘容器在输入法窗口里的位置；窗口上下移动（状态栏显隐）时用它平移模糊面。 */
+    private val anchorOrigin: () -> androidx.compose.ui.unit.IntOffset? = { null },
+) {
 
     private var dialog: Dialog? = null
     private var background: GradientDrawable? = null
     private var region: Rect? = null
+    private var regionMeasuredAt: androidx.compose.ui.unit.IntOffset? = null
     private var boundToken: IBinder? = null
     private var blurRadiusPx = 0
     private var cornerRadiusPx = 0f
@@ -40,12 +46,24 @@ internal class ImeGlassBlurWindow(private val context: Context, private val role
     private var appliedCornerRadius = -1f
     private var appliedOpacity = -1f
 
-    /** 键盘矩形（输入法窗口坐标）。换矩形只挪子窗口，不重建。 */
-    fun setRegion(bounds: Rect?) {
+    /**
+     * 键盘矩形（输入法窗口坐标）。[measuredAt] 是量这块矩形时键盘容器在窗口里的位置；
+     * 之后窗口自己上下移动（状态栏显隐）也能按差值平移，不用等 Compose 再报一次。
+     */
+    fun setRegion(bounds: Rect?, measuredAt: androidx.compose.ui.unit.IntOffset? = null) {
         val next = bounds?.takeUnless { it.isEmpty }?.let(::Rect)
-        if (region == next) return
+        if (region == next && regionMeasuredAt == measuredAt) return
         region = next
+        regionMeasuredAt = measuredAt
         refresh()
+    }
+
+    private fun shiftedRegion(): Rect? {
+        val measured = region ?: return null
+        val shift = blurAnchorShift(regionMeasuredAt, anchorOrigin())
+        return if (shift == androidx.compose.ui.unit.IntOffset.Zero) measured else Rect(measured).apply {
+            offset(shift.x, shift.y)
+        }
     }
 
     /** 开关、模糊半径（px）、键盘圆角（px）。 */
@@ -144,7 +162,7 @@ internal class ImeGlassBlurWindow(private val context: Context, private val role
     }
 
     private fun updateWindow(window: Window) {
-        val bounds = region ?: return
+        val bounds = shiftedRegion() ?: return
         if (appliedRegion != bounds) {
             window.attributes = window.attributes.apply {
                 x = bounds.left
@@ -189,3 +207,10 @@ internal class ImeGlassBlurWindow(private val context: Context, private val role
         const val TAG = "ImeGlassBlurWindow"
     }
 }
+
+/** 量矩形之后键盘容器在窗口里移动了多少（参考实现同款）。 */
+internal fun blurAnchorShift(
+    measuredAt: androidx.compose.ui.unit.IntOffset?,
+    now: androidx.compose.ui.unit.IntOffset?,
+): androidx.compose.ui.unit.IntOffset =
+    if (measuredAt == null || now == null) androidx.compose.ui.unit.IntOffset.Zero else now - measuredAt

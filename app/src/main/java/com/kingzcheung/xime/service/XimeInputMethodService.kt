@@ -3367,6 +3367,14 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     /** 键盘背后与键盘等大的系统模糊面（安卓 12+，玻璃开启时才有）。 */
     private var glassBlurWindow: ImeGlassBlurWindow? = null
 
+    /** 键盘容器此刻在输入法窗口里的位置（参考实现同款锚点）。 */
+    private fun glassAnchorOrigin(): androidx.compose.ui.unit.IntOffset? {
+        if (!::keyboardContainer.isInitialized || !keyboardContainer.isAttachedToWindow) return null
+        val location = IntArray(2)
+        keyboardContainer.getLocationInWindow(location)
+        return androidx.compose.ui.unit.IntOffset(location[0], location[1])
+    }
+
     /**
      * 玻璃效果的系统模糊：只覆盖键盘矩形（子窗口），不会糊到键盘以外的画面。
      * 关闭玻璃时把模糊窗口撤掉，退回透明背板。
@@ -3375,7 +3383,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return
         val enabled = com.kingzcheung.xime.ui.theme.GlassEffect.enabled
         val win = glassBlurWindow ?: if (enabled) {
-            ImeGlassBlurWindow(this).also { glassBlurWindow = it }
+            ImeGlassBlurWindow(this, anchorOrigin = { glassAnchorOrigin() }).also { glassBlurWindow = it }
         } else {
             return
         }
@@ -3383,7 +3391,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val density = resources.displayMetrics.density
         // 参考实现：键盘模糊 16dp 圆角（顶部直角/导航条时用 0，这里先统一 16dp）
         win.configure(enabled, (cfg.blurRadiusDp * density).toInt(), 16f * density)
-        win.setRegion(if (enabled) rect else null)
+        win.setRegion(if (enabled) rect else null, glassAnchorOrigin())
         win.setOpacity(1f)
         win.setVisible(enabled && isInputViewShown)
         win.update(window?.window?.decorView, window?.window?.decorView?.windowToken)
