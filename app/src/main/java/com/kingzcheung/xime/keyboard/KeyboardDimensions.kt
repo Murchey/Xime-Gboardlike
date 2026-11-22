@@ -11,7 +11,8 @@ object KeyboardDimensions {
     val KeyHeight = 44.dp
 
     val BubbleHeightDown = 40.dp  // 下滑气泡主体高度
-    val BubbleCornerRadius = 8.dp
+    /** 圆角气泡（多项长按 / 符号网格）的圆角半径；比 Gboard 基准 8dp 大 1dp，视觉更饱满。 */
+    val BubbleCornerRadius = 9.dp
     
     // 气泡底部pointer（覆盖按键的部分）
     // 注意：按键实际宽度由weight决定，这里使用估算值

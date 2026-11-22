@@ -89,7 +89,7 @@ data class BubbleDrawData(
     val appearAlpha: Float = 1f,
 )
 
-/** 圆角气泡的半径修正（px）：较基础圆角减 2px，气泡更紧凑精致。 */
+/** 圆角气泡的半径修正（px）：在 dp 圆角（已乘气泡缩放）之上再补的像素，随字号一起放大时不失真。 */
 private const val BUBBLE_RADIUS_DELTA_PX = 3f
 
 /** 按压气泡抬起后的滞留时长：随抬起瞬间消失看不清键位提示（主流输入法约 50~80ms），取中值。 */
@@ -283,8 +283,9 @@ fun rememberSwipeBubbleDrawData(
     // 结论：Gboard 的圆形气泡直径是**固定的 40dp 量级**，不跟随键高。
     // 之前用键高(61.8dp)当直径，比 Gboard 大 55%，这就是"大小明显不同"的主因。
     val circularBaseDp = if (bubbleScale > 1.2f) 50.dp else 46.dp
-    // 用户微调：在基准直径上再加 2px 半径（= 直径 +4px），肉眼可见的柔和放大
-    val circularRadiusExtraPx = 2f
+    // 用户微调：在基准直径上再补半径（直径 = +2×该值）。当前 +3px 半径，
+    // 对应直径 +6px —— 字母长按/悬浮的圆形气泡看着更饱满一点。
+    val circularRadiusExtraPx = 3f
     val roundTextPx = with(density) { 27.sp.toPx() }
     val roundDiameterPx = maxOf(
         with(density) { circularBaseDp.toPx() },
