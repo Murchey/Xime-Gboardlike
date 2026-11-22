@@ -3122,6 +3122,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        // 玻璃模糊面随键盘显示；区域用最近一次上报的键盘矩形
+        runCatching {
+            val rect = glassBlurRect
+            if (rect != null) updateGlassBlur(rect) else glassBlurWindow?.setVisible(false)
+        }
         ImeLatencyTrace.onShown()
         // 符号提示风格改过：重载配置并重建输入视图，避免"再呼出键盘还是老样式"
         if (SettingsPreferences.isSymbolHintPending(this)) {
@@ -3366,6 +3371,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     /** 键盘背后与键盘等大的系统模糊面（安卓 12+，玻璃开启时才有）。 */
     private var glassBlurWindow: ImeGlassBlurWindow? = null
+    /** 最近一次键盘矩形：键盘显示/隐藏时用它同步模糊面的显隐。 */
+    private var glassBlurRect: android.graphics.Rect? = null
 
     /** 键盘容器此刻在输入法窗口里的位置（参考实现同款锚点）。 */
     private fun glassAnchorOrigin(): androidx.compose.ui.unit.IntOffset? {
@@ -3381,6 +3388,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
      */
     internal fun updateGlassBlur(rect: android.graphics.Rect) {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return
+        glassBlurRect = android.graphics.Rect(rect)
         val enabled = com.kingzcheung.xime.ui.theme.GlassEffect.enabled
         val win = glassBlurWindow ?: if (enabled) {
             ImeGlassBlurWindow(this, anchorOrigin = { glassAnchorOrigin() }).also { glassBlurWindow = it }
@@ -3517,6 +3525,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
+        // 键盘收起：模糊面一并撤掉，避免糊住宿主
+        runCatching { glassBlurWindow?.setVisible(false) }
         // 手写模型轻量，按"用键盘时加载、键盘收起即卸载"管理：输入会话结束
         // （收起键盘/焦点离开）即释放，:inference 侧同步卸载模型；未初始化时
         // release() 幂等空操作。下次落笔由 predict 自愈或布局重建重载。
