@@ -30,7 +30,7 @@ enum class KeyboardTopStyle(val id: String, val title: String) {
         if (this == ROUNDED) RoundedCornerShape(topStart = radius, topEnd = radius) else SQUARE_SHAPE
 
     companion object {
-        fun of(id: String?): KeyboardTopStyle = entries.firstOrNull { it.id == id } ?: SQUARE
+        fun of(id: String?): KeyboardTopStyle = entries.firstOrNull { it.id == id } ?: ROUNDED
     }
 }
 
@@ -46,12 +46,13 @@ fun keyboardEdgeShape(top: KeyboardTopStyle, roundedBottom: Boolean, radius: Dp 
     )
 }
 
-private val TOP_ROUND_RADIUS = 14.dp
+/** 键盘上沿圆角半径（用户反馈原 14dp 偏小，加大到 24dp）。 */
+private val TOP_ROUND_RADIUS = 24.dp
 private val SQUARE_SHAPE = RoundedCornerShape(0.dp)
 
 /** 当前生效的键盘顶部样式（Compose 状态）。 */
 object KeyboardTopStyles {
-    var current by mutableStateOf(KeyboardTopStyle.SQUARE)
+    var current by mutableStateOf(KeyboardTopStyle.ROUNDED)
         internal set
 }
 

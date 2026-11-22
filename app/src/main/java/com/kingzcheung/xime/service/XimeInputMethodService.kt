@@ -57,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.kingzcheung.xime.ui.theme.keyboardTopSoftEdge
+import androidx.compose.foundation.border
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -2247,6 +2248,18 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     )
                                     .keyboardBackground(rootTheme.keyboardBackground, isDark, keyboardBgColor)
                                     .then(Modifier.keyboardTopSoftEdge(keyboardBgColor))
+                                    // 键盘边缘细描边：圆角/直角都好辨认上沿（玻璃下尤其需要）
+                                    .then(
+                                        Modifier.border(
+                                            1.dp,
+                                            if (isDark) androidx.compose.ui.graphics.Color.White.copy(alpha = .14f)
+                                            else androidx.compose.ui.graphics.Color.Black.copy(alpha = .10f),
+                                            com.kingzcheung.xime.ui.theme.keyboardEdgeShape(
+                                                com.kingzcheung.xime.ui.theme.KeyboardTopStyles.current,
+                                                SettingsPreferences.roundedKeyboardBottom(this@XimeInputMethodService),
+                                            ),
+                                        )
+                                    )
                             )
                         }
                         Box(
@@ -3437,7 +3450,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         win.configure(
             true,
             (cfg.blurRadiusDp * density).toInt(),
-            if (roundCorner) 14f * density else 0f,
+            // 与键盘上沿圆角（24dp）/底部圆角保持一致，避免磨砂矩形在圆角外侧露方角
+            if (roundCorner) 24f * density else 0f,
         )
         win.setRegion(rect, glassAnchorOrigin())
         // 参考实现里模糊跟着"键盘整体透明度"（glassOpacity）走，不是背板不透明度；
