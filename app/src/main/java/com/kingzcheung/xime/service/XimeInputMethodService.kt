@@ -3492,7 +3492,15 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         fun androidRect(r: androidx.compose.ui.geometry.Rect) = android.graphics.Rect(
             r.left.toInt(), r.top.toInt(), r.right.toInt(), r.bottom.toInt(),
         ).apply { if (nav) bottom = resources.displayMetrics.heightPixels }
-        updateGlassSurface("keyboard", null)
+        // 分体时上方工具栏那条仍是一整块（参考实现的 "keyboard" 顶条），从键盘顶到左右两半的顶
+        val card = glassBlurRect
+        val topBottom = minOf(left.top.toInt(), right.top.toInt())
+        val topStrip = if (card != null && topBottom > card.top) {
+            android.graphics.Rect(card.left, card.top, card.right, topBottom)
+        } else {
+            null
+        }
+        updateGlassSurface("keyboard", topStrip)
         updateGlassSurface("keyboard-left", androidRect(left))
         updateGlassSurface("keyboard-right", androidRect(right))
     }
