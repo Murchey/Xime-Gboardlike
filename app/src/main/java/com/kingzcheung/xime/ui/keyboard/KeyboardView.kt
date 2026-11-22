@@ -1160,6 +1160,7 @@ fun KeyboardView(
                             LocalSuppressCursorMove provides suppressCursorMove,
                             LocalCursorGestureActive provides cursorGestureActive,
                             LocalKeyFontScale provides keyboardTextScale,
+                            LocalGlassSplitReporter provides callbacks.onGlassSplitChanged,
                         ) {
                             KeyboardLayoutScreen(
                                 keyboardState = keyboardState,

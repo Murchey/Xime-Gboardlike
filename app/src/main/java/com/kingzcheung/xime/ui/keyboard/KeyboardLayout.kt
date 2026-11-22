@@ -98,6 +98,7 @@ import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -2649,6 +2650,11 @@ private fun LandscapeKeyboardContent(
     // 行距由外层 provider 统一提供（手机横屏回退 2dp / 平板 4.25dp），此处不再覆盖。
     // 侧边距统一 4dp + 面板内距 4dp = 8dp 靠边，与候选栏一致；平板分体两侧留边 16dp（同主键盘）
     // 挖孔/导航栏避让由服务层边衬区 padding 统一处理，不再叠加手机专用的 50dp 拇指区缩进。
+    // 分体：左右两半各上报窗口矩形，服务层据此拆成两块模糊、中缝保持清晰
+    val splitReporter = LocalGlassSplitReporter.current
+    var splitLeft by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var splitRight by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    LaunchedEffect(splitLeft, splitRight) { splitReporter?.invoke(splitLeft, splitRight) }
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -2658,7 +2664,13 @@ private fun LandscapeKeyboardContent(
             modifier = Modifier
                 .fillMaxHeight()
                 .weight(0.42f)
-                .padding(start = 4.dp),
+                .padding(start = 4.dp)
+                .onGloballyPositioned { c ->
+                    val p = c.positionInWindow()
+                    splitLeft = androidx.compose.ui.geometry.Rect(
+                        p.x, p.y, p.x + c.size.width, p.y + c.size.height,
+                    )
+                },
         ) {
             landscapeRows.forEachIndexed { idx, row ->
                 val (left, _) = splitRowForLandscape(row.keys)
@@ -2678,7 +2690,13 @@ private fun LandscapeKeyboardContent(
             modifier = Modifier
                 .fillMaxHeight()
                 .weight(0.42f)
-                .padding(end = 4.dp),
+                .padding(end = 4.dp)
+                .onGloballyPositioned { c ->
+                    val p = c.positionInWindow()
+                    splitRight = androidx.compose.ui.geometry.Rect(
+                        p.x, p.y, p.x + c.size.width, p.y + c.size.height,
+                    )
+                },
         ) {
             landscapeRows.forEachIndexed { idx, row ->
                 val (_, right) = splitRowForLandscape(row.keys)
