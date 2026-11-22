@@ -10,13 +10,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import com.kingzcheung.xime.settings.FrostedGlassConfig
+import com.kingzcheung.xime.settings.FrostedGlassPreferences
 import com.kingzcheung.xime.ui.theme.GlassEffect
 import com.kingzcheung.xime.ui.theme.LiquidGlass
 import com.kingzcheung.xime.ui.theme.liquidGlassCap
@@ -63,26 +67,36 @@ private class KeyFacePosition {
  *   底色 alpha 自动收窄到 0.65，否则不透明键帽会把磨砂层完全盖住。
  */
 @Composable
-internal fun Modifier.keyFaceBackground(color: Color, shape: Shape): Modifier {
-    // 键面材质与玻璃效果：玻璃开时压到 62% 不透明（键面半透明），并画玻璃高光/亮边
+internal fun Modifier.keyFaceBackground(color: Color, shape: Shape, textColor: Color? = null): Modifier {
+    // 键面颜色走玻璃材质算法：玻璃开时键帽只做半透明（不透明度/提亮规则见 FrostedKeyColors））；
+    // 液态玻璃代替视觉样式材质，与实现一致只叠一层。
     val radius = LocalKeyCornerRadius.current
-    val glass = GlassEffect.enabled
-    val materialStyle = if (glass) VisualStyle.GLASS else VisualStyle.forKeyboard(VisualStyles.current)
-    val faceColor = if (glass) color.copy(alpha = min(color.alpha, 0.62f)) else color
-
-    // 液态玻璃：在底色/材质之上再补一道亮边（按住变亮），文字仍然在最上面
-    val liquid = if (glass && LiquidGlass.enabled) Modifier.liquidGlassCap(radius) else Modifier
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isDarkSurface = MaterialTheme.colorScheme.surface.luminance() < .5f
+    val config = if (GlassEffect.enabled) {
+        FrostedGlassPreferences.read(context, isDarkSurface).copy(enabled = true)
+    } else {
+        FrostedGlassConfig(enabled = false)
+    }
+    // 没传文字色时按键面明暗取一个对比色：只影响玻璃提亮的"深浅面"判断与按下反馈
+    val foreground = textColor ?: if (color.luminance() > .5f) Color.Black else Color.White
+    val faceColor = frostedKeyColor(color, foreground, config)
+    val materialStyle = VisualStyle.forKeyboard(VisualStyles.current)
+    val overlay = if (config.enabled && LiquidGlass.enabled) {
+        Modifier.liquidGlassCap(radius)
+    } else {
+        Modifier.visualMaterial(materialStyle, radius, level = MaterialLevel.BASE)
+    }
     if (FrostedBackdropHolder.image == null) {
         return this
             .clip(shape)
             .background(faceColor)
-            .visualMaterial(materialStyle, radius, level = MaterialLevel.BASE)
-            .then(liquid)
+            .then(overlay)
     }
 
     val position = remember { KeyFacePosition() }
     var laidOut by remember { mutableStateOf(false) }
-    val glassColor = if (glass) faceColor.copy(alpha = min(faceColor.alpha, 0.62f)) else faceColor.copy(alpha = min(faceColor.alpha, 0.65f))
+    val glassColor = faceColor
     return this
         .onGloballyPositioned { coordinates ->
             position.topLeft = coordinates.positionInRoot()
@@ -108,6 +122,5 @@ internal fun Modifier.keyFaceBackground(color: Color, shape: Shape): Modifier {
             }
             drawRect(glassColor)
         }
-        .visualMaterial(materialStyle, radius, level = MaterialLevel.BASE)
-        .then(liquid)
+        .then(overlay)
 }

@@ -465,6 +465,8 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
     fun setGlassEffectEnabled(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_GLASS_EFFECT, enabled).apply()
         com.kingzcheung.xime.ui.theme.GlassEffect.enabled = enabled
+        // 与材质参数同一开关：键面绘制读 FrostedGlassPreferences
+        FrostedGlassPreferences.writeEnabled(context, enabled)
     }
 
     /** 按键形状 id（见 [com.kingzcheung.xime.ui.theme.KeyShape]）。 */
