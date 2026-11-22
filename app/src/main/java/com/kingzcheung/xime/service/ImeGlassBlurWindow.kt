@@ -115,6 +115,14 @@ internal class ImeGlassBlurWindow(
         removeWindow()
     }
 
+    /**
+     * 强制重建子窗口：有些系统对子窗口的后景做了缓存，应用切页后不重算，
+     * 输入法重新显示时先拆掉、下一次 update 再建，逼它重新采样当前页面。
+     */
+    fun recreate() {
+        removeWindow()
+    }
+
     private fun refresh() {
         if (!enabled || !visible) removeWindow() else dialog?.window?.let { updateWindow(it) }
     }

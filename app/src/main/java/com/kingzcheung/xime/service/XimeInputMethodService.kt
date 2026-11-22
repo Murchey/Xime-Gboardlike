@@ -3123,7 +3123,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         // 玻璃模糊面随键盘显示；区域用最近一次上报的键盘矩形
-        runCatching { setGlassSurfacesVisible(true) }
+        // 先拆掉模糊子窗口再重建：输入法重新显示时让系统重新采样当前页面（避免切页后拍到旧内容）
+        runCatching {
+            glassBlurWindows.values.forEach { it.recreate() }
+            setGlassSurfacesVisible(true)
+        }
         ImeLatencyTrace.onShown()
         // 符号提示风格改过：重载配置并重建输入视图，避免"再呼出键盘还是老样式"
         if (SettingsPreferences.isSymbolHintPending(this)) {
@@ -3677,6 +3681,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     override fun onWindowShown() {
         super.onWindowShown()
+        // 窗口重新显示：拆掉旧的模糊子窗口，让系统重新采样当前页面
+        runCatching {
+            glassBlurWindows.values.forEach { it.recreate() }
+            glassBlurRect?.let(::updateGlassBlur)
+        }
         // 键盘弹出时对比系统取色与缓存的动态主题色，壁纸取色变化则重建主题并热更新 UI。
         // 每次弹出只做两次资源读取对比，取色未变时零成本。
         KeyboardThemes.refreshDynamicSchemes(this)
