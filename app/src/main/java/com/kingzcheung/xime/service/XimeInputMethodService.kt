@@ -3123,10 +3123,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         // 玻璃模糊面随键盘显示；区域用最近一次上报的键盘矩形
-        runCatching {
-            val rect = glassBlurRect
-            if (rect != null) updateGlassBlur(rect) else glassBlurWindow?.setVisible(false)
-        }
+        runCatching { setGlassSurfacesVisible(true) }
         ImeLatencyTrace.onShown()
         // 符号提示风格改过：重载配置并重建输入视图，避免"再呼出键盘还是老样式"
         if (SettingsPreferences.isSymbolHintPending(this)) {
@@ -3369,8 +3366,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         }
     }
 
-    /** 键盘背后与键盘等大的系统模糊面（安卓 12+，玻璃开启时才有）。 */
-    private var glassBlurWindow: ImeGlassBlurWindow? = null
+    /** 键盘背后的系统模糊面（安卓 12+，玻璃开启时才有）；按名字分块，与参考实现同构。 */
+    private val glassBlurWindows = mutableMapOf<String, ImeGlassBlurWindow>()
+    /** 每块模糊面最近一次上报的矩形（窗口坐标）。 */
+    private val glassSurfaceBounds = mutableMapOf<String, android.graphics.Rect>()
     /** 最近一次键盘矩形：键盘显示/隐藏时用它同步模糊面的显隐。 */
     private var glassBlurRect: android.graphics.Rect? = null
 
@@ -3382,40 +3381,65 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         return androidx.compose.ui.unit.IntOffset(location[0], location[1])
     }
 
+    /** 系统是否开着跨窗口模糊（省电/无障碍设置会关掉）；关着时保留透明背板兜底。 */
+    private fun windowBlurAvailable(): Boolean = runCatching {
+        getSystemService(android.view.WindowManager::class.java)?.isCrossWindowBlurEnabled == true
+    }.getOrDefault(false)
+
     /**
-     * 玻璃效果的系统模糊：只覆盖键盘矩形（子窗口），不会糊到键盘以外的画面。
-     * 关闭玻璃时把模糊窗口撤掉，退回透明背板。
+     * 按名字更新一块键盘背后的系统模糊面（子窗口），与参考实现同一套：
+     * 名字 → 矩形；矩形为空或玻璃关闭时把这块撤掉。
      */
+    private fun updateGlassSurface(name: String, rect: android.graphics.Rect?) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return
+        val enabled = com.kingzcheung.xime.ui.theme.GlassEffect.enabled
+        if (!enabled || rect == null || rect.isEmpty) {
+            glassSurfaceBounds.remove(name)
+            glassBlurWindows[name]?.setVisible(false)
+            return
+        }
+        glassSurfaceBounds[name] = android.graphics.Rect(rect)
+        val available = windowBlurAvailable()
+        if (!available) {
+            glassBlurWindows[name]?.setVisible(false)
+            return
+        }
+        val win = glassBlurWindows[name] ?: ImeGlassBlurWindow(
+            this, name, anchorOrigin = { glassAnchorOrigin() }
+        ).also { glassBlurWindows[name] = it }
+        val cfg = com.kingzcheung.xime.settings.FrostedGlassPreferences.read(this, isDarkTheme())
+        val density = resources.displayMetrics.density
+        // 参考实现：键盘模糊 16dp 圆角（顶部直角/导航条时用 0，这里先统一 16dp）
+        win.configure(true, (cfg.blurRadiusDp * density).toInt(), 16f * density)
+        win.setRegion(rect, glassAnchorOrigin())
+        // 参考实现里模糊跟着"键盘整体透明度"（glassOpacity）走，不是背板不透明度；
+        // 背板 0.2 时模糊仍是满强度，否则会露出清晰的应用画面
+        win.setOpacity(1f)
+        win.setVisible(isInputViewShown)
+        win.update(window?.window?.decorView, window?.window?.decorView?.windowToken)
+    }
+
+    /** 键盘主模糊面。底部圆角（导航栏透明）时延伸到屏幕底，覆盖导航条区域。 */
     internal fun updateGlassBlur(rect: android.graphics.Rect) {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return
         glassBlurRect = android.graphics.Rect(rect)
-        val enabled = com.kingzcheung.xime.ui.theme.GlassEffect.enabled
-        val win = glassBlurWindow ?: if (enabled) {
-            ImeGlassBlurWindow(this, anchorOrigin = { glassAnchorOrigin() }).also { glassBlurWindow = it }
-        } else {
-            return
-        }
-        val cfg = com.kingzcheung.xime.settings.FrostedGlassPreferences.read(this, isDarkTheme())
-        val density = resources.displayMetrics.density
-        // 系统没开跨窗口模糊（省电/无障碍设置）时不建窗，保留透明背板兜底
-        val blurAvailable = runCatching {
-            getSystemService(android.view.WindowManager::class.java)?.isCrossWindowBlurEnabled == true
-        }.getOrDefault(false)
-        // 参考实现：键盘模糊 16dp 圆角（顶部直角/导航条时用 0，这里先统一 16dp）
-        win.configure(enabled && blurAvailable, (cfg.blurRadiusDp * density).toInt(), 16f * density)
-        // 底部圆角（导航栏透明）时导航条也是键盘的一部分：模糊面延伸到屏幕底，
-        // 对应参考实现里单独的 "navigation" 那块，避免导航条区域露出没模糊的应用
         val surfaceRect = if (SettingsPreferences.roundedKeyboardBottom(this)) {
             android.graphics.Rect(rect).apply { bottom = resources.displayMetrics.heightPixels }
         } else {
             rect
         }
-        win.setRegion(if (enabled && blurAvailable) surfaceRect else null, glassAnchorOrigin())
-        // 参考实现里模糊跟着"键盘整体透明度"（glassOpacity）走，不是背板不透明度；
-        // 背板 0.2 时模糊仍是满强度，否则会露出清晰的应用画面
-        win.setOpacity(1f)
-        win.setVisible(enabled && blurAvailable && isInputViewShown)
-        win.update(window?.window?.decorView, window?.window?.decorView?.windowToken)
+        updateGlassSurface("keyboard", surfaceRect)
+    }
+
+    private fun setGlassSurfacesVisible(visible: Boolean) {
+        glassBlurWindows.values.forEach { win ->
+            if (visible) {
+                val rect = glassSurfaceBounds["keyboard"]
+                if (rect != null) updateGlassBlur(rect) else win.setVisible(false)
+            } else {
+                win.setVisible(false)
+            }
+        }
     }
 
     internal fun applyWindowBackground() {
@@ -3539,7 +3563,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
         // 键盘收起：模糊面一并撤掉，避免糊住宿主
-        runCatching { glassBlurWindow?.setVisible(false) }
+        runCatching { setGlassSurfacesVisible(false) }
         // 手写模型轻量，按"用键盘时加载、键盘收起即卸载"管理：输入会话结束
         // （收起键盘/焦点离开）即释放，:inference 侧同步卸载模型；未初始化时
         // release() 幂等空操作。下次落笔由 predict 自愈或布局重建重载。
@@ -3690,6 +3714,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     override fun onDestroy() {
         super.onDestroy()
+        // 模糊子窗口随输入法服务一起销毁
+        runCatching { glassBlurWindows.values.forEach { it.dispose() } }
+        glassBlurWindows.clear()
+        glassSurfaceBounds.clear()
         try {
             contentResolver.unregisterContentObserver(uiNightModeObserver)
         } catch (_: Exception) {
