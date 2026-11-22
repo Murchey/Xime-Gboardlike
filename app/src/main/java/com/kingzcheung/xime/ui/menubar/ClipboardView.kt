@@ -140,7 +140,11 @@ fun ClipboardView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            // 玻璃下剪贴板面板不另画底色，透出键盘同一张磨砂底
+            .background(
+                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) Color.Transparent
+                else backgroundColor
+            )
     ) {
         Row(
             modifier = Modifier
