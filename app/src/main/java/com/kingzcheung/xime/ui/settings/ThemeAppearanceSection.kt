@@ -327,7 +327,7 @@ private fun BottomStylePreview(
     accent: Color,
     onClick: () -> Unit,
 ) {
-    val radius = if (rounded) 12.dp else 0.dp
+    val radius = if (rounded) 24.dp else 0.dp
     val shape = RoundedCornerShape(bottomStart = radius, bottomEnd = radius)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -376,13 +376,14 @@ private fun TopStylePreview(
         Box(
             modifier = Modifier
                 .size(width = 84.dp, height = 40.dp)
-                .clip(style.clipShape(12.dp))
+                // 与键盘一致：顶部圆角 24dp、1dp 细描边（浅色 10% 黑 / 深色 14% 白）
+                .clip(style.clipShape(24.dp))
                 .background(keyColor)
                 .then(
                     if (style == KeyboardTopStyle.SOFT) {
                         Modifier.drawWithContent {
                             drawContent()
-                            val h = 12.dp.toPx()
+                            val h = 24.dp.toPx()
                             drawRect(
                                 brush = Brush.verticalGradient(
                                     listOf(keyColor, keyColor.copy(alpha = 0f)),
@@ -399,8 +400,8 @@ private fun TopStylePreview(
                 )
                 .border(
                     width = if (selected) 2.dp else 1.dp,
-                    color = if (selected) accent else MaterialTheme.colorScheme.outlineVariant,
-                    shape = style.clipShape(12.dp),
+                    color = if (selected) accent else MaterialTheme.colorScheme.onSurface.copy(alpha = .10f),
+                    shape = style.clipShape(24.dp),
                 ),
         )
         Spacer(Modifier.height(6.dp))
