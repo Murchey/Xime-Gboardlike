@@ -132,6 +132,27 @@ internal fun Modifier.keyFaceBackground(color: Color, shape: Shape, textColor: C
                     ),
                     dstSize = size,
                 )
+                // 液态玻璃的图片折射（安卓 13+）：键帽外圈按底图弯折，保留轻微色散
+                if (config.enabled && LiquidGlass.enabled &&
+                    android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+                    com.kingzcheung.xime.ui.theme.LiquidRefraction.available()
+                ) {
+                    val ppuX = image.width / size.width.toFloat()
+                    val ppuY = image.height / size.height.toFloat()
+                    com.kingzcheung.xime.ui.theme.LiquidRefraction.run {
+                        drawRefraction(
+                            image = image,
+                            keyLeft = origin.x,
+                            keyTop = origin.y,
+                            radiusPx = radius.toPx(),
+                            strength = LiquidGlass.strength,
+                            imageLeft = (origin.x - root.x) * ppuX,
+                            imageTop = (origin.y - root.y) * ppuY,
+                            pixelsPerX = ppuX,
+                            pixelsPerY = ppuY,
+                        )
+                    }
+                }
             }
             drawRect(glassColor)
         }
