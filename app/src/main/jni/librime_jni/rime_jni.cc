@@ -38,6 +38,13 @@
 // log(1e-6) ≈ -13.8155。调用方据此判断"没有 gram 信号"，不要当成真实分数）。
 static const jdouble kGramUnavailable = -13.815510557964274;
 
+// 用户词库学习开关（实现在 librime 的 gear/memory.cc；这里只前向声明，
+// 避免 memory.h 对 Segment 等类型的依赖要求特定 include 顺序）。
+namespace rime
+{
+    void SetUserDictLearningEnabled(bool enabled);
+}
+
 #define LOG_TAG "XimeRime"
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
@@ -2787,6 +2794,16 @@ extern "C"
             return;
         Rime::Instance().setOption(option_ptr, value == JNI_TRUE);
         env->ReleaseStringUTFChars(option, option_ptr);
+    }
+
+    // 隐私模式：关闭后用户提交不再写入用户词库（读库/删除/导入导出不受影响）
+    JNIEXPORT void JNICALL
+    Java_com_kingzcheung_xime_rime_RimeEngine_nativeSetUserDictLearning(
+        JNIEnv *env,
+        jobject thiz,
+        jboolean enabled)
+    {
+        rime::SetUserDictLearningEnabled(enabled == JNI_TRUE);
     }
 
     // 读取 Rime 选项

@@ -555,6 +555,7 @@ fun KeyboardView(
                             ToolbarButton.FLOAT -> ({ callbacks.onFloatingModeChange?.invoke(!state.isFloatingMode) })
                             ToolbarButton.KEYBOARD_RESIZE -> ({ callbacks.onKeyboardResize?.invoke() })
                             ToolbarButton.ONE_HANDED -> ({ callbacks.onToggleOneHanded?.invoke() })
+                            ToolbarButton.PRIVACY -> ({ callbacks.onTogglePrivacyInput?.invoke() })
                             ToolbarButton.HANDWRITING_LOOKUP -> ({ isHandwritingLookup = !isHandwritingLookup })
                             ToolbarButton.EDIT -> ({ viewModel.showOverlay(OverlayRoute.Edit) })
                             ToolbarButton.DEBUG_GLIDE -> ({ toggleGlideRecording(toolbarContext) })
@@ -1536,6 +1537,7 @@ fun KeyboardView(
                             toolbarButtons = state.toolbarButtons,
                             toolbarPluginButtons = state.toolbarPluginButtons,
                             isSttEnabled = state.isSttEnabled,
+                            privacyInputEnabled = state.privacyInputEnabled,
                         ),
                         callbacks = MenuBarCallbacks(
                             onDismiss = { onHapticFeedback?.invoke(); viewModel.closeOverlay() },
@@ -1577,6 +1579,7 @@ fun KeyboardView(
                                         ToolbarButton.FLOAT -> callbacks.onFloatingModeChange?.invoke(!state.isFloatingMode)
                                         ToolbarButton.KEYBOARD_RESIZE -> callbacks.onKeyboardResize?.invoke()
                                         ToolbarButton.ONE_HANDED -> callbacks.onToggleOneHanded?.invoke()
+                                        ToolbarButton.PRIVACY -> callbacks.onTogglePrivacyInput?.invoke()
                                         ToolbarButton.HANDWRITING_LOOKUP -> callbacks.onToolbarEditingAction?.invoke("handwriting_lookup")
                                         ToolbarButton.EDIT -> viewModel.showOverlay(OverlayRoute.Edit)
                                         ToolbarButton.VOICE -> callbacks.onVoiceStickyToggle?.invoke()

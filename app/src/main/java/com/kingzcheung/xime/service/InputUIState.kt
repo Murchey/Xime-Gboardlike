@@ -22,6 +22,8 @@ data class InputUIState(
     val darkMode: Int = 0,
     val themeId: String = "gboard_gray",
     val isSttEnabled: Boolean = false,
+    /** 隐私输入：开启后不再学习新输入（工具栏卡片显示"退出隐私输入"）。 */
+    val privacyInputEnabled: Boolean = false,
     val keyboardHeightDp: Int = 0,
     val keyboardBottomPaddingDp: Int = 0,
     /** 键盘贴底显示：忽略底部系统 inset（隐藏导航栏/手势条时把键盘下移到屏幕底边）。 */

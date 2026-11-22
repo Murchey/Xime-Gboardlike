@@ -25,6 +25,8 @@ import androidx.compose.material.icons.outlined.Gesture
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.ZoomOutMap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -111,6 +113,12 @@ enum class ToolbarButton(
 
     /** 单手模式：点一次进入（默认靠右），再点一次退出；可加入顶部快捷栏。 */
     ONE_HANDED("one_handed", tr(R.string.s_danshoumoshi), Icons.Rounded.Smartphone),
+
+    /**
+     * 隐私输入：一次开关同时关掉用户词库学习与联想记录（见 [com.kingzcheung.xime.settings.PrivacyInput]）。
+     * 开启后卡片文字换成「退出隐私输入」、图标换成睁眼，与单手模式同一套"开关卡片"表达。
+     */
+    PRIVACY("privacy", tr(R.string.s_yinsishuru), Icons.Rounded.VisibilityOff),
 
     /** 开发者调试用：一键开关滑动轨迹采集，并在同一面板里标记真实意图。 */
     DEBUG_GLIDE("debug_glide", tr(R.string.s_debug_huadongbiaoj), Icons.Outlined.BugReport);

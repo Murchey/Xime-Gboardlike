@@ -63,6 +63,8 @@ object SettingsPreferences {
     const val KEY_KEYBOARD_LETTER_ORDER = "keyboard_letter_order"
     private const val KEY_PREDICTION_MODEL_REPO = "prediction_model_repo"
     private const val KEY_PREDICTION_SELECTED_MODEL = "prediction_selected_model"
+/** 隐私输入：关闭学习（用户词库 + 联想记录）。公开给 IME 的偏好监听用。 */
+const val KEY_PRIVACY_INPUT = "privacy_input"
 /** 联想模型缺省 id：上游 small（自训模型不再占默认槽位）。 */
 private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
     private const val KEY_SPACE_COMMIT_ASSOCIATION = "space_commit_association"
@@ -822,6 +824,20 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
         getPrefs(context).edit().putBoolean("plugin_enabled_$pluginId", enabled).apply()
     }
     
+    // ── 隐私输入（关闭词库与联想的学习） ──
+
+    /**
+     * 隐私输入开关：开启后 libly 不再把提交写进用户词库，联想也不再记录输入。
+     *
+     * 默认关闭（= 正常学习）。只停"学习"，不影响已有词库/模型的读取与使用。
+     */
+    fun isPrivacyInputEnabled(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_PRIVACY_INPUT, false)
+
+    fun setPrivacyInputEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_PRIVACY_INPUT, enabled).apply()
+    }
+
     /**
      * 智能联想开关。默认 **开启**，但联想模型已不再随 APK 分发：
      * 没有模型文件时 [com.kingzcheung.xime.viewmodel.SmartPredictionSettingsViewModel]

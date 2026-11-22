@@ -172,12 +172,14 @@ class PredictionManager(
     }
     
     fun recordInput(text: String) {
+        if (SettingsPreferences.isPrivacyInputEnabled(context)) return
         if (SettingsPreferences.isSmartPredictionEnabled(context) && AssociationManager.isInitialized()) {
             AssociationManager.recordInput(text)
         }
     }
     
     fun recordInputPair(lastChar: String, candidate: String) {
+        if (SettingsPreferences.isPrivacyInputEnabled(context)) return
         if (SettingsPreferences.isSmartPredictionEnabled(context) && AssociationManager.isInitialized()) {
             AssociationManager.recordInput(lastChar + candidate)
         }

@@ -37,6 +37,8 @@ data class KeyboardCallbacks(
     val onKeyboardResize: (() -> Unit)? = null,
     /** 工具栏面板：进入/退出单手模式。 */
     val onToggleOneHanded: (() -> Unit)? = null,
+    /** 工具栏「隐私输入」：切换学习开关（用户词库 + 联想记录）。 */
+    val onTogglePrivacyInput: (() -> Unit)? = null,
     val onReloadConfig: (() -> Unit)? = null,
     val onSettings: (() -> Unit)? = null,
     val onSwitchSchema: ((String) -> Unit)? = null,

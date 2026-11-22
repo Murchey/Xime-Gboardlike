@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.OpenInFull
+import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.twotone.Edit
 import androidx.compose.material.icons.twotone.KeyboardAlt
@@ -107,6 +108,8 @@ data class MenuBarState(
     val toolbarButtons: List<String> = emptyList(),
     val toolbarPluginButtons: List<ToolbarButtonItem.Plugin> = emptyList(),
     val isSttEnabled: Boolean = true,
+    /** 隐私输入是否开启：决定卡片显示「隐私输入」还是「退出隐私输入」。 */
+    val privacyInputEnabled: Boolean = false,
 )
 
 /** 工具栏顶部最多容纳的功能数（Gboard 式：顶部分散放 5 个）。 */
@@ -209,11 +212,19 @@ fun MenuBar(
         // 单手模式是"开关"：已开启时同一张卡片显示"退出单手模式"，图标换成四角箭头
         val oneHandedOn = b == ToolbarButton.ONE_HANDED &&
             state.oneHandedMode != com.kingzcheung.xime.settings.OneHandedMode.OFF
-        MenuTool(
-            b.id,
-            if (oneHandedOn) tr(R.string.s_tuichudanshou) else b.label,
-            rememberVectorPainter(if (oneHandedOn) Icons.Filled.OpenInFull else b.icon),
-        ) {
+        // 隐私输入同样是开关：已开启时卡片显示"退出隐私输入"、图标改成睁眼
+        val privacyOn = b == ToolbarButton.PRIVACY && state.privacyInputEnabled
+        val label = when {
+            oneHandedOn -> tr(R.string.s_tuichudanshou)
+            privacyOn -> tr(R.string.s_tuichuyinsishuru)
+            else -> b.label
+        }
+        val icon = when {
+            oneHandedOn -> Icons.Filled.OpenInFull
+            privacyOn -> Icons.Rounded.Visibility
+            else -> b.icon
+        }
+        MenuTool(b.id, label, rememberVectorPainter(icon)) {
             callbacks.onToolbarButtonClick(b.id)
         }
     }
@@ -807,13 +818,24 @@ private fun ToolCard(tool: MenuTool, textColor: Color, cardColor: Color, modifie
             .clip(RoundedCornerShape(34.dp))
             .background(cardColor.copy(alpha = 0.88f))
             .clickable { onClick() }
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         ToolIcon(tool, textColor, 30.dp)
-        Text(tool.label, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Spacer(Modifier.weight(1f))
+        // 文字占满剩余宽度并省略：4 个字的条目不能把右侧箭头挤出卡片
+        // （此前 Text 无宽度约束 + Spacer(weight) 争抢，长标签会把 Chevron 顶到卡片外）
+        Text(
+            tool.label,
+            color = textColor,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            // 两行：4 个字的条目（如「单手模式」「隐私输入」）不会被截成"单…"，
+            // 同时 weight(1f) 保证右侧箭头永远留在卡片内
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
         Icon(Icons.Default.ChevronRight, tr(R.string.s_xiayibu), tint = textColor.copy(alpha = .72f), modifier = Modifier.size(24.dp))
     }
 }

@@ -114,6 +114,8 @@ data class KeyboardUiState(
     val voiceRecognitionState: RecognitionState = RecognitionState.IDLE,
     val voiceRecognizedText: String = "",
     val isSttEnabled: Boolean = true,
+    /** 隐私输入是否开启：工具栏卡片据此显示「隐私输入 / 退出隐私输入」。 */
+    val privacyInputEnabled: Boolean = false,
     val toolbarButtons: List<String> = ToolbarButton.DEFAULT_VISIBLE.map { it.id },
     /** 已启用插件声明的工具栏按钮（候选池），渲染时与内置按钮合并。 */
     val toolbarPluginButtons: List<ToolbarButtonItem.Plugin> = emptyList(),

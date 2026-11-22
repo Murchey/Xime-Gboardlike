@@ -521,6 +521,24 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         )
     }
 
+    /**
+     * 工具栏「隐私输入」：一次开关同时停掉用户词库学习与联想记录。
+     *
+     * 文案说明"不学习"而不是"不记录"——已有词库/学习数据不会被删，只是不再新增。
+     */
+    internal fun togglePrivacyInput() {
+        val enabled = !SettingsPreferences.isPrivacyInputEnabled(this)
+        com.kingzcheung.xime.settings.PrivacyInput.setEnabled(this, enabled)
+        if (uiState.value.privacyInputEnabled != enabled) {
+            uiState.value = uiState.value.copy(privacyInputEnabled = enabled)
+        }
+        android.widget.Toast.makeText(
+            this,
+            tr(if (enabled) R.string.s_yinsishuru_kaiqi else R.string.s_yinsishuru_guanbi),
+            android.widget.Toast.LENGTH_SHORT,
+        ).show()
+    }
+
     /** 工具栏面板的「单手模式」按钮：关闭时进入（默认靠右），已开启时退出。 */
     internal fun toggleOneHandedMode() {
         val current = SettingsPreferences.getOneHandedMode(this)
@@ -833,6 +851,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             darkMode = darkMode,
             themeId = SettingsPreferences.getKeyboardThemeForMode(this, isDarkNow),
             isSttEnabled = SettingsPreferences.isSttEnabled(this@XimeInputMethodService),
+            privacyInputEnabled = SettingsPreferences.isPrivacyInputEnabled(this@XimeInputMethodService),
             keyboardHeightDp = SettingsPreferences.getKeyboardHeightDp(this, isLandscape),
             keyboardBottomPaddingDp = SettingsPreferences.getKeyboardBottomPaddingDp(this),
             keyboardFlushBottom = SettingsPreferences.isKeyboardFlushBottom(this),
@@ -871,6 +890,13 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 "floating_mode", "floating_mode_landscape" -> {
                     loadDarkModePreference()
                     applyWindowBackground()
+                }
+                SettingsPreferences.KEY_PRIVACY_INPUT -> {
+                    // 设置页/工具栏任一处切换后，IME 侧状态与 librime 开关都要跟上
+                    com.kingzcheung.xime.settings.PrivacyInput.apply(this@XimeInputMethodService)
+                    uiState.value = uiState.value.copy(
+                        privacyInputEnabled = SettingsPreferences.isPrivacyInputEnabled(this@XimeInputMethodService)
+                    )
                 }
                 "stt_enabled" -> {
                     val sttEnabled = SettingsPreferences.isSttEnabled(this@XimeInputMethodService)
@@ -1112,6 +1138,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 
                 notifyDeploymentStatus(true, tr(R.string.s_zhengzaijiazaishurufayinqing))
                 rimeEngine.initialize(userDataDir, sharedDataDir)
+                // 隐私输入是进程内开关：引擎重建后重新落一次（否则会退回"一直学习"）
+                com.kingzcheung.xime.settings.PrivacyInput.apply(this@XimeInputMethodService)
 
                 // 检查词库是否已部署（deploymentDone 标记 + 部署 hash 一致）
                 val deploymentDone = SettingsPreferences.isDeploymentDone(this@XimeInputMethodService)
@@ -2261,6 +2289,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     voiceRecognitionState = state.voiceRecognitionState,
                                     voiceRecognizedText = state.voiceRecognizedText,
                                     isSttEnabled = state.isSttEnabled,
+                                    privacyInputEnabled = state.privacyInputEnabled,
                                     toolbarButtons = state.toolbarButtons,
                                     toolbarPluginButtons = state.toolbarPluginButtons,
                                     isCalculatorMode = calculatorEngine.isActive(),

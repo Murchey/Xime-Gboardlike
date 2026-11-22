@@ -156,6 +156,9 @@ object AssociationManager {
     
     fun recordInput(text: String) {
         if (!isInitialized) return
+        // 隐私输入：不把新输入记进本地 n-gram（已有学习数据保留）
+        val ctx = context
+        if (ctx != null && com.kingzcheung.xime.settings.SettingsPreferences.isPrivacyInputEnabled(ctx)) return
         fusionEngine.recordUserInput(text)
     }
     

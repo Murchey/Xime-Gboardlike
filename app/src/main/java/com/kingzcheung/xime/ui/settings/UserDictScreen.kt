@@ -52,6 +52,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -64,11 +65,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kingzcheung.xime.settings.DictEntry
+import com.kingzcheung.xime.settings.PrivacyInput
+import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.settings.UserDictIoManager
 import com.kingzcheung.xime.viewmodel.UserDictUiState
 import com.kingzcheung.xime.viewmodel.UserDictViewModel
@@ -92,6 +96,11 @@ import java.util.Locale
 fun UserDictContent(onBack: () -> Unit) {
     val viewModel: UserDictViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    // 学习开关（= 隐私输入的反向）：同时控制用户词库与联想两条学习链路
+    var learningEnabled by remember {
+        mutableStateOf(!SettingsPreferences.isPrivacyInputEnabled(context))
+    }
 
     // 导出到 / 从系统文件选择器导入：均走 librime 的文本码表（与 PC 端同格式）
     val exportLauncher = rememberLauncherForActivityResult(
@@ -213,6 +222,42 @@ fun UserDictContent(onBack: () -> Unit) {
         }
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            // 学习开关放在列表前面：与"当前词库"无关，随时可以一键进入隐私模式
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = tr(R.string.s_xuexishuru),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = tr(R.string.s_xuexishuru_fu),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = learningEnabled,
+                    onCheckedChange = { checked ->
+                        learningEnabled = checked
+                        // 关闭学习 = 隐私输入：librime 不再写词库，联想也不再记录
+                        PrivacyInput.setEnabled(context, !checked)
+                        android.widget.Toast.makeText(
+                            context,
+                            tr(
+                                if (checked) R.string.s_yinsishuru_guanbi
+                                else R.string.s_yinsishuru_kaiqi
+                            ),
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
+                    },
+                )
+            }
             when {
                 uiState.isLoading -> {
                     Centered { CircularProgressIndicator() }

@@ -531,6 +531,16 @@ class RimeEngine {
         }
     }
 
+    /**
+     * 隐私模式：关闭后用户提交不再被学进用户词库（librime Memory::OnCommit 直接跳过）。
+     *
+     * 只影响"学习"这条路径：读词库、删除词条、导入/导出仍正常。
+     * 引擎重建（进程重启 / 切换方案）后需要重新调用，见 PrivacyInput.apply。
+     */
+    fun setUserDictLearningEnabled(enabled: Boolean) {
+        nativeSetUserDictLearning(enabled)
+    }
+
     fun setOption(option: String, value: Boolean) {
         if (!isInitialized) return
         // 会话/方案状态读写必须与 rimeLock 序列化：后台用户词库操作（readUserDictText /
@@ -887,6 +897,7 @@ class RimeEngine {
     private external fun nativeToggleAsciiMode(): Boolean
     private external fun nativeIsAsciiMode(): Boolean
     private external fun nativeSetOption(option: String, value: Boolean)
+    private external fun nativeSetUserDictLearning(enabled: Boolean)
     private external fun nativeGetOption(option: String): Boolean
     private external fun nativeSwitchSchema(schemaId: String): Boolean
     private external fun nativeEnsureT9SchemaPatches(schemaId: String): Boolean

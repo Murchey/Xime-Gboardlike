@@ -174,6 +174,7 @@ internal fun rememberImeKeyboardCallbacks(
             },
             onReloadConfig = { service.schemaController.reloadConfig() },
         onToggleOneHanded = { service.toggleOneHandedMode() },
+        onTogglePrivacyInput = { service.togglePrivacyInput() },
             onSettings = { service.schemaController.openSettings() },
             onSwitchSchema = { schemaId -> service.schemaController.switchSchema(schemaId) },
             onToggleSchemaSwitch = { sw -> service.sessionController.toggleSchemaSwitch(sw) },
