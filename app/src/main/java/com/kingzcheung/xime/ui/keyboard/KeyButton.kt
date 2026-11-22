@@ -671,13 +671,13 @@ fun KeyButton(
                 scaleX = s
                 scaleY = s
             }
-            .clip(keyClipShape)
-            .background(
-                when {
+            .keyFaceBackground(
+                color = when {
                     isPressed -> LocalKeyPressedBackgroundColor.current ?: pressOverlay(backgroundColor)
                     isHighlighted -> backgroundColor.copy(alpha = 0.8f)
                     else -> backgroundColor
-                }
+                },
+                shape = keyClipShape,
             )
             // 按下描边：Gboard 只有键面提亮、不描边；经典样式保留高对比描边，
             // 让浅色主题白键也能一眼看出「确实按到了」。
@@ -1212,12 +1212,12 @@ fun SwipeableKeyButton(
             }
             .padding(LocalKeyVisualPadding.current)
             .then(shadowModifier)
-            .clip(keyClipShape)
-            .background(
-                if (isPressed) LocalKeyPressedBackgroundColor.current
+            .keyFaceBackground(
+                color = if (isPressed) LocalKeyPressedBackgroundColor.current
                     ?: pressedKeyColor(backgroundColor, LocalKeyPressHighlightColor.current)
                 else if (isHighlighted) backgroundColor.copy(alpha = 0.8f)
-                else backgroundColor
+                else backgroundColor,
+                shape = keyClipShape,
             )
             .keySemantics(a11yDescription, a11yState) { currentOnClick() },
         contentAlignment = if (layoutMode == ButtonLayout.COMPACT) Alignment.TopStart else Alignment.Center
@@ -1603,11 +1603,11 @@ fun IconKeyButton(
             }
             .padding(LocalKeyVisualPadding.current)
             .then(shadowModifier)
-            .clip(keyClipShape)
-            .background(
-                if (isPressed) darkenColor(backgroundColor, 0.1f)
+            .keyFaceBackground(
+                color = if (isPressed) darkenColor(backgroundColor, 0.1f)
                 else if (isHighlighted) darkenColor(backgroundColor, 0.2f)
-                else backgroundColor
+                else backgroundColor,
+                shape = keyClipShape,
             )
             .keySemantics(a11yDescription, a11yState) { currentOnClick() },
         contentAlignment = Alignment.Center
@@ -2117,13 +2117,13 @@ fun SwipeableIconKeyButton(
                 scaleX = s
                 scaleY = s
             }
-            .clip(keyClipShape)
-            .background(
-                when {
+            .keyFaceBackground(
+                color = when {
                     isPressed -> LocalKeyPressedBackgroundColor.current ?: pressOverlay(backgroundColor)
                     isHighlighted -> backgroundColor.copy(alpha = 0.8f)
                     else -> backgroundColor
-                }
+                },
+                shape = keyClipShape,
             )
             // 按下描边：Gboard 只有键面提亮、不描边；经典样式保留高对比描边，
             // 让浅色主题白键也能一眼看出「确实按到了」。
@@ -2591,8 +2591,10 @@ fun SwipeableKeyButtonLandscape(
             }
             .padding(LocalKeyVisualPadding.current)
             .then(shadowModifier)
-            .clip(keyClipShape)
-            .background(if (isPressed) darkenColor(backgroundColor) else backgroundColor),
+            .keyFaceBackground(
+                color = if (isPressed) darkenColor(backgroundColor) else backgroundColor,
+                shape = keyClipShape,
+            ),
         contentAlignment = Alignment.TopStart
     ) {
         val contentScale = adaptiveKeyContentScale(

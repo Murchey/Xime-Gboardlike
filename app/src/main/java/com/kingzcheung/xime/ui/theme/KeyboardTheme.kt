@@ -128,6 +128,11 @@ data class KeyboardColorScheme(
     val hidden: Boolean = false,
     /** 是否显著标注第一个候选词；所有内置主题默认关闭。 */
     val highlightFirstCandidate: Boolean = false,
+    /** 按键透明度 0..1（1 = 不透明）；自定义配色的「按键透明度」滑块。 */
+    val keyOpacity: Float = 1f,
+    /** 按键毛玻璃：键帽内绘制模糊后的底图；[keyBlurRadius] 为模糊半径（像素）。 */
+    val keyBlurEnabled: Boolean = false,
+    val keyBlurRadius: Int = 0,
 )
 
 object KeyboardThemes {

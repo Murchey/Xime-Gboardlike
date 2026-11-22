@@ -51,12 +51,16 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kingzcheung.xime.handwriting.HandwritingCandidate
+import com.kingzcheung.xime.ui.theme.renderFrostedBackdrop
 import com.kingzcheung.xime.keyboard.KeyboardPage
 import com.kingzcheung.xime.rime.RimeEngine
 import com.kingzcheung.xime.keyboard.MainType
@@ -296,6 +300,42 @@ fun KeyboardView(
         // 保证延伸到屏幕底部时渐变连续），此处不再叠加第二层背景。
         modifier
     }
+
+    // ── 按键毛玻璃：预渲染「与内容区同尺寸的模糊底图」，键帽各自采样其中对应的一块 ──
+    val frostedContext = LocalContext.current
+    val frostedConfig = themeScheme.keyboardBackground
+    val frostedBlurRadius = if (themeScheme.keyBlurEnabled) themeScheme.keyBlurRadius else 0
+    var frostedSizePx by remember { mutableStateOf(IntSize.Zero) }
+    LaunchedEffect(
+        frostedConfig?.src,
+        frostedConfig?.srcDark,
+        frostedConfig?.fit,
+        frostedConfig?.offsetX,
+        frostedConfig?.offsetY,
+        frostedBlurRadius,
+        frostedSizePx,
+        state.isDarkTheme,
+    ) {
+        val config = frostedConfig
+        if (frostedBlurRadius <= 0 || config?.type != "image" || frostedSizePx.width <= 0) {
+            FrostedBackdropHolder.clear()
+            return@LaunchedEffect
+        }
+        val backdrop = renderFrostedBackdrop(
+            context = frostedContext,
+            config = config,
+            isDark = state.isDarkTheme,
+            widthPx = frostedSizePx.width,
+            heightPx = frostedSizePx.height,
+            blurRadiusPx = frostedBlurRadius.toFloat(),
+        )
+        FrostedBackdropHolder.size = frostedSizePx
+        FrostedBackdropHolder.image = backdrop
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { FrostedBackdropHolder.clear() }
+    }
     FloatingKeyboardContainer(
         isFloatingMode = state.isFloatingMode,
         scaleFactor = floatScaleFactor,
@@ -308,9 +348,12 @@ fun KeyboardView(
         onCardPositioned = onCardPositioned,
     ) {
     Box(
-        modifier = contentModifier.onSizeChanged { size ->
-            measuredWidthDp = with(densityForMeasure) { size.width.toDp().value.roundToInt() }
-        }
+        modifier = contentModifier
+            .onSizeChanged { size ->
+                measuredWidthDp = with(densityForMeasure) { size.width.toDp().value.roundToInt() }
+                frostedSizePx = size
+            }
+            .onGloballyPositioned { FrostedBackdropHolder.rootOrigin = it.positionInRoot() }
     ) {
         Box {
         // 长按候选删除自造词：确认覆盖层状态（键盘视图内渲染，不弹独立

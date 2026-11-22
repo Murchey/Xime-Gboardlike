@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,18 +57,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kingzcheung.xime.R
 import com.kingzcheung.xime.i18n.tr
+import com.kingzcheung.xime.settings.BackgroundConfig
 import com.kingzcheung.xime.settings.CustomColorScheme
 import com.kingzcheung.xime.settings.CustomThemeStore
 import com.kingzcheung.xime.settings.SettingsPreferences
+import com.kingzcheung.xime.settings.ThemeBackgroundSettings
 import com.kingzcheung.xime.settings.ThemeColorSet
 import com.kingzcheung.xime.ui.theme.KeyboardThemes
+import com.kingzcheung.xime.ui.theme.keyboardBackground
 import com.kingzcheung.xime.ui.theme.toCustomColorScheme
 import com.kingzcheung.xime.ui.theme.toKeyboardColorScheme
+import java.io.File
+import kotlin.math.roundToInt
 
 /** 可调颜色项；名称同时用于取色与保存。 */
 private enum class ThemeColorField(val labelRes: Int) {
@@ -187,10 +196,46 @@ fun ThemeEditorContent(
         }
     }
 
+    /** 相册选图：复制到 files/themes/backgrounds/ 后作为键盘底图（旧图在保存成功后统一回收）。 */
+    fun importBackgroundImage(uri: Uri) {
+        val extension = when (context.contentResolver.getType(uri)?.substringBefore(';')) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            else -> "jpg"
+        }
+        val relative = CustomThemeStore.newBackgroundPath(draft.id, extension)
+        val target = File(context.filesDir, relative.trimStart('/'))
+        runCatching {
+            target.parentFile?.mkdirs()
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                target.outputStream().use { output -> input.copyTo(output) }
+            } ?: throw IllegalStateException("无法读取所选图片")
+        }.onSuccess {
+            draft = draft.copy(background = draft.background.copy(imagePath = relative))
+            showMessage(tr(R.string.s_yijiangtupianshezhiweiditu))
+        }.onFailure {
+            runCatching { target.delete() }
+            showMessage(tr(R.string.s_daorutupianshibai), isError = true)
+        }
+    }
+
+    fun clearBackgroundImage() {
+        // 只改草稿：保存成功后再回收文件，避免放弃编辑时把已保存方案的底图删掉
+        draft = draft.copy(background = draft.background.copy(imagePath = ""))
+        showMessage(tr(R.string.s_yiqingchuditu))
+    }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) importBackgroundImage(uri)
+    }
+
     fun saveAndApply() {
         val name = draft.name.trim().ifBlank { "我的配色" }.take(CustomThemeStore.MAX_NAME_LENGTH)
         val normalized = draft.copy(name = name)
         val updated = CustomThemeStore.upsert(context, normalized)
+        CustomThemeStore.pruneOrphanBackgrounds(context)
         schemes = updated
         draft = normalized
         applyScheme(normalized)
@@ -210,6 +255,8 @@ fun ThemeEditorContent(
 
     fun deleteScheme(scheme: CustomColorScheme) {
         val remaining = CustomThemeStore.delete(context, scheme.id)
+        // 删掉方案后再回收它独占的底图（别的方案仍引用的文件保留）
+        CustomThemeStore.pruneOrphanBackgrounds(context)
         schemes = remaining
         pendingDelete = null
         if (appliedLightThemeId == scheme.id || appliedDarkThemeId == scheme.id) {
@@ -327,6 +374,113 @@ fun ThemeEditorContent(
                             checked = draft.highlightFirstCandidate,
                             onCheckedChange = { draft = draft.copy(highlightFirstCandidate = it) },
                         )
+                    }
+                }
+            }
+
+            // 键盘底图：相册选图 + 拖动定位 + 按键透明度 / 两处高斯模糊
+            item {
+                SettingsSection(title = tr(R.string.s_jianpanditu)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        val bg = draft.background
+                        if (bg.hasImage) {
+                            BackgroundDragPreview(
+                                background = bg,
+                                isDark = isDarkMode,
+                                onDragged = { dxRatio, dyRatio ->
+                                    draft = draft.copy(
+                                        background = draft.background.copy(
+                                            offsetX = (draft.background.offsetX - dxRatio).coerceIn(0f, 1f),
+                                            offsetY = (draft.background.offsetY - dyRatio).coerceIn(0f, 1f),
+                                        )
+                                    )
+                                },
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = tr(R.string.s_tuodongtiaozhengditu),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { imagePicker.launch(arrayOf("image/*")) },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(
+                                    if (bg.hasImage) tr(R.string.s_genghuantupian)
+                                    else tr(R.string.s_xuanzetupian)
+                                )
+                            }
+                            if (bg.hasImage) {
+                                OutlinedButton(
+                                    onClick = { clearBackgroundImage() },
+                                    modifier = Modifier.weight(1f),
+                                ) { Text(tr(R.string.s_qingchuditu)) }
+                            }
+                        }
+                        if (!bg.hasImage) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = tr(R.string.s_weishediditu),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ThemeSliderRow(
+                            label = tr(R.string.s_anjiantoumingdu),
+                            valueLabel = "${(bg.keyOpacity * 100).roundToInt()}%",
+                            value = bg.keyOpacity,
+                            range = 0f..1f,
+                            onChange = { value ->
+                                draft = draft.copy(background = draft.background.copy(keyOpacity = value))
+                            },
+                        )
+
+                        if (bg.hasImage) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            ThemeSliderRow(
+                                label = tr(R.string.s_mengbanqiangdu),
+                                valueLabel = "${(bg.overlayAlpha * 100).roundToInt()}%",
+                                value = bg.overlayAlpha,
+                                range = 0f..0.8f,
+                                onChange = { value ->
+                                    draft = draft.copy(background = draft.background.copy(overlayAlpha = value))
+                                },
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ThemeToggleWithRadius(
+                            title = tr(R.string.s_anjianmohu),
+                            subtitle = tr(R.string.s_anjianmohu_shuoming),
+                            checked = bg.keyBlurEnabled,
+                            onCheckedChange = { enabled ->
+                                draft = draft.copy(background = draft.background.copy(keyBlurEnabled = enabled))
+                            },
+                            radius = bg.keyBlurRadius,
+                            onRadiusChange = { radius ->
+                                draft = draft.copy(background = draft.background.copy(keyBlurRadius = radius))
+                            },
+                        )
+                        if (bg.hasImage) {
+                            ThemeToggleWithRadius(
+                                title = tr(R.string.s_mengbanmohu),
+                                subtitle = tr(R.string.s_mengbanmohu_shuoming),
+                                checked = bg.maskBlurEnabled,
+                                onCheckedChange = { enabled ->
+                                    draft = draft.copy(background = draft.background.copy(maskBlurEnabled = enabled))
+                                },
+                                radius = bg.maskBlurRadius,
+                                onRadiusChange = { radius ->
+                                    draft = draft.copy(background = draft.background.copy(maskBlurRadius = radius))
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -856,3 +1010,121 @@ private fun CustomColorScheme.withColor(field: ThemeColorField, isDark: Boolean,
 
 private fun String.toComposeColor(): Color =
     Color((CustomThemeStore.parseHexColor(this) ?: 0xFF808080).toInt())
+
+/** 底图预览：复用键盘的背景渲染（填充/平移/蒙版模糊），拖动改平移比例。 */
+@Composable
+private fun BackgroundDragPreview(
+    background: ThemeBackgroundSettings,
+    isDark: Boolean,
+    onDragged: (dxRatio: Float, dyRatio: Float) -> Unit,
+) {
+    var size by remember { mutableStateOf(IntSize.Zero) }
+    val config = remember(
+        background.imagePath,
+        background.fit,
+        background.offsetX,
+        background.offsetY,
+        background.overlayAlpha,
+        background.maskBlurEnabled,
+        background.maskBlurRadius,
+    ) {
+        BackgroundConfig(
+            type = "image",
+            src = background.imagePath,
+            srcDark = background.imagePath,
+            fit = background.fit,
+            overlayAlpha = background.overlayAlpha,
+            overlayAlphaDark = background.overlayAlpha,
+            offsetX = background.offsetX,
+            offsetY = background.offsetY,
+            maskBlurRadius = if (background.maskBlurEnabled) background.maskBlurRadius else 0,
+        )
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(112.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .onSizeChanged { size = it }
+            .pointerInput(Unit) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    if (size.width > 0 && size.height > 0) {
+                        onDragged(dragAmount.x / size.width, dragAmount.y / size.height)
+                    }
+                }
+            }
+            .keyboardBackground(config, isDark, Color(0xFF202124)),
+    )
+}
+
+/** 带数值的滑块行（透明度、蒙版强度、模糊半径共用）。 */
+@Composable
+private fun ThemeSliderRow(
+    label: String,
+    valueLabel: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    onChange: (Float) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = valueLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = onChange,
+            valueRange = range,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/** 开关 + 展开的模糊半径滑块。 */
+@Composable
+private fun ThemeToggleWithRadius(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    radius: Int,
+    onRadiusChange: (Int) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
+        }
+        if (checked) {
+            ThemeSliderRow(
+                label = tr(R.string.s_mohubanjing),
+                valueLabel = "${radius}px",
+                value = radius.toFloat(),
+                range = 0f..ThemeBackgroundSettings.MAX_BLUR_RADIUS.toFloat(),
+                onChange = { onRadiusChange(it.roundToInt().coerceIn(0, ThemeBackgroundSettings.MAX_BLUR_RADIUS)) },
+            )
+        }
+    }
+}
+

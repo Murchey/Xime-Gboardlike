@@ -438,6 +438,14 @@ data class BackgroundConfig(
     /** 暗色模式下的遮罩强度，未配置时沿用 [overlayAlpha]。 */
     @SerialName("overlay_alpha_dark")
     val overlayAlphaDark: Float? = null,
+    /** 图片平移：0..1（0.5 居中），在 fill/cover 等留出的可移动余量内偏移。 */
+    @SerialName("offset_x")
+    val offsetX: Float? = null,
+    @SerialName("offset_y")
+    val offsetY: Float? = null,
+    /** 蒙版层高斯模糊半径（像素，>0 生效）：模糊蒙版下方的底图。 */
+    @SerialName("mask_blur_radius")
+    val maskBlurRadius: Int? = null,
 )
 
 @Serializable

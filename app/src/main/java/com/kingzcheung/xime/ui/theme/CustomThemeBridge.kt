@@ -12,27 +12,50 @@ import com.kingzcheung.xime.settings.ThemeColorSet
 fun CustomColorScheme.toKeyboardColorScheme(): KeyboardColorScheme {
     val lightAccent = light.accent.toComposeColor()
     val darkAccent = dark.accent.toComposeColor()
+    val bg = background.normalized()
+    val opacity = bg.keyOpacity
+    val lightBgLong = light.keyboardBackground.toHexLong()
+    val darkBgLong = dark.keyboardBackground.toHexLong()
+    // 有底图时把纯色降级为兜底色（图片解码失败/路径失效时仍能看）
+    val imageBackground = if (bg.hasImage) {
+        BackgroundConfig(
+            type = "image",
+            src = bg.imagePath,
+            srcDark = bg.imagePath,
+            fit = bg.fit,
+            color = lightBgLong,
+            colorDark = darkBgLong,
+            overlayAlpha = bg.overlayAlpha,
+            overlayAlphaDark = bg.overlayAlpha,
+            offsetX = bg.offsetX,
+            offsetY = bg.offsetY,
+            maskBlurRadius = if (bg.maskBlurEnabled) bg.maskBlurRadius else 0,
+        )
+    } else {
+        null
+    }
     return KeyboardColorScheme(
         id = id,
         name = name,
         highlightFirstCandidate = highlightFirstCandidate,
-        specialKeyLight = light.functionKeyBackground.toComposeColor(),
-        specialKeyDark = dark.functionKeyBackground.toComposeColor(),
+        // 按键透明度：统一乘到键帽底色上（功能键/强调键同口径），文字与图标不受影响
+        specialKeyLight = light.functionKeyBackground.toComposeColor().withOpacity(opacity),
+        specialKeyDark = dark.functionKeyBackground.toComposeColor().withOpacity(opacity),
         // 自定义主题的「功能键背景」直接驱动 shift/退格/字符键分组
-        functionKeyBackgroundLight = light.functionKeyBackground.toComposeColor(),
-        functionKeyBackgroundDark = dark.functionKeyBackground.toComposeColor(),
+        functionKeyBackgroundLight = light.functionKeyBackground.toComposeColor().withOpacity(opacity),
+        functionKeyBackgroundDark = dark.functionKeyBackground.toComposeColor().withOpacity(opacity),
         accentLight = lightAccent,
         accentDark = darkAccent,
         primaryLight = lightAccent,
         primaryDark = darkAccent,
-        primaryContainerLight = light.functionKeyBackground.toComposeColor(),
-        primaryContainerDark = dark.functionKeyBackground.toComposeColor(),
+        primaryContainerLight = light.functionKeyBackground.toComposeColor().withOpacity(opacity),
+        primaryContainerDark = dark.functionKeyBackground.toComposeColor().withOpacity(opacity),
         surfaceLight = light.keyboardBackground.toComposeColor(),
         surfaceDark = dark.keyboardBackground.toComposeColor(),
         keyboardBgLight = light.keyboardBackground.toComposeColor(),
         keyboardBgDark = dark.keyboardBackground.toComposeColor(),
-        keyBgLight = light.keyBackground.toComposeColor(),
-        keyBgDark = dark.keyBackground.toComposeColor(),
+        keyBgLight = light.keyBackground.toComposeColor().withOpacity(opacity),
+        keyBgDark = dark.keyBackground.toComposeColor().withOpacity(opacity),
         candidateBarBgLight = light.keyboardBackground.toComposeColor(),
         candidateBarBgDark = dark.keyboardBackground.toComposeColor(),
         keyTextColorLight = light.keyText.toComposeColor(),
@@ -43,12 +66,22 @@ fun CustomColorScheme.toKeyboardColorScheme(): KeyboardColorScheme {
         candidateSelectedTextColorLight = if (highlightFirstCandidate) lightAccent else light.candidateText.toComposeColor(),
         candidateSelectedTextColorDark = if (highlightFirstCandidate) darkAccent else dark.candidateText.toComposeColor(),
         // 回车键：面板里单独配过就用配置值，否则留空跟随强调色
-        accentKeyBackgroundLight = light.enterKeyBackground.takeIf { it.isNotBlank() }?.toComposeColor(),
-        accentKeyBackgroundDark = dark.enterKeyBackground.takeIf { it.isNotBlank() }?.toComposeColor(),
+        accentKeyBackgroundLight = light.enterKeyBackground.takeIf { it.isNotBlank() }
+            ?.toComposeColor()?.withOpacity(opacity),
+        accentKeyBackgroundDark = dark.enterKeyBackground.takeIf { it.isNotBlank() }
+            ?.toComposeColor()?.withOpacity(opacity),
         accentKeyTextColorLight = light.enterKeyIconColor.takeIf { it.isNotBlank() }?.toComposeColor(),
         accentKeyTextColorDark = dark.enterKeyIconColor.takeIf { it.isNotBlank() }?.toComposeColor(),
+        keyboardBackground = imageBackground,
+        keyOpacity = opacity,
+        keyBlurEnabled = bg.keyBlurEnabled,
+        keyBlurRadius = bg.keyBlurRadius,
     )
 }
+
+/** 按键透明度：乘到颜色自身的 alpha 上（0 = 全透明，1 = 保持原样）。 */
+private fun Color.withOpacity(opacity: Float): Color =
+    copy(alpha = (alpha * opacity.coerceIn(0f, 1f)).coerceIn(0f, 1f))
 
 /** 自定义配色 → xime.yaml 同构的 color_schemes 条目，供既有的取色覆盖逻辑复用。 */
 fun CustomColorScheme.toColorSchemeEntry(): ColorSchemeEntry {
@@ -70,11 +103,23 @@ fun CustomColorScheme.toColorSchemeEntry(): ColorSchemeEntry {
         candidateTextColorDark = dark.candidateText.toHexLong(),
         candidateSelectedTextColor = light.accent.toHexLong(),
         candidateSelectedTextColorDark = dark.accent.toHexLong(),
-        keyboardBackground = BackgroundConfig(
-            type = "solid",
-            color = lightBg,
-            colorDark = darkBg,
-        ),
+        keyboardBackground = if (background.hasImage) {
+            BackgroundConfig(
+                type = "image",
+                src = background.imagePath,
+                srcDark = background.imagePath,
+                fit = background.fit,
+                overlayAlpha = background.overlayAlpha,
+                overlayAlphaDark = background.overlayAlpha,
+                offsetX = background.offsetX,
+                offsetY = background.offsetY,
+                maskBlurRadius = if (background.maskBlurEnabled) background.maskBlurRadius else 0,
+                color = lightBg,
+                colorDark = darkBg,
+            )
+        } else {
+            BackgroundConfig(type = "solid", color = lightBg, colorDark = darkBg)
+        },
     )
 }
 

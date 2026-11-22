@@ -24,9 +24,65 @@ data class ThemeColorSet(
 )
 
 /**
+ * 自定义配色的键盘底图与「玻璃」效果。
+ *
+ * 图片是用户从相册选进 `files/themes/backgrounds/` 的副本；[imagePath] 以 `/` 开头时
+ * 相对 `files/` 根目录（如 `/themes/backgrounds/xxx.jpg`），与主题图片路径规则一致。
+ * 空串表示不用底图，只用 [ThemeColorSet.keyboardBackground] 的纯色。
+ */
+data class ThemeBackgroundSettings(
+    val imagePath: String = "",
+    /** 图片填充方式，取值同 [BackgroundConfig.fit]。 */
+    val fit: String = FIT_COVER,
+    /** 拖动位置：0..1，0.5 为居中；只在图片有可移动余量时生效。 */
+    val offsetX: Float = 0.5f,
+    val offsetY: Float = 0.5f,
+    /** 蒙版（压暗层）强度 0..1。 */
+    val overlayAlpha: Float = DEFAULT_OVERLAY_ALPHA,
+    /** 蒙版层高斯模糊：模糊蒙版下方的底图；半径单位是像素。 */
+    val maskBlurEnabled: Boolean = false,
+    val maskBlurRadius: Int = DEFAULT_BLUR_RADIUS,
+    /** 按键透明度 0..1（1 = 不透明）。 */
+    val keyOpacity: Float = 1f,
+    /** 按键毛玻璃：键帽内绘制模糊后的底图；半径单位是像素。 */
+    val keyBlurEnabled: Boolean = false,
+    val keyBlurRadius: Int = DEFAULT_BLUR_RADIUS,
+) {
+    val hasImage: Boolean get() = imagePath.isNotBlank()
+
+    /** 导入的文件不可信：数值钳到合法区间，路径去掉 `..` 之类的越界写法。 */
+    fun normalized(): ThemeBackgroundSettings = copy(
+        imagePath = imagePath.trim().takeIf { ".." !in it } ?: "",
+        fit = fit.takeIf { it in FITS } ?: FIT_COVER,
+        offsetX = offsetX.coerceIn(0f, 1f),
+        offsetY = offsetY.coerceIn(0f, 1f),
+        overlayAlpha = overlayAlpha.coerceIn(0f, 1f),
+        maskBlurRadius = maskBlurRadius.coerceIn(0, MAX_BLUR_RADIUS),
+        keyOpacity = keyOpacity.coerceIn(0f, 1f),
+        keyBlurRadius = keyBlurRadius.coerceIn(0, MAX_BLUR_RADIUS),
+    )
+
+    companion object {
+        const val FIT_COVER = "cover"
+        const val FIT_CONTAIN = "contain"
+        const val FIT_FILL = "fill"
+        const val FIT_FIT_WIDTH = "fit_width"
+        const val FIT_FIT_HEIGHT = "fit_height"
+        const val FIT_NONE = "none"
+
+        val FITS = setOf(FIT_COVER, FIT_CONTAIN, FIT_FILL, FIT_FIT_WIDTH, FIT_FIT_HEIGHT, FIT_NONE)
+
+        const val DEFAULT_OVERLAY_ALPHA = 0.25f
+        const val DEFAULT_BLUR_RADIUS = 16
+        const val MAX_BLUR_RADIUS = 60
+    }
+}
+
+/**
  * 用户自定义配色方案：浅色与深色各自一套颜色，id 以 custom_ 开头。
  *
  * [highlightFirstCandidate] = false 时不显著标注第一个候选词（去掉候选底色与强调文字色）。
+ * [background] 是键盘底图与透明度/毛玻璃参数（没有底图时它只影响按键透明度）。
  */
 data class CustomColorScheme(
     val id: String,
@@ -34,6 +90,7 @@ data class CustomColorScheme(
     val light: ThemeColorSet,
     val dark: ThemeColorSet,
     val highlightFirstCandidate: Boolean = true,
+    val background: ThemeBackgroundSettings = ThemeBackgroundSettings(),
 )
 
 /**
@@ -167,7 +224,26 @@ object CustomThemeStore {
             dark = parseColorSet(darkJson, GBOARD_DARK),
             // 缺省 true：旧文件没有该字段时保持既有"标注第一个候选"的行为
             highlightFirstCandidate = json.optBoolean("highlight_first_candidate", true),
+            background = parseBackground(json.optJSONObject("background")),
         )
+    }
+
+    /** 底图参数：缺省用默认值（旧文件没有这一段），数值一律钳到合法区间。 */
+    private fun parseBackground(json: JSONObject?): ThemeBackgroundSettings {
+        if (json == null) return ThemeBackgroundSettings()
+        val defaults = ThemeBackgroundSettings()
+        return ThemeBackgroundSettings(
+            imagePath = json.optString("image_path", defaults.imagePath),
+            fit = json.optString("fit", defaults.fit),
+            offsetX = json.optDouble("offset_x", defaults.offsetX.toDouble()).toFloat(),
+            offsetY = json.optDouble("offset_y", defaults.offsetY.toDouble()).toFloat(),
+            overlayAlpha = json.optDouble("overlay_alpha", defaults.overlayAlpha.toDouble()).toFloat(),
+            maskBlurEnabled = json.optBoolean("mask_blur_enabled", defaults.maskBlurEnabled),
+            maskBlurRadius = json.optInt("mask_blur_radius", defaults.maskBlurRadius),
+            keyOpacity = json.optDouble("key_opacity", defaults.keyOpacity.toDouble()).toFloat(),
+            keyBlurEnabled = json.optBoolean("key_blur_enabled", defaults.keyBlurEnabled),
+            keyBlurRadius = json.optInt("key_blur_radius", defaults.keyBlurRadius),
+        ).normalized()
     }
 
     private fun parseColorSet(json: JSONObject, fallback: ThemeColorSet): ThemeColorSet {
@@ -202,6 +278,20 @@ object CustomThemeStore {
         put("highlight_first_candidate", highlightFirstCandidate)
         put("light", light.toJson())
         put("dark", dark.toJson())
+        put("background", background.toJson())
+    }
+
+    private fun ThemeBackgroundSettings.toJson(): JSONObject = JSONObject().apply {
+        put("image_path", imagePath)
+        put("fit", fit)
+        put("offset_x", offsetX.toDouble())
+        put("offset_y", offsetY.toDouble())
+        put("overlay_alpha", overlayAlpha.toDouble())
+        put("mask_blur_enabled", maskBlurEnabled)
+        put("mask_blur_radius", maskBlurRadius)
+        put("key_opacity", keyOpacity.toDouble())
+        put("key_blur_enabled", keyBlurEnabled)
+        put("key_blur_radius", keyBlurRadius)
     }
 
     private fun ThemeColorSet.toJson(): JSONObject = JSONObject().apply {
@@ -217,6 +307,47 @@ object CustomThemeStore {
 
     private fun file(context: Context): File =
         File(File(context.filesDir, FILE_DIR), FILE_NAME)
+
+    /** 相册导入的底图副本目录：`files/themes/backgrounds/`（随配色一起管理）。 */
+    fun backgroundsDir(context: Context): File =
+        File(File(context.filesDir, FILE_DIR), "backgrounds")
+
+    /** 底图的存储路径（相对 `files/`，以 `/` 开头，供 [BackgroundConfig.src] 使用）。 */
+    fun newBackgroundPath(schemeId: String, extension: String): String {
+        val ext = extension.lowercase().takeIf { it in setOf("jpg", "jpeg", "png", "webp") } ?: "jpg"
+        return "/$FILE_DIR/backgrounds/${schemeId}_${System.currentTimeMillis()}.$ext"
+    }
+
+    /** 删除某个底图文件（删除配色时回收）；路径不在底图目录内时不动。 */
+    fun deleteBackground(context: Context, path: String) {
+        if (path.isBlank() || ".." in path) return
+        val target = File(context.filesDir, path.trimStart('/')).canonicalFile
+        val dir = backgroundsDir(context).canonicalFile
+        if (!target.path.startsWith(dir.path + File.separator)) return
+        runCatching { target.delete() }
+    }
+
+    /**
+     * 回收没有任何配色引用的底图文件。
+     *
+     * 换图/清除底图时**不立即删**旧图：草稿可能被放弃，立即删会让已保存的方案指向不存在的文件。
+     * 保存成功后再统一扫一遍，只留仍被引用的图片。
+     */
+    fun pruneOrphanBackgrounds(context: Context) {
+        val dir = backgroundsDir(context)
+        val files = dir.listFiles() ?: return
+        if (files.isEmpty()) return
+        val referenced = load(context)
+            .mapNotNull { it.background.imagePath.takeIf(String::isNotBlank) }
+            .mapNotNull { path ->
+                runCatching { File(context.filesDir, path.trimStart('/')).canonicalFile.path }.getOrNull()
+            }
+            .toSet()
+        files.forEach { file ->
+            val path = runCatching { file.canonicalFile.path }.getOrNull() ?: return@forEach
+            if (path !in referenced) runCatching { file.delete() }
+        }
+    }
 
     /** 校验并规范化颜色：#RRGGBB / #AARRGGBB，也接受 0x 前缀与省略 #。无效返回 null。 */
     fun normalizeHexColor(input: String): String? {
