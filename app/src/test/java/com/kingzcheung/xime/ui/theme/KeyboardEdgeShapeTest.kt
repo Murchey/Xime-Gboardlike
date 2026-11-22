@@ -19,7 +19,7 @@ class KeyboardEdgeShapeTest {
     @Test
     fun `顶部圆角只在上面`() {
         assertEquals(
-            RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomEnd = 0.dp, bottomStart = 0.dp),
+            RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomEnd = 0.dp, bottomStart = 0.dp),
             keyboardEdgeShape(KeyboardTopStyle.ROUNDED, roundedBottom = false),
         )
     }
@@ -27,7 +27,7 @@ class KeyboardEdgeShapeTest {
     @Test
     fun `底部圆角四角都圆`() {
         assertEquals(
-            RoundedCornerShape(14.dp, 14.dp, 14.dp, 14.dp),
+            RoundedCornerShape(24.dp, 24.dp, 24.dp, 24.dp),
             keyboardEdgeShape(KeyboardTopStyle.ROUNDED, roundedBottom = true),
         )
     }

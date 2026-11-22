@@ -9,16 +9,16 @@ import org.junit.Test
 class KeyboardTopStyleTest {
 
     @Test
-    fun `id 往返与非法回退直角`() {
+    fun `id 往返与非法回退圆角`() {
         KeyboardTopStyle.entries.forEach { assertEquals(it, KeyboardTopStyle.of(it.id)) }
-        assertEquals(KeyboardTopStyle.SQUARE, KeyboardTopStyle.of(null))
-        assertEquals(KeyboardTopStyle.SQUARE, KeyboardTopStyle.of("bogus"))
+        assertEquals(KeyboardTopStyle.ROUNDED, KeyboardTopStyle.of(null))
+        assertEquals(KeyboardTopStyle.ROUNDED, KeyboardTopStyle.of("bogus"))
     }
 
     @Test
     fun `圆角档只裁上两角`() {
         assertEquals(
-            RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+            RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             KeyboardTopStyle.ROUNDED.clipShape(),
         )
         assertEquals(RoundedCornerShape(0.dp), KeyboardTopStyle.SQUARE.clipShape())
