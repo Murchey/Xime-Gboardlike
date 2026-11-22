@@ -85,6 +85,8 @@ class XimeApplication : Application(), ImageLoaderFactory {
 
         // 安装/升级后一次性关掉滑动输入（版本号标记，只跑一次）
         SettingsPreferences.applyGlideDefaultsIfNeeded(this)
+        // 按键形状：启动时先落到 Compose 状态，键盘首帧就用对的圆角
+        com.kingzcheung.xime.ui.theme.KeyShapes.current = SettingsPreferences.getKeyShape(this)
         FileLogger.init(this)
         KeyTapLogger.init(this)
         KeyTapLogger.enabled = SettingsPreferences.isKeyTapLogEnabled(this)

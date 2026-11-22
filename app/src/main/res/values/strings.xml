@@ -1233,6 +1233,8 @@
     <string name="s_genzhuqiangdiaose">跟随强调色</string>
     <string name="s_qiangdiaodiyigehouxuan">强调第一个候选</string>
     <string name="s_qiangdiaodiyigehouxuan_shuoming">关闭后第一个候选词不再加底色与强调文字色，仅按普通候选显示。</string>
+    <string name="s_anjianxingzhuang">按键形状</string>
+    <string name="s_anjianxingzhuang_fu">键帽圆角形状：圆角 / 大圆角 / 方形 / 直角，所有布局与面板统一生效</string>
     <string name="s_yinsishuru">隐私输入</string>
     <string name="s_tuichuyinsishuru">退出隐私输入</string>
     <string name="s_yinsishuru_kaiqi">隐私输入已开启：新输入不再写入词库、也不参与联想学习</string>

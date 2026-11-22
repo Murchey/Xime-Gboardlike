@@ -403,6 +403,17 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
         getPrefs(context).edit().putBoolean(KEY_KEY_TAP_LOG, enabled).apply()
     }
 
+    /** 按键形状 id（见 [com.kingzcheung.xime.ui.theme.KeyShape]）。 */
+    const val KEY_KEY_SHAPE = "key_shape"
+
+    fun getKeyShape(context: Context): com.kingzcheung.xime.ui.theme.KeyShape =
+        com.kingzcheung.xime.ui.theme.KeyShape.fromId(getPrefs(context).getString(KEY_KEY_SHAPE, null))
+
+    fun setKeyShape(context: Context, shape: com.kingzcheung.xime.ui.theme.KeyShape) {
+        getPrefs(context).edit().putString(KEY_KEY_SHAPE, shape.id).apply()
+        com.kingzcheung.xime.ui.theme.KeyShapes.current = shape
+    }
+
     // ── 手写公式（LaTeX） ──
 
     /** 手写公式模式开关（默认关闭）。 */

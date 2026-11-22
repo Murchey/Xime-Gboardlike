@@ -897,7 +897,10 @@ internal fun overlayKeyCornerRadius(
     isTablet: Boolean,
 ): Dp {
     val configured = if (isTablet) maxOf(kbKey.cornerRadius.dp, TABLET_KEY_CORNER_RADIUS) else kbKey.cornerRadius.dp
-    return maxOf(configured, if (isTablet) GBOARD_KEY_CORNER_TABLET else GBOARD_KEY_CORNER_PHONE)
+    // 按键形状（圆角/大圆角/方形/直角）在最终圆角上钳制，所有布局与面板共用
+    return com.kingzcheung.xime.ui.theme.KeyShapes.current.radius(
+        maxOf(configured, if (isTablet) GBOARD_KEY_CORNER_TABLET else GBOARD_KEY_CORNER_PHONE)
+    )
 }
 
 internal fun keyCornerRadiusFor(
@@ -905,11 +908,15 @@ internal fun keyCornerRadiusFor(
     keyboard: String,
     isTablet: Boolean,
 ): Dp {
-    // 用户显式写了该键盘的 corner_radius 时以配置为准，不被 Gboard 档抬高
-    kbKey.spacingOverrides[keyboard]?.cornerRadius?.dp?.let { return it }
+    // 用户显式写了该键盘的 corner_radius 时以配置为准，不被 Gboard 档抬高（形状仍会钳制）
+    kbKey.spacingOverrides[keyboard]?.cornerRadius?.dp?.let {
+        return com.kingzcheung.xime.ui.theme.KeyShapes.current.radius(it)
+    }
     val configured = if (isTablet) maxOf(kbKey.cornerRadius.dp, TABLET_KEY_CORNER_RADIUS) else kbKey.cornerRadius.dp
-    // 未显式覆盖时取 Gboard 档与全局配置的较大值
-    return maxOf(configured, if (isTablet) GBOARD_KEY_CORNER_TABLET else GBOARD_KEY_CORNER_PHONE)
+    // 未显式覆盖时取 Gboard 档与全局配置的较大值，再由按键形状钳制
+    return com.kingzcheung.xime.ui.theme.KeyShapes.current.radius(
+        maxOf(configured, if (isTablet) GBOARD_KEY_CORNER_TABLET else GBOARD_KEY_CORNER_PHONE)
+    )
 }
 
 /**
@@ -1205,13 +1212,15 @@ internal val RENDERED_FUNCTION_KEY_IDS: Set<String> = setOf(
     "back", "back_right", "number", "open_symbols", "space_bar", "space_key",
 )
 
-/** 底行两端功能键（?123 / 回车）的方形圆角。 */
+/** 底行功能键（?123 / 回车）圆角：24dp，同样受「按键形状」钳制。 */
 private val BottomActionKeyCornerRadius = 24.dp
+private val BottomActionKeyCornerRadiusShaped: Dp
+    get() = com.kingzcheung.xime.ui.theme.KeyShapes.current.radius(BottomActionKeyCornerRadius)
 
 @Composable
 private fun BottomActionKey(content: @Composable () -> Unit) {
     CompositionLocalProvider(
-        LocalKeyCornerRadius provides BottomActionKeyCornerRadius
+        LocalKeyCornerRadius provides BottomActionKeyCornerRadiusShaped
     ) {
         content()
     }
@@ -1631,7 +1640,7 @@ private fun EnterCell(env: QwertyRowEnv, modifier: Modifier, fontSize: TextUnit?
         onRelease = { env.onKeyRelease?.invoke(enterKeyValue) },
         shadowEnabled = env.shadowEnabled,
         shadowElevation = env.shadowElevation,
-        shadowShapeRadius = maxOf(env.shadowShapeRadius, BottomActionKeyCornerRadius),
+        shadowShapeRadius = maxOf(env.shadowShapeRadius, BottomActionKeyCornerRadiusShaped),
         fontSize = fontSize ?: androidx.compose.ui.unit.TextUnit.Unspecified,
     )
 }
@@ -1712,7 +1721,7 @@ private fun ModeChangeCell(env: QwertyRowEnv, modifier: Modifier) {
         onSwipeStateChange = { state, bounds -> env.processSwipeState(state, bounds) },
         shadowEnabled = env.shadowEnabled,
         shadowElevation = env.shadowElevation,
-        shadowShapeRadius = maxOf(env.shadowShapeRadius, BottomActionKeyCornerRadius),
+        shadowShapeRadius = maxOf(env.shadowShapeRadius, BottomActionKeyCornerRadiusShaped),
     )
 }
 
