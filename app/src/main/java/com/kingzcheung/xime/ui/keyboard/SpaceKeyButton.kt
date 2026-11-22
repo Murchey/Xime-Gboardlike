@@ -72,7 +72,10 @@ fun SpaceKeyButton(
             .height((44 * LocalStretchFactor.current).dp)
             .then(shadowModifier)
             .clip(keyShape)
-            .keyPressFeedback(isPressed, backgroundColor, keyShape)
+            // 与普通按键同一套键面：玻璃配色 / 按住高光 / 松开辉光，空格不再单独一套质感
+            .keyFaceBackground(color = backgroundColor, shape = keyShape, textColor = textColor)
+            .keyHeldHighlight(isPressed)
+            .keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)

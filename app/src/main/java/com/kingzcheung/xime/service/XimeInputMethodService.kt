@@ -3390,7 +3390,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
      * 按名字更新一块键盘背后的系统模糊面（子窗口），与参考实现同一套：
      * 名字 → 矩形；矩形为空或玻璃关闭时把这块撤掉。
      */
-    private fun updateGlassSurface(name: String, rect: android.graphics.Rect?) {
+    private fun updateGlassSurface(name: String, rect: android.graphics.Rect?, alphaScale: Float = 1f) {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return
         val enabled = com.kingzcheung.xime.ui.theme.GlassEffect.enabled
         if (!enabled || rect == null || rect.isEmpty) {
@@ -3414,7 +3414,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         win.setRegion(rect, glassAnchorOrigin())
         // 参考实现里模糊跟着"键盘整体透明度"（glassOpacity）走，不是背板不透明度；
         // 背板 0.2 时模糊仍是满强度，否则会露出清晰的应用画面
-        win.setOpacity(1f)
+        win.setOpacity(alphaScale.coerceIn(0f, 1f))
         win.setVisible(isInputViewShown)
         win.update(window?.window?.decorView, window?.window?.decorView?.windowToken)
     }
@@ -3428,7 +3428,33 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         } else {
             rect
         }
-        updateGlassSurface("keyboard", surfaceRect)
+        // 柔化顶部：上沿 16dp 切成几条细模糊窗口，透明度一级级升上去；
+        // 整块模糊从这段下面开始，和 Compose 里顶部渐变对齐
+        val featherPx = (com.kingzcheung.xime.ui.theme.GLASS_TOP_FEATHER_HEIGHT.value *
+            resources.displayMetrics.density).toInt()
+        val featherOn = com.kingzcheung.xime.ui.theme.KeyboardTopStyles.current ==
+            com.kingzcheung.xime.ui.theme.KeyboardTopStyle.SOFT
+        val bands = if (featherOn) {
+            com.kingzcheung.xime.ui.theme.glassTopFeatherBands(
+                surfaceRect.left, surfaceRect.top, surfaceRect.right, surfaceRect.bottom, featherPx,
+            )
+        } else emptyList()
+        val mainRect = if (bands.isEmpty()) surfaceRect else android.graphics.Rect(
+            surfaceRect.left, surfaceRect.top + featherPx, surfaceRect.right, surfaceRect.bottom,
+        )
+        updateGlassSurface("keyboard", mainRect)
+        for (i in 0 until com.kingzcheung.xime.ui.theme.GLASS_TOP_FEATHER_STEPS) {
+            val band = bands.getOrNull(i)
+            if (band == null) {
+                updateGlassSurface("keyboard-edge-$i", null)
+            } else {
+                updateGlassSurface(
+                    "keyboard-edge-$i",
+                    android.graphics.Rect(band.left, band.top, band.right, band.bottom),
+                    band.alpha,
+                )
+            }
+        }
     }
 
     private fun setGlassSurfacesVisible(visible: Boolean) {
