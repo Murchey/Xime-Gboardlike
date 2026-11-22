@@ -67,6 +67,7 @@ fun ThemeAppearanceSection() {
     var liquidOn by remember { mutableStateOf(SettingsPreferences.isLiquidGlassEnabled(context)) }
     var liquidStrength by remember { mutableStateOf(SettingsPreferences.getLiquidGlassStrength(context)) }
     var topStyle by remember { mutableStateOf(SettingsPreferences.getKeyboardTopStyle(context)) }
+    var roundedBottom by remember { mutableStateOf(SettingsPreferences.roundedKeyboardBottom(context)) }
 
     // 预览键使用的"键面"颜色：与设置页一致的浅色/深色中性色
     val keyColor = MaterialTheme.colorScheme.surfaceVariant
@@ -248,6 +249,87 @@ fun ThemeAppearanceSection() {
                 }
             }
         }
+
+        Spacer(Modifier.height(16.dp))
+
+        SettingsSection(title = tr(R.string.s_jianpandibu_yangshi)) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Text(
+                    text = tr(R.string.s_jianpandibu_yangshi_fu),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(10.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    BottomStylePreview(
+                        rounded = true,
+                        selected = roundedBottom,
+                        keyColor = keyColor,
+                        accent = accent,
+                        onClick = {
+                            roundedBottom = true
+                            SettingsPreferences.setRoundedKeyboardBottom(context, true)
+                        },
+                    )
+                    BottomStylePreview(
+                        rounded = false,
+                        selected = !roundedBottom,
+                        keyColor = keyColor,
+                        accent = accent,
+                        onClick = {
+                            roundedBottom = false
+                            SettingsPreferences.setRoundedKeyboardBottom(context, false)
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 键盘底部样式预览：示例块按是否圆角画下沿。 */
+@Composable
+private fun BottomStylePreview(
+    rounded: Boolean,
+    selected: Boolean,
+    keyColor: Color,
+    accent: Color,
+    onClick: () -> Unit,
+) {
+    val radius = if (rounded) 12.dp else 0.dp
+    val shape = RoundedCornerShape(bottomStart = radius, bottomEnd = radius)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(4.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 84.dp, height = 40.dp)
+                .clip(shape)
+                .background(keyColor)
+                .border(
+                    width = if (selected) 2.dp else 1.dp,
+                    color = if (selected) accent else MaterialTheme.colorScheme.outlineVariant,
+                    shape = shape,
+                ),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = if (rounded) "底部圆角" else "底部直角",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+        )
     }
 }
 

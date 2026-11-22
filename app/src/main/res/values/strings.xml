@@ -1235,6 +1235,8 @@
     <string name="s_qiangdiaodiyigehouxuan_shuoming">关闭后第一个候选词不再加底色与强调文字色，仅按普通候选显示。</string>
     <string name="s_shijueyangshi">视觉样式</string>
     <string name="s_shijueyangshi_fu">键面材质：原有外观 / 霓光描边 / 柔光折面（描边与折面高光随键色与明暗自动取色）</string>
+    <string name="s_jianpandibu_yangshi">键盘底部样式</string>
+    <string name="s_jianpandibu_yangshi_fu">底部圆角时导航栏透明；底部直角时导航栏跟键盘同色</string>
     <string name="s_jianpandingbu_yangshi">键盘顶部样式</string>
     <string name="s_jianpandingbu_yangshi_fu">固定键盘上沿：圆角 / 直角 / 渐变柔化</string>
     <string name="s_yetaiboli">液态玻璃</string>
