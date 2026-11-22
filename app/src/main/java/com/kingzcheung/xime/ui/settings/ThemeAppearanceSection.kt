@@ -31,6 +31,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.ui.theme.KeyShape
+import com.kingzcheung.xime.ui.theme.KeyboardTopStyle
 import com.kingzcheung.xime.ui.theme.LiquidGlassStrength
 import com.kingzcheung.xime.ui.theme.LocalMaterialPalette
 import com.kingzcheung.xime.ui.theme.MaterialLevel
@@ -62,6 +66,7 @@ fun ThemeAppearanceSection() {
     var glassOn by remember { mutableStateOf(SettingsPreferences.isGlassEffectEnabled(context)) }
     var liquidOn by remember { mutableStateOf(SettingsPreferences.isLiquidGlassEnabled(context)) }
     var liquidStrength by remember { mutableStateOf(SettingsPreferences.getLiquidGlassStrength(context)) }
+    var topStyle by remember { mutableStateOf(SettingsPreferences.getKeyboardTopStyle(context)) }
 
     // 预览键使用的"键面"颜色：与设置页一致的浅色/深色中性色
     val keyColor = MaterialTheme.colorScheme.surfaceVariant
@@ -209,6 +214,96 @@ fun ThemeAppearanceSection() {
                 }
             }
         }
+
+        Spacer(Modifier.height(16.dp))
+
+        SettingsSection(title = tr(R.string.s_jianpandingbu_yangshi)) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Text(
+                    text = tr(R.string.s_jianpandingbu_yangshi_fu),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(10.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    KeyboardTopStyle.entries.forEach { style ->
+                        TopStylePreview(
+                            style = style,
+                            selected = topStyle == style,
+                            keyColor = keyColor,
+                            accent = accent,
+                            onClick = {
+                                topStyle = style
+                                SettingsPreferences.setKeyboardTopStyle(context, style)
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** 键盘顶部样式预览：示例块按该样式的上沿画（圆角 / 直角 / 渐变柔化）。 */
+@Composable
+private fun TopStylePreview(
+    style: KeyboardTopStyle,
+    selected: Boolean,
+    keyColor: Color,
+    accent: Color,
+    onClick: () -> Unit,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(4.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 84.dp, height = 40.dp)
+                .clip(style.clipShape(12.dp))
+                .background(keyColor)
+                .then(
+                    if (style == KeyboardTopStyle.SOFT) {
+                        Modifier.drawWithContent {
+                            drawContent()
+                            val h = 12.dp.toPx()
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    listOf(keyColor, keyColor.copy(alpha = 0f)),
+                                    0f,
+                                    h,
+                                ),
+                                topLeft = Offset.Zero,
+                                size = androidx.compose.ui.geometry.Size(size.width, h),
+                            )
+                        }
+                    } else {
+                        Modifier
+                    }
+                )
+                .border(
+                    width = if (selected) 2.dp else 1.dp,
+                    color = if (selected) accent else MaterialTheme.colorScheme.outlineVariant,
+                    shape = style.clipShape(12.dp),
+                ),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = style.title,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+        )
     }
 }
 
