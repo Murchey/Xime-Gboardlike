@@ -83,7 +83,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.kingzcheung.xime.ui.theme.liquidGlassCap
+import com.kingzcheung.xime.ui.theme.liquidGlassEdge
 import androidx.compose.ui.unit.sp
 
 /** 工具条/工具面板统一数据项。 */
@@ -976,7 +976,7 @@ private fun DragTileOverlay(
                 if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled &&
                     com.kingzcheung.xime.ui.theme.LiquidGlass.enabled
                 ) {
-                    Modifier.liquidGlassCap(if (big) 24.dp else 22.dp)
+                    Modifier.liquidGlassEdge(if (big) 24.dp else 22.dp)
                 } else {
                     Modifier
                 }

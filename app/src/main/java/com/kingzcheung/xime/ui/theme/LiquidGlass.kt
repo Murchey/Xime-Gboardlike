@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.luminance
@@ -36,6 +37,20 @@ object LiquidGlass {
  * 键帽上的液态玻璃亮边/厚度/高光：画在底色与材质之上、文字之下。
  * 只观察指针（不消费事件），按住时亮边变亮。
  */
+/** 面板件上的同一道细亮边（不含厚度/高光），与参考实现的 liquidGlassEdge 同义。 */
+fun Modifier.liquidGlassEdge(radius: Dp, alpha: () -> Float = { 1f }): Modifier = composed {
+    if (!LiquidGlass.enabled || !GlassEffect.enabled) return@composed this
+    val dark = MaterialTheme.colorScheme.surface.luminance() < .5f
+    drawWithCache {
+        val rim = liquidRimGeometry(radius, dark, LiquidGlassStrength.STANDARD, body = false)
+        onDrawWithContent {
+            val shown = alpha().coerceIn(0f, 1f)
+            if (rim.visible && shown > 0f) clipPath(rim.path) { drawLiquidRim(rim, alpha = shown) }
+            drawContent()
+        }
+    }
+}
+
 fun Modifier.liquidGlassCap(radius: Dp): Modifier = composed {
     if (!LiquidGlass.enabled) return@composed this
     val paletteSurface = MaterialTheme.colorScheme.surface
