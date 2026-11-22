@@ -192,6 +192,9 @@ fun MenuBar(
             cardColor, textColor,
             com.kingzcheung.xime.settings.FrostedGlassPreferences.read(context, darkSurface)
                 .copy(enabled = true),
+            // 功能键/面板卡片按参考实现用更透的材质（glassFunctionKeyScale = 0.5）：
+            // 深色主题里整块提亮后的近白卡片会压住白色图标
+            opacityScale = 0.5f,
         )
     } else {
         cardColor
