@@ -185,20 +185,7 @@ fun MenuBar(
     val context = LocalContext.current
     val textColor = state.keyTextColor
     val cardColor = state.keyBgColor
-    // 玻璃下面板（工具栏卡片）跟键帽同一套玻璃配色：只做半透明，文字不变
-    val panelColor = if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
-        val darkSurface = textColor.luminance() > .5f
-        frostedKeyColor(
-            cardColor, textColor,
-            com.kingzcheung.xime.settings.FrostedGlassPreferences.read(context, darkSurface)
-                .copy(enabled = true),
-            // 功能键/面板卡片按参考实现用更透的材质（glassFunctionKeyScale = 0.5）：
-            // 深色主题里整块提亮后的近白卡片会压住白色图标
-            opacityScale = 0.5f,
-        )
-    } else {
-        cardColor
-    }
+
     var editing by remember { mutableStateOf(false) }
     var draft by remember(state.toolbarButtons) { mutableStateOf(state.toolbarButtons) }
     // 顶部工具栏条的屏幕区域：编辑态卡片拖入该区域即加入工具栏（Gboard 拖动到顶部栏目）
@@ -344,7 +331,7 @@ fun MenuBar(
                     if (!editing) callbacks.onUpdateToolbarButtons(draft)
                 },
                 textColor = textColor,
-                cardColor = panelColor,
+                cardColor = cardColor,
                 onDismiss = { callbacks.onDismiss() },
                 onFinishEdit = {
                     callbacks.onUpdateToolbarButtons(draft)
@@ -363,7 +350,7 @@ fun MenuBar(
                     candidateTools = candidateTools,
                     toolbarableIds = toolbarableIds + SCHEMA_SLOT_ID,
                     textColor = textColor,
-                    cardColor = panelColor,
+                    cardColor = cardColor,
                     draft = draft,
                     onDraftChange = { draft = it },
                     onAddToStrip = ::addToStrip,
@@ -382,7 +369,7 @@ fun MenuBar(
                 ToolbarNormalBody(
                     candidateTools = candidateTools,
                     textColor = textColor,
-                    cardColor = panelColor,
+                    cardColor = cardColor,
                     onEdit = { draft = state.toolbarButtons; editing = true },
                 )
             }
@@ -396,7 +383,7 @@ fun MenuBar(
                 origin = overlayOrigin,
                 big = dragBig,
                 textColor = textColor,
-                cardColor = panelColor,
+                cardColor = cardColor,
             )
         }
     }
