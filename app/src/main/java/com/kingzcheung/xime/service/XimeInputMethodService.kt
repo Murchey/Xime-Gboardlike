@@ -57,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.kingzcheung.xime.ui.theme.keyboardTopSoftEdge
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -2226,6 +2227,13 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                             com.kingzcheung.xime.ui.theme.KeyboardTopStyles.current,
                                             SettingsPreferences.roundedKeyboardBottom(this@XimeInputMethodService),
                                         )
+                                    )
+                                    // 玻璃效果：背板按背景不透明度透出下层应用（浅色默认 0.2、深色 0.8）
+                                    .alpha(
+                                        if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
+                                            com.kingzcheung.xime.settings.FrostedGlassPreferences
+                                                .read(this@XimeInputMethodService, isDark).backgroundOpacity
+                                        } else 1f
                                     )
                                     .keyboardBackground(rootTheme.keyboardBackground, isDark, keyboardBgColor)
                                     .then(Modifier.keyboardTopSoftEdge(keyboardBgColor))

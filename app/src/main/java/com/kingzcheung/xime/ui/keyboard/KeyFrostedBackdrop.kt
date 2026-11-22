@@ -10,7 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.border
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.luminance
@@ -86,7 +88,18 @@ internal fun Modifier.keyFaceBackground(color: Color, shape: Shape, textColor: C
         Modifier.liquidGlassCap(radius)
     } else {
         Modifier.visualMaterial(materialStyle, radius, level = MaterialLevel.BASE)
-    }
+    }.then(
+        // 玻璃键在白底上容易与背景糊在一起：补一道很淡的描边保证键位边界
+        if (config.enabled) {
+            Modifier.border(
+                width = 1.dp,
+                color = if (isDarkSurface) Color.White.copy(alpha = .18f) else Color.Black.copy(alpha = .10f),
+                shape = shape,
+            )
+        } else {
+            Modifier
+        }
+    )
     if (FrostedBackdropHolder.image == null) {
         return this
             .clip(shape)

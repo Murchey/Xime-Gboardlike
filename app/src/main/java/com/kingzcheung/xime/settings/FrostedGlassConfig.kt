@@ -25,7 +25,8 @@ data class FrostedGlassConfig(
             enabled = enabled,
             blurRadiusDp = 10f,
             backgroundOpacity = if (isDark) 0.8f else 0.2f,
-            keyOpacity = if (isDark) 0.2f else 0.8f,
+            // 浅色底多半是白纸，键面 0.8 会与背景糊成一片；0.62 仍有玻璃感又能看清键位
+            keyOpacity = if (isDark) 0.2f else 0.62f,
         )
     }
 }
