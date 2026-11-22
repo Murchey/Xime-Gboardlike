@@ -56,6 +56,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.kingzcheung.xime.ui.theme.keyboardTopSoftEdge
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -2219,7 +2220,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                         keyboardBgTopPx = b.top.toInt()
                                         keyboardBgBottomPx = b.bottom.toInt()
                                     }
+                                    // 键盘顶部样式：圆角档裁上两角；柔化档在背景之上叠一层上沿渐变
+                                    .clip(com.kingzcheung.xime.ui.theme.KeyboardTopStyles.current.clipShape())
                                     .keyboardBackground(rootTheme.keyboardBackground, isDark, keyboardBgColor)
+                                    .then(Modifier.keyboardTopSoftEdge(keyboardBgColor))
                             )
                         }
                         Box(

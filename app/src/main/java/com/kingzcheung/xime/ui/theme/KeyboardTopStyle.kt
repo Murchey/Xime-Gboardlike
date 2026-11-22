@@ -1,0 +1,66 @@
+package com.kingzcheung.xime.ui.theme
+
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+
+/**
+ * 键盘顶部样式（固定键盘贴屏幕顶部的那一条边）。
+ *
+ * - [ROUNDED]：上沿两角圆角；
+ * - [SQUARE]：直角（默认，保持原行为）；
+ * - [SOFT]：上沿渐变过渡（背景图/渐变到顶部淡出）。
+ */
+enum class KeyboardTopStyle(val id: String, val title: String) {
+    ROUNDED("rounded", "圆角"),
+    SQUARE("square", "直角"),
+    SOFT("soft", "柔化");
+
+    /** 顶部裁剪形状：圆角档裁上两角，其它档不裁。 */
+    fun clipShape(radius: Dp = TOP_ROUND_RADIUS): Shape =
+        if (this == ROUNDED) RoundedCornerShape(topStart = radius, topEnd = radius) else SQUARE_SHAPE
+
+    companion object {
+        fun of(id: String?): KeyboardTopStyle = entries.firstOrNull { it.id == id } ?: SQUARE
+    }
+}
+
+private val TOP_ROUND_RADIUS = 14.dp
+private val SQUARE_SHAPE = RoundedCornerShape(0.dp)
+
+/** 当前生效的键盘顶部样式（Compose 状态）。 */
+object KeyboardTopStyles {
+    var current by mutableStateOf(KeyboardTopStyle.SQUARE)
+        internal set
+}
+
+/**
+ * 上沿柔化：在背景之上叠一层从"键盘底色"到透明的竖向渐变，让上沿不像一条硬边。
+ * 只在 [KeyboardTopStyle.SOFT] 下生效；[color] 用作渐变起始色（与键盘底色一致）。
+ */
+fun Modifier.keyboardTopSoftEdge(color: Color, height: Dp = 10.dp): Modifier =
+    if (KeyboardTopStyles.current != KeyboardTopStyle.SOFT) this
+    else drawWithContent {
+        drawContent()
+        val h = height.toPx().coerceAtMost(size.height * 0.5f)
+        if (h > 0f) {
+            drawRect(
+                brush = Brush.verticalGradient(
+                    listOf(color, color.copy(alpha = 0f)),
+                    0f,
+                    h,
+                ),
+                topLeft = Offset.Zero,
+                size = androidx.compose.ui.geometry.Size(size.width, h),
+            )
+        }
+    }

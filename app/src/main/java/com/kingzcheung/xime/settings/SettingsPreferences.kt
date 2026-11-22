@@ -403,6 +403,19 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
         getPrefs(context).edit().putBoolean(KEY_KEY_TAP_LOG, enabled).apply()
     }
 
+    /** 键盘顶部样式 id（rounded/square/soft，见 KeyboardTopStyle）。 */
+    const val KEY_KEYBOARD_TOP_STYLE = "keyboard_top_style"
+
+    fun getKeyboardTopStyle(context: Context): com.kingzcheung.xime.ui.theme.KeyboardTopStyle =
+        com.kingzcheung.xime.ui.theme.KeyboardTopStyle.of(
+            getPrefs(context).getString(KEY_KEYBOARD_TOP_STYLE, null)
+        )
+
+    fun setKeyboardTopStyle(context: Context, style: com.kingzcheung.xime.ui.theme.KeyboardTopStyle) {
+        getPrefs(context).edit().putString(KEY_KEYBOARD_TOP_STYLE, style.id).apply()
+        com.kingzcheung.xime.ui.theme.KeyboardTopStyles.current = style
+    }
+
     /** 液态玻璃开关（与玻璃效果配合；开启时自动打开玻璃效果）。 */
     const val KEY_GLASS_LIQUID = "glass_liquid"
 
