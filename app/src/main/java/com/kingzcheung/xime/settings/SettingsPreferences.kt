@@ -503,9 +503,9 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
     const val KEY_GLIDE_NEURAL = "glide_neural"
     /** 滑动解码 loading 条（默认开启）：抬手到结果确定前在候选栏顶缘滚动。 */
     const val KEY_GLIDE_LOADING_BAR = "glide_loading_bar"
-    /** 滑动默认项迁移版本：升到新版本时把滑动输入与神经解码各开启一次。 */
+    /** 滑动默认项迁移版本：只用于「升级时关一次滑动输入」，之后完全尊重用户选择。 */
     const val KEY_GLIDE_DEFAULTS_VERSION = "glide_defaults_version"
-    private const val GLIDE_DEFAULTS_VERSION = 1
+    private const val GLIDE_DEFAULTS_VERSION = 2
 
     /** 神经解码只用于超过该字数的滑动（短词几何解码已足够，跑模型反而慢）。 */
     const val GLIDE_NEURAL_MIN_SYLLABLES = 4
@@ -634,9 +634,9 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
         getPrefs(context).edit().putBoolean(KEY_CANDIDATE_DIVIDER, show).apply()
     }
 
-    /** 滑动输入：默认开启。开启后 26 键中文区域的拖动由 glide 接管。 */
+    /** 滑动输入：**默认关闭**。开启后 26 键中文区域的拖动才由 glide 接管（否则仍是移动光标）。 */
     fun isGlideTypingEnabled(context: Context): Boolean =
-        getPrefs(context).getBoolean(KEY_GLIDE_TYPING, true)
+        getPrefs(context).getBoolean(KEY_GLIDE_TYPING, false)
 
     /**
      * 开启滑动输入时一并打开神经解码（默认配套）；
@@ -656,16 +656,17 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
     }
 
     /**
-     * 滑动输入默认项迁移：安装/升级后执行一次，把「滑动输入」与「神经滑动解码」都置为开启。
+     * 滑动输入默认项迁移：安装/升级后执行一次，把滑动输入**关掉**。
      *
-     * 用版本号标记保证只跑一次，之后完全尊重用户的开关选择。
+     * 历史版本曾用这里强制开启滑动输入（版本 1）；现在默认关闭，版本 2 会统一关一次，
+     * 把当年"被默认打开"的用户也带回关闭态。用版本号保证只跑一次，之后完全尊重用户的开关选择
+     * （用户在「键盘偏好 → 滑动输入」里打开后不会再被覆盖）。
      */
     fun applyGlideDefaultsIfNeeded(context: Context) {
         val prefs = getPrefs(context)
         if (prefs.getInt(KEY_GLIDE_DEFAULTS_VERSION, 0) >= GLIDE_DEFAULTS_VERSION) return
         prefs.edit()
-            .putBoolean(KEY_GLIDE_TYPING, true)
-            .putBoolean(KEY_GLIDE_NEURAL, true)
+            .putBoolean(KEY_GLIDE_TYPING, false)
             .putInt(KEY_GLIDE_DEFAULTS_VERSION, GLIDE_DEFAULTS_VERSION)
             .apply()
     }
