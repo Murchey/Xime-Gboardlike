@@ -47,7 +47,7 @@ object ModelImportCatalog {
                 ),
             ),
         )
-        // 内置联想模型：独立标识，不与上游 small/base 混在一起
+        // 本分支自训联想模型：独立标识，不与上游 small/base 混在一起；不再随包，作为下载/导入目标
         add(
             ModelInfo(
                 id = XimeGboardPredictionModel.ID,

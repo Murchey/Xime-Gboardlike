@@ -821,8 +821,9 @@ object SettingsPreferences {
     }
     
     /**
-     * 智能联想开关。默认 **开启**：联想模型随 APK 分发（[BundledResources]），
-     * 用户没动过开关时即可直接用；显式关掉过则保持关闭。
+     * 智能联想开关。默认 **开启**，但联想模型已不再随 APK 分发：
+     * 没有模型文件时 [com.kingzcheung.xime.viewmodel.SmartPredictionSettingsViewModel]
+     * 会自动关闭并提示去下载/导入；显式关掉过则保持关闭。
      */
     fun isSmartPredictionEnabled(context: Context): Boolean {
         return getPrefs(context).getBoolean(KEY_SMART_PREDICTION_ENABLED, true)

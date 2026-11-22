@@ -175,12 +175,8 @@ android {
         getByName("test") {
             resources.srcDirs("src/main/assets")
         }
-        // 内置联想模型（full 包）：默认打进 APK；-PbundleModel=false 出 lite 包——
-        // APK 里不带模型权重，只保留加载/导入架构，用户自己装模型。
-        val bundleModel = project.providers.gradleProperty("bundleModel").orNull?.toBoolean() ?: true
-        if (bundleModel) {
-            getByName("main").assets.srcDir("src/modelAssets")
-        }
+        // 联想 ONNX 模型不再随包：main assets 里只保留语法模型 assets/gram/。
+        // 首次使用联想需在 设置 → 智能 → 智能联想 里下载或导入模型（导入入口不受影响）。
     }
     lint {
         checkReleaseBuilds = false

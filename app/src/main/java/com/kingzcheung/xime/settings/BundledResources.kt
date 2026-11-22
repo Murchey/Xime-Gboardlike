@@ -2,13 +2,12 @@ package com.kingzcheung.xime.settings
 
 import android.content.Context
 import android.util.Log
-import com.kingzcheung.xime.model.ModelStorage
 import java.io.File
 import java.io.FileOutputStream
 import java.security.MessageDigest
 
 /**
- * 随 APK 分发的资源（内置语法模型 + 内置联想模型）的版本化落盘。
+ * 随 APK 分发的资源（目前只有内置语法模型 .gram）的版本化落盘。
  *
  * 旧机制只看「文件在不在」，所以升级 APK 后用户仍用着上一版资源。这里改成按版本覆盖：
  * - 资产内容一变就把 [VERSION] 加 1；
@@ -21,28 +20,26 @@ object BundledResources {
     private const val KEY_VERSION = "version"
     private const val KEY_HASH = "hash_"
 
-    /** 资源版本。改动 [ITEMS] 里任何一个资产文件的内容时都必须 +1。 */
+    /** 资源版本。改动 [items] 里任何一个资产文件的内容时都必须 +1。 */
     const val VERSION = 2
 
-    // 内置联想模型用独立 id（见 XimeGboardPredictionModel），资产目录沿用 apk 内的老路径
-    private val MODEL_ID = com.kingzcheung.xime.model.XimeGboardPredictionModel.ID
-    private const val ASSET_MODEL_DIR = "models/predictive-text-small"
-
-    /** 随包资源清单：资产路径 → 运行时目标文件。 */
+    /**
+     * 随包资源清单：资产路径 → 运行时目标文件。
+     *
+     * 联想 ONNX 模型（原 `models/predictive-text-small/`）已不再随包，
+     * 用户首次使用需自行下载/导入；资产缺失时 [install] 会安静跳过（见 [assetExists]）。
+     */
     private fun items(context: Context): List<Pair<String, File>> {
         val rimeDir = SchemaManager.getRimeDir(context)
-        val modelDir = ModelStorage.getModelDir(context, MODEL_ID)
         return listOf(
             "gram/${GramBundledModel.FILE_NAME}" to File(rimeDir, GramBundledModel.FILE_NAME),
-            "$ASSET_MODEL_DIR/vocab.json" to File(modelDir, "vocab.json"),
-            "$ASSET_MODEL_DIR/model_int8_dynamic.onnx" to File(modelDir, "model_int8_dynamic.onnx"),
         )
     }
 
     data class Result(
         val replaced: List<String>,
         val kept: List<String>,
-        /** 这次 APK 里没有带这份资产（lite 包）。 */
+        /** 这次 APK 里没有带这份资产（当前只可能出现在旧包/被裁剪的构建里）。 */
         val absent: List<String>,
         val failed: List<String>,
         val version: Int,

@@ -7,6 +7,8 @@ import com.kingzcheung.xime.i18n.tr
 import android.content.Context
 import android.util.Log
 import com.kingzcheung.xime.model.ModelRuntime
+import com.kingzcheung.xime.model.ModelStorage
+import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.util.FileLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,6 +21,11 @@ object AssociationManager {
     
     @Volatile
     private var isInitialized = false
+
+    /** 「没装联想模型」只记一次日志：预测每次刷新都会走到这里，不能刷屏。 */
+    @Volatile
+    private var missingModelLogged = false
+
     private val mutex = Mutex()
     
     private lateinit var fusionEngine: NgramFusionEngine
@@ -69,10 +76,26 @@ object AssociationManager {
         }
     }
     
+    /** 当前选中的联想模型两个必需文件是否都在（只做 stat，不加载）。 */
+    private fun hasModelFiles(ctx: Context): Boolean {
+        val modelDir = ModelStorage.getModelDir(ctx, SettingsPreferences.getPredictionSelectedModel(ctx))
+        return File(modelDir, "vocab.json").isFile && File(modelDir, "model_int8_dynamic.onnx").isFile
+    }
+
     suspend fun predict(contextText: String, topK: Int = 20): List<AssociationCandidate> = withContext(Dispatchers.Default) {
         if (!isInitialized) {
             val ctx = context
             if (ctx != null) {
+                // 联想模型已不再随包：没装模型时若每次联想都走一遍初始化，
+                // 会白发一次 NgramFusionEngine 的加载。这里先 stat，直接空返回。
+                if (!hasModelFiles(ctx)) {
+                    if (!missingModelLogged) {
+                        missingModelLogged = true
+                        FileLogger.w(TAG, "联想模型未安装，跳过初始化（在 设置 → 智能 → 智能联想 里下载或导入）")
+                    }
+                    return@withContext emptyList()
+                }
+                missingModelLogged = false
                 val initSuccess = withContext(Dispatchers.IO) {
                     initialize(ctx)
                 }

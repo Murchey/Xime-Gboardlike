@@ -4,11 +4,11 @@
 
 ## 1. 构建产物
 
-- [ ] `build_apk.bat` 两个包都出：`dist/full/XimeGboard-<ver>-<abi>-full.apk`、`dist/lite/...-lite.apk`
-- [ ] 两种包各自 4 个 ABI（arm64-v8a / armeabi-v7a / x86 / x86_64；universal 已取消）
+- [ ] `build_apk.bat` 一次出 4 个 ABI 的 release APK：`dist/XimeGboard-<ver>-<abi>.apk`
+      （arm64-v8a / armeabi-v7a / x86 / x86_64；universal 已取消）
 - [ ] 检查 APK 内容：
-  - `assets/models/predictive-text-small/` 只在 **full** 里出现；
-  - `assets/gram/XimeGboard.gram` 两种包都有；
+  - `assets/gram/XimeGboard.gram` 在（语法模型仍随包）；
+  - **不应该有** `assets/models/predictive-text-small/`（联想 ONNX 模型不再随包）；
   - `assets/xime.yaml` 在；
   - 不应该再有 `assets/grid_schemas/`（合并键方案改为运行时派生）。
 
@@ -38,16 +38,16 @@
 
 ## 5. 模型与语法
 
-- [ ] 「智能联想 → 选择模型」里能看到 **XimeGboard 内置联想模型**（独立条目），
+- [ ] 「智能联想 → 选择模型」里能看到 **XimeGboard 自训联想模型**（独立条目），
       上游 `predictive-text-small` / `predictive-text-base` 仍作为可导入项存在。
-- [ ] full 包首次启动即有联想；lite 包不崩、提示去导入模型。
+- [ ] 全新安装（没有任何模型文件）不崩：智能联想自动关闭并提示去下载/导入；导入后能正常联想。
 - [ ] 语法模型（.gram）在设置里可见并处于启用状态。
 
 ## 2026-11-16 本次自检记录
 
 ### 构建与产物
 
-- §build_apk.bat§ 跑通：full + lite 各 5 个 ABI。
+- §build_apk.bat§ 跑通（当时的 full + lite 双包流程，现已改为单包）。
 - APK 内容核对：模型只在 full；§assets/gram/XimeGboard.gram§ 两种包都有；§assets/grid_schemas/§ 已无（合并键改成运行时派生）。
 - debug 单测 1913 个用例、5 个既有失败（与本次改动无关）。
 
@@ -64,4 +64,4 @@
 ### 仍建议人工过一遍的
 
 - 合并键布局在 release 上的切换（debug 上已充分验证：派生、键面、组码解码、切回 26 键恢复方案）；
-- lite 包的「无模型」路径（导入入口、不崩）。
+- 「无模型」路径（联想 ONNX 已不随包，所有包都是这条路径：导入入口、不崩、提示下载）。

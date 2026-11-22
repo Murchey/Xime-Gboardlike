@@ -32,7 +32,7 @@ object ModelStorage {
     private fun legacyDirFor(context: Context, modelId: String): File? {
         return when (modelId) {
             "predictive-text-small" -> context.filesDir
-            // 内置联想模型（新 id）：以前以 small 的身份落在 filesDir 根目录
+            // 本分支自训联想模型（新 id）：以前以 small 的身份落在 filesDir 根目录
             com.kingzcheung.xime.model.XimeGboardPredictionModel.ID -> context.filesDir
             // base 联想模型是新增版本，无旧路径，无需迁移
             "predictive-text-base" -> null
