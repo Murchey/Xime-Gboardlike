@@ -917,17 +917,22 @@ fun KeyboardThemeCard(
                 .fillMaxWidth()
                 .aspectRatio(1.3f)
                 .then(
+                    // 卡片与键盘同一套视觉：24dp 圆角 + 1dp 细描边（选中强调色 2dp）
                     if (isSelected) {
                         Modifier.border(
                             width = 2.dp,
                             color = theme.accentLight,
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(24.dp)
                         )
                     } else {
-                        Modifier
+                        Modifier.border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = .10f),
+                            shape = RoundedCornerShape(24.dp)
+                        )
                     }
                 ),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceContainer,
             shadowElevation = 0.dp,
             onClick = onClick
