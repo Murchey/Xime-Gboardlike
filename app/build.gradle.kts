@@ -155,6 +155,9 @@ android {
         // 但按 ABI 安装时整体占用反而少一份解压副本（约 -16MB），且省去安装解压时间。
         jniLibs {
             useLegacyPackaging = false
+            // onnxruntime-android AAR 自带一份 libonnxruntime.so；本仓库 jniLibs 里已有同版本
+            // （1.28）本体，只保留一份，否则打包报重复。
+            pickFirsts += "**/libonnxruntime.so"
         }
         // dex 保持压缩：classes.dex 原始 10.0MB、压缩后 4.6MB，省 5.4MB。
         // 代价是首次启动多一次 dexopt（minSdk 28 起系统会缓存）。
@@ -263,6 +266,10 @@ dependencies {
 
     // ExecuTorch（FUTO 滑动编码器推理；仅 x86_64/arm64-v8a 带原生库）
     implementation("org.pytorch:executorch-android:1.5.1")
+
+    // Java ONNX Runtime 绑定（手写公式 encoder/decoder）：版本与本仓库 jniLibs 里的
+    // libonnxruntime.so 一致（ORT_API_VERSION 28），AAR 只取 4j JNI 库，避免重复打包运行时本体。
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.28.0")
 
     // Coil (Image Loading)
     implementation(libs.coil)

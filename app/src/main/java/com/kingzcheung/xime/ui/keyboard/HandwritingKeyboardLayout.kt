@@ -6,6 +6,7 @@ import com.kingzcheung.xime.i18n.tr
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -17,9 +18,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -44,11 +51,17 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kingzcheung.xime.handwriting.HandwritingEngine
+import com.kingzcheung.xime.handwriting.FormulaDelimiter
+import com.kingzcheung.xime.handwriting.FormulaModelDownloader
+import com.kingzcheung.xime.handwriting.FormulaRecognizer
+import com.kingzcheung.xime.handwriting.HandwritingCandidate
 import com.kingzcheung.xime.handwriting.HandwritingStrokeFx
 import com.kingzcheung.xime.handwriting.HW_RECOGNIZE_WINDOW_LIMIT
 import com.kingzcheung.xime.handwriting.OverlappedHandwritingRecognizer
 import com.kingzcheung.xime.handwriting.StrokePoint
 import com.kingzcheung.xime.handwriting.renderStrokes
+import com.kingzcheung.xime.settings.SettingsPreferences
+import com.kingzcheung.xime.ui.settings.KatexView
 import com.kingzcheung.xime.settings.KeysConfigHelper
 import com.kingzcheung.xime.ui.isTablet
 import kotlinx.coroutines.Dispatchers
@@ -153,6 +166,17 @@ fun HandwritingKeyboardLayout(
     val recognizer = remember { OverlappedHandwritingRecognizer() }
     var recognizeJob by remember { mutableStateOf<Job?>(null) }
 
+    // ── 手写公式（LaTeX）──
+    // 公式模型（encoder/decoder，约 32MB）不随包：首次使用时按需下载到 files/models/handwriting-formula。
+    var formulaAvailable by remember { mutableStateOf(FormulaRecognizer.isAvailable(context)) }
+    var formulaMode by remember { mutableStateOf(formulaAvailable && SettingsPreferences.isFormulaModeEnabled(context)) }
+    val formulaActive = formulaMode && formulaAvailable
+    var formulaPreview by remember { mutableStateOf("") }
+    var formulaDialog by remember { mutableStateOf(false) }
+    var formulaDownloading by remember { mutableStateOf(false) }
+    var formulaProgress by remember { mutableStateOf(0f) }
+    var delimiter by remember { mutableStateOf(SettingsPreferences.getFormulaDelimiter(context)) }
+
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             HandwritingEngine.initialize(context)
@@ -178,7 +202,9 @@ fun HandwritingKeyboardLayout(
     // 全窗口重新识别自动纠正（"口"→"中"）。分字完全交给 DP 的时间偏置+
     // 相对停顿阈值，滑窗（HW_RECOGNIZE_WINDOW_LIMIT）兜底。
     // 超长闲置（CLEAR_IDLE_MS）无新笔画才真正清窗（下个字从零开始）。
-    LaunchedEffect(lastStrokeEndMs) {
+    LaunchedEffect(lastStrokeEndMs, formulaActive) {
+        // 公式模式下不清板：公式由整段笔迹重认，画错逐笔撤销（侧栏删除键）
+        if (formulaActive) return@LaunchedEffect
         if (lastStrokeEndMs > 0L) {
             delay(HandwritingStrokeFx.splitPauseMs(strokes.size - settledCount))
             if (strokes.isNotEmpty()) {
@@ -196,6 +222,7 @@ fun HandwritingKeyboardLayout(
         }
     }
     LaunchedEffect(clearSignal) {
+        formulaPreview = ""
         strokes.clear()
         fadingPrefix = 0
         gonePrefix = 0
@@ -219,6 +246,31 @@ fun HandwritingKeyboardLayout(
         recognizeJob?.cancel()
         if (settledCount >= strokes.size) return
         recognizeJob = scope.launch {
+            // 公式模式：整段笔迹一次认成 LaTeX，走同一套"替换式上屏"，不做中文字段切分
+            if (formulaActive) {
+                val window = strokes.drop(settledCount)
+                if (window.isEmpty()) return@launch
+                val pairs = window.map { stroke -> stroke.map { Pair(it.x, it.y) } }
+                val results = withContext(Dispatchers.Default) {
+                    FormulaRecognizer.recognize(context, pairs)
+                }
+                if (!isActive) return@launch
+                formulaPreview = results.firstOrNull()?.first.orEmpty()
+                if (results.isNotEmpty()) {
+                    onRecognition?.invoke(
+                        listOf(
+                            OverlappedHandwritingRecognizer.Segment(
+                                startStroke = 0,
+                                strokeCount = window.size,
+                                candidates = results.map { (latex, score) ->
+                                    HandwritingCandidate(delimiter.wrap(latex), score)
+                                },
+                            )
+                        )
+                    )
+                }
+                return@launch
+            }
             // 窗口超限：识别一次取最早段固化出窗，循环至不超限
             while (strokes.size - settledCount > HW_RECOGNIZE_WINDOW_LIMIT && isActive) {
                 val window = strokes.drop(settledCount)
@@ -460,5 +512,160 @@ fun HandwritingKeyboardLayout(
                     }
                 }
         )
+        // 公式开关（左上角）：点按切换模式；模型缺失时打开下载对话框；长按打开选项
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp)
+                .size(38.dp)
+                .clip(RoundedCornerShape(19.dp))
+                .background(if (formulaActive) Color(0x332196F3) else Color(0x14000000))
+                .combinedClickable(
+                    onClick = {
+                        if (!formulaAvailable) {
+                            formulaDialog = true
+                        } else {
+                            formulaMode = !formulaMode
+                            SettingsPreferences.setFormulaModeEnabled(context, formulaMode)
+                            strokes.clear()
+                            settledCount = 0
+                            fadingPrefix = 0
+                            gonePrefix = 0
+                            formulaPreview = ""
+                            dragVersion++
+                            recognizer.reset()
+                        }
+                    },
+                    onLongClick = { formulaDialog = true },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "∑",
+                color = if (formulaActive) Color(0xFF1A73E8) else keyTextColor.copy(alpha = 0.75f),
+                fontSize = 18.sp,
+                fontFamily = AppFonts.keyFontFamily,
+            )
+        }
+
+        // 首选公式的实时预览（KaTeX）：只在有笔迹/有结果时显示；不可在预览区继续书写
+        if (formulaActive && formulaPreview.isNotEmpty()) {
+            KatexView(
+                latex = formulaPreview,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 6.dp)
+                    .fillMaxWidth(0.7f)
+                    .height(58.dp)
+                    .pointerInteropFilter { true },
+                color = keyTextColor,
+            )
+        }
+
+        if (formulaDialog) {
+            FormulaDialog(
+                available = formulaAvailable,
+                downloading = formulaDownloading,
+                progress = formulaProgress,
+                delimiter = delimiter,
+                totalMb = (FormulaModelDownloader.totalBytes() / 1024 / 1024).toInt(),
+                onDismiss = { formulaDialog = false },
+                onDelimiterChange = { option ->
+                    delimiter = option
+                    SettingsPreferences.setFormulaDelimiter(context, option)
+                },
+                onDownload = {
+                    if (!formulaDownloading) {
+                        formulaDownloading = true
+                        formulaProgress = 0f
+                        scope.launch {
+                            val result = FormulaModelDownloader.download(context) { p -> formulaProgress = p }
+                            formulaDownloading = false
+                            if (result.isSuccess) {
+                                formulaAvailable = true
+                                formulaMode = true
+                                SettingsPreferences.setFormulaModeEnabled(context, true)
+                                strokes.clear()
+                                dragVersion++
+                                formulaPreview = ""
+                                formulaDialog = false
+                            }
+                        }
+                    }
+                },
+                onDelete = {
+                    if (FormulaModelDownloader.delete(context)) {
+                        FormulaRecognizer.release()
+                        formulaAvailable = false
+                        formulaMode = false
+                        SettingsPreferences.setFormulaModeEnabled(context, false)
+                        formulaDialog = false
+                    }
+                },
+            )
+        }
     }
 }
+
+/** 公式模型下载 / 上屏标记选择。 */
+@Composable
+private fun FormulaDialog(
+    available: Boolean,
+    downloading: Boolean,
+    progress: Float,
+    delimiter: FormulaDelimiter,
+    totalMb: Int,
+    onDismiss: () -> Unit,
+    onDownload: () -> Unit,
+    onDelete: () -> Unit,
+    onDelimiterChange: (FormulaDelimiter) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (available) "手写公式" else "下载公式模型") },
+        text = {
+            Column {
+                Text(
+                    text = if (available) {
+                        "在画板上写数学公式，识别成 LaTeX 后按所选标记上屏。"
+                    } else {
+                        "公式模型约 ${totalMb}MB，首次使用需要下载。模型来自公开模型包（基于 MathWriting，CC BY-NC-SA 4.0），仅限非商业用途。"
+                    },
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                )
+                if (!available && downloading) {
+                    androidx.compose.foundation.layout.Spacer(Modifier.height(10.dp))
+                    LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+                    Text("已下载 ${(progress * 100).toInt()}%", style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+                }
+                androidx.compose.foundation.layout.Spacer(Modifier.height(12.dp))
+                Text("上屏标记", style = androidx.compose.material3.MaterialTheme.typography.labelLarge)
+                FormulaDelimiter.entries.forEach { option ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = delimiter == option, onClick = { onDelimiterChange(option) })
+                        Text(option.label)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (available) {
+                TextButton(onClick = onDismiss) { Text("完成") }
+            } else {
+                TextButton(onClick = onDownload, enabled = !downloading) {
+                    Text(if (downloading) "下载中…" else "下载")
+                }
+            }
+        },
+        dismissButton = {
+            if (available) {
+                TextButton(onClick = onDelete) {
+                    Text("删除模型", color = androidx.compose.material3.MaterialTheme.colorScheme.error)
+                }
+            } else {
+                TextButton(onClick = onDismiss) { Text("取消") }
+            }
+        },
+    )
+}
+

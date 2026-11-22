@@ -1,0 +1,195 @@
+package com.kingzcheung.xime.handwriting
+
+import ai.onnxruntime.OnnxTensor
+import ai.onnxruntime.OrtEnvironment
+import ai.onnxruntime.OrtSession
+import android.content.Context
+import android.util.Log
+import com.kingzcheung.xime.model.ModelStorage
+import com.kingzcheung.xime.util.FileLogger
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import java.nio.FloatBuffer
+import java.nio.LongBuffer
+import kotlin.math.exp
+
+/**
+ * 整段笔迹 → 记号序列的模型包（编码器 + 解码器 + 记号表 + 预处理参数）。
+ *
+ * 模型包固定四个文件：`formula_encoder.onnx`、`formula_decoder.onnx`、
+ * `formula_vocab.json`、`formula_meta.json`；优先用 `files/models/<id>/`，
+ * 没有时退回外置私有目录（方便 adb 推包调试）。
+ * 预处理见 [FormulaRecognizer.featurize] / [FormulaRecognizer.segments]。
+ */
+internal class InkSeq2SeqModel(
+    private val modelId: String,
+    private val externalDir: String,
+    private val name: String,
+) {
+    private var env: OrtEnvironment? = null
+    private var encoder: OrtSession? = null
+    private var decoder: OrtSession? = null
+    private var vocab: List<String> = emptyList()
+    private var meta: FormulaRecognizer.Meta? = null
+
+    private fun complete(directory: File) = FILES.all { File(directory, it).isFile }
+
+    fun dir(context: Context): File =
+        ModelStorage.getModelDir(context, modelId).takeIf(::complete)
+            ?: File(context.getExternalFilesDir(null) ?: context.filesDir, externalDir)
+
+    fun isAvailable(context: Context): Boolean = complete(dir(context))
+
+    @Synchronized
+    fun ensureLoaded(context: Context): Boolean {
+        if (encoder != null && decoder != null) return true
+        if (!isAvailable(context)) return false
+        return try {
+            val d = dir(context)
+            val m = JSONObject(File(d, "formula_meta.json").readText())
+            meta = FormulaRecognizer.Meta(
+                segLen = m.getInt("seg_len"),
+                segFeat = m.getInt("seg_feat"),
+                maxPoints = m.getInt("max_points"),
+                maxTokens = m.getInt("max_tokens"),
+                minStep = m.getDouble("min_step").toFloat(),
+                wideRatio = m.getDouble("wide_ratio").toFloat(),
+                bos = m.getInt("bos"),
+                eos = m.getInt("eos"),
+            )
+            val v = JSONArray(File(d, "formula_vocab.json").readText())
+            vocab = List(v.length()) { v.getString(it) }
+            val e = OrtEnvironment.getEnvironment()
+            // 逐个 token 解码要推理很多次：线程做完一次不空转等下一次（省电，结果不变）
+            val options = OrtSession.SessionOptions().apply {
+                setIntraOpNumThreads(2)
+                addConfigEntry("session.intra_op.allow_spinning", "0")
+                addConfigEntry("session.inter_op.allow_spinning", "0")
+            }
+            encoder = e.createSession(File(d, "formula_encoder.onnx").path, options)
+            decoder = e.createSession(File(d, "formula_decoder.onnx").path, options)
+            env = e
+            true
+        } catch (t: Throwable) {
+            Log.e(TAG, "load $name model failed", t)
+            FileLogger.e(TAG, "load $name model failed", t)
+            release()
+            false
+        }
+    }
+
+    @Synchronized
+    fun release() {
+        runCatching { encoder?.close() }
+        runCatching { decoder?.close() }
+        encoder = null
+        decoder = null
+    }
+
+    /** 识别整段笔迹，返回 (文本, 置信度 0~1) 按置信度降序；模型不可用或没有笔迹时为空。 */
+    @Synchronized
+    fun recognize(context: Context, strokes: List<List<Pair<Float, Float>>>, beam: Int): List<Pair<String, Float>> {
+        if (!ensureLoaded(context)) return emptyList()
+        val m = meta ?: return emptyList()
+        val e = env ?: return emptyList()
+        val feats = FormulaRecognizer.featurize(strokes, m) ?: return emptyList()
+        return try {
+            encode(e, feats, m) { mem, sm -> beamSearch(e, mem, sm, m, beam) } ?: emptyList()
+        } catch (t: Throwable) {
+            Log.e(TAG, "$name recognize failed", t)
+            FileLogger.e(TAG, "$name recognize failed", t)
+            emptyList()
+        }
+    }
+
+    private fun <T> encode(
+        e: OrtEnvironment,
+        feats: List<List<FloatArray>>,
+        m: FormulaRecognizer.Meta,
+        use: (mem: OnnxTensor, sm: OnnxTensor) -> T,
+    ): T? {
+        val segs = FormulaRecognizer.segments(feats, m)
+        if (segs.isEmpty()) return null
+        val s = segs.size.toLong()
+        val p = FloatArray(segs.size * m.segLen * 6)
+        val pm = BooleanArray(segs.size * m.segLen)
+        val c = FloatArray(segs.size * m.segFeat)
+        segs.forEachIndexed { i, seg ->
+            seg.points.forEachIndexed { j, row ->
+                System.arraycopy(row, 0, p, (i * m.segLen + j) * 6, 6)
+                pm[i * m.segLen + j] = true
+            }
+            System.arraycopy(seg.feat, 0, c, i * m.segFeat, m.segFeat)
+        }
+        return OnnxTensor.createTensor(e, FloatBuffer.wrap(p), longArrayOf(1, s, m.segLen.toLong(), 6)).use { tp ->
+            boolTensor(e, pm, longArrayOf(1, s, m.segLen.toLong())).use { tpm ->
+                OnnxTensor.createTensor(e, FloatBuffer.wrap(c), longArrayOf(1, s, m.segFeat.toLong())).use { tc ->
+                    boolTensor(e, BooleanArray(segs.size) { true }, longArrayOf(1, s)).use { tsm ->
+                        encoder!!.run(mapOf("P" to tp, "PM" to tpm, "C" to tc, "SM" to tsm)).use { out ->
+                            use(out[0] as OnnxTensor, tsm)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun boolTensor(e: OrtEnvironment, data: BooleanArray, shape: LongArray): OnnxTensor =
+        when (shape.size) {
+            2 -> OnnxTensor.createTensor(e, arrayOf(data))
+            3 -> {
+                val rows = shape[1].toInt()
+                val cols = shape[2].toInt()
+                OnnxTensor.createTensor(e, arrayOf(Array(rows) { r -> data.copyOfRange(r * cols, (r + 1) * cols) }))
+            }
+            else -> error("unsupported bool shape")
+        }
+
+    private fun beamSearch(
+        e: OrtEnvironment,
+        mem: OnnxTensor,
+        sm: OnnxTensor,
+        m: FormulaRecognizer.Meta,
+        beam: Int,
+    ): List<Pair<String, Float>> {
+        data class Hyp(val tokens: List<Int>, val logp: Double, val done: Boolean)
+        var beams = listOf(Hyp(listOf(m.bos), 0.0, false))
+        repeat(m.maxTokens) {
+            if (beams.all { it.done }) return@repeat
+            val next = mutableListOf<Hyp>()
+            for (h in beams) {
+                if (h.done) { next += h; continue }
+                val y = LongArray(h.tokens.size) { h.tokens[it].toLong() }
+                val logits = OnnxTensor.createTensor(e, LongBuffer.wrap(y), longArrayOf(1, y.size.toLong())).use { ty ->
+                    decoder!!.run(mapOf("mem" to mem, "SM" to sm, "y" to ty)).use { out ->
+                        @Suppress("UNCHECKED_CAST")
+                        (out[0].value as Array<FloatArray>)[0]
+                    }
+                }
+                val lse = logSumExp(logits)
+                logits.indices.sortedByDescending { logits[it] }.take(beam).forEach { t ->
+                    next += Hyp(h.tokens + t, h.logp + (logits[t] - lse), t == m.eos)
+                }
+            }
+            // 按平均对数概率排序，避免短候选天然占优
+            beams = next.sortedByDescending { it.logp / it.tokens.size }.take(beam)
+        }
+        return beams.map { h ->
+            val ids = h.tokens.drop(1).filter { it != m.eos }
+            FormulaRecognizer.detokenize(ids, vocab) to exp(h.logp / maxOf(h.tokens.size - 1, 1)).toFloat()
+        }.filter { it.first.isNotBlank() }.distinctBy { it.first }
+    }
+
+    private fun logSumExp(v: FloatArray): Double {
+        val mx = v.maxOrNull() ?: 0f
+        var s = 0.0
+        for (x in v) s += exp((x - mx).toDouble())
+        return mx + kotlin.math.ln(s)
+    }
+
+    companion object {
+        private const val TAG = "InkSeq2SeqModel"
+        private val FILES = listOf("formula_encoder.onnx", "formula_decoder.onnx", "formula_vocab.json", "formula_meta.json")
+    }
+}

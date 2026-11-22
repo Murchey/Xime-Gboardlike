@@ -403,6 +403,33 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
         getPrefs(context).edit().putBoolean(KEY_KEY_TAP_LOG, enabled).apply()
     }
 
+    // ── 手写公式（LaTeX） ──
+
+    /** 手写公式模式开关（默认关闭）。 */
+    const val KEY_FORMULA_MODE = "handwriting_formula_mode"
+
+    /** 公式上屏分隔符 id（见 [com.kingzcheung.xime.handwriting.FormulaDelimiter]）。 */
+    const val KEY_FORMULA_DELIMITER = "handwriting_formula_delimiter"
+
+    fun isFormulaModeEnabled(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_FORMULA_MODE, false)
+
+    fun setFormulaModeEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_FORMULA_MODE, enabled).apply()
+    }
+
+    fun getFormulaDelimiter(context: Context): com.kingzcheung.xime.handwriting.FormulaDelimiter =
+        com.kingzcheung.xime.handwriting.FormulaDelimiter.of(
+            getPrefs(context).getString(KEY_FORMULA_DELIMITER, null)
+        )
+
+    fun setFormulaDelimiter(
+        context: Context,
+        delimiter: com.kingzcheung.xime.handwriting.FormulaDelimiter,
+    ) {
+        getPrefs(context).edit().putString(KEY_FORMULA_DELIMITER, delimiter.id).apply()
+    }
+
     /** 滑动轨迹采集（glide 离线评测数据），默认关闭。 */
     fun isGlideTraceEnabled(context: Context): Boolean {
         return getPrefs(context).getBoolean(KEY_GLIDE_TRACE, false)
