@@ -17,6 +17,11 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import com.kingzcheung.xime.ui.theme.GlassEffect
+import com.kingzcheung.xime.ui.theme.MaterialLevel
+import com.kingzcheung.xime.ui.theme.VisualStyle
+import com.kingzcheung.xime.ui.theme.VisualStyles
+import com.kingzcheung.xime.ui.theme.visualMaterial
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -57,11 +62,22 @@ private class KeyFacePosition {
  */
 @Composable
 internal fun Modifier.keyFaceBackground(color: Color, shape: Shape): Modifier {
-    if (FrostedBackdropHolder.image == null) return this.clip(shape).background(color)
+    // 键面材质与玻璃效果：玻璃开时压到 62% 不透明（键面半透明），并画玻璃高光/亮边
+    val radius = LocalKeyCornerRadius.current
+    val glass = GlassEffect.enabled
+    val materialStyle = if (glass) VisualStyle.GLASS else VisualStyle.forKeyboard(VisualStyles.current)
+    val faceColor = if (glass) color.copy(alpha = min(color.alpha, 0.62f)) else color
+
+    if (FrostedBackdropHolder.image == null) {
+        return this
+            .clip(shape)
+            .background(faceColor)
+            .visualMaterial(materialStyle, radius, level = MaterialLevel.BASE)
+    }
 
     val position = remember { KeyFacePosition() }
     var laidOut by remember { mutableStateOf(false) }
-    val glassColor = color.copy(alpha = min(color.alpha, 0.65f))
+    val glassColor = if (glass) faceColor.copy(alpha = min(faceColor.alpha, 0.62f)) else faceColor.copy(alpha = min(faceColor.alpha, 0.65f))
     return this
         .onGloballyPositioned { coordinates ->
             position.topLeft = coordinates.positionInRoot()
@@ -87,4 +103,5 @@ internal fun Modifier.keyFaceBackground(color: Color, shape: Shape): Modifier {
             }
             drawRect(glassColor)
         }
+        .visualMaterial(materialStyle, radius, level = MaterialLevel.BASE)
 }

@@ -8,8 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,7 +22,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.twotone.Straighten
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,9 +52,8 @@ import kotlinx.coroutines.launch
 import com.kingzcheung.xime.settings.DoublePinyinFinals
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.settings.declarative.SettingValue
-import com.kingzcheung.xime.ui.theme.KeyShape
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LayoutDisplaySettingsContent(
     onBack: () -> Unit,
@@ -137,41 +133,6 @@ fun LayoutDisplaySettingsContent(
                                     }
                                 },
                             )
-                        }
-                    }
-                    // 按键形状：点一下立即生效（KeyShapes 是 Compose 状态，键盘会直接重绘）
-                    var keyShape by remember { mutableStateOf(SettingsPreferences.getKeyShape(context)) }
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        Text(
-                            text = tr(R.string.s_anjianxingzhuang),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = tr(R.string.s_anjianxingzhuang_fu),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            KeyShape.entries.forEach { shape ->
-                                FilterChip(
-                                    selected = keyShape == shape,
-                                    onClick = {
-                                        keyShape = shape
-                                        SettingsPreferences.setKeyShape(context, shape)
-                                    },
-                                    label = { Text(shape.title) },
-                                )
-                            }
                         }
                     }
                     DeclarativeSettingItems(

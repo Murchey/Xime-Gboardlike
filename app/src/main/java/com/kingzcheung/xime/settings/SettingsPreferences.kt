@@ -403,6 +403,28 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
         getPrefs(context).edit().putBoolean(KEY_KEY_TAP_LOG, enabled).apply()
     }
 
+    /** 视觉样式 id（见 [com.kingzcheung.xime.ui.theme.VisualStyle]）。 */
+    const val KEY_VISUAL_STYLE = "visual_style"
+
+    /** 玻璃效果开关：键面半透明 + 玻璃高光/亮边。 */
+    const val KEY_GLASS_EFFECT = "glass_effect"
+
+    fun getVisualStyle(context: Context): com.kingzcheung.xime.ui.theme.VisualStyle =
+        com.kingzcheung.xime.ui.theme.VisualStyle.fromId(getPrefs(context).getString(KEY_VISUAL_STYLE, null))
+
+    fun setVisualStyle(context: Context, style: com.kingzcheung.xime.ui.theme.VisualStyle) {
+        getPrefs(context).edit().putString(KEY_VISUAL_STYLE, style.id).apply()
+        com.kingzcheung.xime.ui.theme.VisualStyles.current = style
+    }
+
+    fun isGlassEffectEnabled(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_GLASS_EFFECT, false)
+
+    fun setGlassEffectEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_GLASS_EFFECT, enabled).apply()
+        com.kingzcheung.xime.ui.theme.GlassEffect.enabled = enabled
+    }
+
     /** 按键形状 id（见 [com.kingzcheung.xime.ui.theme.KeyShape]）。 */
     const val KEY_KEY_SHAPE = "key_shape"
 

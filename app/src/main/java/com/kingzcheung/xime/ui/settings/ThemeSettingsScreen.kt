@@ -230,6 +230,9 @@ fun ThemeSettingsContent(
                 }
             }
 
+            // 外观与材质：按键形状、视觉样式、玻璃效果（主体功能放在主题页）
+            item { ThemeAppearanceSection() }
+
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
