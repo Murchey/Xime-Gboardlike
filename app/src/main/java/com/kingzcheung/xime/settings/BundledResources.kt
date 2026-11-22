@@ -2,12 +2,13 @@ package com.kingzcheung.xime.settings
 
 import android.content.Context
 import android.util.Log
+import com.kingzcheung.xime.model.ModelStorage
 import java.io.File
 import java.io.FileOutputStream
 import java.security.MessageDigest
 
 /**
- * 随 APK 分发的资源（目前只有内置语法模型 .gram）的版本化落盘。
+ * 随 APK 分发的资源（内置语法模型 .gram + 手写模型 ochwpro）的版本化落盘。
  *
  * 旧机制只看「文件在不在」，所以升级 APK 后用户仍用着上一版资源。这里改成按版本覆盖：
  * - 资产内容一变就把 [VERSION] 加 1；
@@ -21,18 +22,28 @@ object BundledResources {
     private const val KEY_HASH = "hash_"
 
     /** 资源版本。改动 [items] 里任何一个资产文件的内容时都必须 +1。 */
-    const val VERSION = 2
+    const val VERSION = 3
+
+    /** 手写模型 id（与 HandwritingEngine / ModelImportCatalog 一致）。 */
+    private const val HANDWRITING_MODEL_ID = "ochwpro"
 
     /**
      * 随包资源清单：资产路径 → 运行时目标文件。
      *
-     * 联想 ONNX 模型（原 `models/predictive-text-small/`）已不再随包，
-     * 用户首次使用需自行下载/导入；资产缺失时 [install] 会安静跳过（见 [assetExists]）。
+     * - 语法模型：`assets/gram/XimeGboard.gram` → rime 目录；
+     * - 手写模型：`assets/models/ochwpro/` → `files/models/ochwpro/`，首次安装即落盘，
+     *   用户不用再去模型管理里下载；
+     * - 联想 ONNX 模型（原 `models/predictive-text-small/`）不随包，需自行下载/导入。
+     *
+     * 资产缺失时 [install] 会安静跳过（见 [assetExists]），不影响其它资源。
      */
     private fun items(context: Context): List<Pair<String, File>> {
         val rimeDir = SchemaManager.getRimeDir(context)
+        val handwritingDir = ModelStorage.getModelDir(context, HANDWRITING_MODEL_ID)
         return listOf(
             "gram/${GramBundledModel.FILE_NAME}" to File(rimeDir, GramBundledModel.FILE_NAME),
+            "models/$HANDWRITING_MODEL_ID/ochwpro.onnx" to File(handwritingDir, "ochwpro.onnx"),
+            "models/$HANDWRITING_MODEL_ID/char_index.json" to File(handwritingDir, "char_index.json"),
         )
     }
 

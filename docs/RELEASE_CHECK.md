@@ -7,8 +7,10 @@
 - [ ] `build_apk.bat` 一次出 4 个 ABI 的 release APK：`dist/XimeGboard-<ver>-<abi>.apk`
       （arm64-v8a / armeabi-v7a / x86 / x86_64；universal 已取消）
 - [ ] 检查 APK 内容：
-  - `assets/gram/XimeGboard.gram` 在（语法模型仍随包）；
-  - **不应该有** `assets/models/predictive-text-small/`（联想 ONNX 模型不再随包）；
+  - `assets/gram/XimeGboard.gram` 在（语法模型随包）；
+  - `assets/models/ochwpro/`（ochwpro.onnx + char_index.json）在——**手写模型随包**，
+    首次安装即落盘到 `files/models/ochwpro/`，用户不需要再去下载；
+  - **不应该有** `assets/models/predictive-text-small/`（联想 ONNX 模型不随包）；
   - `assets/xime.yaml` 在；
   - 不应该再有 `assets/grid_schemas/`（合并键方案改为运行时派生）。
 
