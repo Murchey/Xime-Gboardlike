@@ -34,6 +34,18 @@ enum class KeyboardTopStyle(val id: String, val title: String) {
     }
 }
 
+/** 键盘整体边缘形状：上沿按 [top]，下沿按 [roundedBottom]（底部圆角 + 透明导航栏）。 */
+fun keyboardEdgeShape(top: KeyboardTopStyle, roundedBottom: Boolean, radius: Dp = TOP_ROUND_RADIUS): Shape {
+    val topRadius = if (top == KeyboardTopStyle.ROUNDED) radius else 0.dp
+    val bottomRadius = if (roundedBottom) radius else 0.dp
+    return RoundedCornerShape(
+        topStart = topRadius,
+        topEnd = topRadius,
+        bottomEnd = bottomRadius,
+        bottomStart = bottomRadius,
+    )
+}
+
 private val TOP_ROUND_RADIUS = 14.dp
 private val SQUARE_SHAPE = RoundedCornerShape(0.dp)
 

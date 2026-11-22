@@ -403,6 +403,16 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
         getPrefs(context).edit().putBoolean(KEY_KEY_TAP_LOG, enabled).apply()
     }
 
+    /** 键盘底部样式：底部圆角 + 透明导航栏（false = 直角 + 导航栏跟键盘同色）。 */
+    const val KEY_ROUNDED_KEYBOARD_BOTTOM = "rounded_keyboard_bottom"
+
+    fun roundedKeyboardBottom(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_ROUNDED_KEYBOARD_BOTTOM, false)
+
+    fun setRoundedKeyboardBottom(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_ROUNDED_KEYBOARD_BOTTOM, enabled).apply()
+    }
+
     /** 键盘顶部样式 id（rounded/square/soft，见 KeyboardTopStyle）。 */
     const val KEY_KEYBOARD_TOP_STYLE = "keyboard_top_style"
 

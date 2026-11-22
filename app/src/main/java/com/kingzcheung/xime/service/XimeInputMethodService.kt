@@ -2221,7 +2221,12 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                         keyboardBgBottomPx = b.bottom.toInt()
                                     }
                                     // 键盘顶部样式：圆角档裁上两角；柔化档在背景之上叠一层上沿渐变
-                                    .clip(com.kingzcheung.xime.ui.theme.KeyboardTopStyles.current.clipShape())
+                                    .clip(
+                                        com.kingzcheung.xime.ui.theme.keyboardEdgeShape(
+                                            com.kingzcheung.xime.ui.theme.KeyboardTopStyles.current,
+                                            SettingsPreferences.roundedKeyboardBottom(this@XimeInputMethodService),
+                                        )
+                                    )
                                     .keyboardBackground(rootTheme.keyboardBackground, isDark, keyboardBgColor)
                                     .then(Modifier.keyboardTopSoftEdge(keyboardBgColor))
                             )
@@ -3383,7 +3388,14 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                         win.isNavigationBarContrastEnforced = false
                     }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        win.setNavigationBarColor(android.graphics.Color.TRANSPARENT)
+                        // 底部直角时导航栏跟键盘同色（底部圆角才用透明导航栏，露出键盘底图）
+                        win.setNavigationBarColor(
+                            if (SettingsPreferences.roundedKeyboardBottom(this@XimeInputMethodService)) {
+                                android.graphics.Color.TRANSPARENT
+                            } else {
+                                argb
+                            }
+                        )
                     }
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
