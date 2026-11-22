@@ -18,6 +18,8 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import com.kingzcheung.xime.ui.theme.GlassEffect
+import com.kingzcheung.xime.ui.theme.LiquidGlass
+import com.kingzcheung.xime.ui.theme.liquidGlassCap
 import com.kingzcheung.xime.ui.theme.MaterialLevel
 import com.kingzcheung.xime.ui.theme.VisualStyle
 import com.kingzcheung.xime.ui.theme.VisualStyles
@@ -68,11 +70,14 @@ internal fun Modifier.keyFaceBackground(color: Color, shape: Shape): Modifier {
     val materialStyle = if (glass) VisualStyle.GLASS else VisualStyle.forKeyboard(VisualStyles.current)
     val faceColor = if (glass) color.copy(alpha = min(color.alpha, 0.62f)) else color
 
+    // 液态玻璃：在底色/材质之上再补一道亮边（按住变亮），文字仍然在最上面
+    val liquid = if (glass && LiquidGlass.enabled) Modifier.liquidGlassCap(radius) else Modifier
     if (FrostedBackdropHolder.image == null) {
         return this
             .clip(shape)
             .background(faceColor)
             .visualMaterial(materialStyle, radius, level = MaterialLevel.BASE)
+            .then(liquid)
     }
 
     val position = remember { KeyFacePosition() }
@@ -104,4 +109,5 @@ internal fun Modifier.keyFaceBackground(color: Color, shape: Shape): Modifier {
             drawRect(glassColor)
         }
         .visualMaterial(materialStyle, radius, level = MaterialLevel.BASE)
+        .then(liquid)
 }

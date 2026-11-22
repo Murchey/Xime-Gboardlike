@@ -32,16 +32,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.ui.theme.KeyShape
+import com.kingzcheung.xime.ui.theme.LiquidGlassStrength
 import com.kingzcheung.xime.ui.theme.LocalMaterialPalette
 import com.kingzcheung.xime.ui.theme.MaterialLevel
 import com.kingzcheung.xime.ui.theme.MaterialPalette
 import com.kingzcheung.xime.ui.theme.VisualStyle
+import com.kingzcheung.xime.ui.theme.liquidGlassSample
 import com.kingzcheung.xime.ui.theme.visualMaterial
 
 /**
@@ -57,6 +60,8 @@ fun ThemeAppearanceSection() {
     var keyShape by remember { mutableStateOf(SettingsPreferences.getKeyShape(context)) }
     var visualStyle by remember { mutableStateOf(SettingsPreferences.getVisualStyle(context)) }
     var glassOn by remember { mutableStateOf(SettingsPreferences.isGlassEffectEnabled(context)) }
+    var liquidOn by remember { mutableStateOf(SettingsPreferences.isLiquidGlassEnabled(context)) }
+    var liquidStrength by remember { mutableStateOf(SettingsPreferences.getLiquidGlassStrength(context)) }
 
     // 预览键使用的"键面"颜色：与设置页一致的浅色/深色中性色
     val keyColor = MaterialTheme.colorScheme.surfaceVariant
@@ -155,6 +160,53 @@ fun ThemeAppearanceSection() {
                 // 玻璃效果本身也画一个示例键：半透明键面 + 玻璃高光/亮边
                 Spacer(Modifier.height(8.dp))
                 GlassPreviewSample(enabled = glassOn, keyColor = keyColor, keyText = keyText, accent = accent)
+
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = tr(R.string.s_yetaiboli),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = tr(R.string.s_yetaiboli_fu),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = liquidOn,
+                        onCheckedChange = { on ->
+                            liquidOn = on
+                            SettingsPreferences.setLiquidGlassEnabled(context, on)
+                            // 液态玻璃会把玻璃效果一起打开
+                            if (on) glassOn = true
+                        },
+                    )
+                }
+                if (liquidOn) {
+                    Spacer(Modifier.height(10.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        LiquidGlassStrength.entries.forEach { strength ->
+                            LiquidStrengthPreview(
+                                strength = strength,
+                                selected = liquidStrength == strength,
+                                keyColor = keyColor,
+                                keyText = keyText,
+                                accent = accent,
+                                onClick = {
+                                    liquidStrength = strength
+                                    SettingsPreferences.setLiquidGlassStrength(context, strength)
+                                },
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -241,6 +293,49 @@ private fun VisualStylePreview(
         Spacer(Modifier.height(6.dp))
         Text(
             text = style.title,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+        )
+    }
+}
+
+/** 液态玻璃强度示例：用键盘同一段代码画这一档的亮边/厚度/高光。 */
+@Composable
+private fun LiquidStrengthPreview(
+    strength: LiquidGlassStrength,
+    selected: Boolean,
+    keyColor: Color,
+    keyText: Color,
+    accent: Color,
+    onClick: () -> Unit,
+) {
+    val dark = keyColor.luminance() < 0.5f
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(4.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 84.dp, height = 44.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(keyColor.copy(alpha = 0.62f))
+                .liquidGlassSample(10.dp, dark = dark, strength = strength)
+                .border(
+                    width = if (selected) 2.dp else 1.dp,
+                    color = if (selected) accent else MaterialTheme.colorScheme.outlineVariant,
+                    shape = RoundedCornerShape(10.dp),
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("Aa", color = keyText, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = strength.label,
             style = MaterialTheme.typography.bodySmall,
             color = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,

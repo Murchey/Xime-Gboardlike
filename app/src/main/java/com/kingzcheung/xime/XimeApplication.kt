@@ -89,6 +89,8 @@ class XimeApplication : Application(), ImageLoaderFactory {
         com.kingzcheung.xime.ui.theme.KeyShapes.current = SettingsPreferences.getKeyShape(this)
         com.kingzcheung.xime.ui.theme.VisualStyles.current = SettingsPreferences.getVisualStyle(this)
         com.kingzcheung.xime.ui.theme.GlassEffect.enabled = SettingsPreferences.isGlassEffectEnabled(this)
+        com.kingzcheung.xime.ui.theme.LiquidGlass.enabled = SettingsPreferences.isLiquidGlassEnabled(this)
+        com.kingzcheung.xime.ui.theme.LiquidGlass.strength = SettingsPreferences.getLiquidGlassStrength(this)
         FileLogger.init(this)
         KeyTapLogger.init(this)
         KeyTapLogger.enabled = SettingsPreferences.isKeyTapLogEnabled(this)

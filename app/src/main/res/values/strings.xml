@@ -1235,6 +1235,8 @@
     <string name="s_qiangdiaodiyigehouxuan_shuoming">关闭后第一个候选词不再加底色与强调文字色，仅按普通候选显示。</string>
     <string name="s_shijueyangshi">视觉样式</string>
     <string name="s_shijueyangshi_fu">键面材质：原有外观 / 霓光描边 / 柔光折面（描边与折面高光随键色与明暗自动取色）</string>
+    <string name="s_yetaiboli">液态玻璃</string>
+    <string name="s_yetaiboli_fu">按键加一道朝光的亮边，按住时变亮；强度可选标准/加强/最强（会同时打开玻璃效果）</string>
     <string name="s_bolixiaoguo">玻璃效果</string>
     <string name="s_bolixiaoguo_fu">键面半透明，并加玻璃高光与亮边；开启时覆盖视觉样式的描边</string>
     <string name="s_anjianxingzhuang">按键形状</string>
