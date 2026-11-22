@@ -82,6 +82,8 @@ internal fun Modifier.keyFaceBackground(color: Color, shape: Shape, textColor: C
     }
     // 没传文字色时按键面明暗取一个对比色：只影响玻璃提亮的"深浅面"判断与按下反馈
     val foreground = textColor ?: if (color.luminance() > .5f) Color.Black else Color.White
+    // 玻璃关闭：回到改造前的键面（纯色底 + 无材质/描边/折射），保证旧观感原样
+    if (!config.enabled) return this.clip(shape).background(color)
     val faceColor = frostedKeyColor(color, foreground, config)
     val materialStyle = VisualStyle.forKeyboard(VisualStyles.current)
     val overlay = if (config.enabled && LiquidGlass.enabled) {

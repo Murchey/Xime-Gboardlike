@@ -684,8 +684,12 @@ fun KeyButton(
                 },
                 shape = keyClipShape,
             )
-            .keyHeldHighlight(isPressed)
-            .keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
+            .then(if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) Modifier.keyHeldHighlight(isPressed) else Modifier)
+            .then(
+                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
+                    Modifier.keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
+                } else Modifier
+            )
             // 按下描边：Gboard 只有键面提亮、不描边；经典样式保留高对比描边，
             // 让浅色主题白键也能一眼看出「确实按到了」。
             .then(
@@ -1226,8 +1230,12 @@ fun SwipeableKeyButton(
                 else backgroundColor,
                 shape = keyClipShape,
             )
-            .keyHeldHighlight(isPressed)
-            .keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
+            .then(if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) Modifier.keyHeldHighlight(isPressed) else Modifier)
+            .then(
+                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
+                    Modifier.keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
+                } else Modifier
+            )
             .keySemantics(a11yDescription, a11yState) { currentOnClick() },
         contentAlignment = if (layoutMode == ButtonLayout.COMPACT) Alignment.TopStart else Alignment.Center
     ) {
@@ -2138,8 +2146,12 @@ fun SwipeableIconKeyButton(
                 },
                 shape = keyClipShape,
             )
-            .keyHeldHighlight(isPressed)
-            .keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
+            .then(if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) Modifier.keyHeldHighlight(isPressed) else Modifier)
+            .then(
+                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
+                    Modifier.keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
+                } else Modifier
+            )
             // 按下描边：Gboard 只有键面提亮、不描边；经典样式保留高对比描边，
             // 让浅色主题白键也能一眼看出「确实按到了」。
             .then(

@@ -72,10 +72,17 @@ fun SpaceKeyButton(
             .height((44 * LocalStretchFactor.current).dp)
             .then(shadowModifier)
             .clip(keyShape)
-            // 与普通按键同一套键面：玻璃配色 / 按住高光 / 松开辉光，空格不再单独一套质感
-            .keyFaceBackground(color = backgroundColor, shape = keyShape, textColor = textColor)
-            .keyHeldHighlight(isPressed)
-            .keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
+            // 玻璃开启时与普通按键同一套键面；关闭时保留原来的 keyPressFeedback
+            .then(
+                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
+                    Modifier
+                        .keyFaceBackground(color = backgroundColor, shape = keyShape, textColor = textColor)
+                        .keyHeldHighlight(isPressed)
+                        .keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
+                } else {
+                    Modifier.keyPressFeedback(isPressed, backgroundColor, keyShape)
+                }
+            )
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
