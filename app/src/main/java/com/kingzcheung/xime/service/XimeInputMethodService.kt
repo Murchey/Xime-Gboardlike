@@ -3381,6 +3381,22 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         return androidx.compose.ui.unit.IntOffset(location[0], location[1])
     }
 
+    /** 跨窗口模糊可用性监听：系统开关变化时重算模糊面（参考实现同款）。 */
+    private var glassBlurAvailabilityListener: java.util.function.Consumer<Boolean>? = null
+
+    private fun ensureGlassBlurAvailabilityListener() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return
+        if (glassBlurAvailabilityListener != null) return
+        runCatching {
+            val manager = getSystemService(android.view.WindowManager::class.java) ?: return
+            val listener = java.util.function.Consumer<Boolean> {
+                glassBlurRect?.let(::updateGlassBlur)
+            }
+            glassBlurAvailabilityListener = listener
+            manager.addCrossWindowBlurEnabledListener(mainExecutor, listener)
+        }
+    }
+
     /** 系统是否开着跨窗口模糊（省电/无障碍设置会关掉）；关着时保留透明背板兜底。 */
     private fun windowBlurAvailable(): Boolean = runCatching {
         getSystemService(android.view.WindowManager::class.java)?.isCrossWindowBlurEnabled == true
@@ -3422,6 +3438,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     /** 键盘主模糊面。底部圆角（导航栏透明）时延伸到屏幕底，覆盖导航条区域。 */
     internal fun updateGlassBlur(rect: android.graphics.Rect) {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return
+        ensureGlassBlurAvailabilityListener()
         glassBlurRect = android.graphics.Rect(rect)
         val surfaceRect = if (SettingsPreferences.roundedKeyboardBottom(this)) {
             android.graphics.Rect(rect).apply { bottom = resources.displayMetrics.heightPixels }
@@ -3744,6 +3761,13 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         runCatching { glassBlurWindows.values.forEach { it.dispose() } }
         glassBlurWindows.clear()
         glassSurfaceBounds.clear()
+        glassBlurAvailabilityListener?.let { listener ->
+            runCatching {
+                getSystemService(android.view.WindowManager::class.java)
+                    ?.removeCrossWindowBlurEnabledListener(listener)
+            }
+        }
+        glassBlurAvailabilityListener = null
         try {
             contentResolver.unregisterContentObserver(uiNightModeObserver)
         } catch (_: Exception) {
