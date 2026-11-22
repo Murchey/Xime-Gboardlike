@@ -2,6 +2,7 @@ package com.kingzcheung.xime.ui.keyboard
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -219,10 +220,12 @@ internal fun Modifier.keyPressFeedback(
 ): Modifier {
     val scale by animateFloatAsState(
         targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
-        animationSpec = tween(
-            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
-            easing = FastOutSlowInEasing,
-        ),
+        animationSpec = if (isPressed) {
+            tween(durationMillis = KEY_PRESS_IN_MS, easing = FastOutSlowInEasing)
+        } else {
+            // 松开走带过冲的弹簧：先冲过 1 再落回，短促有回弹（借用实现的按键手感）
+            spring(dampingRatio = 0.38f, stiffness = 1400f)
+        },
         label = "keyPressFeedbackScale",
     )
     return this
@@ -511,10 +514,12 @@ fun KeyButton(
     // 按下时的键帽缩放：统一常量（Gboard 的按压回弹幅度）
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
-        animationSpec = tween(
-            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
-            easing = FastOutSlowInEasing,
-        ),
+        animationSpec = if (isPressed) {
+            tween(durationMillis = KEY_PRESS_IN_MS, easing = FastOutSlowInEasing)
+        } else {
+            // 松开走带过冲的弹簧：先冲过 1 再落回，短促有回弹（借用实现的按键手感）
+            spring(dampingRatio = 0.38f, stiffness = 1400f)
+        },
         label = "keyPressScale",
     )
     
@@ -1554,10 +1559,12 @@ fun IconKeyButton(
     // 按下时键帽缩放（与字母/功能键共用统一常量）
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
-        animationSpec = tween(
-            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
-            easing = FastOutSlowInEasing,
-        ),
+        animationSpec = if (isPressed) {
+            tween(durationMillis = KEY_PRESS_IN_MS, easing = FastOutSlowInEasing)
+        } else {
+            // 松开走带过冲的弹簧：先冲过 1 再落回，短促有回弹（借用实现的按键手感）
+            spring(dampingRatio = 0.38f, stiffness = 1400f)
+        },
         label = "swipeKeyPressScale",
     )
     val density = LocalDensity.current
@@ -1679,10 +1686,12 @@ fun SwipeableIconKeyButton(
     // 按下时键帽缩放（图标键，与文字键共用统一常量）
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
-        animationSpec = tween(
-            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
-            easing = FastOutSlowInEasing,
-        ),
+        animationSpec = if (isPressed) {
+            tween(durationMillis = KEY_PRESS_IN_MS, easing = FastOutSlowInEasing)
+        } else {
+            // 松开走带过冲的弹簧：先冲过 1 再落回，短促有回弹（借用实现的按键手感）
+            spring(dampingRatio = 0.38f, stiffness = 1400f)
+        },
         label = "iconKeyPressScale",
     )
     var dragOffsetY by remember { mutableStateOf(0f) }
@@ -2226,10 +2235,12 @@ fun SwipeableKeyButtonLandscape(
     // 按下时键帽缩放（横屏紧凑键盘，与竖屏共用统一常量）
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
-        animationSpec = tween(
-            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
-            easing = FastOutSlowInEasing,
-        ),
+        animationSpec = if (isPressed) {
+            tween(durationMillis = KEY_PRESS_IN_MS, easing = FastOutSlowInEasing)
+        } else {
+            // 松开走带过冲的弹簧：先冲过 1 再落回，短促有回弹（借用实现的按键手感）
+            spring(dampingRatio = 0.38f, stiffness = 1400f)
+        },
         label = "landscapeKeyPressScale",
     )
     var dragOffsetY by remember { mutableStateOf(0f) }
