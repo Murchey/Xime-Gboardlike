@@ -4,7 +4,10 @@ import com.kingzcheung.xime.R
 
 import com.kingzcheung.xime.i18n.tr
 
+import android.net.Uri
 import android.text.format.Formatter
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -23,6 +26,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.twotone.DataUsage
 import androidx.compose.material.icons.twotone.Image
 import androidx.compose.material.icons.twotone.Lock
@@ -36,6 +41,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -45,6 +52,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,8 +66,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kingzcheung.xime.clipboard.ClipboardManager
 import com.kingzcheung.xime.clipboard.ImageUsage
+import com.kingzcheung.xime.clipboard.transfer.ClipboardTransferManager
 import com.kingzcheung.xime.settings.SettingsPreferences
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -105,6 +115,82 @@ fun ClipboardSettingsContent(
         mutableStateOf(SettingsPreferences.getClipboardRetentionMinutes(context))
     }
 
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
+    /** 正在进行的导入/导出（null = 空闲）：既禁用重复点击，也作为行尾「进行中」徽标。 */
+    var transferBusy by remember { mutableStateOf<String?>(null) }
+
+    fun runExport(uri: Uri) {
+        if (transferBusy != null) return
+        transferBusy = "export"
+        scope.launch {
+            val result = ClipboardTransferManager.exportTo(context, uri)
+            transferBusy = null
+            snackbar.showSnackbar(
+                result.fold(
+                    onSuccess = { summary ->
+                        if (summary.imageCount > 0) {
+                            tr(
+                                R.string.s_jiantieban_daochuchenggong_tupian,
+                                summary.entryCount,
+                                summary.imageCount
+                            )
+                        } else {
+                            tr(R.string.s_jiantieban_daochuchenggong, summary.entryCount)
+                        }
+                    },
+                    onFailure = { tr(R.string.s_daochushibai_2, it.message ?: it.javaClass.simpleName) },
+                )
+            )
+        }
+    }
+
+    fun runImport(uri: Uri) {
+        if (transferBusy != null) return
+        transferBusy = "import"
+        scope.launch {
+            val result = ClipboardTransferManager.importFrom(context, uri)
+            transferBusy = null
+            // 导入可能带来图片：占用统计跟着刷新（Snackbar 会挂起到消失，先刷新再提示）
+            usage = withContext(Dispatchers.IO) { clipboardManager.imageUsage() }
+            snackbar.showSnackbar(
+                result.fold(
+                    onSuccess = { summary ->
+                        val base = if (summary.imageCount > 0) {
+                            tr(
+                                R.string.s_jiantieban_daoruchenggong_tupian,
+                                summary.textCount,
+                                summary.imageCount
+                            )
+                        } else {
+                            tr(R.string.s_jiantieban_daoruchenggong, summary.textCount)
+                        }
+                        if (summary.missingImageCount > 0) {
+                            base + "；" + tr(
+                                R.string.s_jiantieban_daoru_queshitu,
+                                summary.missingImageCount
+                            )
+                        } else {
+                            base
+                        }
+                    },
+                    onFailure = { tr(R.string.s_daorushibai_2, it.message ?: it.javaClass.simpleName) },
+                )
+            )
+        }
+    }
+
+    // 导出前先看有没有图片：没有图片给 .txt，有图片给 .zip（图片塞不进纯文本）
+    val txtExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri -> if (uri != null) runExport(uri) }
+    val zipExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri -> if (uri != null) runExport(uri) }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> if (uri != null) runImport(uri) }
+
     /** 提交手动输入的条数：夹到合法区间，同步滑块并立即裁剪历史。 */
     fun commitMaxItems() {
         val range = SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE
@@ -124,6 +210,7 @@ fun ClipboardSettingsContent(
 
     Scaffold(
         containerColor = settingsPageContainerColor(),
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = { Text(tr(R.string.s_jiantieban)) },
@@ -394,6 +481,42 @@ fun ClipboardSettingsContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                }
+            )
+
+            SettingsSection(
+                title = tr(R.string.s_daochuyudaoru),
+                content = {
+                    SettingsItem(
+                        icon = Icons.Outlined.FileUpload,
+                        title = tr(R.string.s_daochujiantieban),
+                        subtitle = tr(R.string.s_daochujiantieban_fu),
+                        badgeText = if (transferBusy == "export") tr(R.string.s_jinxingzhong) else null,
+                        showArrow = true,
+                        onClick = {
+                            if (transferBusy == null) {
+                                scope.launch {
+                                    val zip = ClipboardTransferManager.hasExportableImages(context)
+                                    val name = ClipboardTransferManager.exportFileName(zip)
+                                    if (zip) {
+                                        zipExportLauncher.launch(name)
+                                    } else {
+                                        txtExportLauncher.launch(name)
+                                    }
+                                }
+                            }
+                        }
+                    )
+                    SettingsItem(
+                        icon = Icons.Outlined.FileDownload,
+                        title = tr(R.string.s_daorujiantieban),
+                        subtitle = tr(R.string.s_daorujiantieban_fu),
+                        badgeText = if (transferBusy == "import") tr(R.string.s_jinxingzhong) else null,
+                        showArrow = true,
+                        onClick = {
+                            if (transferBusy == null) importLauncher.launch(arrayOf("*/*"))
+                        }
+                    )
                 }
             )
 

@@ -65,6 +65,13 @@ data class ImageUsage(
     val fileBytes: Long = 0,
 )
 
+/** 设置页「导入剪贴板」的一条文本记录（时间戳由导入方排定，用于还原文件中的顺序）。 */
+data class ClipboardImportItem(
+    val text: String,
+    val timestamp: Long,
+    val pinned: Boolean = false,
+)
+
 class ClipboardManager private constructor(private val context: Context) {
 
     companion object {
@@ -331,13 +338,14 @@ class ClipboardManager private constructor(private val context: Context) {
         width: Int,
         height: Int,
         limits: ImageLimits,
+        timestamp: Long = System.currentTimeMillis(),
     ): String? {
         return imageMutex.withLock {
             val hash = ClipboardProfile.sha256Hex(bytes)
             val mime = ClipboardImageStore.mimeForExtension(extension)
                 ?: mimeHint?.takeIf { it.startsWith("image/") }
                 ?: "application/octet-stream"
-            val now = System.currentTimeMillis()
+            val now = timestamp
             val existing = dao.findImageByHash(hash)
             if (existing != null) {
                 // 同图重复复制：仅更新时间戳置顶，不重复落盘
@@ -389,16 +397,30 @@ class ClipboardManager private constructor(private val context: Context) {
      * @param dataName 远端文件名（`<sha256>.<ext>`），仅用于兜底推断类型
      * @return 落盘后的**绝对路径**（可直接写系统剪贴板）；失败返回 null
      */
-    suspend fun importImageFromSync(data: ByteArray, dataName: String?): String? {
+    suspend fun importImageFromSync(data: ByteArray, dataName: String?): String? =
+        importImage(data, dataName)
+
+    /**
+     * 导入外部图片（剪贴板同步 / 设置页「导入剪贴板」共用）。
+     *
+     * 与 [importImageFromSync] 同一套宽松准入：只按绝对上限拒收。
+     *
+     * @param timestamp 入库时间戳（默认当前时间；导入文件时用于还原条目顺序）
+     */
+    suspend fun importImage(
+        data: ByteArray,
+        dataName: String?,
+        timestamp: Long = System.currentTimeMillis(),
+    ): String? {
         if (data.isEmpty()) return null
         if (data.size.toLong() > SYNC_IMPORT_MAX_BYTES) {
-            Log.w(TAG, "Synced image exceeds hard cap (${data.size} bytes), skipped")
+            Log.w(TAG, "External image exceeds hard cap (${data.size} bytes), skipped")
             return null
         }
         val extension = ClipboardImageStore.sniffExtension(data)
             ?: ClipboardImageStore.extensionForMime(mimeHintOf(dataName))
             ?: run {
-                Log.w(TAG, "Unsupported synced image (dataName=$dataName), skipped")
+                Log.w(TAG, "Unsupported external image (dataName=$dataName), skipped")
                 return null
             }
         val (width, height) = decodeBounds(data)
@@ -415,8 +437,9 @@ class ClipboardManager private constructor(private val context: Context) {
             width = width,
             height = height,
             limits = limits,
+            timestamp = timestamp,
         ) ?: return null
-        Log.d(TAG, "Imported synced image ($relativePath, ${data.size} bytes)")
+        Log.d(TAG, "Imported external image ($relativePath, ${data.size} bytes)")
         return imageStore.absoluteFile(relativePath).absolutePath
     }
 
@@ -975,6 +998,55 @@ class ClipboardManager private constructor(private val context: Context) {
             bytes = dao.totalImageBytes(),
             fileBytes = imageStore.usedBytes(),
         )
+    }
+
+    /**
+     * 导出快照：全部剪贴板条目（不含快捷发送），顺序与界面一致
+     * （置顶在前，其余按时间倒序）。设置页「导出剪贴板」用。
+     */
+    suspend fun exportSnapshot(): List<ClipboardItem> = dao.allClipboardOnce()
+        .sortedWith(compareByDescending<ClipboardEntry> { it.isPinned }.thenByDescending { it.timestamp })
+        .map { it.toClipboardItem() }
+
+    /**
+     * 是否有**可导出**的图片（图片行存在且文件仍在）——决定「导出剪贴板」是 txt 还是 zip。
+     * 只看行数会与导出结果不一致（行在、文件已丢的图片导出时会被跳过）。
+     */
+    suspend fun hasExportableImages(): Boolean =
+        dao.allImages().any { it.imagePath.isNotEmpty() && imageStore.absoluteFile(it.imagePath).exists() }
+
+    /**
+     * 导入文本条目（设置页「导入剪贴板」）。
+     *
+     * 同一文本已存在时只更新时间戳与置顶（不产生重复行），导入的文件顺序由调用方
+     * 通过递减的 [ClipboardImportItem.timestamp] 还原。
+     *
+     * @return 实际写入（新增或更新）的条目数
+     */
+    suspend fun importTextEntries(items: List<ClipboardImportItem>): Int {
+        var written = 0
+        for (item in items) {
+            if (item.text.isBlank()) continue
+            val existing = dao.findByText(item.text)
+            if (existing != null) {
+                dao.updateTimestamp(existing.id, item.timestamp)
+                if (item.pinned && !existing.isPinned) dao.updatePinned(existing.id, true)
+            } else {
+                dao.insert(
+                    ClipboardEntry(
+                        text = item.text,
+                        timestamp = item.timestamp,
+                        isPinned = item.pinned,
+                    )
+                )
+            }
+            written++
+        }
+        if (written > 0) {
+            Log.d(TAG, "Imported $written clipboard text entries")
+            enforceItemLimit()
+        }
+        return written
     }
 
     /**

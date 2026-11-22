@@ -1163,6 +1163,19 @@
     <string name="s_tiaoshu_danwei">条</string>
     <string name="s_tiaoshu_fanwei">可输入 %1$d–%2$d 条</string>
     <string name="s_zidongqingli_tishi">超过设定时间的记录会自动删除；置顶和快捷发送不受影响</string>
+    <string name="s_daochuyudaoru">导出与导入</string>
+    <string name="s_daochujiantieban">导出剪贴板</string>
+    <string name="s_daochujiantieban_fu">不含图片时导出为 txt；含图片时导出为 zip，图片放在 img 目录</string>
+    <string name="s_daorujiantieban">导入剪贴板</string>
+    <string name="s_daorujiantieban_fu">支持本应用导出的 txt / zip；普通 txt 会整体作为一条记录</string>
+    <string name="s_jiantieban_daochuchenggong">已导出 %1$d 条记录</string>
+    <string name="s_jiantieban_daochuchenggong_tupian">已导出 %1$d 条记录（含 %2$d 张图片）</string>
+    <string name="s_jiantieban_daoruchenggong">已导入 %1$d 条记录</string>
+    <string name="s_jiantieban_daoruchenggong_tupian">已导入 %1$d 条文本、%2$d 张图片</string>
+    <string name="s_jiantieban_daoru_queshitu">另有 %1$d 张图片在文件里缺失，已跳过</string>
+    <string name="s_jiantieban_wenjianweikong">文件里没有可导入的记录</string>
+    <string name="s_jiantieban_yasuobaowenben">压缩包里没有找到 clipboard.txt</string>
+    <string name="s_jiantieban_wenjianguoda">文件过大（超过 %1$d MB），已取消</string>
 
     <!-- 字体选择 / 个性化调色 -->
     <string name="s_gboard_jingdian">Gboard 经典</string>
