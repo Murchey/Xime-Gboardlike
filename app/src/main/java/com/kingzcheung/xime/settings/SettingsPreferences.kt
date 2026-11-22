@@ -63,6 +63,8 @@ object SettingsPreferences {
     const val KEY_KEYBOARD_LETTER_ORDER = "keyboard_letter_order"
     private const val KEY_PREDICTION_MODEL_REPO = "prediction_model_repo"
     private const val KEY_PREDICTION_SELECTED_MODEL = "prediction_selected_model"
+/** 联想模型缺省 id：上游 small（自训模型不再占默认槽位）。 */
+private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
     private const val KEY_SPACE_COMMIT_ASSOCIATION = "space_commit_association"
     private const val KEY_ASSOCIATION_SINGLE_MODE = "association_single_mode"
     
@@ -970,20 +972,12 @@ object SettingsPreferences {
     /**
      * 当前选中的联想模型 id。
      *
-     * 内置模型换成了独立 id（[com.kingzcheung.xime.model.XimeGboardPredictionModel.ID]），
-     * 老装机里存的还是上游 small 的 id：这里一次性迁到新 id，模型文件由
-     * [com.kingzcheung.xime.model.ModelStorage.migrateLegacyForModel] 一起搬过去。
+     * 本分支自训模型（`ximegboard-prediction`）已不再预留槽位，缺省值回到上游 small；
+     * 老装机里存过的值原样保留——已装好的模型仍能按 id 加载，只是列表里不再预置该条目。
      */
     fun getPredictionSelectedModel(context: Context): String {
-        val stored = getPrefs(context).getString(
-            KEY_PREDICTION_SELECTED_MODEL,
-            com.kingzcheung.xime.model.XimeGboardPredictionModel.ID,
-        ) ?: com.kingzcheung.xime.model.XimeGboardPredictionModel.ID
-        if (stored == com.kingzcheung.xime.model.XimeGboardPredictionModel.LEGACY_ID) {
-            setPredictionSelectedModel(context, com.kingzcheung.xime.model.XimeGboardPredictionModel.ID)
-            return com.kingzcheung.xime.model.XimeGboardPredictionModel.ID
-        }
-        return stored
+        return getPrefs(context).getString(KEY_PREDICTION_SELECTED_MODEL, DEFAULT_PREDICTION_MODEL_ID)
+            ?: DEFAULT_PREDICTION_MODEL_ID
     }
     
     fun setPredictionSelectedModel(context: Context, modelId: String) {

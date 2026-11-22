@@ -47,26 +47,9 @@ object ModelImportCatalog {
                 ),
             ),
         )
-        // 本分支自训联想模型：独立标识，不与上游 small/base 混在一起；不再随包，作为下载/导入目标
-        add(
-            ModelInfo(
-                id = XimeGboardPredictionModel.ID,
-                name = XimeGboardPredictionModel.NAME,
-                description = XimeGboardPredictionModel.DESCRIPTION,
-                category = ModelCategory.PREDICTION,
-                size = "7.96 MB",
-                versions = listOf(
-                    ModelVersion(
-                        version = "v5",
-                        files = listOf(
-                            ModelFile("vocab.json", ""),
-                            ModelFile("model_int8_dynamic.onnx", ""),
-                        ),
-                    ),
-                ),
-            ),
-        )
         // 预测模型始终提供导入目标（远程索引未加载时也能导入自训练模型）
+        // 注：本分支自训模型（原 id ximegboard-prediction）不再预留槽位——既不随包，
+        // 也不在本地清单里预置条目；要装它请走「模型管理 → 导入模型」或远程商店。
         add(
             ModelInfo(
                 id = "predictive-text-small",

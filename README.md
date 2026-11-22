@@ -116,7 +116,7 @@ Merged-key layouts (14 / 17 / 18 keys), same build:
 ## Recent updates
 
 - **Merged-key layouts** — 14 / 17 / 18 keys (letters grouped, each key sends its group code) × QWERTY / ABCDE, shipped as Rime schemas `pinyin_14jian` / `pinyin_17jian` / `pinyin_18jian` (+ `_abcde`). Pick one in **Layout & display → Keyboard layout**; switching back to 26 keys restores your previous schema.
-- **Association model is no longer bundled** — the ONNX weights are gone from the APK (about 8 MB smaller); download or import one in **Settings → Smart → Smart association**. The self-trained model keeps its own identity `XimeGboard` (id `ximegboard-prediction`) instead of masquerading as the upstream `predictive-text-small`; upstream small/base remain available as importable models.
+- **Association model is no longer bundled** — the ONNX weights are gone from the APK (about 8 MB smaller); download or import one in **Settings → Smart → Smart association**. No local slot is reserved for the fork's self-trained model either: the list only offers upstream small/base plus whatever you import or install from the model store.
 - **Association polish** — contexts ending in a digit no longer trigger prediction; continuation words are computed inside the inference process (one IPC instead of three); punctuation is dropped and multi-character phrases stay next to their seed.
 - **Grammar model (gram)** — one 13.8 MB `.gram` re-ranks candidates against the full context, with the same versioned install/override policy as other bundled resources.
 
