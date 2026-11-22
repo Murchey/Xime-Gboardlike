@@ -242,13 +242,11 @@ fun rememberSwipeBubbleDrawData(
     appearAlpha: Float = 1f,
 ): BubbleDrawData? {
     val context = LocalContext.current
-    // 点按气泡恒开：非滑动、非点按、非长按时不绘制
-    if (!swipeState.isSwiping && !swipeState.isPressed && !swipeState.isLongPress) return null
+    // 只保留滑动与长按气泡：普通点按不再弹圆形气泡
+    if (!swipeState.isSwiping && !swipeState.isLongPress) return null
 
     val isLongPressMode = swipeState.isLongPress && swipeState.longPressItems.isNotEmpty()
-    val displayText = if (isLongPressMode) null
-        else if (swipeState.isPressed) swipeState.pressedText
-        else swipeState.swipeText
+    val displayText = if (isLongPressMode) null else swipeState.swipeText
     if (!isLongPressMode && displayText.isNullOrEmpty()) return null
 
     val density = LocalDensity.current
@@ -271,7 +269,8 @@ fun rememberSwipeBubbleDrawData(
     // Gboard 实际观感：点按（含字母键）浮起的是**圆形**气泡。
     // 因此点按气泡与单项长按同为圆形，只有多项长按（符号/变音候选）才用圆角矩形网格。
     val singleLongPress = isLongPressMode && swipeState.longPressItems.size == 1
-    val circularPress = swipeState.isPressed && !swipeState.isLongPress && swipeState.isLetterPress
+    // 点按气泡已去掉，这里保留变量名以兼容后续尺寸/颜色分支（恒 false）
+    val circularPress = false
     val isRoundBubble = singleLongPress || circularPress
     // 圆形气泡直径：逐值取自 Gboard 反编译资源。
     //
