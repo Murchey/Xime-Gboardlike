@@ -3397,11 +3397,24 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         }
         val cfg = com.kingzcheung.xime.settings.FrostedGlassPreferences.read(this, isDarkTheme())
         val density = resources.displayMetrics.density
+        // 系统没开跨窗口模糊（省电/无障碍设置）时不建窗，保留透明背板兜底
+        val blurAvailable = runCatching {
+            getSystemService(android.view.WindowManager::class.java)?.isCrossWindowBlurEnabled == true
+        }.getOrDefault(false)
         // 参考实现：键盘模糊 16dp 圆角（顶部直角/导航条时用 0，这里先统一 16dp）
-        win.configure(enabled, (cfg.blurRadiusDp * density).toInt(), 16f * density)
-        win.setRegion(if (enabled) rect else null, glassAnchorOrigin())
+        win.configure(enabled && blurAvailable, (cfg.blurRadiusDp * density).toInt(), 16f * density)
+        // 底部圆角（导航栏透明）时导航条也是键盘的一部分：模糊面延伸到屏幕底，
+        // 对应参考实现里单独的 "navigation" 那块，避免导航条区域露出没模糊的应用
+        val surfaceRect = if (SettingsPreferences.roundedKeyboardBottom(this)) {
+            android.graphics.Rect(rect).apply { bottom = resources.displayMetrics.heightPixels }
+        } else {
+            rect
+        }
+        win.setRegion(if (enabled && blurAvailable) surfaceRect else null, glassAnchorOrigin())
+        // 参考实现里模糊跟着"键盘整体透明度"（glassOpacity）走，不是背板不透明度；
+        // 背板 0.2 时模糊仍是满强度，否则会露出清晰的应用画面
         win.setOpacity(1f)
-        win.setVisible(enabled && isInputViewShown)
+        win.setVisible(enabled && blurAvailable && isInputViewShown)
         win.update(window?.window?.decorView, window?.window?.decorView?.windowToken)
     }
 
