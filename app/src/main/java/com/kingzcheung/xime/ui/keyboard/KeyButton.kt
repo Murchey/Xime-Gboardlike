@@ -678,13 +678,14 @@ fun KeyButton(
             }
             .keyFaceBackground(
                 color = when {
-                    isPressed -> LocalKeyPressedBackgroundColor.current ?: pressOverlay(backgroundColor)
+                    // 按下时不做淡色/强调色叠加，直接透出键盘底部背景（原来的按压效果）
+                    isPressed -> Color.Transparent
                     isHighlighted -> backgroundColor.copy(alpha = 0.8f)
                     else -> backgroundColor
                 },
                 shape = keyClipShape,
             )
-            .then(if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) Modifier.keyHeldHighlight(isPressed) else Modifier)
+            .then(Modifier)
             .then(
                 if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
                     Modifier.keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
@@ -1224,13 +1225,12 @@ fun SwipeableKeyButton(
             .padding(LocalKeyVisualPadding.current)
             .then(shadowModifier)
             .keyFaceBackground(
-                color = if (isPressed) LocalKeyPressedBackgroundColor.current
-                    ?: pressedKeyColor(backgroundColor, LocalKeyPressHighlightColor.current)
+                color = if (isPressed) Color.Transparent
                 else if (isHighlighted) backgroundColor.copy(alpha = 0.8f)
                 else backgroundColor,
                 shape = keyClipShape,
             )
-            .then(if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) Modifier.keyHeldHighlight(isPressed) else Modifier)
+            .then(Modifier)
             .then(
                 if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
                     Modifier.keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
@@ -2140,13 +2140,14 @@ fun SwipeableIconKeyButton(
             }
             .keyFaceBackground(
                 color = when {
-                    isPressed -> LocalKeyPressedBackgroundColor.current ?: pressOverlay(backgroundColor)
+                    // 按下时不做淡色/强调色叠加，直接透出键盘底部背景（原来的按压效果）
+                    isPressed -> Color.Transparent
                     isHighlighted -> backgroundColor.copy(alpha = 0.8f)
                     else -> backgroundColor
                 },
                 shape = keyClipShape,
             )
-            .then(if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) Modifier.keyHeldHighlight(isPressed) else Modifier)
+            .then(Modifier)
             .then(
                 if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
                     Modifier.keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)

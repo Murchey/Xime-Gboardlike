@@ -89,15 +89,13 @@ fun SpaceKeyButton(
                 scaleY = s
             }
             .keyFaceBackground(
-                color = if (isPressed) pressOverlay(backgroundColor) else backgroundColor,
+                color = if (isPressed) Color.Transparent else backgroundColor,
                 shape = keyShape,
                 textColor = textColor,
             )
             .then(
                 if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
-                    Modifier
-                        .keyHeldHighlight(isPressed)
-                        .keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
+                    Modifier.keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
                 } else Modifier
             )
             .pointerInput(Unit) {
