@@ -89,6 +89,11 @@ class XimeApplication : Application(), ImageLoaderFactory {
         com.kingzcheung.xime.ui.theme.KeyShapes.current = SettingsPreferences.getKeyShape(this)
         com.kingzcheung.xime.ui.theme.VisualStyles.current = SettingsPreferences.getVisualStyle(this)
         com.kingzcheung.xime.ui.theme.GlassEffect.enabled = SettingsPreferences.isGlassEffectEnabled(this)
+        // 同一开关两处存储：启动时把材质参数里的 enabled 对齐，避免"背板已透出但键面不生效"这类撕裂
+        com.kingzcheung.xime.settings.FrostedGlassPreferences.writeEnabled(
+            this,
+            com.kingzcheung.xime.ui.theme.GlassEffect.enabled,
+        )
         com.kingzcheung.xime.ui.theme.LiquidGlass.enabled = SettingsPreferences.isLiquidGlassEnabled(this)
         com.kingzcheung.xime.ui.theme.LiquidGlass.strength = SettingsPreferences.getLiquidGlassStrength(this)
         com.kingzcheung.xime.ui.theme.KeyboardTopStyles.current = SettingsPreferences.getKeyboardTopStyle(this)
