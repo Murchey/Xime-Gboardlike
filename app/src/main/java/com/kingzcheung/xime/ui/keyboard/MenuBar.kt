@@ -83,7 +83,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.kingzcheung.xime.ui.theme.liquidGlassEdge
 import androidx.compose.ui.unit.sp
 
 /** 工具条/工具面板统一数据项。 */
@@ -971,16 +970,7 @@ private fun DragTileOverlay(
                 shape = if (big) RoundedCornerShape(24.dp) else CircleShape
                 clip = true
             }
-            // 工具栏胶囊也画液态玻璃亮边（与键帽同条件：玻璃 + 液态玻璃都开）
-            .then(
-                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled &&
-                    com.kingzcheung.xime.ui.theme.LiquidGlass.enabled
-                ) {
-                    Modifier.liquidGlassEdge(if (big) 24.dp else 22.dp)
-                } else {
-                    Modifier
-                }
-            ),
+            ,
         contentAlignment = Alignment.Center,
     ) {
         if (big) {

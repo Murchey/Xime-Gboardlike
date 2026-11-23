@@ -45,8 +45,6 @@ import androidx.compose.ui.unit.sp
 import com.kingzcheung.xime.settings.FrostedGlassPreferences
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.ui.theme.KeyboardTopStyle
-import com.kingzcheung.xime.ui.theme.LiquidGlassStrength
-import com.kingzcheung.xime.ui.theme.liquidGlassSample
 
 /**
  * 高级设置抽屉：外观/材质相关设置。默认折叠，避免主题页一开门堆满预览卡片。
@@ -86,8 +84,6 @@ fun ThemeAppearanceSection() {
     var backgroundOpacity by remember(glassDark) {
         mutableFloatStateOf(FrostedGlassPreferences.read(context, glassDark).backgroundOpacity)
     }
-    var liquidOn by remember { mutableStateOf(SettingsPreferences.isLiquidGlassEnabled(context)) }
-    var liquidStrength by remember { mutableStateOf(SettingsPreferences.getLiquidGlassStrength(context)) }
     var topStyle by remember { mutableStateOf(SettingsPreferences.getKeyboardTopStyle(context)) }
     var roundedBottom by remember { mutableStateOf(SettingsPreferences.roundedKeyboardBottom(context)) }
     val keyColor = MaterialTheme.colorScheme.surfaceVariant
@@ -139,50 +135,6 @@ fun ThemeAppearanceSection() {
                     )
                 }
 
-                Spacer(Modifier.height(10.dp))
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            text = tr(R.string.s_yetaiboli),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = tr(R.string.s_yetaiboli_fu),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = liquidOn,
-                        onCheckedChange = { on ->
-                            liquidOn = on
-                            SettingsPreferences.setLiquidGlassEnabled(context, on)
-                            if (on) glassOn = true
-                        },
-                    )
-                }
-                if (liquidOn) {
-                    Spacer(Modifier.height(10.dp))
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        LiquidGlassStrength.entries.forEach { strength ->
-                            LiquidStrengthPreview(
-                                strength = strength,
-                                selected = liquidStrength == strength,
-                                keyColor = keyColor,
-                                accent = accent,
-                                onClick = {
-                                    liquidStrength = strength
-                                    SettingsPreferences.setLiquidGlassStrength(context, strength)
-                                },
-                            )
-                        }
-                    }
-                }
             }
         }
 
@@ -261,47 +213,6 @@ fun ThemeAppearanceSection() {
                 }
             }
         }
-    }
-}
-
-/** 液态玻璃强度示例。 */
-@Composable
-private fun LiquidStrengthPreview(
-    strength: LiquidGlassStrength,
-    selected: Boolean,
-    keyColor: Color,
-    accent: Color,
-    onClick: () -> Unit,
-) {
-    val dark = keyColor.luminance() < 0.5f
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(4.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(width = 84.dp, height = 44.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(keyColor.copy(alpha = 0.62f))
-                .liquidGlassSample(10.dp, dark = dark, strength = strength)
-                .border(
-                    width = if (selected) 2.dp else 1.dp,
-                    color = if (selected) accent else MaterialTheme.colorScheme.outlineVariant,
-                    shape = RoundedCornerShape(10.dp),
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("Aa", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 15.sp)
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = strength.label,
-            style = MaterialTheme.typography.bodySmall,
-            color = if (selected) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 

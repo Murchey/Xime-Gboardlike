@@ -44,7 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.kingzcheung.xime.ui.theme.liquidGlassEdge
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -513,7 +512,6 @@ fun EmojiCategoryTab(
                 if (isSelected) selectedBackgroundColor.copy(0.4f)
                 else backgroundColor
             )
-            .then(Modifier.liquidGlassEdge(15.dp))
             .padding(horizontal = 5.dp)
             .tolerantClick(onClick = onClick),
         contentAlignment = Alignment.Center

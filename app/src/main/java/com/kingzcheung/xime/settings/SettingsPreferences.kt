@@ -426,35 +426,6 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
         com.kingzcheung.xime.ui.theme.KeyboardTopStyles.current = style
     }
 
-    /** 液态玻璃开关（与玻璃效果配合；开启时自动打开玻璃效果）。 */
-    const val KEY_GLASS_LIQUID = "glass_liquid"
-
-    /** 液态玻璃强度 id（standard/strong/strongest）。 */
-    const val KEY_GLASS_LIQUID_STRENGTH = "glass_liquid_strength"
-
-    fun isLiquidGlassEnabled(context: Context): Boolean =
-        getPrefs(context).getBoolean(KEY_GLASS_LIQUID, false)
-
-    fun setLiquidGlassEnabled(context: Context, enabled: Boolean) {
-        getPrefs(context).edit().putBoolean(KEY_GLASS_LIQUID, enabled).apply()
-        com.kingzcheung.xime.ui.theme.LiquidGlass.enabled = enabled
-        // 液态玻璃建立在玻璃效果上：打开它时把玻璃一起打开
-        if (enabled && !isGlassEffectEnabled(context)) setGlassEffectEnabled(context, true)
-    }
-
-    fun getLiquidGlassStrength(context: Context): com.kingzcheung.xime.ui.theme.LiquidGlassStrength =
-        com.kingzcheung.xime.ui.theme.LiquidGlassStrength.of(
-            getPrefs(context).getString(KEY_GLASS_LIQUID_STRENGTH, null)
-        )
-
-    fun setLiquidGlassStrength(
-        context: Context,
-        strength: com.kingzcheung.xime.ui.theme.LiquidGlassStrength,
-    ) {
-        getPrefs(context).edit().putString(KEY_GLASS_LIQUID_STRENGTH, strength.id).apply()
-        com.kingzcheung.xime.ui.theme.LiquidGlass.strength = strength
-    }
-
     /** 视觉样式 id（见 [com.kingzcheung.xime.ui.theme.VisualStyle]）。 */
     const val KEY_VISUAL_STYLE = "visual_style"
 
