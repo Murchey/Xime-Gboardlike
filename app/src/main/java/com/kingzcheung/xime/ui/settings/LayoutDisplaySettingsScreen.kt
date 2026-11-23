@@ -61,6 +61,12 @@ fun LayoutDisplaySettingsContent(
     onOpenKeyboardLayout: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    // 输入统计二级页
+    var showStats by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    if (showStats) {
+        TypingStatsScreen(onBack = { showStats = false })
+        return
+    }
 
     // 声明式设置层：与 SettingsPreferences 共用同一份 SharedPreferences
     val settingsStore = androidx.compose.runtime.remember(context) {
@@ -487,44 +493,19 @@ fun LayoutDisplaySettingsContent(
                             },
                         )
                     }
-                    // 概览：开启时读一份统计（不传任何文本内容）
-                    var overview by remember(statsOn) {
-                        mutableStateOf<com.kingzcheung.xime.stats.TypingStatsData?>(null)
-                    }
-                    var refresh by remember { mutableStateOf(0) }
-                    LaunchedEffect(statsOn, refresh) {
-                        overview = if (statsOn) {
-                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                com.kingzcheung.xime.stats.TypingStats.snapshot(context)
-                            }
-                        } else {
-                            null
-                        }
-                    }
-                    overview?.let { d ->
-                        val today = com.kingzcheung.xime.stats.TypingStats.today()
-                        val day = d.day(today)
-                        Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                            Text(
-                                "今日 ${day[com.kingzcheung.xime.stats.TypingStatsData.Day.CHARS]} 字 · " +
-                                    "按键 ${day[com.kingzcheung.xime.stats.TypingStatsData.Day.KEYS]} · " +
-                                    "删除 ${day[com.kingzcheung.xime.stats.TypingStatsData.Day.DELETES]}",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            Text(
-                                "累计 ${d.total[com.kingzcheung.xime.stats.TypingStatsData.Day.CHARS]} 字 · " +
-                                    "最快 ${d.bestSpeed} 字/分",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                    HorizontalDivider()
+                    Row(
+                        Modifier.fillMaxWidth().clickable { showStats = true }.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("查看统计", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        Text(">", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     HorizontalDivider()
                     Row(
                         Modifier.fillMaxWidth()
                             .clickable {
                                 com.kingzcheung.xime.stats.TypingStats.clear(context)
-                                refresh++
                                 android.widget.Toast.makeText(context, "已清空统计", android.widget.Toast.LENGTH_SHORT).show()
                             }
                             .padding(16.dp),

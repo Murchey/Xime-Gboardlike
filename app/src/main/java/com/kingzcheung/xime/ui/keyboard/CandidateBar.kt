@@ -289,7 +289,7 @@ fun CandidateBar(
                     com.kingzcheung.xime.settings.SettingsPreferences.getGlassScope(
                         androidx.compose.ui.platform.LocalContext.current
                     ) == com.kingzcheung.xime.ui.theme.GlassScope.CANDIDATE_BAR ->
-                        visuals.backgroundColor.copy(alpha = 0.55f)
+                        visuals.backgroundColor.copy(alpha = 0.45f)
                     else -> Color.Transparent
                 }
             ),

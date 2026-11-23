@@ -3500,9 +3500,12 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val candidateOnly = SettingsPreferences.getGlassScope(this) ==
             com.kingzcheung.xime.ui.theme.GlassScope.CANDIDATE_BAR
         val surfaceRect = when {
-            // 只有候选栏：模糊只盖顶部 48dp 那一条
+            // 只有候选栏：背景层顶部被 padding 掉 48dp，onGloballyPositioned 给的是 padding 后的上沿，
+            // 所以模糊条要往上扩 48dp，盖的才是候选栏那条
             candidateOnly -> android.graphics.Rect(rect).apply {
-                bottom = (top + (48f * densityPx)).toInt().coerceAtMost(bottom)
+                val strip = (48f * densityPx).toInt()
+                bottom = top
+                top = (top - strip).coerceAtLeast(0)
             }
             SettingsPreferences.roundedKeyboardBottom(this) ->
                 android.graphics.Rect(rect).apply { bottom = resources.displayMetrics.heightPixels }
