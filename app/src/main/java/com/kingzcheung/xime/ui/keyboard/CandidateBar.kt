@@ -289,7 +289,10 @@ fun CandidateBar(
                     com.kingzcheung.xime.settings.SettingsPreferences.getGlassScope(
                         androidx.compose.ui.platform.LocalContext.current
                     ) == com.kingzcheung.xime.ui.theme.GlassScope.CANDIDATE_BAR ->
-                        visuals.backgroundColor.copy(alpha = 0.45f)
+                        // visuals.backgroundColor 本身是 Transparent（黑），直接调 alpha 会得到灰黑带；
+                        // 这里用深浅模式对应的实色压成半透明玻璃
+                        (if (visuals.isDarkTheme) androidx.compose.ui.graphics.Color(0xFF202124)
+                        else androidx.compose.ui.graphics.Color.White).copy(alpha = 0.55f)
                     else -> Color.Transparent
                 }
             ),

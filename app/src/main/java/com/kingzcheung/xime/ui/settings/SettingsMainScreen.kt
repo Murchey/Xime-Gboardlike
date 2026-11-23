@@ -107,6 +107,11 @@ fun SettingsMainContent(
         preset + " 键 · " + order
     }
 
+    var showStats by remember { mutableStateOf(false) }
+    if (showStats) {
+        TypingStatsScreen(onBack = { showStats = false })
+        return
+    }
     SettingsPageScaffold(title = stringResource(R.string.settings_title)) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -181,6 +186,12 @@ fun SettingsMainContent(
                         summary = tr(R.string.s_yufamoxing_fu),
                         icon = Icons.TwoTone.Sort,
                         onClick = onNavigateToGrammarModel,
+                    )
+                    SettingsNavRow(
+                        title = "输入统计",
+                        summary = "打字字数、速度与输入方式（本机）",
+                        icon = Icons.TwoTone.Tune,
+                        onClick = { showStats = true },
                     )
                     SettingsNavRow(
                         title = tr(R.string.s_zhinengjiucuo_shiyanxing),

@@ -469,54 +469,6 @@ fun LayoutDisplaySettingsContent(
                 })
             }
             item {
-                SettingsGroup(title = "输入统计") {
-                    var statsOn by remember {
-                        mutableStateOf(com.kingzcheung.xime.stats.TypingStats.isEnabled(context))
-                    }
-                    Row(
-                        Modifier.fillMaxWidth().padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text("记录打字统计", style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                "只在本机记录按键与字数，不上传、不记录输入内容；隐私输入开启时暂停。",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Switch(
-                            checked = statsOn,
-                            onCheckedChange = {
-                                statsOn = it
-                                com.kingzcheung.xime.stats.TypingStats.setEnabled(context, it)
-                            },
-                        )
-                    }
-                    HorizontalDivider()
-                    Row(
-                        Modifier.fillMaxWidth().clickable { showStats = true }.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("查看统计", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        Text(">", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    HorizontalDivider()
-                    Row(
-                        Modifier.fillMaxWidth()
-                            .clickable {
-                                com.kingzcheung.xime.stats.TypingStats.clear(context)
-                                android.widget.Toast.makeText(context, "已清空统计", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("清空统计", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error)
-                    }
-                }
-            }
-
-            item {
                 SettingsGroup(title = tr(R.string.s_shurukuangshipei), content = {
                     DeclarativeSettingItems(
                         specs = LayoutDisplaySettingsSpecs.inputField,
