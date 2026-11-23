@@ -60,20 +60,23 @@ object KeyboardTopStyles {
  * 上沿柔化：在背景之上叠一层从"键盘底色"到透明的竖向渐变，让上沿不像一条硬边。
  * 只在 [KeyboardTopStyle.SOFT] 下生效；[color] 用作渐变起始色（与键盘底色一致）。
  */
-fun Modifier.keyboardTopSoftEdge(color: Color, height: Dp = 10.dp): Modifier =
+fun Modifier.keyboardTopSoftEdge(color: Color, height: Dp = 16.dp): Modifier =
     if (KeyboardTopStyles.current != KeyboardTopStyle.SOFT) this
     else drawWithContent {
         drawContent()
+        // 与参考实现同义：用 DstIn 把上沿这段按竖向渐变"擦掉"，底图/渐变/纯色都直接渐隐到透明，
+        // 不再叠一块兜底色（图片主题下那样会盖住真实底图）。
         val h = height.toPx().coerceAtMost(size.height * 0.5f)
         if (h > 0f) {
             drawRect(
                 brush = Brush.verticalGradient(
-                    listOf(color, color.copy(alpha = 0f)),
+                    listOf(Color.Transparent, Color.Black),
                     0f,
                     h,
                 ),
                 topLeft = Offset.Zero,
                 size = androidx.compose.ui.geometry.Size(size.width, h),
+                blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
             )
         }
     }
