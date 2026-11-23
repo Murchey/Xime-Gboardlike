@@ -60,6 +60,38 @@ import com.kingzcheung.xime.ui.theme.visualMaterial
  * 每一项都用**真实渲染**做预览（示例键帽按所选圆角/材质画），不是纯文字选项；
  * 点选直接改 Compose 状态（KeyShapes / VisualStyles / GlassEffect），键盘立即重绘。
  */
+/**
+ * 高级设置抽屉：把新增的外观/材质设置收在可折叠的入口里，默认折叠，
+ * 避免主题页一开门堆满预览卡片（参考实现也是把材质效果收在「高级设置」里）。
+ */
+@Composable
+fun ThemeAdvancedAppearance() {
+    var expanded by remember { mutableStateOf(false) }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = tr(R.string.s_waiguan_gaojishezhi),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = if (expanded) "▴" else "▾",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (expanded) {
+            ThemeAppearanceSection()
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ThemeAppearanceSection() {

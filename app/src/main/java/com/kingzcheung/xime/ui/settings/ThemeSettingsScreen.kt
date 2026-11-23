@@ -230,8 +230,8 @@ fun ThemeSettingsContent(
                 }
             }
 
-            // 外观与材质：按键形状、视觉样式、玻璃效果（主体功能放在主题页）
-            item { ThemeAppearanceSection() }
+            // 外观与材质：收进「高级设置」抽屉（按键形状、视觉样式、玻璃效果等）
+            item { ThemeAdvancedAppearance() }
 
             item {
                 Spacer(modifier = Modifier.height(8.dp))
