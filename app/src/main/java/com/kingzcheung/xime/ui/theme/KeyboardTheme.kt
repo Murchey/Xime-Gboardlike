@@ -323,6 +323,33 @@ object KeyboardThemes {
                 accentKeyBg = Color(0xFFE0A06A), accentKeyText = Color(0xFF1A120A),
             ),
         ),
+        // 流光渐变：参考 iOS 渐变的三色底，玻璃透出时层次最明显；键面/文字保持高对比
+        buildTheme(
+            id = "glass_gradient", name = "流光渐变",
+            light = ThemePalette(
+                background = Color(0xFFDCE3EE), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF1B2430), candidateText = Color(0xFF111820),
+                accent = Color(0xFF3D5AFE), selectedText = Color(0xFF2A3FC8), container = Color(0xFFDCE4F0),
+                specialKey = Color(0xFFDCE4F0),
+                functionKey = Color(0xFFDCE4F0),
+                accentKeyBg = Color(0xFF3D5AFE), accentKeyText = Color(0xFFFFFFFF),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF232A36), key = Color(0xFF3A404B),
+                keyText = Color(0xFFE8EBF1), candidateText = Color(0xFFFFFFFF),
+                accent = Color(0xFFA9B8FF), selectedText = Color(0xFFC7D2FF), container = Color(0xFF2E3540),
+                specialKey = Color(0xFF2E3540),
+                functionKey = Color(0xFF2E3540),
+                accentKeyBg = Color(0xFFA9B8FF), accentKeyText = Color(0xFF10151C),
+            ),
+        ).copy(
+            keyboardBackground = com.kingzcheung.xime.settings.BackgroundConfig(
+                type = "gradient",
+                angle = 135,
+                colors = listOf(0x9CACCCL, 0xD6BCC9L, 0x85BFBFL),
+                colorsDark = listOf(0x232A36L, 0x3B2E3AL, 0x24404AL),
+            ),
+        ),
         // 参照 Gboard 黑（浅：白键 + 灰功能键 + Google 蓝回车；深：纯黑底 + 浅灰键）
         buildTheme(
             id = "gboard_black", name = "Gboard 黑",
