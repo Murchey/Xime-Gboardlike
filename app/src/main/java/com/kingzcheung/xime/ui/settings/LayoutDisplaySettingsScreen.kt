@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.animation.AnimatedVisibility
@@ -461,6 +462,79 @@ fun LayoutDisplaySettingsContent(
                     )
                 })
             }
+            item {
+                SettingsGroup(title = "输入统计") {
+                    var statsOn by remember {
+                        mutableStateOf(com.kingzcheung.xime.stats.TypingStats.isEnabled(context))
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("记录打字统计", style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                "只在本机记录按键与字数，不上传、不记录输入内容；隐私输入开启时暂停。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(
+                            checked = statsOn,
+                            onCheckedChange = {
+                                statsOn = it
+                                com.kingzcheung.xime.stats.TypingStats.setEnabled(context, it)
+                            },
+                        )
+                    }
+                    // 概览：开启时读一份统计（不传任何文本内容）
+                    var overview by remember(statsOn) {
+                        mutableStateOf<com.kingzcheung.xime.stats.TypingStatsData?>(null)
+                    }
+                    var refresh by remember { mutableStateOf(0) }
+                    LaunchedEffect(statsOn, refresh) {
+                        overview = if (statsOn) {
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                com.kingzcheung.xime.stats.TypingStats.snapshot(context)
+                            }
+                        } else {
+                            null
+                        }
+                    }
+                    overview?.let { d ->
+                        val today = com.kingzcheung.xime.stats.TypingStats.today()
+                        val day = d.day(today)
+                        Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                            Text(
+                                "今日 ${day[com.kingzcheung.xime.stats.TypingStatsData.Day.CHARS]} 字 · " +
+                                    "按键 ${day[com.kingzcheung.xime.stats.TypingStatsData.Day.KEYS]} · " +
+                                    "删除 ${day[com.kingzcheung.xime.stats.TypingStatsData.Day.DELETES]}",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Text(
+                                "累计 ${d.total[com.kingzcheung.xime.stats.TypingStatsData.Day.CHARS]} 字 · " +
+                                    "最快 ${d.bestSpeed} 字/分",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    HorizontalDivider()
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clickable {
+                                com.kingzcheung.xime.stats.TypingStats.clear(context)
+                                refresh++
+                                android.widget.Toast.makeText(context, "已清空统计", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("清空统计", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+
             item {
                 SettingsGroup(title = tr(R.string.s_shurukuangshipei), content = {
                     DeclarativeSettingItems(

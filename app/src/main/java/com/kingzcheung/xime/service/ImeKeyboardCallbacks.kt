@@ -43,6 +43,8 @@ internal fun rememberImeKeyboardCallbacks(
                 service.keyRouter.handleKeyPress(key, isShifted)
             },
             onKeyPressDown = { key ->
+                // 打字统计：屏幕键盘按下的每个键（含删除）
+                com.kingzcheung.xime.stats.TypingStats.onKeyDown(key)
                 // 删除键按下：开一次删除会话快照（下滑撤回删除用），必须在首次退格
                 // 派发之前（同一主线程回调内同步完成），否则首个被删字符漏记。
                 // 会话结算见 XimeInputMethodService.finishDeleteSession：由撤回请求或
@@ -54,6 +56,7 @@ internal fun rememberImeKeyboardCallbacks(
                 service.feedbackManager.hapticFeedback(view, keyUp = true)
             },
             onCandidateSelect = { index ->
+                com.kingzcheung.xime.stats.TypingStats.onCandidatePicked(index, "")
                 service.keyRouter.selectCandidate(index)
             },
             onCandidateDelete = { index ->

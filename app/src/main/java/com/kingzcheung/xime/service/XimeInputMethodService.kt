@@ -1029,6 +1029,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     override fun onCreate() {
+        // 打字统计：读开关与历史数据（后台读盘）
+        com.kingzcheung.xime.stats.TypingStats.init(this)
         super.onCreate()
         // 允许 IME 窗口绘制到摄像头挖孔/刘海区域（横屏时背景覆盖全屏）
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
@@ -3692,6 +3694,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
+        // 键盘收起：结算速度并后台写盘
+        com.kingzcheung.xime.stats.TypingStats.flush()
         // 键盘收起：模糊面一并撤掉，避免糊住宿主
         runCatching { setGlassSurfacesVisible(false) }
         // 手写模型轻量，按"用键盘时加载、键盘收起即卸载"管理：输入会话结束
@@ -4107,6 +4111,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     private fun commitTextAndPredict(text: String, isPaste: Boolean) {
+        // 打字统计：只计字数/速度，不记录文本内容；粘贴只记字数
+        com.kingzcheung.xime.stats.TypingStats.onCommit(
+            text, isPaste, com.kingzcheung.xime.stats.TypingStatsData.Source.OTHER,
+        )
         commitTextSilently(text, isPaste)
         // 空串上屏不改变上下文，跳过本轮推理。空格/标点仍要进入：预测入口会判定
         // 上下文无效并清空候选栏（见 PredictionManager.isValidPredictionContext）。
