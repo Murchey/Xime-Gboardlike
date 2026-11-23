@@ -140,8 +140,10 @@ fun EmojiKeyboardLayout(
         modifier = Modifier
             .fillMaxSize()
             // 玻璃下表情面板不另画底色，透出键盘同一张磨砂底
+            // 表情页是覆盖在键盘之上的独立页：玻璃下也不能全透明，否则下面的键盘按键会透出来
+            // （用户反馈"表情页叠加在键盘页之上"）。用近不透明的主题底，仍保留一点通透感。
             .background(
-                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) Color.Transparent
+                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) backgroundColor.copy(alpha = 0.92f)
                 else backgroundColor
             )
     ) {

@@ -140,9 +140,10 @@ fun ClipboardView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            // 玻璃下剪贴板面板不另画底色，透出键盘同一张磨砂底
+            // 剪贴板同样是覆盖在键盘之上的页：玻璃下用近不透明的主题底，
+            // 不把下面的键盘按键透出来（与表情页一致）
             .background(
-                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) Color.Transparent
+                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) backgroundColor.copy(alpha = 0.92f)
                 else backgroundColor
             )
     ) {
