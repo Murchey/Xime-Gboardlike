@@ -1,6 +1,7 @@
 package com.kingzcheung.xime.ui.keyboard
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import com.kingzcheung.xime.settings.FrostedGlassConfig
@@ -80,6 +81,43 @@ internal fun keyHintColor(themeText: Color, legacyAlpha: Float, opacity: Float =
         alpha = (if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) 1f else legacyAlpha)
             .times(opacity.coerceIn(0f, 1f)),
     )
+
+/** 玻璃材质上键面文字的最低对比度（按键字号大，取 WCAG AA 正文线 4.5:1）。 */
+internal const val GLASS_LABEL_CONTRAST = 4.5f
+
+/**
+ * 玻璃可读性下限：键盘背后可能是纯白页面也可能是纯黑页面，两种最坏情况下键面文字都要清楚。
+ * 用户设得太透时，背景与键面两个不透明度按同一比例往不透明靠拢，刚好达标为止；本来就清楚的设置原样保留。
+ */
+internal fun FrostedGlassConfig.legibleOver(
+    surface: Color,
+    keys: List<Pair<Color, Color>>,
+    target: Float = GLASS_LABEL_CONTRAST,
+): FrostedGlassConfig {
+    if (!enabled || keys.isEmpty()) return this
+    fun worst(config: FrostedGlassConfig): Float = listOf(Color.White, Color.Black).minOf { backdrop ->
+        val panel = surface.copy(alpha = config.backgroundOpacity).compositeOver(backdrop)
+        keys.minOf { (key, text) ->
+            contrastRatio(text, frostedKeyColor(key, text, config).compositeOver(panel))
+        }
+    }
+    if (worst(this) >= target) return this
+    for (step in 1..20) {
+        val t = step / 20f
+        val raised = copy(
+            backgroundOpacity = backgroundOpacity + (1f - backgroundOpacity) * t,
+            keyOpacity = keyOpacity + (1f - keyOpacity) * t,
+        )
+        if (worst(raised) >= target) return raised
+    }
+    return copy(backgroundOpacity = 1f, keyOpacity = 1f)
+}
+
+private fun contrastRatio(a: Color, b: Color): Float {
+    val light = maxOf(a.luminance(), b.luminance())
+    val dark = minOf(a.luminance(), b.luminance())
+    return (light + 0.05f) / (dark + 0.05f)
+}
 
 /** 玻璃下沿用改色前的近黑键（#1C1C1C / #353535）：提亮后是一层淡灰、后面的页面透得出来。 */
 internal fun glassKeyBase(color: Color): Color = when (color) {
