@@ -680,10 +680,12 @@ fun KeyButton(
                 color = when {
                     // 按下时不做淡色/强调色叠加，直接透出键盘底部背景（原来的按压效果）
                     isPressed -> Color.Transparent
+                    // 玻璃开启时也强制透明，见 forceTransparent
                     isHighlighted -> backgroundColor.copy(alpha = 0.8f)
                     else -> backgroundColor
                 },
                 shape = keyClipShape,
+                forceTransparent = isPressed,
             )
             .then(Modifier)
             .then(
@@ -1229,6 +1231,7 @@ fun SwipeableKeyButton(
                 else if (isHighlighted) backgroundColor.copy(alpha = 0.8f)
                 else backgroundColor,
                 shape = keyClipShape,
+                forceTransparent = isPressed,
             )
             .then(Modifier)
             .then(
@@ -1627,6 +1630,7 @@ fun IconKeyButton(
                 else if (isHighlighted) darkenColor(backgroundColor, 0.2f)
                 else backgroundColor,
                 shape = keyClipShape,
+                forceTransparent = isPressed,
             )
             .keySemantics(a11yDescription, a11yState) { currentOnClick() },
         contentAlignment = Alignment.Center
@@ -2142,10 +2146,12 @@ fun SwipeableIconKeyButton(
                 color = when {
                     // 按下时不做淡色/强调色叠加，直接透出键盘底部背景（原来的按压效果）
                     isPressed -> Color.Transparent
+                    // 玻璃开启时也强制透明，见 forceTransparent
                     isHighlighted -> backgroundColor.copy(alpha = 0.8f)
                     else -> backgroundColor
                 },
                 shape = keyClipShape,
+                forceTransparent = isPressed,
             )
             .then(Modifier)
             .then(
@@ -2624,6 +2630,7 @@ fun SwipeableKeyButtonLandscape(
             .keyFaceBackground(
                 color = if (isPressed) darkenColor(backgroundColor) else backgroundColor,
                 shape = keyClipShape,
+                forceTransparent = isPressed,
             ),
         contentAlignment = Alignment.TopStart
     ) {

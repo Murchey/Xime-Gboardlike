@@ -92,6 +92,7 @@ fun SpaceKeyButton(
                 color = if (isPressed) Color.Transparent else backgroundColor,
                 shape = keyShape,
                 textColor = textColor,
+                forceTransparent = isPressed,
             )
             .then(
                 if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {

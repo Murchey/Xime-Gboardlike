@@ -69,7 +69,14 @@ private class KeyFacePosition {
  *   底色 alpha 自动收窄到 0.65，否则不透明键帽会把磨砂层完全盖住。
  */
 @Composable
-internal fun Modifier.keyFaceBackground(color: Color, shape: Shape, textColor: Color? = null): Modifier {
+internal fun Modifier.keyFaceBackground(
+    color: Color,
+    shape: Shape,
+    textColor: Color? = null,
+    /** 按住时强制整块透明（透出键盘底部背景），不走玻璃配色。 */
+    forceTransparent: Boolean = false,
+): Modifier {
+    if (forceTransparent) return this.clip(shape).background(Color.Transparent)
     // 键面颜色走玻璃材质算法：玻璃开时键帽只做半透明（不透明度/提亮规则见 FrostedKeyColors））；
     // 液态玻璃代替视觉样式材质，与实现一致只叠一层。
     val radius = LocalKeyCornerRadius.current
