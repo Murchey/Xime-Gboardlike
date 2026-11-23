@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kingzcheung.xime.settings.FrostedGlassPreferences
 import com.kingzcheung.xime.settings.SettingsPreferences
+import com.kingzcheung.xime.ui.theme.GlassScope
 import com.kingzcheung.xime.ui.theme.KeyShape
 import com.kingzcheung.xime.ui.theme.KeyboardTopStyle
 import com.kingzcheung.xime.ui.theme.LiquidGlassStrength
@@ -108,6 +110,10 @@ fun ThemeAppearanceSection() {
     var keyOpacity by remember(glassDark) {
         mutableFloatStateOf(FrostedGlassPreferences.read(context, glassDark).keyOpacity)
     }
+    var backgroundOpacity by remember(glassDark) {
+        mutableFloatStateOf(FrostedGlassPreferences.read(context, glassDark).backgroundOpacity)
+    }
+    var glassScope by remember { mutableStateOf(SettingsPreferences.getGlassScope(context)) }
 
     // 预览键使用的"键面"颜色：与设置页一致的浅色/深色中性色
     val keyColor = MaterialTheme.colorScheme.surfaceVariant
@@ -203,11 +209,44 @@ fun ThemeAppearanceSection() {
                         },
                     )
                 }
+                // 玻璃范围：整个盘面 / 只有候选栏
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = tr(R.string.s_boli_fanwei),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(6.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GlassScope.entries.forEach { option ->
+                        FilterChip(
+                            selected = glassScope == option,
+                            onClick = {
+                                glassScope = option
+                                SettingsPreferences.setGlassScope(context, option)
+                            },
+                            label = { Text(option.title) },
+                        )
+                    }
+                }
                 // 玻璃效果本身也画一个示例键：半透明键面 + 玻璃高光/亮边
                 Spacer(Modifier.height(8.dp))
                 GlassPreviewSample(enabled = glassOn, keyColor = keyColor, keyText = keyText, accent = accent)
                 if (glassOn) {
                     Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "背景不透明度 ${(backgroundOpacity * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Slider(
+                        value = backgroundOpacity,
+                        onValueChange = { v ->
+                            backgroundOpacity = v
+                            FrostedGlassPreferences.writeOpacities(context, glassDark, backgroundOpacity = v)
+                        },
+                        valueRange = 0f..1f,
+                    )
                     Text(
                         text = "键面不透明度 ${(keyOpacity * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,

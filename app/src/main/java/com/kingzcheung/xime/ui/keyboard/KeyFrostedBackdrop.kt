@@ -82,8 +82,14 @@ internal fun Modifier.keyFaceBackground(color: Color, shape: Shape, textColor: C
     }
     // 没传文字色时按键面明暗取一个对比色：只影响玻璃提亮的"深浅面"判断与按下反馈
     val foreground = textColor ?: if (color.luminance() > .5f) Color.Black else Color.White
-    // 玻璃关闭：回到改造前的键面（纯色底 + 无材质/描边/折射），保证旧观感原样
-    if (!config.enabled) return this.clip(shape).background(color)
+    // 玻璃关闭，或玻璃只作用在候选栏时：键面回到纯色底（无材质/描边/折射）
+    if (!config.enabled ||
+        com.kingzcheung.xime.settings.SettingsPreferences.getGlassScope(
+            androidx.compose.ui.platform.LocalContext.current
+        ) != com.kingzcheung.xime.ui.theme.GlassScope.ENTIRE
+    ) {
+        return this.clip(shape).background(color)
+    }
     // 可读性下限：把不透明度按最坏背景（纯白/纯黑）抬到键面文字达标，原本清楚的设置不动
     val legibleConfig = config.legibleOver(color, listOf(color to foreground))
     val faceColor = frostedKeyColor(color, foreground, legibleConfig)

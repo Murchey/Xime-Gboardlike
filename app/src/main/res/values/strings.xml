@@ -1241,6 +1241,7 @@
     <string name="s_jianpandingbu_yangshi_fu">固定键盘上沿：圆角 / 直角 / 渐变柔化</string>
     <string name="s_yetaiboli">液态玻璃</string>
     <string name="s_yetaiboli_fu">按键加一道朝光的亮边，按住时变亮；强度可选标准/加强/最强（会同时打开玻璃效果）</string>
+    <string name="s_boli_fanwei">玻璃作用范围</string>
     <string name="s_bolixiaoguo">玻璃效果</string>
     <string name="s_bolixiaoguo_fu">键面半透明，并加玻璃高光与亮边；开启时覆盖视觉样式的描边</string>
     <string name="s_waiguan_gaojishezhi">高级设置</string>

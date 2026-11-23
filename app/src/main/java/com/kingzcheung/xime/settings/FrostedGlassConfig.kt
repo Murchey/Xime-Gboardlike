@@ -71,7 +71,11 @@ object FrostedGlassPreferences {
     ) {
         val editor = SettingsPreferences.getPrefsPublic(context).edit()
         keyOpacity?.let { editor.putFloat(appearanceKey(KEY_KEY_OPACITY, isDark), it) }
-        backgroundOpacity?.let { editor.putFloat(appearanceKey(KEY_BACKGROUND_OPACITY, isDark), it) }
+        backgroundOpacity?.let {
+            editor.putFloat(appearanceKey(KEY_BACKGROUND_OPACITY, isDark), it)
+            // 浅色手动调过背景不透明度后，白玻璃不再自动补到 0.88
+            if (!isDark) editor.putBoolean("frosted_glass_light_panel_custom", true)
+        }
         blurRadiusDp?.let { editor.putFloat(appearanceKey(KEY_BLUR_RADIUS, isDark), it) }
         editor.apply()
     }
