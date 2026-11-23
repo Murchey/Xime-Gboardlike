@@ -137,7 +137,10 @@ class FeedbackManager(private val context: Context) {
         val soundId = soundIds[id] ?: soundIds[keyType] ?: soundIds["standard"] ?: return
         val volume = soundVolume / 100f
 
-        pool.play(soundId, volume, volume, 1, 0, 1.0f)
+        // 机械轴实录本身偏轻：同样音量下给一档增益，听感才和触控音接近
+        val gain = if (soundStyle == "mechanical") 2.0f else 1.0f
+        val v = (volume * gain).coerceAtMost(1f)
+        pool.play(soundId, v, v, 1, 0, 1.0f)
     }
 
     fun hapticFeedback(view: View, longPress: Boolean = false, keyUp: Boolean = false) {

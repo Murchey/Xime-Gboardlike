@@ -3505,6 +3505,26 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val mainRect = if (bands.isEmpty()) surfaceRect else android.graphics.Rect(
             surfaceRect.left, surfaceRect.top + featherPx, surfaceRect.right, surfaceRect.bottom,
         )
+        // 顶部圆角：系统模糊窗口是矩形，会盖住圆角外侧的楔形；
+        // 拆成「主块（从圆角半径以下开始）+ 顶部中段（避开左右圆角的窄条）」，
+        // 左右两个圆角楔形就不再被模糊遮盖，能完全透出后面的内容。
+        val roundedTop = com.kingzcheung.xime.ui.theme.KeyboardTopStyles.current ==
+            com.kingzcheung.xime.ui.theme.KeyboardTopStyle.ROUNDED
+        if (roundedTop && bands.isEmpty()) {
+            val radiusPx = (com.kingzcheung.xime.ui.theme.TOP_ROUND_RADIUS.value *
+                resources.displayMetrics.density).toInt()
+            val mid = android.graphics.Rect(
+                mainRect.left + radiusPx, mainRect.top,
+                mainRect.right - radiusPx, mainRect.top + radiusPx,
+            )
+            mainRect.top += radiusPx
+            updateGlassSurface("keyboard", mainRect)
+            updateGlassSurface("keyboard-edge-0", mid)
+            for (i in 1 until com.kingzcheung.xime.ui.theme.GLASS_TOP_FEATHER_STEPS) {
+                updateGlassSurface("keyboard-edge-$i", null)
+            }
+            return
+        }
         updateGlassSurface("keyboard", mainRect)
         for (i in 0 until com.kingzcheung.xime.ui.theme.GLASS_TOP_FEATHER_STEPS) {
             val band = bands.getOrNull(i)

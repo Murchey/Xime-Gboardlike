@@ -47,7 +47,7 @@ fun keyboardEdgeShape(top: KeyboardTopStyle, roundedBottom: Boolean, radius: Dp 
 }
 
 /** 键盘上沿圆角半径（用户反馈原 14dp 偏小，加大到 24dp）。 */
-private val TOP_ROUND_RADIUS = 24.dp
+internal val TOP_ROUND_RADIUS = 24.dp
 private val SQUARE_SHAPE = RoundedCornerShape(0.dp)
 
 /** 当前生效的键盘顶部样式（Compose 状态）。 */
