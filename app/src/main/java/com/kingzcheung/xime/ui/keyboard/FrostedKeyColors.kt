@@ -71,6 +71,16 @@ private fun glassKeyTint(
     return Color(channel(r), channel(g), channel(b), background.alpha)
 }
 
+/**
+ * 键面角标/提示文字的颜色：玻璃开启时不透明度直接给满（参考实现同义——
+ * 玻璃底下把角标淡下去会露出宿主内容，位置和大小已足够区分）；关玻璃时保持原来的 legacy alpha。
+ */
+internal fun keyHintColor(themeText: Color, legacyAlpha: Float, opacity: Float = 1f): Color =
+    themeText.copy(
+        alpha = (if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) 1f else legacyAlpha)
+            .times(opacity.coerceIn(0f, 1f)),
+    )
+
 /** 玻璃下沿用改色前的近黑键（#1C1C1C / #353535）：提亮后是一层淡灰、后面的页面透得出来。 */
 internal fun glassKeyBase(color: Color): Color = when (color) {
     Color(0xFF55555A) -> Color(0xFF1C1C1C)
