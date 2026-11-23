@@ -446,7 +446,8 @@ fun KeyboardLayout(
             vertical = when {
                 landscapeCompactSpacing -> (kbKey.spacingOverrides["qwerty"]?.spacingY?.dp ?: 2.5.dp)
                 tabletParams -> 6.dp
-                else -> (kbKey.spacingFor("qwerty").second?.dp ?: 4.25.dp)
+                // 手机「原有外观」基准图：纵向总缝约 14dp（视觉内距 7dp），原 4.25dp 太紧
+                else -> (kbKey.spacingFor("qwerty").second?.dp ?: 7.dp)
             },
         ),
     ) {

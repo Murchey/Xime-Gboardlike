@@ -107,7 +107,10 @@ internal fun Modifier.keyFaceBackground(
         Modifier.visualMaterial(materialStyle, radius, level = MaterialLevel.BASE)
     }.then(
         // 玻璃键在白底上容易与背景糊在一起：补一道很淡的描边保证键位边界
-        if (config.enabled) {
+        // 「原有外观」不要描边（基准图：玻璃/深色键面也没有细边）；霓光描边、柔光折面才加
+        if (config.enabled && com.kingzcheung.xime.ui.theme.VisualStyles.current !=
+            com.kingzcheung.xime.ui.theme.VisualStyle.ORIGINAL
+        ) {
             Modifier.border(
                 width = 1.dp,
                 color = if (isDarkSurface) Color.White.copy(alpha = .18f) else Color.Black.copy(alpha = .10f),
