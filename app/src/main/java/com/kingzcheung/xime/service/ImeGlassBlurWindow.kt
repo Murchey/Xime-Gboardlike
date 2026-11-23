@@ -94,7 +94,9 @@ internal class ImeGlassBlurWindow(
 
     /** 交给输入法窗口的父视图与 token；窗口重建（主题切换等）后重新绑定。 */
     fun update(parent: View?, token: IBinder?) {
-        if (!enabled || !visible || region == null || parent == null || !parent.isAttachedToWindow || token == null) {
+        if (!enabled || !visible || blurRadiusPx <= 0 || region == null || parent == null ||
+            !parent.isAttachedToWindow || token == null
+        ) {
             removeWindow()
             return
         }

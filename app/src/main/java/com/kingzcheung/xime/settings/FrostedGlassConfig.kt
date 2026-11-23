@@ -25,8 +25,7 @@ data class FrostedGlassConfig(
             enabled = enabled,
             blurRadiusDp = 10f,
             backgroundOpacity = if (isDark) 0.8f else 0.2f,
-            // 浅色底多半是白纸，键面 0.8 会与背景糊成一片；0.62 仍有玻璃感又能看清键位
-            keyOpacity = if (isDark) 0.2f else 0.62f,
+            keyOpacity = if (isDark) 0.2f else 0.8f,
         )
     }
 }
@@ -44,13 +43,19 @@ object FrostedGlassPreferences {
         val prefs = SettingsPreferences.getPrefsPublic(context)
         val enabled = prefs.getBoolean(KEY_ENABLED, false)
         val defaults = FrostedGlassConfig.defaults(isDark, enabled)
-        return FrostedGlassConfig(
+        val base = FrostedGlassConfig(
             enabled = enabled,
             blurRadiusDp = prefs.getFloat(appearanceKey(KEY_BLUR_RADIUS, isDark), defaults.blurRadiusDp),
             backgroundOpacity = prefs.getFloat(appearanceKey(KEY_BACKGROUND_OPACITY, isDark), defaults.backgroundOpacity),
             keyOpacity = prefs.getFloat(appearanceKey(KEY_KEY_OPACITY, isDark), defaults.keyOpacity),
             lightPanelCustom = !isDark && prefs.getBoolean("frosted_glass_light_panel_custom", false),
         ).normalized(defaults)
+        // 浅色"白玻璃"：参考实现自动把背景不透明度补到 0.88（用户手动拖过滑块则不再补）
+        return if (!isDark && !base.lightPanelCustom) {
+            base.copy(backgroundOpacity = maxOf(base.backgroundOpacity, 0.88f))
+        } else {
+            base
+        }
     }
 
     fun writeEnabled(context: android.content.Context, enabled: Boolean) {

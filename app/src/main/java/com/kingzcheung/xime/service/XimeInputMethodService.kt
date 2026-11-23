@@ -2242,8 +2242,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     // 玻璃效果：背板按背景不透明度透出下层应用（浅色默认 0.2、深色 0.8）
                                     .alpha(
                                         if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
-                                            com.kingzcheung.xime.settings.FrostedGlassPreferences
-                                                .read(this@XimeInputMethodService, isDark).backgroundOpacity
+                                            currentGlassConfig().backgroundOpacity
                                         } else 1f
                                     )
                                     .keyboardBackground(rootTheme.keyboardBackground, isDark, keyboardBgColor)
@@ -3414,6 +3413,22 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         }
     }
 
+    /** 自定义"我的图片"底图：玻璃下不模糊、不淡化，用户选的图要看得见（与参考实现一致）。 */
+    private fun isCustomImageBackground(background: com.kingzcheung.xime.settings.BackgroundConfig?): Boolean {
+        if (background?.type != "image") return false
+        val src = background.src ?: return false
+        return src.startsWith("/") || src.contains("backgrounds") || src.startsWith("content://") ||
+            src.startsWith("file://")
+    }
+
+    /** 当前生效的玻璃参数（含自定义图片底图的特例）。 */
+    private fun currentGlassConfig(): com.kingzcheung.xime.settings.FrostedGlassConfig {
+        val cfg = com.kingzcheung.xime.settings.FrostedGlassPreferences.read(this, isDarkTheme())
+        val bg = com.kingzcheung.xime.ui.theme.KeyboardThemes
+            .getThemeById(uiState.value.themeId).keyboardBackground
+        return if (isCustomImageBackground(bg)) cfg.copy(blurRadiusDp = 0f, backgroundOpacity = 1f) else cfg
+    }
+
     /** 系统是否开着跨窗口模糊（省电/无障碍设置会关掉）；关着时保留透明背板兜底。 */
     private fun windowBlurAvailable(): Boolean = runCatching {
         getSystemService(android.view.WindowManager::class.java)?.isCrossWindowBlurEnabled == true
@@ -3440,7 +3455,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val win = glassBlurWindows[name] ?: ImeGlassBlurWindow(
             this, name, anchorOrigin = { glassAnchorOrigin() }
         ).also { glassBlurWindows[name] = it }
-        val cfg = com.kingzcheung.xime.settings.FrostedGlassPreferences.read(this, isDarkTheme())
+        val cfg = currentGlassConfig()
         val density = resources.displayMetrics.density
         // 模糊窗口的圆角与键盘背景一致：顶部「圆角」或底部圆角时才有圆角，否则直角；
         // 否则模糊矩形会在键盘圆角外侧露出一块方的磨砂，圆角看起来就不明显
