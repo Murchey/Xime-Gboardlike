@@ -23,8 +23,9 @@ data class FrostedGlassConfig(
     companion object {
         fun defaults(isDark: Boolean, enabled: Boolean = false) = FrostedGlassConfig(
             enabled = enabled,
-            blurRadiusDp = 10f,
-            backgroundOpacity = if (isDark) 0.8f else 0.2f,
+            // 默认给足模糊，才像毛玻璃而不是一块透明板
+            blurRadiusDp = 18f,
+            backgroundOpacity = if (isDark) 0.8f else 0.4f,
             keyOpacity = if (isDark) 0.2f else 0.8f,
         )
     }

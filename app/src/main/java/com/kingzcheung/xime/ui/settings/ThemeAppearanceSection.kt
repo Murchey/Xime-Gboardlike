@@ -84,6 +84,9 @@ fun ThemeAppearanceSection() {
     var backgroundOpacity by remember(glassDark) {
         mutableFloatStateOf(FrostedGlassPreferences.read(context, glassDark).backgroundOpacity)
     }
+    var blurRadius by remember(glassDark) {
+        mutableFloatStateOf(FrostedGlassPreferences.read(context, glassDark).blurRadiusDp)
+    }
     var topStyle by remember { mutableStateOf(SettingsPreferences.getKeyboardTopStyle(context)) }
     var roundedBottom by remember { mutableStateOf(SettingsPreferences.roundedKeyboardBottom(context)) }
     val keyColor = MaterialTheme.colorScheme.surfaceVariant
@@ -132,6 +135,21 @@ fun ThemeAppearanceSection() {
                             FrostedGlassPreferences.writeOpacities(context, glassDark, backgroundOpacity = v)
                         },
                         valueRange = 0f..1f,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "模糊程度 ${blurRadius.toInt()} dp",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Slider(
+                        value = blurRadius,
+                        onValueChange = { v ->
+                            blurRadius = v
+                            FrostedGlassPreferences.writeOpacities(context, glassDark, blurRadiusDp = v)
+                        },
+                        valueRange = 0f..40f,
+                        steps = 39,
                     )
                 }
 
