@@ -350,6 +350,33 @@ object KeyboardThemes {
                 colorsDark = listOf(0x232A36L, 0x3B2E3AL, 0x24404AL),
             ),
         ),
+        // 雾面暖阳：暖色三色底（晨光/砂金），玻璃下偏柔；深色是暖夜
+        buildTheme(
+            id = "glass_warm", name = "雾面暖阳",
+            light = ThemePalette(
+                background = Color(0xFFF3E9DA), key = Color(0xFFFFFFFF),
+                keyText = Color(0xFF241F18), candidateText = Color(0xFF17130D),
+                accent = Color(0xFFA34F1F), selectedText = Color(0xFF813D14), container = Color(0xFFEFE3D2),
+                specialKey = Color(0xFFEFE3D2),
+                functionKey = Color(0xFFEFE3D2),
+                accentKeyBg = Color(0xFFA34F1F), accentKeyText = Color(0xFFFFFFFF),
+            ),
+            dark = ThemePalette(
+                background = Color(0xFF241E18), key = Color(0xFF3A3129),
+                keyText = Color(0xFFF0EAE0), candidateText = Color(0xFFFFFFFF),
+                accent = Color(0xFFE0A06A), selectedText = Color(0xFFF0C39A), container = Color(0xFF2C241C),
+                specialKey = Color(0xFF2C241C),
+                functionKey = Color(0xFF2C241C),
+                accentKeyBg = Color(0xFFE0A06A), accentKeyText = Color(0xFF1A120A),
+            ),
+        ).copy(
+            keyboardBackground = com.kingzcheung.xime.settings.BackgroundConfig(
+                type = "gradient",
+                angle = 120,
+                colors = listOf(0xF6E7D2L, 0xEAD1CFL, 0xCFE0E9L),
+                colorsDark = listOf(0x2A2118L, 0x33262AL, 0x1E2A33L),
+            ),
+        ),
         // 参照 Gboard 黑（浅：白键 + 灰功能键 + Google 蓝回车；深：纯黑底 + 浅灰键）
         buildTheme(
             id = "gboard_black", name = "Gboard 黑",
