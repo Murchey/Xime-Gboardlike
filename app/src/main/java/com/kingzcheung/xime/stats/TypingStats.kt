@@ -155,7 +155,9 @@ object TypingStats {
         synchronized(lock) {
             val copy = data.copy()
             // 正在打的这一段也算进最快纪录，页面上不用等键盘收起。
-            TypingStatsData.speedOf(burstChars, burstMs)?.let { if (burstMs >= MIN_BURST_MS && it > copy.bestSpeed) copy.bestSpeed = it }
+            if (burstMs >= MIN_BURST_MS && burstChars >= MIN_BURST_CHARS) {
+                TypingStatsData.speedOf(burstChars, burstMs)?.let { if (it > copy.bestSpeed) copy.bestSpeed = it }
+            }
             return copy
         }
     }
@@ -195,8 +197,8 @@ object TypingStats {
         return (Math.floorMod(local, 86_400_000L) / 3_600_000L).toInt()
     }
 
-    private const val MIN_BURST_MS = 20_000L
-    private const val MIN_BURST_CHARS = 20L
+    private const val MIN_BURST_MS = 10_000L
+    private const val MIN_BURST_CHARS = 10L
 
     private fun clearPendingLocked() {
         pendingKeys = 0; pendingDeletes = 0; pendingPicks = 0; pendingFirstPicks = 0

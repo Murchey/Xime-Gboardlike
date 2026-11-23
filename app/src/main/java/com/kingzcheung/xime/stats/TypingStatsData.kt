@@ -248,7 +248,7 @@ class TypingStatsData {
         /** 输入方式种类的上限，防止异常情况下文件无限变大。 */
         const val MAX_COMBOS = 64
 
-        fun speedOf(chars: Long, ms: Long): Long? = if (ms < 30_000 || chars <= 0) null else chars * 60_000 / ms
+        fun speedOf(chars: Long, ms: Long): Long? = if (ms < 10_000 || chars <= 0) null else chars * 60_000 / ms
 
         internal fun ratio(part: Long, whole: Long, minWhole: Long): Double? =
             if (whole < minWhole) null else part.toDouble() / whole
