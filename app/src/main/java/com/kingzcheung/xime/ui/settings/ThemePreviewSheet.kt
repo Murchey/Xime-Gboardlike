@@ -36,12 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,27 +46,20 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kingzcheung.xime.settings.KeysConfigHelper
 import com.kingzcheung.xime.settings.SettingsPreferences
-import com.kingzcheung.xime.ui.keyboard.FrostedBackdropHolder
 import com.kingzcheung.xime.ui.keyboard.LocalKeyCornerRadius
-import com.kingzcheung.xime.ui.keyboard.keyFaceBackground
 import com.kingzcheung.xime.ui.keyboard.keyOutline
 import com.kingzcheung.xime.ui.keyboard.keyOutlineColor
 import com.kingzcheung.xime.ui.theme.KeyboardColorScheme
 import com.kingzcheung.xime.ui.theme.KeyboardThemes
 import com.kingzcheung.xime.ui.theme.keyboardBackground
-import com.kingzcheung.xime.ui.theme.renderFrostedBackdrop
 
 private val QWERTY_ROW0 = listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P")
 private val QWERTY_ROW1 = listOf("A", "S", "D", "F", "G", "H", "J", "K", "L")
@@ -289,47 +277,12 @@ internal fun ThemeKeyboardPreview(
 
     val cornerRadius = KeysConfigHelper.getKeyboardKeyConfig().cornerRadius.dp
 
-    // 按键毛玻璃：预览里用与实机同一套参数预渲染模糊底图，键帽各自采样其中一块
-    var previewSizePx by remember { mutableStateOf(IntSize.Zero) }
-    val previewBlurRadius = if (theme.keyBlurEnabled) theme.keyBlurRadius else 0
-    LaunchedEffect(
-        theme.keyboardBackground?.src,
-        theme.keyboardBackground?.srcDark,
-        theme.keyboardBackground?.fit,
-        theme.keyboardBackground?.offsetX,
-        theme.keyboardBackground?.offsetY,
-        previewBlurRadius,
-        previewSizePx,
-        isDark,
-    ) {
-        val config = theme.keyboardBackground
-        if (previewBlurRadius <= 0 || config?.type != "image" || previewSizePx.width <= 0) {
-            FrostedBackdropHolder.clear()
-            return@LaunchedEffect
-        }
-        val backdrop = renderFrostedBackdrop(
-            context = context,
-            config = config,
-            isDark = isDark,
-            widthPx = previewSizePx.width,
-            heightPx = previewSizePx.height,
-            blurRadiusPx = previewBlurRadius.toFloat(),
-        )
-        FrostedBackdropHolder.size = previewSizePx
-        FrostedBackdropHolder.image = backdrop
-    }
-    DisposableEffect(Unit) {
-        onDispose { FrostedBackdropHolder.clear() }
-    }
-
     CompositionLocalProvider(
         LocalKeyCornerRadius provides cornerRadius,
     ) {
         Box(
             modifier = modifier
                 .clip(RoundedCornerShape(12.dp))
-                .onSizeChanged { previewSizePx = it }
-                .onGloballyPositioned { FrostedBackdropHolder.rootOrigin = it.positionInRoot() }
                 .keyboardBackground(theme.keyboardBackground, isDark, bgColor),
         ) {
             Column(
@@ -556,7 +509,8 @@ private fun RowScope.PreviewKey(
             .fillMaxHeight()
             .fillMaxWidth()
             .then(shadowModifier)
-            .keyFaceBackground(color, RoundedCornerShape(cornerRadius)),
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(color),
         contentAlignment = Alignment.Center,
     ) {
         if (icon != null) {

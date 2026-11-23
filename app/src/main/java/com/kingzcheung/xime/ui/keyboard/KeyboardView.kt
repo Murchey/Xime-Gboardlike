@@ -302,41 +302,6 @@ fun KeyboardView(
         modifier
     }
 
-    // ── 按键毛玻璃：预渲染「与内容区同尺寸的模糊底图」，键帽各自采样其中对应的一块 ──
-    val frostedContext = LocalContext.current
-    val frostedConfig = themeScheme.keyboardBackground
-    val frostedBlurRadius = if (themeScheme.keyBlurEnabled) themeScheme.keyBlurRadius else 0
-    var frostedSizePx by remember { mutableStateOf(IntSize.Zero) }
-    LaunchedEffect(
-        frostedConfig?.src,
-        frostedConfig?.srcDark,
-        frostedConfig?.fit,
-        frostedConfig?.offsetX,
-        frostedConfig?.offsetY,
-        frostedBlurRadius,
-        frostedSizePx,
-        state.isDarkTheme,
-    ) {
-        val config = frostedConfig
-        if (frostedBlurRadius <= 0 || config?.type != "image" || frostedSizePx.width <= 0) {
-            FrostedBackdropHolder.clear()
-            return@LaunchedEffect
-        }
-        val backdrop = renderFrostedBackdrop(
-            context = frostedContext,
-            config = config,
-            isDark = state.isDarkTheme,
-            widthPx = frostedSizePx.width,
-            heightPx = frostedSizePx.height,
-            blurRadiusPx = frostedBlurRadius.toFloat(),
-        )
-        FrostedBackdropHolder.size = frostedSizePx
-        FrostedBackdropHolder.image = backdrop
-    }
-
-    DisposableEffect(Unit) {
-        onDispose { FrostedBackdropHolder.clear() }
-    }
     FloatingKeyboardContainer(
         isFloatingMode = state.isFloatingMode,
         scaleFactor = floatScaleFactor,
@@ -352,9 +317,7 @@ fun KeyboardView(
         modifier = contentModifier
             .onSizeChanged { size ->
                 measuredWidthDp = with(densityForMeasure) { size.width.toDp().value.roundToInt() }
-                frostedSizePx = size
             }
-            .onGloballyPositioned { FrostedBackdropHolder.rootOrigin = it.positionInRoot() }
     ) {
         Box {
         // 长按候选删除自造词：确认覆盖层状态（键盘视图内渲染，不弹独立

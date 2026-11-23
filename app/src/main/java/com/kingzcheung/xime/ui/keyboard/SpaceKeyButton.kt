@@ -24,11 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -59,12 +55,6 @@ fun SpaceKeyButton(
     shadowShapeRadius: Dp = 8.dp,
 ) {
     var isPressed by remember { mutableStateOf(false) }
-    // 与普通按键同一按压参数（幅度/时长/缓动），空格不再有自己的按压动画
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
-        animationSpec = tween(durationMillis = KEY_PRESS_IN_MS, easing = FastOutSlowInEasing),
-        label = "spacePressScale",
-    )
     val longPressTimeout = 400L
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -82,23 +72,7 @@ fun SpaceKeyButton(
             .height((44 * LocalStretchFactor.current).dp)
             .then(shadowModifier)
             .clip(keyShape)
-            // 与普通按键完全同一套按压：同一缩放动画 + 按下键面颜色；玻璃开启时再加按住高光/松开辉光
-            .graphicsLayer {
-                val s = pressScale
-                scaleX = s
-                scaleY = s
-            }
-            .keyFaceBackground(
-                color = if (isPressed) Color.Transparent else backgroundColor,
-                shape = keyShape,
-                textColor = textColor,
-                forceTransparent = isPressed,
-            )
-            .then(
-                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
-                    Modifier.keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
-                } else Modifier
-            )
+            .keyPressFeedback(isPressed, backgroundColor, keyShape)
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)

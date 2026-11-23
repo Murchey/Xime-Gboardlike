@@ -279,10 +279,19 @@ fun CandidateBar(
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
-            // 玻璃下候选栏不另画底色，直接透出键盘同一张磨砂底（与参考实现的面板一致）
+            // 玻璃下候选栏的处理：
+            // - 整个盘面玻璃：不另画底色，透出键盘同一张磨砂底；
+            // - 只有候选栏玻璃：那条磨砂只有模糊、没有底色，这里补一层半透明主题色，
+            //   否则候选栏会变成"完全透明的一条"，文字浮在应用画面上。
             .background(
-                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) Color.Transparent
-                else visuals.backgroundColor
+                when {
+                    !com.kingzcheung.xime.ui.theme.GlassEffect.enabled -> visuals.backgroundColor
+                    com.kingzcheung.xime.settings.SettingsPreferences.getGlassScope(
+                        androidx.compose.ui.platform.LocalContext.current
+                    ) == com.kingzcheung.xime.ui.theme.GlassScope.CANDIDATE_BAR ->
+                        visuals.backgroundColor.copy(alpha = 0.55f)
+                    else -> Color.Transparent
+                }
             ),
     ) {
     Column(

@@ -2,7 +2,6 @@ package com.kingzcheung.xime.ui.keyboard
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -220,12 +219,10 @@ internal fun Modifier.keyPressFeedback(
 ): Modifier {
     val scale by animateFloatAsState(
         targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
-        animationSpec = if (isPressed) {
-            tween(durationMillis = KEY_PRESS_IN_MS, easing = FastOutSlowInEasing)
-        } else {
-            // 松开走带过冲的弹簧：先冲过 1 再落回，短促有回弹（借用实现的按键手感）
-            spring(dampingRatio = 0.38f, stiffness = 1400f)
-        },
+        animationSpec = tween(
+            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
+            easing = FastOutSlowInEasing,
+        ),
         label = "keyPressFeedbackScale",
     )
     return this
@@ -514,12 +511,10 @@ fun KeyButton(
     // 按下时的键帽缩放：统一常量（Gboard 的按压回弹幅度）
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
-        animationSpec = if (isPressed) {
-            tween(durationMillis = KEY_PRESS_IN_MS, easing = FastOutSlowInEasing)
-        } else {
-            // 松开走带过冲的弹簧：先冲过 1 再落回，短促有回弹（借用实现的按键手感）
-            spring(dampingRatio = 0.38f, stiffness = 1400f)
-        },
+        animationSpec = tween(
+            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
+            easing = FastOutSlowInEasing,
+        ),
         label = "keyPressScale",
     )
     
@@ -676,22 +671,13 @@ fun KeyButton(
                 scaleX = s
                 scaleY = s
             }
-            .keyFaceBackground(
-                color = when {
-                    // 按下时不做淡色/强调色叠加，直接透出键盘底部背景（原来的按压效果）
-                    isPressed -> Color.Transparent
-                    // 玻璃开启时也强制透明，见 forceTransparent
+            .clip(keyClipShape)
+            .background(
+                when {
+                    isPressed -> LocalKeyPressedBackgroundColor.current ?: pressOverlay(backgroundColor)
                     isHighlighted -> backgroundColor.copy(alpha = 0.8f)
                     else -> backgroundColor
-                },
-                shape = keyClipShape,
-                forceTransparent = isPressed,
-            )
-            .then(Modifier)
-            .then(
-                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
-                    Modifier.keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
-                } else Modifier
+                }
             )
             // 按下描边：Gboard 只有键面提亮、不描边；经典样式保留高对比描边，
             // 让浅色主题白键也能一眼看出「确实按到了」。
@@ -727,7 +713,7 @@ fun KeyButton(
             val displayText = if (swipeText.length <= 4) swipeText else swipeText.take(4)
             Text(
                 text = displayText,
-                color = keyHintColor(textColor, 0.5f),
+                color = textColor.copy(alpha = 0.5f),
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Normal,
                 textAlign = TextAlign.Center,
@@ -740,7 +726,7 @@ fun KeyButton(
         if (badgeText != null) {
             Text(
                 text = badgeText,
-                color = keyHintColor(textColor, 0.5f),
+                color = textColor.copy(alpha = 0.5f),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Normal,
                 textAlign = TextAlign.End,
@@ -1226,18 +1212,12 @@ fun SwipeableKeyButton(
             }
             .padding(LocalKeyVisualPadding.current)
             .then(shadowModifier)
-            .keyFaceBackground(
-                color = if (isPressed) Color.Transparent
+            .clip(keyClipShape)
+            .background(
+                if (isPressed) LocalKeyPressedBackgroundColor.current
+                    ?: pressedKeyColor(backgroundColor, LocalKeyPressHighlightColor.current)
                 else if (isHighlighted) backgroundColor.copy(alpha = 0.8f)
-                else backgroundColor,
-                shape = keyClipShape,
-                forceTransparent = isPressed,
-            )
-            .then(Modifier)
-            .then(
-                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
-                    Modifier.keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
-                } else Modifier
+                else backgroundColor
             )
             .keySemantics(a11yDescription, a11yState) { currentOnClick() },
         contentAlignment = if (layoutMode == ButtonLayout.COMPACT) Alignment.TopStart else Alignment.Center
@@ -1290,7 +1270,7 @@ fun SwipeableKeyButton(
                         val displayText = if (swipeUpHint.length <= 2) swipeUpHint else swipeUpHint.take(2)
                         Text(
                             text = displayText,
-                            color = keyHintColor(textColor, 0.6f),
+                            color = textColor.copy(alpha = 0.6f),
                             fontSize = effectiveSwipeFontSize,
                             fontWeight = FontWeight.Medium,
                             textAlign = TextAlign.End,
@@ -1312,7 +1292,7 @@ fun SwipeableKeyButton(
                             val displayText = if (swipeDownHint.length <= 12) swipeDownHint else swipeDownHint.take(12)
                             Text(
                                 text = displayText,
-                                color = keyHintColor(textColor, 0.7f),
+                                color = textColor.copy(alpha = 0.7f),
                                 fontSize = adjustedFontSize,
                                 fontWeight = FontWeight.Medium,
                                 textAlign = TextAlign.Right,
@@ -1443,7 +1423,7 @@ fun SwipeableKeyButton(
                     else if (swipeDownKeyLabel.length <= 4) swipeDownKeyLabel else swipeDownKeyLabel.take(4)
                 Text(
                     text = displayText,
-                    color = keyHintColor(textColor, 0.5f),
+                    color = textColor.copy(alpha = 0.5f),
                     fontSize = effectiveSwipeFontSize,
                     fontWeight = FontWeight.Normal,
                     textAlign = TextAlign.Center,
@@ -1462,7 +1442,7 @@ fun SwipeableKeyButton(
             if (badgeText != null) {
                 Text(
                     text = badgeText,
-                    color = keyHintColor(textColor, 0.5f),
+                    color = textColor.copy(alpha = 0.5f),
                     fontSize = (10f * hintScale).sp,
                     fontWeight = FontWeight.Normal,
                     textAlign = TextAlign.End,
@@ -1491,7 +1471,7 @@ private fun SwipeSideHint(
 ) {
     Text(
         text = if (text.length <= 3) text else text.take(3),
-        color = keyHintColor(textColor, 0.5f),
+        color = textColor.copy(alpha = 0.5f),
         fontSize = fontSize,
         fontWeight = FontWeight.Normal,
         textAlign = TextAlign.Center,
@@ -1572,12 +1552,10 @@ fun IconKeyButton(
     // 按下时键帽缩放（与字母/功能键共用统一常量）
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
-        animationSpec = if (isPressed) {
-            tween(durationMillis = KEY_PRESS_IN_MS, easing = FastOutSlowInEasing)
-        } else {
-            // 松开走带过冲的弹簧：先冲过 1 再落回，短促有回弹（借用实现的按键手感）
-            spring(dampingRatio = 0.38f, stiffness = 1400f)
-        },
+        animationSpec = tween(
+            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
+            easing = FastOutSlowInEasing,
+        ),
         label = "swipeKeyPressScale",
     )
     val density = LocalDensity.current
@@ -1625,12 +1603,11 @@ fun IconKeyButton(
             }
             .padding(LocalKeyVisualPadding.current)
             .then(shadowModifier)
-            .keyFaceBackground(
-                color = if (isPressed) darkenColor(backgroundColor, 0.1f)
+            .clip(keyClipShape)
+            .background(
+                if (isPressed) darkenColor(backgroundColor, 0.1f)
                 else if (isHighlighted) darkenColor(backgroundColor, 0.2f)
-                else backgroundColor,
-                shape = keyClipShape,
-                forceTransparent = isPressed,
+                else backgroundColor
             )
             .keySemantics(a11yDescription, a11yState) { currentOnClick() },
         contentAlignment = Alignment.Center
@@ -1700,12 +1677,10 @@ fun SwipeableIconKeyButton(
     // 按下时键帽缩放（图标键，与文字键共用统一常量）
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
-        animationSpec = if (isPressed) {
-            tween(durationMillis = KEY_PRESS_IN_MS, easing = FastOutSlowInEasing)
-        } else {
-            // 松开走带过冲的弹簧：先冲过 1 再落回，短促有回弹（借用实现的按键手感）
-            spring(dampingRatio = 0.38f, stiffness = 1400f)
-        },
+        animationSpec = tween(
+            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
+            easing = FastOutSlowInEasing,
+        ),
         label = "iconKeyPressScale",
     )
     var dragOffsetY by remember { mutableStateOf(0f) }
@@ -2142,22 +2117,13 @@ fun SwipeableIconKeyButton(
                 scaleX = s
                 scaleY = s
             }
-            .keyFaceBackground(
-                color = when {
-                    // 按下时不做淡色/强调色叠加，直接透出键盘底部背景（原来的按压效果）
-                    isPressed -> Color.Transparent
-                    // 玻璃开启时也强制透明，见 forceTransparent
+            .clip(keyClipShape)
+            .background(
+                when {
+                    isPressed -> LocalKeyPressedBackgroundColor.current ?: pressOverlay(backgroundColor)
                     isHighlighted -> backgroundColor.copy(alpha = 0.8f)
                     else -> backgroundColor
-                },
-                shape = keyClipShape,
-                forceTransparent = isPressed,
-            )
-            .then(Modifier)
-            .then(
-                if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
-                    Modifier.keyReleaseGlow(LocalKeyCornerRadius.current, isPressed)
-                } else Modifier
+                }
             )
             // 按下描边：Gboard 只有键面提亮、不描边；经典样式保留高对比描边，
             // 让浅色主题白键也能一眼看出「确实按到了」。
@@ -2257,12 +2223,10 @@ fun SwipeableKeyButtonLandscape(
     // 按下时键帽缩放（横屏紧凑键盘，与竖屏共用统一常量）
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
-        animationSpec = if (isPressed) {
-            tween(durationMillis = KEY_PRESS_IN_MS, easing = FastOutSlowInEasing)
-        } else {
-            // 松开走带过冲的弹簧：先冲过 1 再落回，短促有回弹（借用实现的按键手感）
-            spring(dampingRatio = 0.38f, stiffness = 1400f)
-        },
+        animationSpec = tween(
+            durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
+            easing = FastOutSlowInEasing,
+        ),
         label = "landscapeKeyPressScale",
     )
     var dragOffsetY by remember { mutableStateOf(0f) }
@@ -2627,11 +2591,8 @@ fun SwipeableKeyButtonLandscape(
             }
             .padding(LocalKeyVisualPadding.current)
             .then(shadowModifier)
-            .keyFaceBackground(
-                color = if (isPressed) darkenColor(backgroundColor) else backgroundColor,
-                shape = keyClipShape,
-                forceTransparent = isPressed,
-            ),
+            .clip(keyClipShape)
+            .background(if (isPressed) darkenColor(backgroundColor) else backgroundColor),
         contentAlignment = Alignment.TopStart
     ) {
         val contentScale = adaptiveKeyContentScale(
@@ -2664,7 +2625,7 @@ fun SwipeableKeyButtonLandscape(
         if (keyLabel != null) {
             Text(
                 text = keyLabel,
-                color = keyHintColor(textColor, 0.5f),
+                color = textColor.copy(alpha = 0.5f),
                 fontSize = effectiveSwipeFontSize.sp,
                 fontWeight = FontWeight.Normal,
                 textAlign = TextAlign.End,
@@ -2678,7 +2639,7 @@ fun SwipeableKeyButtonLandscape(
         if (swipeDownKeyLabel != null) {
             Text(
                 text = swipeDownKeyLabel,
-                color = keyHintColor(textColor, 0.5f),
+                color = textColor.copy(alpha = 0.5f),
                 fontSize = effectiveSwipeFontSize.sp,
                 fontWeight = FontWeight.Normal,
                 fontFamily = keyLabelFontFamily,

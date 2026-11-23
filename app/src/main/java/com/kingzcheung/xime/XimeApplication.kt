@@ -86,8 +86,6 @@ class XimeApplication : Application(), ImageLoaderFactory {
         // 安装/升级后一次性关掉滑动输入（版本号标记，只跑一次）
         SettingsPreferences.applyGlideDefaultsIfNeeded(this)
         // 按键形状 / 视觉样式 / 玻璃效果：启动时先落到 Compose 状态，键盘首帧就用对的材质
-        com.kingzcheung.xime.ui.theme.KeyShapes.current = SettingsPreferences.getKeyShape(this)
-        com.kingzcheung.xime.ui.theme.VisualStyles.current = SettingsPreferences.getVisualStyle(this)
         com.kingzcheung.xime.ui.theme.GlassEffect.enabled = SettingsPreferences.isGlassEffectEnabled(this)
         // 同一开关两处存储：启动时把材质参数里的 enabled 对齐，避免"背板已透出但键面不生效"这类撕裂
         com.kingzcheung.xime.settings.FrostedGlassPreferences.writeEnabled(

@@ -161,7 +161,8 @@ keyboard:
   key:
     corner_radius: 8
     spacing_x: 2
-    spacing_y: 4.25
+    # 竖向键缝：基准图（深色原有外观）总缝约 14dp，视觉内距 7dp
+    spacing_y: 7
     t9: { spacing_x: 2, spacing_y: 2 }
     number: { spacing_x: 2, spacing_y: 2 }
     stroke: { spacing_x: 2, spacing_y: 2 }

@@ -473,14 +473,6 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
     /** 玻璃效果开关：键面半透明 + 玻璃高光/亮边。 */
     const val KEY_GLASS_EFFECT = "glass_effect"
 
-    fun getVisualStyle(context: Context): com.kingzcheung.xime.ui.theme.VisualStyle =
-        com.kingzcheung.xime.ui.theme.VisualStyle.fromId(getPrefs(context).getString(KEY_VISUAL_STYLE, null))
-
-    fun setVisualStyle(context: Context, style: com.kingzcheung.xime.ui.theme.VisualStyle) {
-        getPrefs(context).edit().putString(KEY_VISUAL_STYLE, style.id).apply()
-        com.kingzcheung.xime.ui.theme.VisualStyles.current = style
-    }
-
     fun isGlassEffectEnabled(context: Context): Boolean =
         getPrefs(context).getBoolean(KEY_GLASS_EFFECT, false)
 
@@ -493,14 +485,6 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
 
     /** 按键形状 id（见 [com.kingzcheung.xime.ui.theme.KeyShape]）。 */
     const val KEY_KEY_SHAPE = "key_shape"
-
-    fun getKeyShape(context: Context): com.kingzcheung.xime.ui.theme.KeyShape =
-        com.kingzcheung.xime.ui.theme.KeyShape.fromId(getPrefs(context).getString(KEY_KEY_SHAPE, null))
-
-    fun setKeyShape(context: Context, shape: com.kingzcheung.xime.ui.theme.KeyShape) {
-        getPrefs(context).edit().putString(KEY_KEY_SHAPE, shape.id).apply()
-        com.kingzcheung.xime.ui.theme.KeyShapes.current = shape
-    }
 
     // ── 手写公式（LaTeX） ──
 
