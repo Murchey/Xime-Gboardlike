@@ -71,6 +71,8 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TypingStatsScreen(onBack: () -> Unit) {
+    // 系统返回键：回上一级设置页（页面是内嵌渲染的，不接管会直接退出应用）
+    androidx.activity.compose.BackHandler { onBack() }
     val context = LocalContext.current
     var data by remember { mutableStateOf<TypingStatsData?>(null) }
     var enabled by remember { mutableStateOf(TypingStats.isEnabled(context)) }
