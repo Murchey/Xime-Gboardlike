@@ -240,6 +240,39 @@ object KeyboardThemes {
      *   OpenAI #10A37F、Claude #D97757、终末地信号黄 #FFFA00），只用于强调/功能键
      * - 键面文字 ≥9:1（浅色普遍 12+），候选/选中 ≥4.5:1，强调色 ≥3:1
      */
+    /**
+     * CyIME tonal 系列（单色相明度阶梯）移植：每组 9 个色值依次为
+     * 底、字母键、功能键、文字、回车、强调/选中、候选文字、分隔线、选中标签底。
+     */
+    private fun tonalTheme(
+        id: String,
+        name: String,
+        light: LongArray,
+        dark: LongArray,
+        background: com.kingzcheung.xime.settings.BackgroundConfig? = null,
+    ): KeyboardColorScheme {
+        fun Long.c() = Color(0xFF000000 or this)
+        return buildTheme(
+            id = id, name = name,
+            light = ThemePalette(
+                background = light[0].c(), key = light[1].c(),
+                keyText = light[3].c(), candidateText = light[6].c(),
+                accent = light[5].c(), selectedText = light[5].c(), container = light[2].c(),
+                specialKey = light[2].c(),
+                functionKey = light[2].c(),
+                accentKeyBg = light[4].c(), accentKeyText = light[3].c(),
+            ),
+            dark = ThemePalette(
+                background = dark[0].c(), key = dark[1].c(),
+                keyText = dark[3].c(), candidateText = dark[6].c(),
+                accent = dark[5].c(), selectedText = dark[5].c(), container = dark[2].c(),
+                specialKey = dark[2].c(),
+                functionKey = dark[2].c(),
+                accentKeyBg = dark[4].c(), accentKeyText = dark[3].c(),
+            ),
+        ).copy(keyboardBackground = background)
+    }
+
     private val defaultThemes = listOf(
         // 参照 Gboard 实机配色（浅：白键 + 蓝灰功能键；深：深灰键 + 蓝灰功能键）
         buildTheme(
@@ -377,6 +410,35 @@ object KeyboardThemes {
                 colorsDark = listOf(0x2A2118L, 0x33262AL, 0x1E2A33L),
             ),
         ),
+        // ── CyIME tonal 系列（不含带图片的「大漠流金」）──
+        tonalTheme("sakura_pink", "樱花粉黛",
+            longArrayOf(0xFFDCE0L, 0xFFFAFBL, 0xF9BDC5L, 0x3E1820L, 0xFC9AAAL, 0x8B173BL, 0x57494BL, 0xDECCCEL, 0xFDD1D7L),
+            longArrayOf(0x250B10L, 0x4B2D31L, 0x3B191FL, 0xFCEBEDL, 0xE3125EL, 0xFFBDC6L, 0xC4B2B4L, 0x372A2CL, 0x38191FL)),
+        tonalTheme("sunset_gradient", "落日余晖",
+            longArrayOf(0xFBE8E2L, 0xFFFDFCL, 0xECCFC6L, 0x2E1913L, 0xFE8E6CL, 0x882700L, 0x574A45L, 0xDECDC8L, 0xFDD3C7L),
+            longArrayOf(0x180A07L, 0x3C2E2AL, 0x2C1C17L, 0xF7EEEBL, 0xD0440DL, 0xFFC0ADL, 0xC4B3AEL, 0x372A27L, 0x381B11L),
+            com.kingzcheung.xime.settings.BackgroundConfig(
+                type = "gradient", angle = 90,
+                colors = listOf(0xF9E7E1L, 0xFDCABBL),
+                colorsDark = listOf(0x100402L, 0x2D0800L),
+            )),
+        tonalTheme("aurora_gradient", "极光青蓝",
+            longArrayOf(0xDDF2F0L, 0xF9FFFEL, 0xBDDEDAL, 0x072523L, 0x2BC3BAL, 0x005955L, 0x41514FL, 0xC3D5D3L, 0xB9E9E5L),
+            longArrayOf(0x021210L, 0x253534L, 0x0F2523L, 0xE9F2F1L, 0x0A837DL, 0x60EAE1L, 0xAABCBAL, 0x223130L, 0x032A28L),
+            com.kingzcheung.xime.settings.BackgroundConfig(
+                type = "gradient", angle = 90,
+                colors = listOf(0xDCF0EEL, 0xA4E6E0L),
+                colorsDark = listOf(0x000A09L, 0x011B19L),
+            )),
+        tonalTheme("mint_green", "薄荷浅绿",
+            longArrayOf(0xD3F0D2L, 0xF6FEF6L, 0xB4DCB3L, 0x112E12L, 0x7CCA7CL, 0x015E11L, 0x475046L, 0xC9D5C9L, 0xCBE7CAL),
+            longArrayOf(0x071A07L, 0x283D28L, 0x132C13L, 0xE9F4E9L, 0x37853AL, 0x98E898L, 0xB0BBB0L, 0x283128L, 0x142A14L)),
+        tonalTheme("cream_beige", "奶油米白",
+            longArrayOf(0xF7E1D9L, 0xFFFBF9L, 0xE6C8BDL, 0x34211AL, 0xD1AFA3L, 0x62453BL, 0x534B49L, 0xD8CFCCL, 0xEFD9D1L),
+            longArrayOf(0x1E110CL, 0x42332DL, 0x32201AL, 0xF6EEEBL, 0x8E6F64L, 0xEBC8BCL, 0xBEB5B2L, 0x332C2AL, 0x30201AL)),
+        tonalTheme("lavender_purple", "薰衣草紫",
+            longArrayOf(0xEEE8F4L, 0xFFFBF5L, 0xD9CCF2L, 0x2A2438L, 0x8F73E2L, 0x6E50C8L, 0x4A4358L, 0xD9D2E6L, 0xE4D9F7L),
+            longArrayOf(0x211E28L, 0x38333FL, 0x40394EL, 0xEDE9F5L, 0xC7B8FFL, 0xC7B8FFL, 0xB7B1C4L, 0x2C2836L, 0x3A3450L)),
         // 参照 Gboard 黑（浅：白键 + 灰功能键 + Google 蓝回车；深：纯黑底 + 浅灰键）
         buildTheme(
             id = "gboard_black", name = "Gboard 黑",
