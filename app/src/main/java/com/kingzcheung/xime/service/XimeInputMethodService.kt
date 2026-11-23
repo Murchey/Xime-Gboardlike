@@ -3450,8 +3450,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         win.configure(
             true,
             (cfg.blurRadiusDp * density).toInt(),
-            // 与键盘上沿圆角（24dp）/底部圆角保持一致，避免磨砂矩形在圆角外侧露方角
-            if (roundCorner) 24f * density else 0f,
+            // 模糊子窗口的圆角比键盘圆角再大 8dp：磨砂块在键盘圆角"里面"收弧，
+            // 这样系统按矩形裁的模糊不会溢出到键盘圆角外侧（露出方块磨砂）；
+            // 代价只是圆角内侧有一圈 8dp 的轻微清晰边，肉眼几乎看不出。
+            if (roundCorner) 32f * density else 0f,
         )
         win.setRegion(rect, glassAnchorOrigin())
         // 参考实现里模糊跟着"键盘整体透明度"（glassOpacity）走，不是背板不透明度；
