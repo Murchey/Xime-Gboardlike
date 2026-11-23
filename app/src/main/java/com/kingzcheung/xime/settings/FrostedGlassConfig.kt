@@ -50,12 +50,7 @@ object FrostedGlassPreferences {
             keyOpacity = prefs.getFloat(appearanceKey(KEY_KEY_OPACITY, isDark), defaults.keyOpacity),
             lightPanelCustom = !isDark && prefs.getBoolean("frosted_glass_light_panel_custom", false),
         ).normalized(defaults)
-        // 浅色"白玻璃"：参考实现自动把背景不透明度补到 0.88（用户手动拖过滑块则不再补）
-        return if (!isDark && !base.lightPanelCustom) {
-            base.copy(backgroundOpacity = maxOf(base.backgroundOpacity, 0.88f))
-        } else {
-            base
-        }
+        return base
     }
 
     fun writeEnabled(context: android.content.Context, enabled: Boolean) {

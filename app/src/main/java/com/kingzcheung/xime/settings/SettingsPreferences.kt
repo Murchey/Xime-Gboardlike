@@ -31,6 +31,8 @@ object SettingsPreferences {
     /** 公开给声明式设置层：键名与读写共用同一份数据。 */
     const val KEY_SOUND_ENABLED = "sound_enabled"
     const val KEY_SOUND_VOLUME = "sound_volume"
+    /** 按键音色：touch（手机触控音，默认）/ mechanical（电脑键盘音）。 */
+    const val KEY_SOUND_STYLE = "key_sound_style"
     private const val KEY_VIBRATION_ENABLED = "vibration_enabled"
     private const val KEY_VIBRATION_INTENSITY = "vibration_intensity"
     private const val KEY_KEYBOARD_THEME_LIGHT = "keyboard_theme_light"
@@ -519,6 +521,13 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
         return getPrefs(context).getInt(KEY_SOUND_VOLUME, 20)
     }
     
+    fun getSoundStyle(context: Context): String =
+        getPrefs(context).getString(KEY_SOUND_STYLE, "touch") ?: "touch"
+
+    fun setSoundStyle(context: Context, style: String) {
+        getPrefs(context).edit().putString(KEY_SOUND_STYLE, style).apply()
+    }
+
     fun setSoundVolume(context: Context, volume: Int) {
         getPrefs(context).edit().putInt(KEY_SOUND_VOLUME, volume).apply()
     }

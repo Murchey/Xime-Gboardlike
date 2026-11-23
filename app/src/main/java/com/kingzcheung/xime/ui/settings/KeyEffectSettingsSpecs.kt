@@ -45,8 +45,19 @@ object KeyEffectSettingsSpecs {
             default = 20,
             min = 0,
             max = 100,
-            step = 5,
+            // 不吸附：0-100 任意整数
+            step = 1,
             suffix = "%",
+            visibility = SettingVisibility.whenFlag(SettingsPreferences.KEY_SOUND_ENABLED),
+        ),
+        SettingSpec.Choice(
+            key = SettingsPreferences.KEY_SOUND_STYLE,
+            titleRes = R.string.s_anjianyinse,
+            default = "touch",
+            options = listOf(
+                ChoiceOption("touch", R.string.s_shoujichukongyin),
+                ChoiceOption("mechanical", R.string.s_diannaojianpanyin),
+            ),
             visibility = SettingVisibility.whenFlag(SettingsPreferences.KEY_SOUND_ENABLED),
         ),
     )

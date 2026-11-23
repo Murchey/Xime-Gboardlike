@@ -556,6 +556,9 @@
     <string name="s_qiyonganjianyin">启用按键音</string>
     <string name="s_anjianshibofangyinxiao">按键时播放音效</string>
     <string name="s_yinliangdaxiao">音量大小</string>
+    <string name="s_anjianyinse">按键音色</string>
+    <string name="s_shoujichukongyin">手机触控音</string>
+    <string name="s_diannaojianpanyin">电脑键盘音</string>
     <string name="s_zhendongfankui">振动反馈</string>
     <string name="s_chujuefankuimoshi">触觉反馈模式</string>
     <string name="s_xuanzeshifougensuixitongshezhi">选择是否跟随系统设置</string>

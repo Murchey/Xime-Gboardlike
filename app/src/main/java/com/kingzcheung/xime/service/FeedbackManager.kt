@@ -50,6 +50,7 @@ class FeedbackManager(private val context: Context) {
 
     private var soundEnabled = true
     private var soundVolume = 50
+    private var soundStyle = "touch"
     private var hapticMode = HapticMode.FollowingSystem
     private var hapticOnKeyUp = false
     private var pressDuration = 0L
@@ -90,12 +91,18 @@ class FeedbackManager(private val context: Context) {
             soundIds["delete"] = pool.load(context, R.raw.kb_key_delete, 1)
             soundIds["space"] = pool.load(context, R.raw.kb_key_space, 1)
             soundIds["enter"] = pool.load(context, R.raw.kb_key_enter, 1)
+            // 电脑键盘音（机械轴实录）
+            soundIds["mech_standard"] = pool.load(context, R.raw.kb_rec_normal, 1)
+            soundIds["mech_delete"] = pool.load(context, R.raw.kb_rec_backspace, 1)
+            soundIds["mech_space"] = pool.load(context, R.raw.kb_rec_space, 1)
+            soundIds["mech_enter"] = pool.load(context, R.raw.kb_rec_enter, 1)
         }
     }
 
     private fun loadSettings() {
         soundEnabled = SettingsPreferences.isSoundEnabled(context)
         soundVolume = SettingsPreferences.getSoundVolume(context)
+        soundStyle = SettingsPreferences.getSoundStyle(context)
         hapticMode = HapticMode.fromValue(SettingsPreferences.getHapticMode(context))
         hapticOnKeyUp = SettingsPreferences.isHapticOnKeyUp(context)
         pressDuration = SettingsPreferences.getVibrationPressDuration(context).toLong()
@@ -110,6 +117,7 @@ class FeedbackManager(private val context: Context) {
             when (key) {
                 "sound_enabled" -> soundEnabled = SettingsPreferences.isSoundEnabled(context)
                 "sound_volume" -> soundVolume = SettingsPreferences.getSoundVolume(context)
+                "key_sound_style" -> soundStyle = SettingsPreferences.getSoundStyle(context)
                 "haptic_mode" -> hapticMode = HapticMode.fromValue(SettingsPreferences.getHapticMode(context))
                 "haptic_on_keyup" -> hapticOnKeyUp = SettingsPreferences.isHapticOnKeyUp(context)
                 "vibration_press_duration" -> pressDuration = SettingsPreferences.getVibrationPressDuration(context).toLong()
@@ -125,7 +133,8 @@ class FeedbackManager(private val context: Context) {
         if (!soundEnabled) return
 
         val pool = soundPool ?: return
-        val soundId = soundIds[keyType] ?: soundIds["standard"] ?: return
+        val id = if (soundStyle == "mechanical") "mech_$keyType" else keyType
+        val soundId = soundIds[id] ?: soundIds[keyType] ?: soundIds["standard"] ?: return
         val volume = soundVolume / 100f
 
         pool.play(soundId, volume, volume, 1, 0, 1.0f)
