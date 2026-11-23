@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kingzcheung.xime.settings.FrostedGlassPreferences
 import com.kingzcheung.xime.settings.SettingsPreferences
-import com.kingzcheung.xime.ui.theme.GlassScope
 import com.kingzcheung.xime.ui.theme.KeyboardTopStyle
 import com.kingzcheung.xime.ui.theme.LiquidGlassStrength
 import com.kingzcheung.xime.ui.theme.liquidGlassSample
@@ -87,7 +86,6 @@ fun ThemeAppearanceSection() {
     var backgroundOpacity by remember(glassDark) {
         mutableFloatStateOf(FrostedGlassPreferences.read(context, glassDark).backgroundOpacity)
     }
-    var glassScope by remember { mutableStateOf(SettingsPreferences.getGlassScope(context)) }
     var liquidOn by remember { mutableStateOf(SettingsPreferences.isLiquidGlassEnabled(context)) }
     var liquidStrength by remember { mutableStateOf(SettingsPreferences.getLiquidGlassStrength(context)) }
     var topStyle by remember { mutableStateOf(SettingsPreferences.getKeyboardTopStyle(context)) }
@@ -125,25 +123,6 @@ fun ThemeAppearanceSection() {
                     )
                 }
                 if (glassOn) {
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        text = tr(R.string.s_boli_fanwei),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GlassScope.entries.forEach { option ->
-                            FilterChip(
-                                selected = glassScope == option,
-                                onClick = {
-                                    glassScope = option
-                                    SettingsPreferences.setGlassScope(context, option)
-                                },
-                                label = { Text(option.title) },
-                            )
-                        }
-                    }
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = "背景不透明度 ${(backgroundOpacity * 100).toInt()}%",

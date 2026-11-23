@@ -426,18 +426,6 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
         com.kingzcheung.xime.ui.theme.KeyboardTopStyles.current = style
     }
 
-    /** 玻璃作用范围：entire（整个盘面）/ candidate_bar（只有候选栏）。 */
-    const val KEY_GLASS_SCOPE = "glass_scope"
-
-    fun getGlassScope(context: Context): com.kingzcheung.xime.ui.theme.GlassScope =
-        com.kingzcheung.xime.ui.theme.GlassScope.of(
-            getPrefs(context).getString(KEY_GLASS_SCOPE, null)
-        )
-
-    fun setGlassScope(context: Context, scope: com.kingzcheung.xime.ui.theme.GlassScope) {
-        getPrefs(context).edit().putString(KEY_GLASS_SCOPE, scope.id).apply()
-    }
-
     /** 液态玻璃开关（与玻璃效果配合；开启时自动打开玻璃效果）。 */
     const val KEY_GLASS_LIQUID = "glass_liquid"
 

@@ -2219,14 +2219,6 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     .fillMaxWidth()
                                     .height(if (state.showKeyboardResize) (state.resizePreviewHeightDp + state.keyboardBottomPaddingDp + activeBottomDp).dp else (floatingCardContentHeight + state.keyboardBottomPaddingDp + overlayPanelExtra + activeBottomDp).dp)
                                     .padding(start = effectiveMarginStartDp.dp, end = effectiveMarginEndDp.dp)
-                                    // 玻璃范围「只有候选栏」：把顶部 48dp（候选栏条）留空，
-                                    // 由模糊子窗口只盖这一段，键帽与背板保持不透明
-                                    .padding(
-                                        top = if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled &&
-                                            SettingsPreferences.getGlassScope(this@XimeInputMethodService) ==
-                                            com.kingzcheung.xime.ui.theme.GlassScope.CANDIDATE_BAR
-                                        ) 48.dp else 0.dp
-                                    )
                                     .align(androidx.compose.ui.Alignment.BottomCenter)
                                     .onGloballyPositioned { c ->
                                         val b = c.boundsInRoot()
@@ -2251,10 +2243,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     )
                                     // 玻璃效果：背板按背景不透明度透出下层应用（浅色默认 0.2、深色 0.8）
                                     .alpha(
-                                        if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled &&
-                                            SettingsPreferences.getGlassScope(this@XimeInputMethodService) !=
-                                            com.kingzcheung.xime.ui.theme.GlassScope.CANDIDATE_BAR
-                                        ) {
+                                        if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
                                             currentGlassConfig().backgroundOpacity
                                         } else 1f
                                     )
@@ -3497,16 +3486,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         ensureGlassBlurAvailabilityListener()
         glassBlurRect = android.graphics.Rect(rect)
         val densityPx = resources.displayMetrics.density
-        val candidateOnly = SettingsPreferences.getGlassScope(this) ==
-            com.kingzcheung.xime.ui.theme.GlassScope.CANDIDATE_BAR
         val surfaceRect = when {
-            // 只有候选栏：背景层顶部被 padding 掉 48dp，onGloballyPositioned 给的是 padding 后的上沿，
-            // 模糊条要往上扩 48dp，才盖住候选栏那条
-            candidateOnly -> android.graphics.Rect(rect).apply {
-                val strip = (48f * densityPx).toInt()
-                bottom = top
-                top = (top - strip).coerceAtLeast(0)
-            }
             SettingsPreferences.roundedKeyboardBottom(this) ->
                 android.graphics.Rect(rect).apply { bottom = resources.displayMetrics.heightPixels }
             else -> rect
