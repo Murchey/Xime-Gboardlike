@@ -253,6 +253,9 @@ fun KeyboardView(
         FileLogger.i("XimeKeyboard", "keyboardState switched: $keyboardState, vs=$viewState, page=$page, ascii=${state.isAsciiMode}")
     }
 
+    // 手写找字面板开关：Column 与菜单覆盖层都要读写，提到函数作用域
+    var isHandwritingLookup by remember { mutableStateOf(false) }
+
     val kbColors = KeysConfigHelper.getKeyboardColors()
     val kbShadow = KeysConfigHelper.getKeyboardShadow()
     val kbKey = KeysConfigHelper.getKeyboardKeyConfig()
@@ -331,7 +334,6 @@ fun KeyboardView(
             var handwritingCandidates by remember { mutableStateOf<List<String>>(emptyList()) }
             var handwritingComments by remember { mutableStateOf<List<String>>(emptyList()) }
             var handwritingClearSignal by remember { mutableIntStateOf(0) }
-            var isHandwritingLookup by remember { mutableStateOf(false) }
             // 手写叠写状态真源：tailText=屏上手写会话尾部文本（含固化+活动字）；
             // activeLen=其中活动部分长度（可被识别结果替换/固化/撤销）；
             // lastSegLen=最后一次识别的段长（停顿定型不清零）——点选替换据此定位
@@ -1553,7 +1555,11 @@ fun KeyboardView(
                                         ToolbarButton.KEYBOARD_RESIZE -> callbacks.onKeyboardResize?.invoke()
                                         ToolbarButton.ONE_HANDED -> callbacks.onToggleOneHanded?.invoke()
                                         ToolbarButton.PRIVACY -> callbacks.onTogglePrivacyInput?.invoke()
-                                        ToolbarButton.HANDWRITING_LOOKUP -> callbacks.onToolbarEditingAction?.invoke("handwriting_lookup")
+                                        // 手写找字：菜单里直接切到手写面板（此前抛给编辑动作，没有处理器，点了没反应）
+                                        ToolbarButton.HANDWRITING_LOOKUP -> {
+                                            isHandwritingLookup = !isHandwritingLookup
+                                            viewModel.closeOverlay()
+                                        }
                                         ToolbarButton.EDIT -> viewModel.showOverlay(OverlayRoute.Edit)
                                         ToolbarButton.VOICE -> callbacks.onVoiceStickyToggle?.invoke()
                                         ToolbarButton.DEBUG_GLIDE -> {
