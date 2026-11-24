@@ -257,20 +257,6 @@ fun SettingsMainContent(
             }
 
             item {
-                SettingsSection(title = tr(R.string.s_guanyu), content = {
-                    SettingsItem(
-                        icon = Icons.TwoTone.Description,
-                        title = tr(R.string.s_shiyongwendang),
-                        subtitle = "ime.ximei.me",
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://ime.ximei.me"))
-                            context.startActivity(intent)
-                        },
-                    )
-                })
-            }
-
-            item {
                 SettingsGroup(title = stringResource(R.string.settings_section_appearance)) {
                     SettingsNavRow(
                         title = tr(R.string.s_zhutiyudingzhi),
