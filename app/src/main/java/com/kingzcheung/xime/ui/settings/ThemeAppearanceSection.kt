@@ -122,6 +122,19 @@ fun ThemeAppearanceSection() {
                     )
                 }
                 if (glassOn) {
+                    val blurAvailable = remember {
+                        android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && runCatching {
+                            context.getSystemService(android.view.WindowManager::class.java)?.isCrossWindowBlurEnabled == true
+                        }.getOrDefault(false)
+                    }
+                    if (!blurAvailable) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = tr(R.string.s_boli_mohu_bukeyong),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = "背景不透明度 ${(backgroundOpacity * 100).toInt()}%",

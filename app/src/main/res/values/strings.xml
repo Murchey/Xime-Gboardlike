@@ -1246,7 +1246,8 @@
     <string name="s_yetaiboli_fu">按键加一道朝光的亮边，按住时变亮；强度可选标准/加强/最强（会同时打开玻璃效果）</string>
     <string name="s_boli_fanwei">玻璃作用范围</string>
     <string name="s_bolixiaoguo">玻璃效果</string>
-    <string name="s_bolixiaoguo_fu">键面半透明，并加玻璃高光与亮边；开启时覆盖视觉样式的描边</string>
+    <string name="s_boli_mohu_bukeyong">当前系统未开启跨窗口模糊（安卓 12 以下或省电模式），键盘改用不透明背板</string>
+    <string name="s_bolixiaoguo_fu">键面半透明，透出下层应用画面；安卓 12+ 生效</string>
     <string name="s_waiguan_gaojishezhi">高级设置</string>
     <string name="s_anjianxingzhuang">按键形状</string>
     <string name="s_anjianxingzhuang_fu">键帽圆角形状：圆角 / 大圆角 / 方形 / 直角，所有布局与面板统一生效</string>

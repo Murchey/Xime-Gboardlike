@@ -84,6 +84,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 /** 工具条/工具面板统一数据项。 */
 data class MenuTool(
@@ -423,6 +424,10 @@ private fun ToolbarStrip(
     val outThreshold = with(density) { 64.dp.toPx() }
     val currentSlots by rememberUpdatedState(slots)
     val haptics = LocalHapticFeedback.current
+    // 换位动画（对齐 Gboard aach：200ms 线性位移）：记住每个按钮上次的横坐标，位置变了就从旧位置滑过去
+    val slideScope = androidx.compose.runtime.rememberCoroutineScope()
+    val lastSlotX = remember { mutableMapOf<String, Float>() }
+    val slotSlide = remember { mutableMapOf<String, androidx.compose.animation.core.Animatable<Float, androidx.compose.animation.core.AnimationVector1D>>() }
 
     // 「输入方案」固定在右端独立槽位：不参与中间那排的等距分布与互相换位
     val schemaPinned = slots.lastOrNull() == SCHEMA_SLOT_ID
@@ -445,15 +450,29 @@ private fun ToolbarStrip(
                     .padding(horizontal = 2.dp)
                     .size(40.dp)
                     .onGloballyPositioned { c ->
-                        positions[slot] = c.positionInRoot() +
-                            Offset(c.size.width / 2f, c.size.height / 2f)
+                        val root = c.positionInRoot()
+                        positions[slot] = root + Offset(c.size.width / 2f, c.size.height / 2f)
+                        val prev = lastSlotX[id]
+                        lastSlotX[id] = root.x
+                        if (prev != null && kotlin.math.abs(prev - root.x) > 1f) {
+                            val anim = slotSlide.getOrPut(id) { androidx.compose.animation.core.Animatable(0f) }
+                            slideScope.launch {
+                                anim.snapTo(anim.value + prev - root.x)
+                                anim.animateTo(
+                                    0f,
+                                    androidx.compose.animation.core.tween(200, easing = androidx.compose.animation.core.LinearEasing),
+                                )
+                            }
+                        }
                     }
                     .graphicsLayer {
                         // 拖动中的槽位本体隐藏：视觉由根层叠加的"磁贴"承担
                         alpha = if (slot == dragSlot) 0f else 1f
+                        translationX = slotSlide[id]?.value ?: 0f
                     }
                     .clip(CircleShape)
-                    .background(cardColor)
+                    // Gboard 普通态图标没有底色，按下才出圆形水波；编辑态保留底色，便于看出可拖动的槽位
+                    .then(if (editing) Modifier.background(cardColor) else Modifier)
                     // 长按拖动放在 clickable 外层：先拿到按下事件，单击仍交给 clickable
                     .pointerInput(id) {
                         detectDragGesturesAfterLongPress(
@@ -532,7 +551,7 @@ private fun ToolbarStrip(
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                ToolIcon(tool, textColor, 22.dp)
+                ToolIcon(tool, textColor, 24.dp)
             }
         }
     }
@@ -710,7 +729,7 @@ private fun ToolbarNormalBody(
     cardColor: Color,
     onEdit: () -> Unit,
 ) {
-    // 每页 2 列 × 3 行 = 6 个；HorizontalPager 横向翻页（Gboard 式翻页效果）
+    // 对齐 Gboard 两列三行胶囊面板
     val pageSize = 6
     val pages = candidateTools.chunked(pageSize)
     val pagerState = rememberPagerState(pageCount = { pages.size.coerceAtLeast(1) })
@@ -726,7 +745,6 @@ private fun ToolbarNormalBody(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 pageTools.chunked(2).forEach { rowTools ->
-                    // 每行等分高度（weight）→ 三行按钮大小平均，避免最后一行被裁小
                     Row(
                         Modifier.fillMaxWidth().weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -741,18 +759,21 @@ private fun ToolbarNormalBody(
         }
         // 底部：页码圆点居中，编辑入口为右下角描边胶囊（Gboard 工具栏样式）
         Box(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-            Row(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                repeat(pages.size.coerceAtLeast(1)) { index ->
-                    val active = index == pagerState.currentPage
-                    Box(
-                        modifier = Modifier
-                            .size(if (active) 8.dp else 6.dp)
-                            .clip(CircleShape)
-                            .background(textColor.copy(alpha = if (active) 0.9f else 0.3f))
-                    )
+            // 页码圆点：6dp、间距 6dp，只有一页时不显示（对齐 Gboard PageIndicatorView）
+            if (pages.size > 1) {
+                Row(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    repeat(pages.size) { index ->
+                        val active = index == pagerState.currentPage
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(textColor.copy(alpha = if (active) 0.9f else 0.3f))
+                        )
+                    }
                 }
             }
             val editShape = RoundedCornerShape(50)
@@ -815,6 +836,35 @@ private fun ToolIcon(tool: MenuTool, textColor: Color, size: Dp) {
     }
 }
 
+/** 工具面板网格格子：圆形图标底 + 下方单行文字（Gboard 面板样式，无右箭头）。 */
+@Composable
+private fun ToolGridCell(tool: MenuTool, textColor: Color, cardColor: Color, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { tool.action() }
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            Modifier.size(48.dp).clip(CircleShape).background(cardColor.copy(alpha = 0.88f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            ToolIcon(tool, textColor, 24.dp)
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            tool.label,
+            color = textColor,
+            fontSize = 13.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
 @Composable
 private fun ToolCard(tool: MenuTool, textColor: Color, cardColor: Color, modifier: Modifier = Modifier, onClick: () -> Unit = tool.action) {
     Row(
@@ -840,7 +890,7 @@ private fun ToolCard(tool: MenuTool, textColor: Color, cardColor: Color, modifie
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Icon(Icons.Default.ChevronRight, tr(R.string.s_xiayibu), tint = textColor.copy(alpha = .72f), modifier = Modifier.size(24.dp))
+        // 移除右箭头：Gboard 胶囊面板里无右箭头
     }
 }
 
@@ -881,12 +931,12 @@ private fun DraggableToolCard(
                 translationX = dragOffset.x
                 translationY = dragOffset.y
                 // 拖到上方栏目后本体隐藏（改由叠加层画小图标），避免"大卡片悬在栏上"
-                val lift = if (dragging) 1.08f else 1f
+                val lift = if (dragging) 1.04f else 1f
                 scaleX = lift
                 scaleY = lift
-                rotationZ = if (dragging && !overStrip) (dragOffset.x / 40f).coerceIn(-8f, 8f) else 0f
-                alpha = if (dragging && overStrip) 0f else if (dragging) 0.97f else 1f
-                shadowElevation = if (dragging && !overStrip) 18f else 0f
+                // rotationZ 已移除：Gboard 拖动时不旋转
+                alpha = if (dragging && overStrip) 0f else 1f
+                shadowElevation = if (dragging && !overStrip) 8f else 0f
                 shape = RoundedCornerShape(24.dp)
                 clip = dragging && !overStrip
             }
@@ -964,9 +1014,9 @@ private fun DragTileOverlay(
                 )
             }
             .graphicsLayer {
-                shadowElevation = if (big) 24f else 12f
-                scaleX = if (big) 1f else 1.12f
-                scaleY = if (big) 1f else 1.12f
+                shadowElevation = if (big) 16f else 6f
+                scaleX = 1f
+                scaleY = 1f
                 shape = if (big) RoundedCornerShape(24.dp) else CircleShape
                 clip = true
             }

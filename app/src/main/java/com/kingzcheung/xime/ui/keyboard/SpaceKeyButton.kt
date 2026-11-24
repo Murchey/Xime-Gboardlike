@@ -53,6 +53,9 @@ fun SpaceKeyButton(
     shadowEnabled: Boolean = true,
     shadowElevation: Dp = 1.dp,
     shadowShapeRadius: Dp = 8.dp,
+    /** 空格横划移动光标：每隔 [cursorDragStepDp] dp 触发一步。null = 禁用（语音/滑动输入时不传）。 */
+    onCursorMove: ((Int) -> Unit)? = null,
+    cursorDragStepDp: Float = 20f,
 ) {
     var isPressed by remember { mutableStateOf(false) }
     val longPressTimeout = 400L
@@ -73,7 +76,9 @@ fun SpaceKeyButton(
             .then(shadowModifier)
             .clip(keyShape)
             .keyPressFeedback(isPressed, backgroundColor, keyShape)
-            .pointerInput(Unit) {
+            // 横划光标：独立 pointerInput，优先于 tap/longpress 拦截水平滑动
+            // SpaceKeyButton の横划光标由外部 SpaceKey pointerInput 统一处理
+            .pointerInput(isVoiceMode) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     isPressed = true

@@ -2242,8 +2242,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                         )
                                     )
                                     // 玻璃效果：背板按背景不透明度透出下层应用（浅色默认 0.2、深色 0.8）
+                                    // 系统关了跨窗口模糊（省电/无障碍）时没有磨砂托底，背板退回不透明，避免文字压在清晰的宿主画面上
                                     .alpha(
-                                        if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled) {
+                                        if (com.kingzcheung.xime.ui.theme.GlassEffect.enabled && windowBlurAvailable()) {
                                             currentGlassConfig().backgroundOpacity
                                         } else 1f
                                     )

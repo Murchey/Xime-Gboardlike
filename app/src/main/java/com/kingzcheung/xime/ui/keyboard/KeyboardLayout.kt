@@ -557,6 +557,7 @@ fun KeyboardLayout(
                         suppressCursorMove = suppressCursorMove,
                         processSwipeState = { state, bounds -> processSwipeState(state, bounds) },
                         configVersion = cfgVer,
+                        onCursorMove = callbacks.onCursorMove,
                     )
                     // 行数由 layout.rows 驱动（最多 5 行，含可选数字行）；语音模式用固定占位行
                     if (isVoiceMode && !isVoiceSticky) {
@@ -845,6 +846,8 @@ internal class QwertyRowEnv(
     val ctrlFontSize: TextUnit? = null,
     /** 手势/宽度配置来源段名（主键盘 = "qwerty"；面板 = number / common_symbols…）。 */
     val section: String = "qwerty",
+    /** 空格横划移动光标：由 KeyboardCallbacks.onCursorMove 透传。 */
+    val onCursorMove: ((Int) -> Unit)? = null,
 )
 
 /** 功能键列宽：显式 `keys.<id>.width` 优先，否则内置默认。 */
@@ -1594,6 +1597,8 @@ private fun SpaceCell(env: QwertyRowEnv, modifier: Modifier) {
             }
         },
         onSwipeStateChange = { s, b -> env.processSwipeState(s, b) },
+        // 横划移动光标：无语音模式、且未配置左右滑动手势时启用
+        onCursorMove = if (!env.isVoiceMode && spaceLeft == null && spaceRight == null) env.onCursorMove else null,
     )
 }
 
@@ -2636,6 +2641,7 @@ private fun LandscapeKeyboardContent(
         landscape = compactStyle,
         fontSize = landscapeFontSize,
         swipeFontSize = landscapeSwipeFontSize,
+        onCursorMove = callbacks.onCursorMove,
     )
 
     // 行距由外层 provider 统一提供（手机横屏回退 2dp / 平板 4.25dp），此处不再覆盖。
@@ -2732,6 +2738,8 @@ private fun SpaceKey(
     longPressDrawableIds: List<Int> = emptyList(),
     onLongPressSelect: ((String) -> Unit)? = null,
     onSwipeStateChange: ((SwipeState, Rect) -> Unit)? = null,
+    /** 横划移动光标（Gboard 式）：非 null 时在无语音/滑动输入的前提下启用。 */
+    onCursorMove: ((Int) -> Unit)? = null,
 ) {
     val currentOnKeyPress by rememberUpdatedState(onKeyPress)
     val currentOnKeyPressDown by rememberUpdatedState(onKeyPressDown)
@@ -2762,9 +2770,48 @@ private fun SpaceKey(
     }
     val keyFontFamily = AppFonts.keyFontFamily
 
+    val currentOnCursorMove by rememberUpdatedState(onCursorMove)
     Box(
         modifier = modifier
             .fillMaxHeight()
+            // 横划光标：独立 pointerInput，优先于 tap/longpress 拦截水平滑动（Gboard 同款行为）
+            .then(
+                if (onCursorMove != null) {
+                    var accumPx = 0f
+                    val stepDp = 20f
+                    Modifier.pointerInput(Unit) {
+                        awaitEachGesture {
+                            // Initial pass：比 tap/longpress 优先收到事件；不消费 DOWN 保证点击仍触发
+                            val first = awaitFirstDown(requireUnconsumed = false,
+                                pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                            accumPx = 0f
+                            var isDragging = false
+                            loop@ while (true) {
+                                val event = awaitPointerEvent(
+                                    pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                val change = event.changes.firstOrNull() ?: break@loop
+                                if (change.changedToUpIgnoreConsumed()) break@loop
+                                val dx = change.position.x - change.previousPosition.x
+                                val dy = change.position.y - change.previousPosition.y
+                                if (!isDragging && kotlin.math.abs(dx) > kotlin.math.abs(dy) && kotlin.math.abs(dx) > 4f) {
+                                    isDragging = true
+                                }
+                                if (isDragging) {
+                                    change.consume()
+                                    accumPx += dx
+                                    val stepPx = stepDp * this.density
+                                    val steps = (accumPx / stepPx).toInt()
+                                    if (steps != 0) {
+                                        com.kingzcheung.xime.util.FileLogger.d("SpaceCursorDrag","steps=$steps dx=$dx accum=$accumPx")
+                                        currentOnCursorMove?.invoke(steps)
+                                        accumPx -= steps * stepPx
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else Modifier
+            )
             .pointerInput(isSttEnabled, voiceSticky, currentLongPressItems == null) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
