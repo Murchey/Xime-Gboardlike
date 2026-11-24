@@ -46,7 +46,6 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.twotone.EmojiEmotions
 import androidx.compose.material.icons.twotone.KeyboardAlt
 import androidx.compose.material.icons.twotone.KeyboardCapslock
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -2518,12 +2517,8 @@ private fun ShiftCapsKeyButton(
             },
         contentAlignment = Alignment.Center
     ) {
-        // shift 图标：未激活为空心描边箭头；单次点击填充实心；
-        // 双击锁定（CAPS）在实心箭头底部加一根横条。
-        val painter = when (shiftMode) {
-            ShiftMode.OFF -> rememberVectorPainter(Icons.Outlined.ArrowUpward)
-            else -> rememberVectorPainter(Icons.Filled.ArrowUpward)
-        }
+        // shift 图标：三态均用空心箭头；CAPS 在箭头底部加横条区分锁定。
+        val painter = rememberVectorPainter(Icons.Outlined.ArrowUpward)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
