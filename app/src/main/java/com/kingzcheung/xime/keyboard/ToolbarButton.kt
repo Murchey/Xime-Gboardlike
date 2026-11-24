@@ -12,19 +12,15 @@ import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.EmojiEmotions
 import androidx.compose.material.icons.rounded.FirstPage
 import androidx.compose.material.icons.rounded.KeyboardAlt
-import androidx.compose.material.icons.rounded.LastPage
-import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.Quickreply
 import androidx.compose.material.icons.rounded.SelectAll
-import androidx.compose.material.icons.rounded.Computer
-import androidx.compose.material.icons.rounded.Create
 import androidx.compose.material.icons.rounded.Mic
-import androidx.compose.material.icons.rounded.PictureInPicture
+import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Gesture
-import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.ZoomOutMap
@@ -93,11 +89,13 @@ enum class ToolbarButton(
 ) {
     SETTINGS("settings", tr(R.string.s_shezhi), Icons.Rounded.Settings),
     EMOJI("emoji", tr(R.string.s_biaoqing), Icons.Rounded.EmojiEmotions),
-    CLIPBOARD("clipboard", tr(R.string.s_jiantieban), Icons.AutoMirrored.Rounded.Assignment),
+    CLIPBOARD("clipboard", tr(R.string.s_jiantieban), Icons.Rounded.ContentPaste),
     SCHEMA("schema", tr(R.string.s_fanganxuanze), Icons.Rounded.KeyboardAlt),
     QUICK_PHRASE("quick_phrase", tr(R.string.s_kuaijiefasong), Icons.Rounded.Quickreply),
-    SYMBOL("symbol", tr(R.string.s_fuhao), Icons.Rounded.Paid),
-    FLOAT("float", tr(R.string.s_xuanfu), Icons.Rounded.PictureInPicture),
+    /** 符号面板：Tag（# 号）比 Paid（硬币）更贴近「符号」语义。 */
+    SYMBOL("symbol", tr(R.string.s_fuhao), Icons.Rounded.Tag),
+    /** 浮动键盘：OpenWith（四角箭头）比 PictureInPicture 更直观表达「可移动/浮动」。 */
+    FLOAT("float", tr(R.string.s_xuanfu), Icons.Rounded.OpenWith),
 
     /** 键盘尺寸调节：用缩放箭头图标，和文本选择编辑的“工”字图标区分。 */
     KEYBOARD_RESIZE("keyboard_resize", tr(R.string.s_jianpandiaojie), Icons.Rounded.ZoomOutMap),
