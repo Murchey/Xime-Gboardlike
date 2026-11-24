@@ -166,6 +166,9 @@ internal class ImeGlassBlurWindow(
         }
         window.decorView.setPadding(0, 0, 0, 0)
         window.decorView.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        // 明确告知合成层把模糊裁到窗口轮廓内，避免 ColorOS 等厂商系统模糊溢出窗口边界。
+        window.decorView.outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+        window.decorView.clipToOutline = true
         window.setContentView(View(windowContext))
         window.setWindowAnimations(0)
         return child
@@ -185,6 +188,7 @@ internal class ImeGlassBlurWindow(
         val corner = cornerRadiusPx.coerceAtMost(minOf(bounds.width(), bounds.height()) / 2f)
         if (appliedCornerRadius != corner) {
             background?.cornerRadius = corner
+            // 重新触发 outline 计算，让 clipToOutline 裁剪区域随圆角更新
             window.decorView.invalidateOutline()
             appliedCornerRadius = corner
         }
