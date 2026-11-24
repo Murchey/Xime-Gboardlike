@@ -3956,6 +3956,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         } else {
             null
         }
+<<<<<<< HEAD
         if (transformed != null) {
             sessionController.applyComposition(
                 composition.copy(candidates = transformed.candidates.toTypedArray()),
@@ -3963,6 +3964,135 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             )
         } else {
             sessionController.applyComposition(composition)
+=======
+
+        // 非 T9 方案（如双拼）使用原始输入文本显示，
+        // 避免显示 rime speller 展开后的编码（如双拼 i → ch）
+        val isT9Schema = isT9Schema(uiState.value.currentSchemaId)
+        val displayText = if (isT9Schema) {
+            val preeditDisplay = if (preeditText.isNotEmpty()) preeditText else inputText
+            PreeditMergeHelper.mergePartialCommitText(t9PartialCommitTexts, preeditDisplay)
+        } else {
+            inputText
+        }
+        // T9 模式下，只要还有 partial commit 未最终上屏，就应保持 composing 状态，
+        // 以便预编辑区域继续显示已提交的候选文本（如场景 6 BS5 的"策"）
+        val isComposing = inputText.isNotEmpty() || (isT9Schema && t9PartialCommitTexts.isNotEmpty())
+
+        candidateState.value = candidateState.value.copy(
+            inputText = displayText,
+            preeditText = displayText,
+            candidates = filteredTexts,
+            candidateComments = filteredComments,
+            isComposing = isComposing,
+            associationCandidates = if ((isAsciiMode || !isChineseMode) && pendingEnglish.isEmpty()) emptyList() else candidateState.value.associationCandidates,
+            isShowingRecentClipboard = false,
+            hasNextPage = hasNextPage,
+            hasPrevPage = hasPrevPage
+        )
+        uiState.value = uiState.value.copy(isAsciiMode = isAsciiMode)
+
+        // 悬浮候选栏通过 Compose 内联显示（见 onCreateInputView），拖拽由 pointerInput 处理
+        
+        if (pendingEnglish.isNotEmpty()) {
+            serviceScope.launch {
+                val candidates = predictionManager.getEnglishAssociations(pendingEnglish, PredictionManager.MAX_ASSOCIATION_COUNT)
+                Log.d(TAG, "English association for pending '$pendingEnglish': ${candidates.joinToString()}")
+                withContext(Dispatchers.Main) {
+                    candidateState.value = candidateState.value.copy(associationCandidates = candidates)
+                }
+            }
+        }
+    }
+
+    private fun updateUIWithResult(result: com.kingzcheung.xime.rime.RimeProcessResult) {
+        val t0 = System.nanoTime()
+        val isAsciiMode = result.isAsciiMode
+        val candidatesWithComments = result.candidates
+
+        val pendingEnglish = candidateState.value.pendingEnglishText
+
+        val tFilter = System.nanoTime()
+        val (filteredTexts, filteredComments) = if (isAsciiMode) {
+            val filtered = candidatesWithComments.filterNot { candidate ->
+                candidate.text.any { it.code in 0x4E00..0x9FFF }
+            }
+            filtered.map { it.text } to filtered.map { it.comment }
+        } else {
+            candidatesWithComments.map { it.text } to candidatesWithComments.map { it.comment }
+        }
+
+        // 非 T9 方案（如双拼）使用原始输入文本显示，
+        // 避免显示 rime speller 展开后的编码（如双拼 i → ch）
+        val isT9Schema = isT9Schema(uiState.value.currentSchemaId)
+        val displayText = if (isT9Schema) {
+            val preeditDisplay = if (result.preeditText.isNotEmpty()) result.preeditText else result.inputText
+            PreeditMergeHelper.mergePartialCommitText(t9PartialCommitTexts, preeditDisplay)
+        } else {
+            result.inputText
+        }
+        val isComposing = result.inputText.isNotEmpty() || (isT9Schema && t9PartialCommitTexts.isNotEmpty())
+
+        candidateState.value = candidateState.value.copy(
+            inputText = displayText,
+            preeditText = displayText,
+            candidates = filteredTexts,
+            candidateComments = filteredComments,
+            isComposing = isComposing,
+            associationCandidates = if ((isAsciiMode || !isChineseMode) && pendingEnglish.isEmpty()) emptyList() else candidateState.value.associationCandidates,
+            isShowingRecentClipboard = false,
+            hasNextPage = result.hasNextPage,
+            hasPrevPage = result.hasPrevPage
+        )
+        uiState.value = uiState.value.copy(isAsciiMode = isAsciiMode)
+        
+        if (pendingEnglish.isNotEmpty()) {
+            serviceScope.launch {
+                val candidates = predictionManager.getEnglishAssociations(pendingEnglish, PredictionManager.MAX_ASSOCIATION_COUNT)
+                Log.d(TAG, "English association for pending '$pendingEnglish': ${candidates.joinToString()}")
+                withContext(Dispatchers.Main) {
+                    candidateState.value = candidateState.value.copy(associationCandidates = candidates)
+                }
+            }
+        }
+        
+    }
+
+    private fun updateSchemaName() {
+        val context = this@XimeInputMethodService
+        serviceScope.launch(Dispatchers.IO) {
+            val page = keyboardViewModel.page.value
+            val isHandwritingMode = (page as? com.kingzcheung.xime.keyboard.KeyboardPage.Main)?.type == com.kingzcheung.xime.keyboard.MainType.HANDWRITING
+            val currentSchemaId = if (isHandwritingMode) {
+                HANDWRITING_SCHEMA_ID
+            } else {
+                rimeEngine.getCurrentSchema()
+            }
+            val name = SchemaManager.getSchemaDisplayName(context, currentSchemaId)
+
+            val enabledIds = SchemaManager.getEnabledSchemas(context)
+            val allSchemas = SchemaManager.discoverSchemas(context)
+            val schemas = allSchemas
+                .filter { meta -> meta.schemaId in enabledIds && SchemaManager.isSchemaCompiled(context, meta.schemaId) }
+                .map { meta ->
+                    com.kingzcheung.xime.settings.SchemaInfo(
+                        schemaId = meta.schemaId,
+                        name = meta.name,
+                        version = meta.version,
+                        author = meta.author,
+                        description = meta.description,
+                        isDownloaded = true
+                    )
+                }
+
+            withContext(Dispatchers.Main) {
+                uiState.value = uiState.value.copy(
+                    schemaName = name ?: currentSchemaId,
+                    currentSchemaId = currentSchemaId,
+                    schemas = schemas
+                )
+            }
+>>>>>>> 237d19b1 (fix(XimeInputMethodService): 修复非T9方案下显示展开后的编码问题)
         }
     }
 
