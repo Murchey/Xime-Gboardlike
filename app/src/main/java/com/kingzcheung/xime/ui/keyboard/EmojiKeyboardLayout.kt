@@ -32,16 +32,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -128,6 +134,26 @@ fun EmojiKeyboardLayout(
         startPage + selectedSubCategoryIndex.coerceIn(0, maxOf(0, groupSize))
     }
     val totalPages = displayBuiltinCategories.size + pluginCategories.size
+
+    // 搜索状态：非空时过滤全部内置 emoji
+    var searchQuery by remember { mutableStateOf("") }
+    val searchResults by remember(searchQuery, displayBuiltinCategories) {
+        derivedStateOf {
+            if (searchQuery.isBlank()) emptyList()
+            else {
+                val q = searchQuery.trim()
+                // 收集所有匹配分类（分类名包含查询词）的 emoji + 直接包含查询词的 emoji
+                val fromCategories = displayBuiltinCategories
+                    .filter { cat -> cat.name.contains(q, ignoreCase = true) }
+                    .flatMap { it.emojis }
+                val direct = displayBuiltinCategories
+                    .flatMap { it.emojis }
+                    .filter { emoji -> emoji.contains(q) }
+                (fromCategories + direct).distinct()
+            }
+        }
+    }
+    val isSearching = searchQuery.isNotBlank()
 
     // 布局按父容器真实宽度自适应（悬浮卡片/键盘收窄/分屏的容器宽 ≠ 屏幕宽），
     // 不再读屏幕方向：宽容器（横屏全屏）用大边距与更多列，其余按竖屏形态
@@ -257,6 +283,61 @@ fun EmojiKeyboardLayout(
             }
         }
 
+        // 搜索栏：在顶层 tab 下方
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = if (isWide) 50.dp else 8.dp)
+                .padding(bottom = 4.dp)
+                .height(32.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(iconButtonContainer),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = textColor.copy(alpha = 0.5f),
+                modifier = Modifier.padding(start = 8.dp).size(16.dp),
+            )
+            BasicTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.weight(1f).padding(horizontal = 6.dp),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    color = textColor,
+                    fontSize = 13.sp,
+                ),
+                decorationBox = { inner ->
+                    if (searchQuery.isEmpty()) {
+                        Text(
+                            text = tr(R.string.s_sousuo),
+                            color = textColor.copy(alpha = 0.4f),
+                            fontSize = 13.sp,
+                        )
+                    }
+                    inner()
+                },
+            )
+            if (searchQuery.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .tolerantClick { searchQuery = "" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = null,
+                        tint = textColor.copy(alpha = 0.5f),
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+            }
+        }
+
         val pagerState = rememberPagerState(
             initialPage = currentPageIndex,
             pageCount = { totalPages }
@@ -289,7 +370,50 @@ fun EmojiKeyboardLayout(
             }
         }
 
-        HorizontalPager(
+        if (isSearching) {
+            // 搜索结果网格
+            if (searchResults.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = tr(R.string.s_meiyou_sousuo_jieguo),
+                        color = textColor.copy(alpha = 0.5f),
+                        fontSize = 13.sp,
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = if (isWide) 50.dp else 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    items(searchResults.chunked(emojiColumns)) { rowEmojis ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            rowEmojis.forEach { emoji ->
+                                EmojiButton(
+                                    emoji = emoji,
+                                    onClick = {
+                                        RecentUsageStore.record(context, RecentUsageStore.KEY_RECENT_EMOJIS, emoji)
+                                        onEmojiSelect(emoji)
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            repeat(emojiColumns - rowEmojis.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+        } else HorizontalPager(
             state = pagerState,
             modifier = Modifier
                 .fillMaxWidth()
@@ -420,7 +544,7 @@ fun EmojiKeyboardLayout(
             }
         }
 
-        // 底部：子分类 Tab 或留空 + 删除按钮
+        // 底部：子分类 Tab 或留空 + 删除按钮（搜索时只保留删除键）
         Row(
             modifier = Modifier
                 .fillMaxWidth()

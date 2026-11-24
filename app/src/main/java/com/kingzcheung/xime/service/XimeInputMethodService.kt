@@ -2287,9 +2287,12 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                         // 玻璃：键盘背后那块系统模糊面按"窗口坐标"跟键盘矩形走
                                         val origin = c.positionInWindow()
                                         val size = c.size
+                                        // 候选栏上方 overlay 面板（工具面板/快捷发送）撑高了容器；
+                                        // 模糊面只跟键盘本体，从 overlayPanelExtra 像素处才开始。
+                                        val overlayOffsetPx = with(density) { overlayPanelExtra.dp.toPx() }.toInt()
                                         updateGlassBlur(
                                             android.graphics.Rect(
-                                                origin.x.toInt(), origin.y.toInt(),
+                                                origin.x.toInt(), origin.y.toInt() + overlayOffsetPx,
                                                 origin.x.toInt() + size.width, origin.y.toInt() + size.height,
                                             )
                                         )
