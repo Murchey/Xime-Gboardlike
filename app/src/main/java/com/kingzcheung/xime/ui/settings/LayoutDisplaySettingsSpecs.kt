@@ -145,6 +145,16 @@ object LayoutDisplaySettingsSpecs {
                 DoublePinyinFinals.isDoublePinyin(currentSchema)
             },
         ),
+        SettingSpec.Switch(
+            key = SettingsPreferences.KEY_DOUBLE_PINYIN_RAW_OUTPUT,
+            titleRes = R.string.s_shuangpin_xianshi_yuanshishuchu,
+            descriptionRes = R.string.s_shuangpin_xianshi_yuanshishuchu_fu,
+            default = false,
+            // 仅双拼方案下显示
+            visibility = SettingVisibility.whenTrue {
+                DoublePinyinFinals.isDoublePinyin(currentSchema)
+            },
+        ),
         // 字母大小写用字符串枚举存值（upper/lower），开关只是它的视图
         SettingSpec.Switch(
             key = SettingsPreferences.KEY_LETTER_DISPLAY_CASE,

@@ -570,6 +570,9 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
     /** 双拼方案下用韵母替换字母键右上角符号（默认关闭）。 */
     const val KEY_SHOW_DOUBLE_PINYIN_FINALS = "show_double_pinyin_finals"
 
+    /** 双拼显示原始输出：编码气泡直接显示键入串（如 vjkd）而非转换串（默认关闭）。 */
+    const val KEY_DOUBLE_PINYIN_RAW_OUTPUT = "double_pinyin_raw_output"
+
     /** 候选之间的竖分割线（Gboard 风格，默认开启）。 */
     const val KEY_CANDIDATE_DIVIDER = "candidate_divider"
 
@@ -699,6 +702,10 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
     fun showDoublePinyinFinals(context: Context): Boolean =
         getPrefs(context).getBoolean(KEY_SHOW_DOUBLE_PINYIN_FINALS, false)
 
+    /** 双拼显示原始输出：编码气泡显示键入串而非 Rime 转换串（默认关闭）。 */
+    fun showDoublePinyinRawOutput(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_DOUBLE_PINYIN_RAW_OUTPUT, false)
+
     /**
      * 候选之间是否画竖分割线。
      *
@@ -822,6 +829,10 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
 
     fun setShowDoublePinyinFinals(context: Context, show: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_SHOW_DOUBLE_PINYIN_FINALS, show).apply()
+    }
+
+    fun setDoublePinyinRawOutput(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_DOUBLE_PINYIN_RAW_OUTPUT, enabled).apply()
     }
 
     fun getLetterDisplayCase(context: Context): String =

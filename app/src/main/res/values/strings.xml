@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">XimeGboard</string>
     <string name="subtype_label_wubi">XimeGboard 输入法</string>
     <string name="subtype_label_pinyin">拼音</string>
@@ -399,6 +399,8 @@
     <string name="s_chongqiyingshi">需要重启应用后生效</string>
     <string name="s_lijichongqi">立即重启</string>
     <string name="s_shuangpin_yunmu_tihuan_fuhao">字母键显示双拼韵母</string>
+    <string name="s_shuangpin_xianshi_yuanshishuchu">双拼显示原始输出</string>
+    <string name="s_shuangpin_xianshi_yuanshishuchu_fu">编码气泡直接显示键入的字母（如 vjkd），而非转换后的全拼</string>
     <string name="s_shuangpin_yunmu_tihuan_fuhao_fu">用当前双拼方案的韵母替换键面右上角符号</string>
     <string name="s_daochu_rime_shuju_fu">保存到 Download/XimeGboard/rime，可直接浏览、复制、编辑</string>
     <string name="s_yidaochu_rime_shuju">已导出 %1$d 个文件到 %2$s</string>

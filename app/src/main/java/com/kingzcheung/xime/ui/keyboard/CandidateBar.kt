@@ -260,9 +260,13 @@ fun CandidateBar(
 
     // 编码气泡：候选栏内计算编码文本后回写此状态，供 Column 的 drawBehind 读取绘制。
     // drawBehind 在下一帧读取最新值，无需同步；初始值取自当前 state 保证首帧即显示。
+    val showRawPinyin = SettingsPreferences.showDoublePinyinRawOutput(context)
     var preeditBubbleText by remember(state) {
-        mutableStateOf((state as? CandidateBarState.ChineseCandidates)?.preeditText
-            ?: (state as? CandidateBarState.ChineseCandidates)?.inputText ?: "")
+        val cs = state as? CandidateBarState.ChineseCandidates
+        mutableStateOf(
+            if (showRawPinyin) cs?.inputText ?: ""
+            else cs?.preeditText?.takeIf { it.isNotEmpty() } ?: cs?.inputText ?: ""
+        )
     }
     var preeditBubbleCaret by remember(state) {
         mutableStateOf((state as? CandidateBarState.ChineseCandidates)?.preeditCaretPos ?: -1)
@@ -345,8 +349,9 @@ fun CandidateBar(
             return@Column
         }
 
-        val displayText = (state as? CandidateBarState.ChineseCandidates)?.preeditText
-            ?: (state as? CandidateBarState.ChineseCandidates)?.inputText ?: ""
+        val cs = state as? CandidateBarState.ChineseCandidates
+        val displayText = if (showRawPinyin) cs?.inputText ?: ""
+            else cs?.preeditText?.takeIf { it.isNotEmpty() } ?: cs?.inputText ?: ""
         // 编码显示已改为候选栏顶部的悬浮气泡（drawBehind 绘制，见 drawPreeditBubble），
         // 栏内不再为编码保留布局空间——打字态与联想态的候选行共用同一垂直位置。
         preeditBubbleText = displayText
