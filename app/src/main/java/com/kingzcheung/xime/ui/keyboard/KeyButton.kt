@@ -1087,6 +1087,8 @@ fun SwipeableKeyButton(
                         // 滑动已升级时跳过长按气泡：保留纯长按（手指静止），只抑制滑动过程中的误触发
                         if (glideCtxLocal.enabled && glideCtxLocal.controller?.isGliding == true) return@launch
                         localLongPressTriggered = true
+                        // 长按气泡已激活：取消 glide，防止后续横划滑选符号被误解码为滑动输入
+                        if (glideCtxLocal.enabled) glideCtxLocal.controller?.onCancel()
                         view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                         currentOnSwipeStateChange?.invoke(
                             SwipeState(

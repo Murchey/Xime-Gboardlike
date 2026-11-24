@@ -2170,14 +2170,13 @@ fun KeyboardRowWithConfig(
     keys.forEachIndexed { index, key ->
             // Gboard 符号风格：键面角标/上滑值在渲染时按当前偏好现算，不依赖配置缓存
             val gboardHint = if (localGboardHints) {
-                val baseKey = if (key.length in 1..2 && key.all { it.isLetter() }) {
-                    key.first().toString()
-                } else {
-                    key
+                // 仅单字母键有对应 Gboard 数字符号；合并键（18键 "we"/"rt" 等）不取
+                val baseKey = if (key.length == 1 && key[0].isLetter()) key else null
+                baseKey?.let {
+                    com.kingzcheung.xime.settings.SymbolHintStyles.hintFor(
+                        SettingsPreferences.SYMBOL_HINT_GBOARD, it,
+                    )
                 }
-                com.kingzcheung.xime.settings.SymbolHintStyles.hintFor(
-                    SettingsPreferences.SYMBOL_HINT_GBOARD, baseKey,
-                )
             } else {
                 null
             }
@@ -2269,7 +2268,8 @@ fun KeyboardRowWithConfig(
                 doublePinyinFinals[key[0].lowercaseChar()].orEmpty()
             } else null
             val effectiveCornerHint = finalHint ?: cornerHintLabel
-            val hideLetterCornerHint = finalHint == null && key.length == 1 && key[0].isLetter() && !showLetterHintSymbols
+            // 合并键（18键 "we"/"rt" 等，length=2）同样算字母键，受「字母上方符号」开关控制
+            val hideLetterCornerHint = finalHint == null && key.length in 1..2 && key.all { it.isLetter() } && !showLetterHintSymbols
             val hideCornerHint = hideMainLabel || hideLetterCornerHint
             // 键面大小写：大写固定 / 小写固定 / 小写跟随 Shift（默认）。
             // 合并键（"qw"）同样算字母键：键面大小写设置要作用到它们身上
@@ -2771,6 +2771,8 @@ private fun SpaceKey(
     val keyFontFamily = AppFonts.keyFontFamily
 
     val currentOnCursorMove by rememberUpdatedState(onCursorMove)
+    // 长按气泡激活时禁止空格横划移光标（共享标志，由长按气泡分支写入）
+    val spaceLongPressActive = remember { androidx.compose.runtime.mutableStateOf(false) }
     Box(
         modifier = modifier
             .fillMaxHeight()
@@ -2785,12 +2787,18 @@ private fun SpaceKey(
                             val first = awaitFirstDown(requireUnconsumed = false,
                                 pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                             accumPx = 0f
+                            spaceLongPressActive.value = false
                             var isDragging = false
                             loop@ while (true) {
                                 val event = awaitPointerEvent(
                                     pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                                 val change = event.changes.firstOrNull() ?: break@loop
                                 if (change.changedToUpIgnoreConsumed()) break@loop
+                                // 长按气泡已激活：停止光标积累，让气泡分支独占横划
+                                if (spaceLongPressActive.value) {
+                                    accumPx = 0f
+                                    continue@loop
+                                }
                                 val dx = change.position.x - change.previousPosition.x
                                 val dy = change.position.y - change.previousPosition.y
                                 if (!isDragging && kotlin.math.abs(dx) > kotlin.math.abs(dy) && kotlin.math.abs(dx) > 4f) {
@@ -2838,6 +2846,7 @@ private fun SpaceKey(
                         val longPressJob = scope.launch {
                             delay(longPressBubbleDelayMs.toLong())
                             triggered = true
+                            spaceLongPressActive.value = true
                             view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                             onSwipeStateChange?.invoke(
                                 SwipeState(
@@ -2900,6 +2909,7 @@ private fun SpaceKey(
                         } finally {
                             longPressJob.cancel()
                             isPressed = false
+                            spaceLongPressActive.value = false
                             onSwipeStateChange?.invoke(SwipeState(), buttonBounds)
                             // 没等到抬手就结束（触摸流取消/协程被重挂）时兜底上屏空格
                             if (!completed && !triggered) {

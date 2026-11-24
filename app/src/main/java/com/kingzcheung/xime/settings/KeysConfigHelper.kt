@@ -2454,9 +2454,9 @@ object KeysConfigHelper {
         val style = SettingsPreferences.getSymbolHintStyle(context)
         if (style != SettingsPreferences.SYMBOL_HINT_GBOARD) return map
         return map.mapValues { (key, binding) ->
-            // 合并键（"as"、"df"）按组内首字母取符号；其它键原样保留
-            val baseKey = if (key.length in 1..2 && key.all { it.isLetter() }) key.first().toString() else key
-            val hint = com.kingzcheung.xime.settings.SymbolHintStyles.hintFor(style, baseKey)
+            // 合并键（18键 "we"/"rt" 等）无对应 Gboard 数字符号，跳过覆盖
+            val baseKey = if (key.length == 1 && key[0].isLetter()) key else null
+            val hint = baseKey?.let { com.kingzcheung.xime.settings.SymbolHintStyles.hintFor(style, it) }
             if (hint == null) {
                 binding
             } else {
