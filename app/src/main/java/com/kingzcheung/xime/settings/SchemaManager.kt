@@ -757,8 +757,12 @@ object SchemaManager {
     internal fun parseSchemaYaml(file: File): SchemaMeta? {
         return try {
             val text = file.readText().trimStart('\uFEFF')
+<<<<<<< HEAD
             val schemaBlock = extractSchemaBlock(text) ?: return null
             val entry = yaml.decodeFromString(SchemaYaml.serializer(), schemaBlock).schema
+=======
+            val entry = yaml.decodeFromString(SchemaYaml.serializer(), text).schema
+>>>>>>> 88500bd2 (fix(settings): 修复文件读取时BOM字符导致的解析问题)
             if (entry.schemaId.isEmpty()) return null
 
             val author = parseAuthorFromText(text)
@@ -771,7 +775,11 @@ object SchemaManager {
                 description = entry.description ?: ""
             )
         } catch (e: Exception) {
+<<<<<<< HEAD
             try { Log.w(TAG, "Failed to parse schema file: ${file.name}, error=${e.message}, skip", e) } catch (_: Exception) {}
+=======
+            try { Log.w(TAG, "Failed to parse schema file: ${file.name}, skip") } catch (_: Exception) {}
+>>>>>>> 88500bd2 (fix(settings): 修复文件读取时BOM字符导致的解析问题)
             null
         }
     }
@@ -857,8 +865,13 @@ object SchemaManager {
         if (!file.exists()) return null
         val text = file.readText().trimStart('\uFEFF')
         return try {
+<<<<<<< HEAD
             val entry = yaml.decodeFromString(SchemaYaml.serializer(), text).schema
             entry.name.ifEmpty { nameFromText(text) }
+=======
+            val entry = yaml.decodeFromString(SchemaYaml.serializer(), file.readText().trimStart('\uFEFF')).schema
+            entry.name.ifEmpty { null }
+>>>>>>> 88500bd2 (fix(settings): 修复文件读取时BOM字符导致的解析问题)
         } catch (e: Exception) {
             // kaml 会因文件里某些段落（例如标点表里的 tab）整份解析失败，
             // 这种情况直接抠 schema 块里的 name，别让方案名变成空标签。

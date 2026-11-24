@@ -2333,6 +2333,10 @@ object KeysConfigHelper {
         if (!file.exists()) return null
         return try {
             val text = file.readText().trimStart('\uFEFF')
+<<<<<<< HEAD
+=======
+            Log.d(TAG, "readUserDataText: read ${text.length} chars, first 80=${text.take(80)}")
+>>>>>>> 88500bd2 (fix(settings): 修复文件读取时BOM字符导致的解析问题)
             text
         } catch (e: Exception) {
             Log.w(TAG, "readUserDataText: failed", e)
