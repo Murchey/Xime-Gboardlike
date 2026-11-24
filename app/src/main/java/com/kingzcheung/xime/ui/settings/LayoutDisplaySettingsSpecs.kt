@@ -136,6 +136,25 @@ object LayoutDisplaySettingsSpecs {
             },
         ),
         SettingSpec.Switch(
+            key = SettingsPreferences.KEY_WUBI_Z_REVERSE_LOOKUP,
+            titleRes = R.string.s_wubi_z_fancha,
+            descriptionRes = R.string.s_wubi_z_fancha_fu,
+            default = false,
+            visibility = SettingVisibility.whenTrue {
+                WubiSchemas.isWubi(currentSchema)
+            },
+        ),
+        SettingSpec.Switch(
+            key = SettingsPreferences.KEY_WUBI_REVERSE_LOOKUP_SHOW_CODE,
+            titleRes = R.string.s_wubi_fancha_xianshi_bianma,
+            descriptionRes = R.string.s_wubi_fancha_xianshi_bianma_fu,
+            default = true,
+            visibility = SettingVisibility.all(
+                SettingVisibility.Flag(SettingsPreferences.KEY_WUBI_Z_REVERSE_LOOKUP, true),
+                SettingVisibility.whenTrue { WubiSchemas.isWubi(currentSchema) },
+            ),
+        ),
+        SettingSpec.Switch(
             key = SettingsPreferences.KEY_SHOW_DOUBLE_PINYIN_FINALS,
             titleRes = R.string.s_shuangpin_yunmu_tihuan_fuhao,
             descriptionRes = R.string.s_shuangpin_yunmu_tihuan_fuhao_fu,

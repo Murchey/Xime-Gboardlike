@@ -1343,6 +1343,10 @@
     <string name="s_houxuanfengexian">候选分隔竖线</string>
     <string name="s_houxuanfengexian_fu">在候选之间显示竖线（Gboard 风格）。关闭后与上游排版一致，一屏可多显示候选。</string>
     <string name="s_wubi_lianda">五笔连打</string>
+    <string name="s_wubi_z_fancha">Z 键拼音反查</string>
+    <string name="s_wubi_z_fancha_fu">五笔模式下按 Z 键进入全拼反查，可通过拼音打出字</string>
+    <string name="s_wubi_fancha_xianshi_bianma">反查展示五笔编码</string>
+    <string name="s_wubi_fancha_xianshi_bianma_fu">反查候选词旁显示对应的五笔编码注释</string>
     <string name="s_wubi_lianda_fu">打出的字先留在候选栏攒成一句，按空格或回车一次性上屏；退格逐字删。适合整句输入后再改。</string>
     <string name="os_section">对象存储</string>
     <string name="os_notice">当前仅支持 XimeGboard 的 Android 版本之间互相同步数据，暂无电脑版，不能与电脑同步。</string>

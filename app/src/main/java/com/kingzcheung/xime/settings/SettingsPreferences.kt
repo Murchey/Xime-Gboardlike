@@ -601,6 +601,12 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
     /** 五笔连打：打出的字先攒在候选栏，不逐字上屏（默认关闭）。 */
     const val KEY_WUBI_CHAINED_INPUT = "wubi_chained_input"
 
+    /** 五笔 z 键拼音反查：输入 z 后进入全拼反查模式（默认关闭）。 */
+    const val KEY_WUBI_Z_REVERSE_LOOKUP = "wubi_z_reverse_lookup"
+
+    /** 反查模式展示五笔编码注释（默认开启）。 */
+    const val KEY_WUBI_REVERSE_LOOKUP_SHOW_CODE = "wubi_reverse_lookup_show_code"
+
     /** 字母键显示大小写：小写 / 大写；小写时可跟随 Shift。 */
     const val KEY_LETTER_DISPLAY_CASE = "letter_display_case"
     const val KEY_LETTER_CASE_FOLLOW_SHIFT = "letter_case_follow_shift"
@@ -825,6 +831,21 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
 
     fun setWubiChainedInput(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_WUBI_CHAINED_INPUT, enabled).apply()
+    }
+
+    fun isWubiZReverseLookupEnabled(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_WUBI_Z_REVERSE_LOOKUP, false)
+
+    fun setWubiZReverseLookupEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_WUBI_Z_REVERSE_LOOKUP, enabled).apply()
+    }
+
+    /** 反查结果是否在候选注释里附上对应的五笔编码（默认开启）。 */
+    fun isWubiReverseLookupShowCode(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_WUBI_REVERSE_LOOKUP_SHOW_CODE, true)
+
+    fun setWubiReverseLookupShowCode(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_WUBI_REVERSE_LOOKUP_SHOW_CODE, enabled).apply()
     }
 
     fun setShowDoublePinyinFinals(context: Context, show: Boolean) {

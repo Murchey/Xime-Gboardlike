@@ -14,6 +14,7 @@ import com.kingzcheung.xime.rime.resolveRimeCandidateIndex
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.ui.keyboard.KeyboardLayoutState
 import com.kingzcheung.xime.ui.keyboard.isT9Schema
+import com.kingzcheung.xime.settings.WubiSchemas
 import com.kingzcheung.xime.util.FileLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -38,6 +39,8 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
     // 引擎冷启动/切方案竞态期：按键先入队，引擎就绪后按序补发，避免"切换输入法后短时间无法打字"。
     private val pendingKeys = ArrayDeque<Pair<String, Boolean>>()
     private var flushScheduled = false
+    /** 五笔 z 键拼音反查：当前反查编码（空串 = 不在反查模式）。 */
+    @Volatile private var wubiReverseLookupInput = ""
 
     /** 引擎是否已能接收按键（已初始化且会话就绪）。 */
     private fun engineReady(): Boolean {
@@ -719,6 +722,50 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                         val isLetter = key.matches(Regex("[a-zA-Z]"))
                         val isShiftedChinese = isShifted && isChinese && isLetter
 
+                        // ── 五笔 z 键拼音反查 ──────────────────────────────────────────────
+                        val currentSchemaForZ = state.currentSchemaId
+                        val zReverseLookupEnabled = isChinese && !isShifted &&
+                            WubiSchemas.isWubi(currentSchemaForZ) &&
+                            SettingsPreferences.isWubiZReverseLookupEnabled(service)
+                        if (zReverseLookupEnabled) {
+                            val rlInput = wubiReverseLookupInput
+                            if (key == "z" && rlInput.isEmpty() && !candState.isComposing &&
+                                candState.inputText.isEmpty()
+                            ) {
+                                // 进入反查模式：记录 z，不下传引擎
+                                wubiReverseLookupInput = "z"
+                                service.candidateState.value = service.candidateState.value.copy(
+                                    inputText = "z",
+                                    preeditText = "z〔拼音〕",
+                                    isComposing = true,
+                                    candidates = emptyList(),
+                                    candidateComments = emptyList(),
+                                )
+                                return@launch
+                            } else if (rlInput.isNotEmpty() && isLetter) {
+                                // 反查模式追加字母
+                                val newRlInput = rlInput + key.lowercase()
+                                wubiReverseLookupInput = newRlInput
+                                val pinyinQuery = newRlInput.substring(1) // 去掉前缀 z
+                                val showCode = SettingsPreferences.isWubiReverseLookupShowCode(service)
+                                val results = if (pinyinQuery.isEmpty()) emptyArray()
+                                    else service.rimeEngine.bypassLookup(pinyinQuery, 50)
+                                val cands = results.map { it.text }
+                                val comments = results.map { if (showCode) it.comment else "" }
+                                service.candidateState.value = service.candidateState.value.copy(
+                                    inputText = newRlInput,
+                                    preeditText = "$newRlInput〔拼音〕",
+                                    isComposing = true,
+                                    candidates = cands,
+                                    candidateComments = comments,
+                                    hasNextPage = false,
+                                    hasPrevPage = false,
+                                )
+                                return@launch
+                            }
+                        }
+                        // ── end 反查 ──────────────────────────────────────────────────────
+
                         // 非 ASCII 可打印字符（全角符号/中文标点）：直接上屏，不进入 Rime 引擎。
                         // Rime processKey 只接受标准键码，全角键码（如 U+FF0F）无法识别会被静默
                         // 丢弃，导致中文模式下符号面板点击全角字符无输出（与 rime 生态既有行为一致）。
@@ -1093,6 +1140,32 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                 service.sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
             }
         } else when {
+            // 0. 五笔 z 键反查模式退格
+            wubiReverseLookupInput.isNotEmpty() -> {
+                val newRl = wubiReverseLookupInput.dropLast(1)
+                wubiReverseLookupInput = newRl
+                if (newRl.isEmpty()) {
+                    // 退出反查模式
+                    service.candidateState.value = service.candidateState.value.copy(
+                        inputText = "",
+                        preeditText = "",
+                        isComposing = false,
+                        candidates = emptyList(),
+                        candidateComments = emptyList(),
+                    )
+                } else {
+                    val pinyinQuery = newRl.substring(1)
+                    val showCode = SettingsPreferences.isWubiReverseLookupShowCode(service)
+                    val results = if (pinyinQuery.isEmpty()) emptyArray()
+                        else service.rimeEngine.bypassLookup(pinyinQuery, 50)
+                    service.candidateState.value = service.candidateState.value.copy(
+                        inputText = newRl,
+                        preeditText = "$newRl〔拼音〕",
+                        candidates = results.map { it.text },
+                        candidateComments = results.map { if (showCode) it.comment else "" },
+                    )
+                }
+            }
             // 1. 英文待处理文本：逐个删除字符，重新加载联想
             candState.pendingEnglishText.isNotEmpty() -> {
                 val newPending = candState.pendingEnglishText.dropLast(1)
@@ -1474,6 +1547,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
      * 输入框模式清 composing 区；T9 方案重置左侧候选区（其他键盘无左栏，跳过）。
      */
     private suspend fun clearInputStateForKeys() {
+        wubiReverseLookupInput = ""
         service.calculatorEngine.clear()
         updateCalculatorCandidates()
         service.t9PartialSegments.clear()
@@ -1531,6 +1605,23 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
 
     internal fun selectCandidate(index: Int) {
         service.composeViewRef?.let { service.feedbackManager.performKeyPressEffect(view = it) }
+
+        // 五笔 z 键反查模式：直接上屏 bypassLookup 结果，不经引擎
+        if (wubiReverseLookupInput.isNotEmpty()) {
+            val text = service.candidateState.value.candidates.getOrNull(index) ?: return
+            wubiReverseLookupInput = ""
+            service.serviceScope.launch(Dispatchers.Main) {
+                service.commitText(text)
+                service.candidateState.value = service.candidateState.value.copy(
+                    inputText = "",
+                    preeditText = "",
+                    isComposing = false,
+                    candidates = emptyList(),
+                    candidateComments = emptyList(),
+                )
+            }
+            return
+        }
 
         // 计算器模式（仅在数字/常用符号键盘下生效，防止状态残留导致其他键盘候选词点击异常）
         val layoutState = service.keyboardViewModel.keyboardState.value
