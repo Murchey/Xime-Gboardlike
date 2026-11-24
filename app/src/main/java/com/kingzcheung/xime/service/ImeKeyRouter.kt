@@ -722,45 +722,54 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                         val isLetter = key.matches(Regex("[a-zA-Z]"))
                         val isShiftedChinese = isShifted && isChinese && isLetter
 
-                        // ── 五笔 z 键拼音反查 ──────────────────────────────────────────────
+                        // ── 五笔 z 键拼音反查（app 层兜底）──────────────────────────────
+                        // 策略：先让引擎处理 z，若引擎自己产出候选（方案内置反查），直接用引擎结果；
+                        // 引擎无候选时才激活 app 层 bypassLookup 兜底，实现对所有五笔方案通用。
                         val currentSchemaForZ = state.currentSchemaId
                         val zReverseLookupEnabled = isChinese && !isShifted &&
                             WubiSchemas.isWubi(currentSchemaForZ) &&
                             SettingsPreferences.isWubiZReverseLookupEnabled(service)
                         if (zReverseLookupEnabled) {
                             val rlInput = wubiReverseLookupInput
-                            if (key == "z" && rlInput.isEmpty() && !candState.isComposing &&
-                                candState.inputText.isEmpty()
-                            ) {
-                                // 进入反查模式：记录 z，不下传引擎
-                                wubiReverseLookupInput = "z"
-                                service.candidateState.value = service.candidateState.value.copy(
-                                    inputText = "z",
-                                    preeditText = "z〔拼音〕",
-                                    isComposing = true,
-                                    candidates = emptyList(),
-                                    candidateComments = emptyList(),
-                                )
-                                return@launch
-                            } else if (rlInput.isNotEmpty() && isLetter) {
-                                // 反查模式追加字母
+                            if (rlInput.isNotEmpty() && isLetter) {
+                                // 已在 app 层反查模式：追加字母，继续走 bypassLookup
                                 val newRlInput = rlInput + key.lowercase()
                                 wubiReverseLookupInput = newRlInput
                                 val pinyinQuery = newRlInput.substring(1) // 去掉前缀 z
                                 val showCode = SettingsPreferences.isWubiReverseLookupShowCode(service)
                                 val results = if (pinyinQuery.isEmpty()) emptyArray()
                                     else service.rimeEngine.bypassLookup(pinyinQuery, 50)
-                                val cands = results.map { it.text }
-                                val comments = results.map { if (showCode) it.comment else "" }
                                 service.candidateState.value = service.candidateState.value.copy(
                                     inputText = newRlInput,
                                     preeditText = "$newRlInput〔拼音〕",
                                     isComposing = true,
-                                    candidates = cands,
-                                    candidateComments = comments,
+                                    candidates = results.map { it.text },
+                                    candidateComments = results.map { if (showCode) it.comment else "" },
                                     hasNextPage = false,
                                     hasPrevPage = false,
                                 )
+                                return@launch
+                            }
+                            // z 键首次按下：先交给引擎处理
+                            if (key == "z" && rlInput.isEmpty() && !candState.isComposing &&
+                                candState.inputText.isEmpty()
+                            ) {
+                                val engineResult = service.rimeEngine.processKeyAndGetResult(keyCode, mask)
+                                val engineHasCandidates = engineResult.candidates.isNotEmpty()
+                                if (engineHasCandidates) {
+                                    // 引擎自己有反查候选（如 wubi86_pinyin），直接用引擎结果
+                                    sendTransformedResult(engineResult)
+                                } else {
+                                    // 引擎无候选，启动 app 层兜底反查
+                                    wubiReverseLookupInput = "z"
+                                    service.candidateState.value = service.candidateState.value.copy(
+                                        inputText = "z",
+                                        preeditText = "z〔拼音〕",
+                                        isComposing = true,
+                                        candidates = emptyList(),
+                                        candidateComments = emptyList(),
+                                    )
+                                }
                                 return@launch
                             }
                         }
