@@ -1539,7 +1539,7 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
         getPrefs(context).edit().putInt(KEY_PAGE_SIZE, pageSize).apply()
     }
 
-    const val DEFAULT_CANDIDATE_TEXT_SIZE = 22
+    const val DEFAULT_CANDIDATE_TEXT_SIZE = 21
 
     fun getCandidateTextSize(context: Context): Int {
         return getPrefs(context).getInt(KEY_CANDIDATE_TEXT_SIZE, DEFAULT_CANDIDATE_TEXT_SIZE)
