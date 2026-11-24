@@ -181,6 +181,7 @@ object ModelDownloader {
                     onProgress(ModelDownloadState.Downloading(0f, 0, -1))
                 }
 
+<<<<<<< HEAD
                 downloadArchive(archiveUrl, tmpFile, onProgress)
                 extractTarBz2(tmpFile, targetDir)
                 tmpFile.delete()
@@ -195,6 +196,51 @@ object ModelDownloader {
                     throw e
                 }
             }
+=======
+            val request = Request.Builder().url(archiveUrl).build()
+            val response = client.newCall(request).execute()
+
+            if (!response.isSuccessful) {
+                throw IOException("HTTP ${response.code}")
+            }
+
+            val body = response.body ?: throw IOException("Response body is null")
+            val totalBytes = body.contentLength()
+            var downloadedBytes = 0L
+
+            tmpFile.parentFile?.mkdirs()
+            body.byteStream().use { input ->
+                FileOutputStream(tmpFile).use { output ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        downloadedBytes += bytesRead
+                        if (totalBytes > 0) {
+                            val progress = (downloadedBytes.toFloat() / totalBytes.toFloat()) * 0.85f
+                            onProgress(ModelDownloadState.Downloading(progress, downloadedBytes, totalBytes))
+                        }
+                    }
+                }
+            }
+
+            if (totalBytes > 0 && downloadedBytes != totalBytes) {
+                throw IOException("Download incomplete: $downloadedBytes/$totalBytes bytes")
+            }
+
+            if (!tmpFile.exists() || tmpFile.length() == 0L) {
+                throw IOException("Archive file is missing or empty")
+            }
+
+            onProgress(ModelDownloadState.Downloading(0.85f, downloadedBytes, totalBytes))
+
+            extractTarBz2(tmpFile, targetDir)
+
+            tmpFile.delete()
+        } catch (e: Exception) {
+            tmpFile.delete()
+            throw e
+>>>>>>> c7a86ab9 (fix(input-method): 修复光标移动和文本获取的安全性问题)
         }
     }
 
