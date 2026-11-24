@@ -1109,7 +1109,18 @@ internal val BUILTIN_SCHEMAS = listOf(
         }
 
         val fallback = BUILTIN_SCHEMAS.filter { available(it) }
-        return fallback
+        if (fallback.isNotEmpty()) return fallback
+        // 兜底：内置方案文件全部缺失时，从 rime/ 目录里找到第一个可用 schema 自动启用，
+        // 防止 RimeEngine 因 schema_list 为空而挂起。
+        val anyAvailable = rimeDir.listFiles { f ->
+            f.isFile && f.name.endsWith(".schema.yaml")
+        }?.map { it.name.removeSuffix(".schema.yaml") }?.firstOrNull()
+        if (anyAvailable != null) {
+            FileLogger.w(TAG, "getEnabledSchemas: fallback to first available schema '$anyAvailable'")
+            setEnabledSchemas(context, listOf(anyAvailable))
+            return listOf(anyAvailable)
+        }
+        return emptyList()
     }
 
     /**
