@@ -4587,6 +4587,386 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     val pendingEnglish = candState.pendingEnglishText
 >>>>>>> c7a86ab9 (fix(input-method): 修复光标移动和文本获取的安全性问题)
 
+<<<<<<< HEAD
+=======
+                    if (pendingEnglish.isNotEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            commitText(" ")
+                            candidateState.value = candidateState.value.copy(
+                                pendingEnglishText = "",
+                                associationCandidates = emptyList()
+                            )
+                        }
+                        Log.d(TAG, "Space: added space after pending English '$pendingEnglish'")
+                    } else if (candState.isComposing) {
+                        if (candState.candidates.isNotEmpty()) {
+                            selectCandidateAsync(0)
+                        } else {
+                            val input = candState.inputText
+                            if (input.isNotEmpty()) {
+                                withContext(Dispatchers.Main) {
+                                    commitText(input)
+                                }
+                                rimeEngine.clearComposition()
+                                // T9模式：清空partialCommit累积文本，避免下一轮输入
+                                // preedit中残留上一轮的提交内容（如"看"→下一轮"看jihua"）
+                                if (isT9Schema(state.currentSchemaId)) {
+                                    withContext(Dispatchers.Main) {
+                                        t9PartialCommitTexts.clear()
+                                        uiState.value = uiState.value.copy(
+                                            t9ResetSignal = uiState.value.t9ResetSignal + 1,
+                                            t9RightCandidateSelectedCount = 0,
+                                            t9SelectedCandidatePinyin = ""
+                                        )
+                                    }
+                                }
+                                needsUIUpdate = true
+                            }
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            commitText(" ")
+                        }
+                    }
+                }
+                "word_separator" -> {
+                    if (candState.isComposing || candState.inputText.isNotEmpty()) {
+                        val result = rimeEngine.processKeyAndGetResult(0x27, 0)
+                        if (result.processed) {
+                            uiEventChannel.trySend {
+                                updateUIWithResult(result)
+                            }
+                        } else {
+                            needsUIUpdate = true
+                        }
+                    } else {
+                        needsUIUpdate = true
+                    }
+                }
+                "shift" -> {
+                }
+                "mode_change" -> {
+                }
+                "ime_switch" -> {
+                    withContext(Dispatchers.Main) {
+                        switchInputMethod()
+                    }
+                }
+                "abc" -> {
+                    calculatorEngine.clear()
+                    updateCalculatorCandidates()
+                }
+                "number", "common_symbol" -> {
+                    // Number/CommonSymbol 内部切换由 KeyboardView 的 key handler 处理
+                }
+                "emoji" -> {
+                    withContext(Dispatchers.Main) {
+                        commitText("😊")
+                    }
+                }
+                else -> {
+                    val isNumberKeyboard = keyboardViewModel.keyboardState.value is com.kingzcheung.xime.ui.keyboard.KeyboardLayoutState.Number
+                    val isCommonSymbolKeyboard = keyboardViewModel.keyboardState.value is com.kingzcheung.xime.ui.keyboard.KeyboardLayoutState.CommonSymbol
+
+                    val routeResult = com.kingzcheung.xime.calculator.routeCalculatorKey(
+                        key = key,
+                        isNumberKeyboard = isNumberKeyboard,
+                        isCommonSymbolKeyboard = isCommonSymbolKeyboard,
+                        calculatorEngine = calculatorEngine,
+                    )
+                    if (routeResult is com.kingzcheung.xime.calculator.CalculatorRouteResult.Handled) {
+                        withContext(Dispatchers.Main) { commitText(routeResult.commitText) }
+                        if (isNumberKeyboard) updateCalculatorCandidates()
+                        needsUIUpdate = true
+                        return@launch
+                    }
+
+                    val pendingEnglish = candState.pendingEnglishText
+                    
+                    // 非计算器键清除计算器状态
+                    if (!key.matches(Regex("[0-9]")) && key !in listOf("+", "-", "*", "/", ".")) {
+                        if (calculatorEngine.isActive() || calculatorEngine.getCandidate() != null) {
+                            calculatorEngine.clear()
+                            updateCalculatorCandidates()
+                        }
+                    }
+                    
+                    // 计算器模式：追踪数字、运算符和小数点
+                    if (key.matches(Regex("[0-9]")) || key in listOf("+", "-", "*", "/", ".")) {
+                        if (key.matches(Regex("[0-9]")) || key == ".") {
+                            calculatorEngine.handleDigit(key)
+                        } else {
+                            calculatorEngine.handleOperator(key)
+                        }
+                        updateCalculatorCandidates()
+                    }
+                    
+                    // 所有按键统一经过 Rime 引擎
+                    // 字母键不进入此分支（即使 pendingEnglish 非空），需要继续积累编码
+                    if (pendingEnglish.isNotEmpty() && !key.matches(Regex("[a-zA-Z]"))) {
+                        withContext(Dispatchers.Main) {
+                            commitText(if (isShifted) (shiftedSymbol(key, !state.isAsciiMode) ?: key) else key)
+                            candidateState.value = candidateState.value.copy(
+                                pendingEnglishText = "",
+                                associationCandidates = emptyList()
+                            )
+                        }
+                        Log.d(TAG, "Symbol: added '$key' after pending English '$pendingEnglish'")
+                        needsUIUpdate = true
+                    } else {
+                        val isChinese = !state.isAsciiMode
+                        val char = if (isShifted) (shiftedSymbol(key, isChinese) ?: key.uppercase()) else key
+                        val keyCode = key.lowercase()[0].code
+                        val mask = if (isShifted) KeyEvent.META_SHIFT_ON else 0
+                        val isLetter = key.matches(Regex("[a-zA-Z]"))
+                        val isShiftedChinese = isShifted && isChinese && isLetter
+
+                        // Shifted non-letter keys: send character code to Rime (like soft keyboard does),
+                        // avoiding Rime misinterpreting physical keycodes as internal actions.
+                        if (isShifted && !isLetter) {
+                            if (char.length == 1) {
+                                val charCode = char[0].code
+                                val processed = rimeEngine.processKey(charCode, 0)
+                                if (processed) {
+                                    val result = rimeEngine.getProcessResult(processed)
+                                    uiEventChannel.trySend {
+                                        if (result.committedText.isNotEmpty()) commitText(result.committedText)
+                                        updateUIWithResult(result)
+                                        if (calculatorEngine.isActive()) updateCalculatorCandidates()
+                                    }
+                                    Log.d(TAG, "Shift+symbol: Rime processed charCode=$charCode, result='${result.committedText}'")
+                                } else {
+                                    committedText = char
+                                    needsUIUpdate = true
+                                    Log.d(TAG, "Shift+symbol: Rime unprocessed, committing '$char' directly")
+                                }
+                            } else {
+                                committedText = char
+                                needsUIUpdate = true
+                                Log.d(TAG, "Shift+symbol: multi-char '$char' committed directly")
+                            }
+                        } else {
+                            val processed = rimeEngine.processKey(keyCode, mask)
+                            if (processed) {
+                                val result = rimeEngine.getProcessResult(processed)
+                                if (isShiftedChinese && result.committedText != char) {
+                                    rimeEngine.clearComposition()
+                                    committedText = char
+                                    needsUIUpdate = true
+                                    Log.d(TAG, "Shift+letter in Chinese mode: Rime consumed key but didn't produce uppercase, committing '$char' directly")
+                                } else {
+                                    val committed = result.committedText
+                                    if (state.isAsciiMode && committed.isNotEmpty() && result.inputText.isEmpty() && result.candidates.isEmpty()) {
+                                        val current = candState.pendingEnglishText
+                                        val newPending = current + committed
+                                        candidateState.value = candidateState.value.copy(pendingEnglishText = newPending)
+                                        withContext(Dispatchers.Main) {
+                                            currentInputConnection?.setComposingText(newPending, 1)
+                                        }
+                                        uiEventChannel.trySend {
+                                            updateUIWithResult(result)
+                                            if (calculatorEngine.isActive()) updateCalculatorCandidates()
+                                        }
+                                    } else {
+                                        uiEventChannel.trySend {
+                                            if (committed.isNotEmpty()) commitText(committed)
+                                            updateUIWithResult(result)
+                                            if (calculatorEngine.isActive()) updateCalculatorCandidates()
+                                        }
+                                    }
+                                }
+                            } else {
+                                val isAscii = state.isAsciiMode
+                                if (!candState.isComposing || isShiftedChinese) {
+                                                    if (isAscii) {
+                                                        val charToCommit = if (isShifted) char.uppercase() else char.lowercase()
+                                                        val currentPending = candState.pendingEnglishText
+                                                        val newPending = currentPending + charToCommit
+                                                        // 用 setComposingText 建立 composing region，选关联候选时 commitText 自然替换
+                                                        withContext(Dispatchers.Main) {
+                                                            currentInputConnection?.setComposingText(newPending, 1)
+                                                        }
+                                                        candidateState.value = candidateState.value.copy(
+                                                            pendingEnglishText = newPending,
+                                                            associationCandidates = emptyList()
+                                                        )
+                                                        needsUIUpdate = true
+                                                        Log.d(TAG, "English mode: setComposingText '$newPending'")
+                                    } else {
+                                        committedText = char
+                                        needsUIUpdate = true
+                                    }
+                                } else {
+                                    val candidateText = if (rimeEngine.selectCandidate(0)) {
+                                        rimeEngine.commit()
+                                    } else {
+                                        ""
+                                    }
+                                    committedText = candidateText + char
+                                    needsUIUpdate = true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (needsUIUpdate) {
+                val result = pendingResult
+                val textToCommit = committedText
+                if (result != null) {
+                    uiEventChannel.trySend {
+                        if (textToCommit != null) {
+                            commitText(textToCommit)
+                        }
+                        updateUIWithResult(result)
+                        if (calculatorEngine.isActive()) {
+                            updateCalculatorCandidates()
+                        }
+                    }
+                } else {
+                    val capturedInputText = rimeEngine.getInput()
+                    val capturedCandidates = rimeEngine.getCandidatesWithComments()
+                    val capturedIsAscii = rimeEngine.isAsciiMode()
+                    val capturedHasNext = rimeEngine.hasNextPage()
+                    val capturedHasPrev = rimeEngine.hasPrevPage()
+                    uiEventChannel.trySend {
+                        if (textToCommit != null) {
+                            commitText(textToCommit)
+                        }
+                        val pendingEnglish = candidateState.value.pendingEnglishText
+                        val (filteredTexts, filteredComments) = if (capturedIsAscii) {
+                            val filtered = capturedCandidates.filterNot { candidate ->
+                                candidate.text.any { it.code in 0x4E00..0x9FFF }
+                            }
+                            filtered.map { it.text } to filtered.map { it.comment }
+                        } else {
+                            capturedCandidates.map { it.text } to capturedCandidates.map { it.comment }
+                        }
+                        candidateState.value = candidateState.value.copy(
+                            inputText = capturedInputText,
+                            candidates = filteredTexts,
+                            candidateComments = filteredComments,
+                            isComposing = capturedInputText.isNotEmpty(),
+                            associationCandidates = if ((capturedIsAscii || !isChineseMode) && pendingEnglish.isEmpty()) emptyList() else candidateState.value.associationCandidates,
+                            isShowingRecentClipboard = false,
+                            hasNextPage = capturedHasNext,
+                            hasPrevPage = capturedHasPrev
+                        )
+                        uiState.value = uiState.value.copy(isAsciiMode = capturedIsAscii)
+                        if (pendingEnglish.isNotEmpty()) {
+                            serviceScope.launch {
+                                val candidates = predictionManager.getEnglishAssociations(pendingEnglish, PredictionManager.MAX_ASSOCIATION_COUNT)
+                                withContext(Dispatchers.Main) {
+                                    candidateState.value = candidateState.value.copy(associationCandidates = candidates)
+                                }
+                            }
+                        }
+                        if (calculatorEngine.isActive()) {
+                            updateCalculatorCandidates()
+                        }
+                    }
+                }
+            }
+        }
+        keyJobs.trySend(job)
+    }
+
+    /**
+     * Posts a rime operation to [keyJobs] for sequential execution.
+     * Ensures no interleaving with key processing.
+     */
+    private fun postRimeJob(block: suspend CoroutineScope.() -> Unit) {
+        val job = serviceScope.launch(keyProcessingDispatcher, start = CoroutineStart.LAZY) {
+            block()
+        }
+        keyJobs.trySend(job)
+    }
+
+    private suspend fun selectCandidateAsync(index: Int) {
+        val selectedCandidate = if (index < candidateState.value.candidates.size) {
+            candidateState.value.candidates[index]
+        } else null
+
+        val isT9 = isT9Schema(uiState.value.currentSchemaId)
+        val candidatePinyin = if (isT9 && index < candidateState.value.candidateComments.size) {
+            candidateState.value.candidateComments[index]
+        } else null
+
+        // 在 RIME 真正 select/commit 之前，先同步通知 T9 控制器消费数字。
+        // 控制器返回 true 表示输入序列已被该候选词完整消费，服务层应视为 full commit。
+        val candidateTextLength = selectedCandidate?.length ?: 0
+        val fullyConsumed = if (isT9) {
+            keyboardCallbacks?.onT9RightCandidateWillBeSelected?.invoke(candidatePinyin, candidateTextLength) ?: false
+        } else {
+            false
+        }
+
+        if (rimeEngine.selectCandidate(index)) {
+            val committedText = rimeEngine.commit()
+            // T9 模式下 fullyConsumed 是判断 full/partial commit 的唯一权威：
+            // 当控制器明确 partial commit 时，即使 RIME commit() 返回非空文本
+            // （RIME 内部做了 partial commit），也不应走 full commit 路径。
+            val isFullCommit = if (isT9) {
+                fullyConsumed && selectedCandidate != null
+            } else {
+                committedText.isNotEmpty()
+            }
+            if (isFullCommit) {
+                if (SettingsPreferences.isSmartPredictionEnabled(this) && selectedCandidate != null && AssociationManager.isInitialized()) {
+                    if (predictionManager.lastCommittedText.isNotEmpty()) {
+                        val lastChar = predictionManager.lastCommittedText.last().toString()
+                        predictionManager.recordInputPair(lastChar, selectedCandidate)
+                        Log.d(TAG, "Learned: '$lastChar' + '$selectedCandidate'")
+                    }
+                }
+                // T9 模式：将 partial commit 累积文本与 RIME committedText 合并后上屏，
+                // 避免之前 partial commit 的文本丢失
+                val textToMerge = if (committedText.isNotEmpty()) committedText else selectedCandidate!!
+                val fullCommitText = if (isT9) {
+                    PreeditMergeHelper.mergePartialCommitText(t9PartialCommitTexts, textToMerge)
+                } else {
+                    textToMerge
+                }
+                withContext(Dispatchers.Main) {
+                    commitText(fullCommitText)
+                    t9PartialCommitTexts.clear()
+                    candidateState.value = candidateState.value.copy(
+                        inputText = "",
+                        candidates = emptyList(),
+                        candidateComments = emptyList(),
+                        isComposing = false,
+                        hasNextPage = false,
+                        hasPrevPage = false,
+                        isShowingRecentClipboard = false
+                    )
+                    uiState.value = uiState.value.copy(
+                        t9ResetSignal = uiState.value.t9ResetSignal + 1,
+                        t9RightCandidateSelectedCount = 0,
+                        t9SelectedCandidatePinyin = ""
+                    )
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    if (isT9) {
+                        // partial commit：把本次选中的候选文本追加到累积列表，供后续合并显示
+                        if (selectedCandidate != null) {
+                            t9PartialCommitTexts.add(selectedCandidate)
+                        }
+                        // 保留状态字段，供 UI 层感知右侧选词事件
+                        uiState.value = uiState.value.copy(
+                            t9RightCandidateSelectedCount = uiState.value.t9RightCandidateSelectedCount + 1,
+                            t9SelectedCandidatePinyin = candidatePinyin ?: ""
+                        )
+                        // RIME commit() 已清除 composition，需要控制器重新发送剩余数字到 RIME
+                        keyboardCallbacks?.onT9ForceSendToRime?.invoke()
+                    }
+                    updateUI()
+                }
+            }
+        }
+    }
+>>>>>>> 61d50561 (fix(XimeInputMethodService): 修复英文输入模式下的文本组成和提交逻辑)
     
 
     override fun onCreateInlineSuggestionsRequest(uiExtras: Bundle): InlineSuggestionsRequest? {
