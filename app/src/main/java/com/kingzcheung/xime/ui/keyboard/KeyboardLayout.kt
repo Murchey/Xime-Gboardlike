@@ -2773,6 +2773,8 @@ private fun SpaceKey(
     val currentOnCursorMove by rememberUpdatedState(onCursorMove)
     // 长按气泡激活时禁止空格横划移光标（共享标志，由长按气泡分支写入）
     val spaceLongPressActive = remember { androidx.compose.runtime.mutableStateOf(false) }
+    // 光标拖动进行中：通知内层 tap 分支抬手时跳过 onKeyPress("space")，防止额外输出空格
+    val spaceCursorDragActive = remember { androidx.compose.runtime.mutableStateOf(false) }
     Box(
         modifier = modifier
             .fillMaxHeight()
@@ -2788,12 +2790,18 @@ private fun SpaceKey(
                                 pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                             accumPx = 0f
                             spaceLongPressActive.value = false
+                            spaceCursorDragActive.value = false
                             var isDragging = false
                             loop@ while (true) {
                                 val event = awaitPointerEvent(
                                     pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                                 val change = event.changes.firstOrNull() ?: break@loop
-                                if (change.changedToUpIgnoreConsumed()) break@loop
+                                if (change.changedToUpIgnoreConsumed()) {
+                                    // 抬手：若曾进入拖动，消费 UP 阻止 tap 分支触发空格
+                                    if (isDragging) change.consume()
+                                    spaceCursorDragActive.value = false
+                                    break@loop
+                                }
                                 // 长按气泡已激活：停止光标积累，让气泡分支独占横划
                                 if (spaceLongPressActive.value) {
                                     accumPx = 0f
@@ -2803,6 +2811,7 @@ private fun SpaceKey(
                                 val dy = change.position.y - change.previousPosition.y
                                 if (!isDragging && kotlin.math.abs(dx) > kotlin.math.abs(dy) && kotlin.math.abs(dx) > 4f) {
                                     isDragging = true
+                                    spaceCursorDragActive.value = true
                                 }
                                 if (isDragging) {
                                     change.consume()
@@ -2952,7 +2961,7 @@ private fun SpaceKey(
 
                     if (dir != null && currentOnSwipe != null) {
                         currentOnSwipe?.invoke(dir)
-                    } else if (!longPressTriggered) {
+                    } else if (!longPressTriggered && !spaceCursorDragActive.value) {
                         if (currentOnTap != null) currentOnTap?.invoke() else currentOnKeyPress("space")
                     }
                 }
