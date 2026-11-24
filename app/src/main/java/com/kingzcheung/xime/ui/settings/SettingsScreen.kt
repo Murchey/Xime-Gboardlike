@@ -86,6 +86,7 @@ fun SettingsScreen(
                 onNavigateToSpeechToText = { navController.navigate(SettingsRoutes.SpeechToText) },
                 onNavigateToAbout = { navController.navigate(SettingsRoutes.About) },
                 onNavigateToClipboard = { navController.navigate(SettingsRoutes.Clipboard) },
+                onNavigateToDeviceLink = { navController.navigate(SettingsRoutes.DeviceLink) },
                 onNavigateToBackup = { navController.navigate(SettingsRoutes.Backup) }
             )
         }
@@ -318,16 +319,19 @@ fun SettingsScreen(
         composable(SettingsRoutes.Clipboard) {
             ClipboardSettingsContent(
                 onBack = { navController.popBackStack() },
-                // 内置对象存储优先；上游插件桥收进二级页
-                onNavigateToClipboardSync = { navController.navigate(SettingsRoutes.ObjectStorageClipboard) },
-                onNavigateToObjectStorage = { navController.navigate(SettingsRoutes.ObjectStorage) },
-                onNavigateToLegacy = { navController.navigate(SettingsRoutes.LegacySync) }
+                onNavigateToClipboardSync = { navController.navigate(SettingsRoutes.ClipboardSync) }
             )
         }
         composable(SettingsRoutes.ClipboardSync) {
             ClipboardSyncSettingsContent(
                 onBack = { navController.popBackStack() },
-                onNavigateToMarket = { navController.navigate(SettingsRoutes.MarketPlugins) }
+                onNavigateToMarket = { navController.navigate(SettingsRoutes.MarketPlugins) },
+                onNavigateToDeviceLink = { navController.navigate(SettingsRoutes.DeviceLink) }
+            )
+        }
+        composable(SettingsRoutes.DeviceLink) {
+            DeviceLinkSettingsContent(
+                onBack = { navController.popBackStack() }
             )
         }
         composable(SettingsRoutes.Backup) {

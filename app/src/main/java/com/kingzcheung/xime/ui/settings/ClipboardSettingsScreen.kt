@@ -1,17 +1,13 @@
-package com.kingzcheung.xime.ui.settings
+﻿package com.kingzcheung.xime.ui.settings
 
 import com.kingzcheung.xime.R
+import com.kingzcheung.xime.clipboard.sync.ChannelPolicy
 
 import com.kingzcheung.xime.i18n.tr
 
-import android.net.Uri
 import android.text.format.Formatter
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,13 +17,9 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.FileDownload
-import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.twotone.DataUsage
 import androidx.compose.material.icons.twotone.Image
 import androidx.compose.material.icons.twotone.Lock
@@ -37,12 +29,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -50,26 +38,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.kingzcheung.xime.clipboard.ClipboardManager
 import com.kingzcheung.xime.clipboard.ImageUsage
-import com.kingzcheung.xime.clipboard.transfer.ClipboardTransferManager
+import com.kingzcheung.xime.plugin.ActivePluginSelection
+import com.kingzcheung.xime.plugin.ExtensionManager
+import com.kingzcheung.xime.p2p.P2pBridge
 import com.kingzcheung.xime.settings.SettingsPreferences
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -82,16 +66,13 @@ import kotlinx.coroutines.withContext
  * 「剪贴板同步」的**总开关就在本页**（就地可切），整行点击进入内页做「选服务 + 配置」——
  * 同步是剪贴板的一种流向，不另立设置分组；开关上提后无需为开关专门进一层页面。
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClipboardSettingsContent(
     onBack: () -> Unit,
     onNavigateToClipboardSync: () -> Unit,
-    onNavigateToObjectStorage: () -> Unit = {},
-    onNavigateToLegacy: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    val focusManager = LocalFocusManager.current
     val clipboardManager = remember { ClipboardManager.getInstance(context) }
 
     var captureEnabled by remember {
@@ -103,104 +84,26 @@ fun ClipboardSettingsContent(
     var maxMb by remember {
         mutableFloatStateOf(SettingsPreferences.getClipboardImageMaxMb(context).toFloat())
     }
+    val syncEnabled = remember { SettingsPreferences.isClipboardSyncEnabled(context) }
+    // 实际生效的同步服务（与引擎同一判定规则 ActivePluginSelection）：副标题要说明"谁在跑 + 能不能同步图片"
+    val activeSyncPlugin = remember {
+        val activeId = ActivePluginSelection.resolve(
+            SettingsPreferences.getClipboardSyncPluginId(context),
+            ExtensionManager.getEnabledClipboardSyncPlugins(context).map { it.first }
+        )
+        ExtensionManager.getAllInstalledPlugins().firstOrNull { it.id == activeId }
+    }
     var usage by remember { mutableStateOf<ImageUsage?>(null) }
-    var maxItems by remember {
-        mutableFloatStateOf(SettingsPreferences.getClipboardMaxItems(context).toFloat())
-    }
-    var maxItemsText by remember {
-        mutableStateOf(SettingsPreferences.getClipboardMaxItems(context).toString())
-    }
-    var maxItemsFieldFocused by remember { mutableStateOf(false) }
-    var retentionMinutes by remember {
-        mutableStateOf(SettingsPreferences.getClipboardRetentionMinutes(context))
-    }
+    var syncOn by remember { mutableStateOf(syncEnabled) }
+    val syncChannels = remember { SettingsPreferences.getClipboardSyncChannels(context) }
+    var p2pPairedCount by remember { mutableIntStateOf(0) }
 
-    val scope = rememberCoroutineScope()
-    val snackbar = remember { SnackbarHostState() }
-    /** 正在进行的导入/导出（null = 空闲）：既禁用重复点击，也作为行尾「进行中」徽标。 */
-    var transferBusy by remember { mutableStateOf<String?>(null) }
-
-    fun runExport(uri: Uri) {
-        if (transferBusy != null) return
-        transferBusy = "export"
-        scope.launch {
-            val result = ClipboardTransferManager.exportTo(context, uri)
-            transferBusy = null
-            snackbar.showSnackbar(
-                result.fold(
-                    onSuccess = { summary ->
-                        if (summary.imageCount > 0) {
-                            tr(
-                                R.string.s_jiantieban_daochuchenggong_tupian,
-                                summary.entryCount,
-                                summary.imageCount
-                            )
-                        } else {
-                            tr(R.string.s_jiantieban_daochuchenggong, summary.entryCount)
-                        }
-                    },
-                    onFailure = { tr(R.string.s_daochushibai_2, it.message ?: it.javaClass.simpleName) },
-                )
-            )
+    LaunchedEffect(syncChannels) {
+        if (syncChannels.contains(ChannelPolicy.CHANNEL_P2P)) {
+            p2pPairedCount = withContext(Dispatchers.IO) {
+                P2pBridge.peers(P2pBridge.dir(context)).size
+            }
         }
-    }
-
-    fun runImport(uri: Uri) {
-        if (transferBusy != null) return
-        transferBusy = "import"
-        scope.launch {
-            val result = ClipboardTransferManager.importFrom(context, uri)
-            transferBusy = null
-            // 导入可能带来图片：占用统计跟着刷新（Snackbar 会挂起到消失，先刷新再提示）
-            usage = withContext(Dispatchers.IO) { clipboardManager.imageUsage() }
-            snackbar.showSnackbar(
-                result.fold(
-                    onSuccess = { summary ->
-                        val base = if (summary.imageCount > 0) {
-                            tr(
-                                R.string.s_jiantieban_daoruchenggong_tupian,
-                                summary.textCount,
-                                summary.imageCount
-                            )
-                        } else {
-                            tr(R.string.s_jiantieban_daoruchenggong, summary.textCount)
-                        }
-                        if (summary.missingImageCount > 0) {
-                            base + "；" + tr(
-                                R.string.s_jiantieban_daoru_queshitu,
-                                summary.missingImageCount
-                            )
-                        } else {
-                            base
-                        }
-                    },
-                    onFailure = { tr(R.string.s_daorushibai_2, it.message ?: it.javaClass.simpleName) },
-                )
-            )
-        }
-    }
-
-    // 导出前先看有没有图片：没有图片给 .txt，有图片给 .zip（图片塞不进纯文本）
-    val txtExportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("text/plain")
-    ) { uri -> if (uri != null) runExport(uri) }
-    val zipExportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/zip")
-    ) { uri -> if (uri != null) runExport(uri) }
-    val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri -> if (uri != null) runImport(uri) }
-
-    /** 提交手动输入的条数：夹到合法区间，同步滑块并立即裁剪历史。 */
-    fun commitMaxItems() {
-        val range = SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE
-        val parsed = maxItemsText.toIntOrNull() ?: maxItems.toInt()
-        val clamped = parsed.coerceIn(range.first, range.last)
-        maxItems = clamped.toFloat()
-        maxItemsText = clamped.toString()
-        SettingsPreferences.setClipboardMaxItems(context, clamped)
-        clipboardManager.enforceItemLimit()
-        clipboardManager.purgeExpired()
     }
 
     // 占用统计读的是数据库 + 图片目录，放到 IO 线程
@@ -209,8 +112,7 @@ fun ClipboardSettingsContent(
     }
 
     Scaffold(
-        containerColor = settingsPageContainerColor(),
-        snackbarHost = { SnackbarHost(snackbar) },
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = { Text(tr(R.string.s_jiantieban)) },
@@ -223,7 +125,7 @@ fun ClipboardSettingsContent(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = settingsPageContainerColor(),
+                    containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 ),
             )
@@ -238,13 +140,6 @@ fun ClipboardSettingsContent(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 内置对象存储同步优先展示（用户要求），上游 WebDAV 等收进二级页
-            ClipboardSyncSummaryRow(
-                onOpen = onNavigateToClipboardSync,
-                onConfigure = onNavigateToObjectStorage,
-                onPluginConfigure = onNavigateToLegacy,
-            )
-
             SettingsSection(
                 title = tr(R.string.s_tupianjilu),
                 content = {
@@ -334,6 +229,11 @@ fun ClipboardSettingsContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 56.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -364,169 +264,43 @@ fun ClipboardSettingsContent(
             )
 
             SettingsSection(
-                title = tr(R.string.s_jiantiebanbaoliuguize),
+                title = tr(R.string.s_tongbu),
                 content = {
-                    Column(
-                        modifier = Modifier.padding(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 16.dp,
-                            bottom = 12.dp
-                        )
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = tr(R.string.s_zuiduobaoliutiaoshu),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = maxItemsText,
-                                onValueChange = { input ->
-                                    val digits = input.filter { it.isDigit() }.take(4)
-                                    maxItemsText = digits
-                                    digits.toIntOrNull()
-                                        ?.takeIf { it in SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE }
-                                        ?.let { maxItems = it.toFloat() }
-                                },
-                                modifier = Modifier
-                                    .width(100.dp)
-                                    .onFocusChanged { focusState ->
-                                        if (maxItemsFieldFocused && !focusState.isFocused) {
-                                            commitMaxItems()
-                                        }
-                                        maxItemsFieldFocused = focusState.isFocused
-                                    },
-                                singleLine = true,
-                                label = { Text(tr(R.string.s_tiaoshu_danwei)) },
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                    textAlign = TextAlign.End
-                                ),
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Number,
-                                    imeAction = ImeAction.Done
-                                ),
-                                keyboardActions = KeyboardActions(
-                                    onDone = { focusManager.clearFocus() }
-                                ),
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Slider(
-                            value = maxItems,
-                            onValueChange = {
-                                maxItems = it
-                                maxItemsText = it.toInt().toString()
-                            },
-                            onValueChangeFinished = {
-                                SettingsPreferences.setClipboardMaxItems(context, maxItems.toInt())
-                                clipboardManager.enforceItemLimit()
-                                clipboardManager.purgeExpired()
-                            },
-                            valueRange = SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.first.toFloat()..
-                                SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.last.toFloat(),
-                            steps = (SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.last -
-                                SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.first) / 50 - 1,
-                        )
-                        Text(
-                            text = tr(
-                                R.string.s_tiaoshu_fanwei,
-                                SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.first,
-                                SettingsPreferences.CLIPBOARD_MAX_ITEMS_RANGE.last
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = tr(R.string.s_baoliutiaoshu_tishi),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Column(
-                        modifier = Modifier.padding(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 12.dp,
-                            bottom = 16.dp
-                        )
-                    ) {
-                        Text(
-                            text = tr(R.string.s_zidongqingli),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            SettingsPreferences.CLIPBOARD_RETENTION_MINUTE_OPTIONS.forEach { minutes ->
-                                FilterChip(
-                                    selected = retentionMinutes == minutes,
-                                    onClick = {
-                                        retentionMinutes = minutes
-                                        SettingsPreferences.setClipboardRetentionMinutes(context, minutes)
-                                        clipboardManager.purgeExpired()
-                                    },
-                                    label = { Text(clipboardRetentionLabel(minutes)) }
-                                )
+                    // 开关就地上提到本页（原先藏在子页里），整行点击进子页做"选服务 + 配置"
+                    val activePlugin = activeSyncPlugin
+                    val subtitle = when {
+                        !syncOn -> tr(R.string.s_tongguochajianyuyuanduanshebei_430fe)
+                        syncChannels.contains(ChannelPolicy.CHANNEL_P2P) ->
+                            tr(R.string.s_juyuwangzhilian) + " · " + if (p2pPairedCount > 0) {
+                                tr(R.string.s_yipeidui_tai, p2pPairedCount)
+                            } else {
+                                tr(R.string.s_weipeidui)
                             }
+                        activePlugin == null -> tr(R.string.s_yiqiyong_weixuanzetongbufuwu_d_e4fe4)
+                        else -> {
+                            // 能力按实际生效插件说明，避免出现"文案说仅文字、其实能同步图片"
+                            val supportsImages =
+                                activePlugin.capabilities?.clipboardSync?.attachments == true
+                            "已启用 · ${activePlugin.name}（${
+                                if (supportsImages) tr(R.string.s_wenziyutupian) else tr(R.string.s_jinwenzi)
+                            }） · 点按进入服务与配置"
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = tr(R.string.s_zidongqingli_tishi),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
-                }
-            )
-
-            SettingsSection(
-                title = tr(R.string.s_daochuyudaoru),
-                content = {
-                    SettingsItem(
-                        icon = Icons.Outlined.FileUpload,
-                        title = tr(R.string.s_daochujiantieban),
-                        subtitle = tr(R.string.s_daochujiantieban_fu),
-                        badgeText = if (transferBusy == "export") tr(R.string.s_jinxingzhong) else null,
-                        showArrow = true,
-                        onClick = {
-                            if (transferBusy == null) {
-                                scope.launch {
-                                    val zip = ClipboardTransferManager.hasExportableImages(context)
-                                    val name = ClipboardTransferManager.exportFileName(zip)
-                                    if (zip) {
-                                        zipExportLauncher.launch(name)
-                                    } else {
-                                        txtExportLauncher.launch(name)
-                                    }
-                                }
-                            }
-                        }
-                    )
-                    SettingsItem(
-                        icon = Icons.Outlined.FileDownload,
-                        title = tr(R.string.s_daorujiantieban),
-                        subtitle = tr(R.string.s_daorujiantieban_fu),
-                        badgeText = if (transferBusy == "import") tr(R.string.s_jinxingzhong) else null,
-                        showArrow = true,
-                        onClick = {
-                            if (transferBusy == null) importLauncher.launch(arrayOf("*/*"))
-                        }
+                    SettingsToggleItem(
+                        icon = Icons.TwoTone.Sync,
+                        title = tr(R.string.s_jiantiebantongbu),
+                        subtitle = subtitle,
+                        checked = syncOn,
+                        onCheckedChange = { checked ->
+                            syncOn = checked
+                            SettingsPreferences.setClipboardSyncEnabled(context, checked)
+                        },
+                        onClick = onNavigateToClipboardSync,
+                        // 右箭头表明"这一行还有下级页面"（与「语音转文本」行同一惯例）
+                        showArrow = true
                     )
                 }
             )
-
         }
     }
-}
-
-/** 自动清理时间标签：整天的显示「N天」，其余显示「N小时」。 */
-private fun clipboardRetentionLabel(minutes: Int): String = when {
-    minutes <= 0 -> tr(R.string.s_buzidongqingli)
-    minutes % 1440 == 0 -> tr(R.string.s_tian, minutes / 1440)
-    else -> tr(R.string.s_xiaoshi, minutes / 60)
 }

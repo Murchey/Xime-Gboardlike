@@ -22,11 +22,13 @@ import androidx.compose.material.icons.twotone.Backup
 import androidx.compose.material.icons.twotone.Ballot
 import androidx.compose.material.icons.twotone.ContentPaste
 import androidx.compose.material.icons.twotone.Description
+import androidx.compose.material.icons.twotone.Devices
 import androidx.compose.material.icons.twotone.Extension
 import androidx.compose.material.icons.twotone.GraphicEq
 import androidx.compose.material.icons.twotone.Info
 import androidx.compose.material.icons.twotone.Keyboard
 import androidx.compose.material.icons.twotone.KeyboardAlt
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.twotone.Palette
 import androidx.compose.material.icons.twotone.Sort
 import androidx.compose.material.icons.twotone.Storefront
@@ -87,6 +89,7 @@ fun SettingsMainContent(
     onNavigateToSpeechToText: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToClipboard: () -> Unit = {},
+    onNavigateToDeviceLink: () -> Unit = {},
     onNavigateToBackup: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -209,9 +212,62 @@ fun SettingsMainContent(
                         onCheckedChange = { enabled ->
                             sttEnabled = enabled
                             SettingsPreferences.setSttEnabled(context, enabled)
-                        },
+                        }
                     )
                 }
+            }
+
+            item {
+                // 分组含"本地数据/数据流向"设置：剪贴板（内容与同步）、设备互联（配对）、
+                // 词典与配置的同步备份。设备互联虽然也服务于剪贴板同步，但配对是独立任务，
+                // 需要从主设置页一键直达；埋在 剪贴板 → 剪贴板同步 第三层时几乎找不到入口。
+                SettingsSection(title = tr(R.string.s_shujuyutongbu), content = {
+                    SettingsItem(
+                        icon = Icons.TwoTone.ContentPaste,
+                        title = tr(R.string.s_jiantieban),
+                        subtitle = tr(R.string.s_tupianjilu_tijixianzhi_zhanyon_fa4c6),
+                        onClick = onNavigateToClipboard,
+                        showArrow = true
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 56.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsItem(
+                        icon = Icons.TwoTone.Devices,
+                        title = tr(R.string.s_shebeihulian),
+                        subtitle = tr(R.string.s_shebeihulian_shuoming),
+                        onClick = onNavigateToDeviceLink,
+                        showArrow = true
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 56.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsItem(
+                        icon = Icons.TwoTone.Backup,
+                        title = tr(R.string.s_tongbuyubeifen),
+                        subtitle = tr(R.string.s_duoshebeicidianhutongyupeizhib_1efa8),
+                        onClick = onNavigateToBackup,
+                        showArrow = true
+                    )
+                })
+            }
+
+            item {
+                SettingsSection(title = tr(R.string.s_guanyu), content = {
+                    SettingsItem(
+                        icon = Icons.TwoTone.Description,
+                        title = tr(R.string.s_shiyongwendang),
+                        subtitle = "ime.ximei.me",
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://ime.ximei.me"))
+                            context.startActivity(intent)
+                        },
+                    )
+                })
             }
 
             item {
@@ -239,23 +295,6 @@ fun SettingsMainContent(
                         summary = tr(R.string.s_houxuancixianshi_jianpanbujudeng),
                         icon = Icons.TwoTone.TableChart,
                         onClick = onNavigateToLayoutDisplay,
-                    )
-                }
-            }
-
-            item {
-                SettingsGroup(title = tr(R.string.s_shujuyutongbu)) {
-                    SettingsNavRow(
-                        title = tr(R.string.s_jiantieban),
-                        summary = tr(R.string.s_tupianjilu_tijixianzhi_zhanyon_fa4c6),
-                        icon = Icons.TwoTone.ContentPaste,
-                        onClick = onNavigateToClipboard,
-                    )
-                    SettingsNavRow(
-                        title = tr(R.string.s_tongbuyubeifen),
-                        summary = tr(R.string.s_duoshebeicidianhutongyupeizhib_1efa8),
-                        icon = Icons.TwoTone.Backup,
-                        onClick = onNavigateToBackup,
                     )
                 }
             }

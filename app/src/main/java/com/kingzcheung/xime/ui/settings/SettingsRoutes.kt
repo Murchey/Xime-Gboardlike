@@ -46,6 +46,7 @@ object SettingsRoutes {
     const val GlideTrace = "glide_trace"
     const val Clipboard = "clipboard"
     const val ClipboardSync = "clipboard_sync"
+    const val DeviceLink = "device_link"
     const val Backup = "backup"
     const val ObjectStorage = "object_storage"
     const val ObjectStorageClipboard = "object_storage_clipboard"
