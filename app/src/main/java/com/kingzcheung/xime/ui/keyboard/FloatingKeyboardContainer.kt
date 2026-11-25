@@ -1,6 +1,16 @@
 package com.kingzcheung.xime.ui.keyboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.OpenWith
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.ui.unit.sp
+import com.kingzcheung.xime.R
+import com.kingzcheung.xime.i18n.tr
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -10,7 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -51,6 +61,8 @@ fun FloatingKeyboardContainer(
     backgroundColor: Color = Color.Transparent,
     onDrag: (dx: Float, dy: Float) -> Unit,
     onDragEnd: () -> Unit,
+    onRestore: () -> Unit,
+    onAdjust: () -> Unit,
     onCardPositioned: (left: Int, top: Int, right: Int, bottom: Int) -> Unit = { _: Int, _: Int, _: Int, _: Int -> },
     keyboardContent: @Composable () -> Unit,
 ) {
@@ -85,6 +97,13 @@ fun FloatingKeyboardContainer(
                 }
         ) {
             Column {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    CompositionLocalProvider(
+                        LocalDensity provides Density(density = density.density, fontScale = density.fontScale * fontScaleFactor)
+                    ) {
+                        keyboardContent()
+                    }
+                }
                 DragBar(
                     backgroundColor = backgroundColor,
                     onDrag = { change, dragAmount ->
@@ -93,15 +112,10 @@ fun FloatingKeyboardContainer(
                         val dyDp = with(density) { dragAmount.y.toDp().value }
                         onDrag(dxDp, dyDp)
                     },
-                    onDragEnd = onDragEnd
+                    onDragEnd = onDragEnd,
+                    onRestore = onRestore,
+                    onAdjust = onAdjust
                 )
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    CompositionLocalProvider(
-                        LocalDensity provides Density(density = density.density, fontScale = density.fontScale * fontScaleFactor)
-                    ) {
-                        keyboardContent()
-                    }
-                }
             }
         }
     }
@@ -112,35 +126,70 @@ private fun DragBar(
     backgroundColor: Color,
     onDrag: (change: androidx.compose.ui.input.pointer.PointerInputChange, dragAmount: androidx.compose.ui.geometry.Offset) -> Unit,
     onDragEnd: () -> Unit,
+    onRestore: () -> Unit,
+    onAdjust: () -> Unit,
 ) {
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(DRAG_BAR_HEIGHT_DP.dp)
-            .background(backgroundColor)
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDrag = onDrag,
-                    onDragEnd = onDragEnd,
-                    // 手势被系统打断视同松手：保证"底部松手切换"的提示态被消费、光效不残留
-                    onDragCancel = onDragEnd,
-                )
-            },
-        contentAlignment = Alignment.Center
+            .background(backgroundColor),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 白色握条垫深色胶囊衬底：浅色主题键盘上也可见（与 KeyboardResizeOverlay 的 GripPill 同款）
+        FloatingControlLabel(
+            label = tr(R.string.s_huifu),
+            onClick = onRestore,
+            modifier = Modifier.weight(1f),
+        )
         Box(
             modifier = Modifier
-                .background(Color.Black.copy(alpha = 0.32f), RoundedCornerShape(9.dp))
-                .padding(horizontal = 10.dp, vertical = 6.dp)
+                .size(48.dp)
+                .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(24.dp))
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDrag = onDrag,
+                        onDragEnd = onDragEnd,
+                        onDragCancel = onDragEnd,
+                    )
+                },
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier
-                    .width(28.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = 0.95f))
+            Icon(
+                imageVector = Icons.Default.OpenWith,
+                contentDescription = tr(R.string.s_xuanfumoshi),
+                tint = Color.White,
+                modifier = Modifier.size(24.dp),
             )
         }
+        FloatingControlLabel(
+            label = tr(R.string.s_jianpandiaojie),
+            onClick = onAdjust,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun FloatingControlLabel(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .height(48.dp)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = 14.sp,
+            modifier = Modifier
+                .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(24.dp))
+                .padding(horizontal = 12.dp, vertical = 7.dp),
+            maxLines = 1,
+        )
     }
 }

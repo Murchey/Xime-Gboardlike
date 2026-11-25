@@ -314,6 +314,8 @@ fun KeyboardView(
         backgroundColor = keyboardBgColor,
         onDrag = { dx, dy -> callbacks.onFloatingKeyboardDrag?.invoke(dx, dy) },
         onDragEnd = { callbacks.onFloatingKeyboardDragEnd?.invoke() },
+        onRestore = { callbacks.onFloatingModeChange?.invoke(false) },
+        onAdjust = { callbacks.onKeyboardResize?.invoke() },
         onCardPositioned = onCardPositioned,
     ) {
     Box(

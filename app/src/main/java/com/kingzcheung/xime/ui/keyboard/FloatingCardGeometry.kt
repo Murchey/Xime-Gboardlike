@@ -6,7 +6,7 @@ import kotlin.math.roundToInt
  * 悬浮键盘卡片几何的唯一权威定义（无 Compose 依赖，可单测）。
  *
  * 卡片恒为竖屏形态：宽度 = 短边 × [CARD_SCALE]（横屏下占窗口宽的比例相应变小），
- * 高度 = 键盘内容高 × [CARD_SCALE] + 顶部拖条 + 底部留白。
+ * 高度 = 键盘内容高 × [CARD_SCALE] + 底部控制栏 + 底部留白。
  *
  * 触摸区与拖动钳制一律以 FloatingKeyboardContainer 实测上报的矩形为准
  * （XimeInputMethodService.floatingCardBounds，窗口坐标）；本对象只承载常量与
@@ -17,8 +17,8 @@ object FloatingCardGeometry {
     /** 卡片缩放系数：宽度、键盘内容高与字号统一按此比例缩小 */
     const val CARD_SCALE = 0.85f
 
-    /** 卡片顶部拖条高度（dp），与 FloatingKeyboardContainer 的拖条渲染共用 */
-    const val DRAG_BAR_HEIGHT_DP = 18
+    /** 卡片底部控制栏高度（dp），与 FloatingKeyboardContainer 共用 */
+    const val DRAG_BAR_HEIGHT_DP = 56
 
     /** 悬浮卡片矩形（窗口坐标，px），由 onGloballyPositioned 实测回传 */
     data class CardBounds(val left: Int, val top: Int, val right: Int, val bottom: Int) {
@@ -90,11 +90,11 @@ object FloatingCardGeometry {
 
     /**
      * 垂直位置钳制：offsetY 是"卡片底边离窗口底边的距离"，下界 [minY]（导航栏高，
-     * 卡片不得压进导航栏），上界为"卡片顶边不顶出窗口顶，且留出拖条高度"。
-     * [topGuardDp] 额外留白（≥ 拖条高），保证拖条在上拖到极限后仍可见。
+     * 卡片不得压进导航栏），上界保证卡片顶边不超出窗口。
+     * [topGuardDp] 为卡片顶部保留额外空间。
      */
     fun clampOffsetY(offsetY: Int, minY: Int, screenHeightDp: Int, cardHeightDp: Int,
-                     topGuardDp: Int = DRAG_BAR_HEIGHT_DP): Int {
+                     topGuardDp: Int = 18): Int {
         val maxOffsetY = (screenHeightDp - cardHeightDp - topGuardDp).coerceAtLeast(minY)
         return offsetY.coerceIn(minY, maxOffsetY)
     }

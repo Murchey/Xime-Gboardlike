@@ -2334,7 +2334,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             modifier = Modifier
 
                                 .fillMaxWidth()
-                                .height(if (state.showKeyboardResize) (state.resizePreviewHeightDp + state.keyboardBottomPaddingDp).dp else (floatingCardContentHeight + state.keyboardBottomPaddingDp + overlayPanelExtra).dp)
+                                .height(if (state.showKeyboardResize && !state.isFloatingMode) (state.resizePreviewHeightDp + state.keyboardBottomPaddingDp).dp else (floatingCardContentHeight + state.keyboardBottomPaddingDp + overlayPanelExtra).dp)
                                 .align(androidx.compose.ui.Alignment.BottomCenter)
                                 .then(if (state.isFloatingMode) Modifier else Modifier.offset(y = (-activeBottomDp).dp))
                                 .onGloballyPositioned { c ->
@@ -2633,7 +2633,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                                   SettingsPreferences.getFloatingWidthPercent(this@XimeInputMethodService),
                                               )
                                           )
-                                          .height(floatingCardContentHeight.dp)
+                                          .height((floatingCardContentHeight + state.keyboardBottomPaddingDp).dp)
                                           .align(androidx.compose.ui.Alignment.BottomCenter)
                                           .offset(x = state.floatingOffsetX.dp, y = (-state.floatingOffsetY).dp)
                                   } else Modifier.matchParentSize()

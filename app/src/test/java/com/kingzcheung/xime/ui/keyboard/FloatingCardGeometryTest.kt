@@ -50,8 +50,8 @@ class FloatingCardGeometryTest {
 
     @Test
     fun `fallback card height is scaled keyboard plus drag bar plus padding`() {
-        // 0.85×280 = 238，+18 拖条 +16 留白
-        assertEquals(272, FloatingCardGeometry.fallbackCardHeightDp(keyboardHeightDp = 280, bottomPaddingDp = 16))
+        // 0.85×280 = 238，+56 控制栏 +16 留白
+        assertEquals(310, FloatingCardGeometry.fallbackCardHeightDp(keyboardHeightDp = 280, bottomPaddingDp = 16))
     }
 
     @Test
@@ -83,7 +83,7 @@ class FloatingCardGeometryTest {
         // 横屏可用高 369dp：竖屏键盘 302dp 封顶到 369×0.5/0.85 = 217dp
         assertEquals(217, FloatingCardGeometry.capKeyboardHeightDp(302, 369))
         val card = FloatingCardGeometry.fallbackCardHeightDp(217, 14)
-        assertTrue(369 - card >= 150)
+        assertTrue(369 - card >= 110)
     }
 
     @Test
