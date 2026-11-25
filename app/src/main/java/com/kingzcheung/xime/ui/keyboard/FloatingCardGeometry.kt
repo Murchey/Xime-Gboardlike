@@ -28,26 +28,34 @@ object FloatingCardGeometry {
     fun cardWidthDp(portraitScreenWidthDp: Int): Int =
         (portraitScreenWidthDp * CARD_SCALE).roundToInt()
 
+    fun floatingCardWidthDp(portraitWidthDp: Int, windowWidthDp: Int, widthPercent: Int): Int {
+        val maxWidth = maxOf(cardWidthDp(portraitWidthDp), (windowWidthDp * 0.6f).roundToInt()).coerceAtLeast(1)
+        return (maxWidth * widthPercent.coerceIn(MIN_WIDTH_PERCENT, 100) / 100f).roundToInt()
+    }
+
     /** 悬浮卡片宽度百分比下限：再窄按键就没法点了 */
     const val MIN_WIDTH_PERCENT = 50
 
     fun widthPercentForMargins(portraitWidthDp: Int, start: Int, end: Int): Int {
-        val maxWidth = cardWidthDp(portraitWidthDp)
-        return if (maxWidth <= 0) 100 else
-            (100f * (maxWidth - start - end) / maxWidth).roundToInt().coerceIn(MIN_WIDTH_PERCENT, 100)
+        return widthPercentForMargins(portraitWidthDp, portraitWidthDp, start, end)
+    }
+
+    fun widthPercentForMargins(portraitWidthDp: Int, windowWidthDp: Int, start: Int, end: Int): Int {
+        val maxWidth = floatingCardWidthDp(portraitWidthDp, windowWidthDp, 100)
+        return (100f * (maxWidth - start - end) / maxWidth).roundToInt().coerceIn(MIN_WIDTH_PERCENT, 100)
     }
 
     /** 按用户调过的宽度百分比取卡宽（[MIN_WIDTH_PERCENT]~100） */
     fun cardWidthDpFor(portraitScreenWidthDp: Int, widthPercent: Int): Int {
         val p = widthPercent.coerceIn(MIN_WIDTH_PERCENT, 100)
-        return (cardWidthDp(portraitScreenWidthDp) * p / 100f).roundToInt()
+        return floatingCardWidthDp(portraitScreenWidthDp, portraitScreenWidthDp, p)
     }
 
     /** 悬浮键盘高度的可调区间（缩放前的键盘高，dp）：卡高占可用高的 25%~[MAX_CARD_HEIGHT_FRACTION] */
     fun floatingHeightBoundsDp(availableHeightDp: Int): IntRange {
         if (availableHeightDp <= 0) return 120..400
         val low = (availableHeightDp * 0.25f / CARD_SCALE).toInt()
-        val high = (availableHeightDp * MAX_CARD_HEIGHT_FRACTION / CARD_SCALE).toInt()
+        val high = maxKeyboardHeightDp(availableHeightDp)
         return low.coerceAtLeast(1)..high.coerceAtLeast(low + 1)
     }
 
@@ -57,22 +65,30 @@ object FloatingCardGeometry {
         windowWidthDp: Int,
         widthPercent: Int = 100,
     ): Float = if (windowWidthDp <= 0) CARD_SCALE
-    else cardWidthDpFor(portraitScreenWidthDp, widthPercent) / windowWidthDp.toFloat()
+    else floatingCardWidthDp(portraitScreenWidthDp, windowWidthDp, widthPercent) / windowWidthDp.toFloat()
 
     /** 卡片水平可移动半幅（dp）：offsetX ∈ [-halfMargin, +halfMargin] */
     fun halfMarginDp(
         windowWidthDp: Int,
         portraitScreenWidthDp: Int,
         widthPercent: Int = 100,
-    ): Int = maxOf(0, (windowWidthDp - cardWidthDpFor(portraitScreenWidthDp, widthPercent)) / 2)
+    ): Int = maxOf(0, (windowWidthDp - floatingCardWidthDp(portraitScreenWidthDp, windowWidthDp, widthPercent)) / 2)
 
-    /** 卡片内容高占可用高度的上限：横屏短边上沿用竖屏键盘高会把卡片撑满屏，没有拖动行程 */
-    const val MAX_CARD_HEIGHT_FRACTION = 0.5f
+    /** 卡片总高度上限，包含底部控制栏。 */
+    const val MAX_CARD_HEIGHT_FRACTION = 0.75f
+
+    private fun maxKeyboardHeightDp(availableHeightDp: Int): Int {
+        val maxCardHeight = minOf(
+            availableHeightDp * MAX_CARD_HEIGHT_FRACTION,
+            (availableHeightDp - 18).coerceAtLeast(1).toFloat(),
+        )
+        return ((maxCardHeight - DRAG_BAR_HEIGHT_DP).coerceAtLeast(1f) / CARD_SCALE).toInt()
+    }
 
     /** 悬浮键盘高度按可用高度封顶（缩放前的键盘高，dp）；可用高度未知时原样返回 */
     fun capKeyboardHeightDp(keyboardHeightDp: Int, availableHeightDp: Int): Int {
         if (availableHeightDp <= 0) return keyboardHeightDp
-        val maxDp = (availableHeightDp * MAX_CARD_HEIGHT_FRACTION / CARD_SCALE).toInt()
+        val maxDp = maxKeyboardHeightDp(availableHeightDp)
         return keyboardHeightDp.coerceAtMost(maxDp)
     }
 

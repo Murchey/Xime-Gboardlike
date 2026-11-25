@@ -57,6 +57,7 @@ fun FloatingKeyboardContainer(
     isFloatingMode: Boolean,
     scaleFactor: Float,
     fontScaleFactor: Float = scaleFactor,
+    cardHeightDp: Int,
     offsetX: Int,
     offsetY: Int,
     onDrag: (dx: Float, dy: Float) -> Unit,
@@ -77,7 +78,7 @@ fun FloatingKeyboardContainer(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
     ) {
-        val cardTotalHeight = maxHeight
+        val cardTotalHeight = cardHeightDp.dp.coerceAtMost(maxHeight)
         Box(
             modifier = Modifier
                 .fillMaxWidth(scaleFactor)

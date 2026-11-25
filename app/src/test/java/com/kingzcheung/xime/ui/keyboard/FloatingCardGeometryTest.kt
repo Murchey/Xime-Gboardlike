@@ -29,7 +29,7 @@ class FloatingCardGeometryTest {
     fun `width fraction shrinks below card scale in landscape window`() {
         // 横屏窗口 891dp：卡宽仍按短边 411dp 算，占窗口 349/891 ≈ 0.392
         val fraction = FloatingCardGeometry.widthFraction(portraitScreenWidthDp = 411, windowWidthDp = 891)
-        assertEquals(349f / 891f, fraction, 0.0001f)
+        assertEquals(535f / 891f, fraction, 0.0001f)
     }
 
     @Test
@@ -40,7 +40,7 @@ class FloatingCardGeometryTest {
     @Test
     fun `half margin is half of window minus card`() {
         assertEquals(31, FloatingCardGeometry.halfMarginDp(windowWidthDp = 411, portraitScreenWidthDp = 411))
-        assertEquals(271, FloatingCardGeometry.halfMarginDp(windowWidthDp = 891, portraitScreenWidthDp = 411))
+        assertEquals(178, FloatingCardGeometry.halfMarginDp(windowWidthDp = 891, portraitScreenWidthDp = 411))
     }
 
     @Test
@@ -80,10 +80,10 @@ class FloatingCardGeometryTest {
 
     @Test
     fun `landscape caps keyboard height so card leaves drag room`() {
-        // 横屏可用高 369dp：竖屏键盘 302dp 封顶到 369×0.5/0.85 = 217dp
-        assertEquals(217, FloatingCardGeometry.capKeyboardHeightDp(302, 369))
-        val card = FloatingCardGeometry.fallbackCardHeightDp(217, 14)
-        assertTrue(369 - card >= 110)
+        // 卡片总高最多占横屏可用高度的 75%，保留上移空间。
+        assertEquals(259, FloatingCardGeometry.capKeyboardHeightDp(302, 369))
+        val card = FloatingCardGeometry.fallbackCardHeightDp(259, 14)
+        assertTrue(369 - card >= 93)
     }
 
     @Test
@@ -100,11 +100,11 @@ class FloatingCardGeometryTest {
     fun `floating height uses user value inside bounds`() {
         val bounds = FloatingCardGeometry.floatingHeightBoundsDp(369)
         assertEquals(108, bounds.first)
-        assertEquals(217, bounds.last)
+        assertEquals(259, bounds.last)
         // 用户值在区间内原样保留
         assertEquals(200, FloatingCardGeometry.floatingKeyboardHeightDp(200, 302, 369))
-        // 超出上界夹到上界
-        assertEquals(217, FloatingCardGeometry.floatingKeyboardHeightDp(300, 302, 369))
+        // 高度上限保留工具栏并允许键盘占用四分之三可用高
+        assertEquals(259, FloatingCardGeometry.floatingKeyboardHeightDp(400, 302, 369))
     }
 
     @Test
@@ -118,7 +118,7 @@ class FloatingCardGeometryTest {
     @Test
     fun `preview margins determine floating width and respect limits`() {
         assertEquals(100, FloatingCardGeometry.widthPercentForMargins(411, 0, 0))
-        assertEquals(80, FloatingCardGeometry.widthPercentForMargins(411, 40, 30))
+        assertEquals(87, FloatingCardGeometry.widthPercentForMargins(411, 891, 40, 30))
         assertEquals(50, FloatingCardGeometry.widthPercentForMargins(411, 300, 0))
         assertEquals(100, FloatingCardGeometry.widthPercentForMargins(0, 0, 0))
     }
@@ -127,9 +127,10 @@ class FloatingCardGeometryTest {
     fun `floating width percent shrinks card and keeps it centered`() {
         assertEquals(349, FloatingCardGeometry.cardWidthDpFor(411, 100))
         assertEquals(175, FloatingCardGeometry.cardWidthDpFor(411, 50))
+        assertEquals(535, FloatingCardGeometry.floatingCardWidthDp(411, 891, 100))
+        assertEquals(268, FloatingCardGeometry.floatingCardWidthDp(411, 891, 50))
         // 下限 50%：再低也按 50 算
-        assertEquals(175, FloatingCardGeometry.cardWidthDpFor(411, 10))
-        assertEquals(349, FloatingCardGeometry.cardWidthDpFor(411, 200))
+        assertEquals(268, FloatingCardGeometry.floatingCardWidthDp(411, 891, 10))
         // 收窄后水平行程随之变大：(411 - 175) / 2 = 118
         assertEquals(118, FloatingCardGeometry.halfMarginDp(411, 411, 50))
     }

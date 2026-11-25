@@ -833,16 +833,21 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val halfMargin = FloatingCardGeometry.halfMarginDp(
             screenW, portraitWidth, SettingsPreferences.getFloatingWidthPercent(this),
         )
-        val kbH = SettingsPreferences.getKeyboardHeightDp(this, isLandscape)
-        val cappedKbH = kbH.coerceAtMost((screenH * 8) / 10)
-        val cardH = FloatingCardGeometry.fallbackCardHeightDp(
-            cappedKbH,
-            SettingsPreferences.getKeyboardBottomPaddingDp(this),
+        val effectiveH = if (isFloatingMode) (resources.displayMetrics.heightPixels / resources.displayMetrics.density).roundToInt() - tryGetStatusBarHeightDp(this, window.window) else screenH
+        val kbH = FloatingCardGeometry.floatingKeyboardHeightDp(
+            SettingsPreferences.getFloatingHeightDp(this),
+            SettingsPreferences.getKeyboardHeightDp(this, false),
+            effectiveH,
         )
+        val cardH = FloatingCardGeometry.fallbackCardHeightDp(kbH, 0)
         val navBarDp = tryGetNavBarHeightDp(this, window.window)
-        val minY = if (isFloatingMode) navBarDp else 0
-        val effectiveH = if (isFloatingMode) screenH - tryGetStatusBarHeightDp(this, window.window) else screenH
-        val maxY = maxOf(minY, effectiveH - cardH - FloatingCardGeometry.DRAG_BAR_HEIGHT_DP)
+        val physicalH = resources.displayMetrics.heightPixels / resources.displayMetrics.density
+        val navBarAlreadyExcluded = (physicalH - screenH) >=
+            (navBarDp + tryGetStatusBarHeightDp(this, window.window) - 3)
+        val minY = if (isFloatingMode && !navBarAlreadyExcluded) {
+            tryGetVisibleNavBarHeightDp(this, window.window)
+        } else 0
+        val maxY = FloatingCardGeometry.clampOffsetY(Int.MAX_VALUE, minY, effectiveH, cardH)
         val clampedX = loadedX.coerceIn(-halfMargin, halfMargin)
         val clampedY = loadedY.coerceIn(minY, maxY)
         if (clampedX != loadedX || clampedY != loadedY) {
@@ -2173,7 +2178,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 }
                 val floatingCardContentHeight = effectiveKeyboardHeight + floatingDragBarHeight
                 val floatingWidthPercent = if (state.floatingResize && state.showKeyboardResize) {
-                    FloatingCardGeometry.widthPercentForMargins(minOf(screenWidthDp, screenHeightDp), state.resizePreviewMarginStartDp, state.resizePreviewMarginEndDp)
+                    FloatingCardGeometry.widthPercentForMargins(minOf(screenWidthDp, screenHeightDp), screenWidthDp, state.resizePreviewMarginStartDp, state.resizePreviewMarginEndDp)
                 } else SettingsPreferences.getFloatingWidthPercent(this@XimeInputMethodService)
                 // 仅夹取生效时打一行，便于无真机的验证（"是否真的被承载区收缩了"）
                 LaunchedEffect(hostAvailableDp, effectiveKeyboardHeight) {
@@ -2337,7 +2342,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             modifier = Modifier
 
                                 .fillMaxWidth()
-                                .height(if (state.showKeyboardResize && !state.isFloatingMode) (state.resizePreviewHeightDp + state.keyboardBottomPaddingDp).dp else (floatingCardContentHeight + (if (state.isFloatingMode) 0 else state.keyboardBottomPaddingDp) + overlayPanelExtra).dp)
+                                .height(if (state.isFloatingMode) effectiveScreenH.dp else if (state.showKeyboardResize) (state.resizePreviewHeightDp + state.keyboardBottomPaddingDp).dp else (floatingCardContentHeight + state.keyboardBottomPaddingDp + overlayPanelExtra).dp)
                                 .align(androidx.compose.ui.Alignment.BottomCenter)
                                 .then(if (state.isFloatingMode) Modifier else Modifier.offset(y = (-activeBottomDp).dp))
                                 .onGloballyPositioned { c ->
@@ -2523,7 +2528,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                               resources.configuration.screenHeightDp,
                                           )
                                           val percent = FloatingCardGeometry.widthPercentForMargins(
-                                              portraitW, snapshot.resizePreviewMarginStartDp, snapshot.resizePreviewMarginEndDp,
+                                              portraitW, screenWidthDp, snapshot.resizePreviewMarginStartDp, snapshot.resizePreviewMarginEndDp,
                                           )
                                           SettingsPreferences.setFloatingWidthPercent(
                                               this@XimeInputMethodService, percent)
@@ -2736,8 +2741,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             if (state.isFloatingMode && floatingExitHintState.value) {
                                 FloatingExitGlow(
                                     offsetXdp = state.floatingOffsetX,
-                                    cardWidthDp = FloatingCardGeometry.cardWidthDpFor(
-                            minOf(screenWidthDp, screenHeightDp),
+                                    cardWidthDp = FloatingCardGeometry.floatingCardWidthDp(
+                            minOf(screenWidthDp, screenHeightDp), screenWidthDp,
                             SettingsPreferences.getFloatingWidthPercent(this@XimeInputMethodService),
                         ),
                                     bottomGapDp = floatingMinY,
@@ -4134,8 +4139,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                         windowHeightPx = windowHeightPx,
                         offsetXdp = state.floatingOffsetX,
                         offsetYdp = state.floatingOffsetY,
-                        cardWidthDp = FloatingCardGeometry.cardWidthDpFor(
-                            portraitWidthDp,
+                        cardWidthDp = FloatingCardGeometry.floatingCardWidthDp(
+                            portraitWidthDp, config.screenWidthDp,
                             SettingsPreferences.getFloatingWidthPercent(this@XimeInputMethodService),
                         ),
                         cardHeightDp = FloatingCardGeometry.fallbackCardHeightDp(

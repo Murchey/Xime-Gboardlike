@@ -77,10 +77,10 @@ interface ClipboardDao {
     @Query("DELETE FROM clipboard_entries WHERE isPinned = 0")
     suspend fun clearUnpinned()
 
-    @Query("SELECT COUNT(*) FROM clipboard_entries WHERE isPinned = 0")
+    @Query("SELECT COUNT(*) FROM clipboard_entries WHERE isPinned = 0 AND isQuickSend = 0")
     suspend fun countUnpinned(): Int
 
-    @Query("DELETE FROM clipboard_entries WHERE isPinned = 0 AND id IN (SELECT id FROM clipboard_entries WHERE isPinned = 0 ORDER BY timestamp ASC LIMIT :limit)")
+    @Query("DELETE FROM clipboard_entries WHERE isPinned = 0 AND isQuickSend = 0 AND id IN (SELECT id FROM clipboard_entries WHERE isPinned = 0 AND isQuickSend = 0 ORDER BY timestamp ASC LIMIT :limit)")
     suspend fun trimUnpinned(limit: Int)
 
     /** 淘汰最旧的非置顶图片条目（置顶图片永不自动淘汰）。 */

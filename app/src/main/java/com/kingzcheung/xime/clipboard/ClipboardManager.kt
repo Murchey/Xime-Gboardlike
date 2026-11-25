@@ -375,6 +375,7 @@ class ClipboardManager private constructor(private val context: Context) {
             // 回读入库结果（带 id；极端情况下容量超限且其余条目全受保护时可能已被淘汰）
             val row = dao.findImageByHash(hash) ?: return@withLock null
             _clipboardChanged.emit(row.toClipboardItem())
+            enforceItemLimit()
             scheduleNextPurge()
             row.imagePath
         }
@@ -904,6 +905,8 @@ class ClipboardManager private constructor(private val context: Context) {
         val current = _clipboardItems.value.firstOrNull { it.id == id } ?: return
         scope.launch {
             dao.updatePinned(id, !current.isPinned)
+            enforceItemLimit()
+            purgeExpired()
         }
     }
 
@@ -1045,6 +1048,7 @@ class ClipboardManager private constructor(private val context: Context) {
         if (written > 0) {
             Log.d(TAG, "Imported $written clipboard text entries")
             enforceItemLimit()
+            purgeExpired()
         }
         return written
     }

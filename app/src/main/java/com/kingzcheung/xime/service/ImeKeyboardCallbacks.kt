@@ -184,8 +184,8 @@ internal fun rememberImeKeyboardCallbacks(
                         },
                         resizePreviewMarginStartDp = if (floating) {
                             val width = minOf(config.screenWidthDp, config.screenHeightDp)
-                            FloatingCardGeometry.cardWidthDp(width) -
-                                FloatingCardGeometry.cardWidthDpFor(width, SettingsPreferences.getFloatingWidthPercent(service))
+                            FloatingCardGeometry.floatingCardWidthDp(width, config.screenWidthDp, 100) -
+                                FloatingCardGeometry.floatingCardWidthDp(width, config.screenWidthDp, SettingsPreferences.getFloatingWidthPercent(service))
                         } else SettingsPreferences.getKeyboardMarginStartDp(service, isLandscape).coerceIn(0, maxMargin),
                         resizePreviewMarginEndDp = if (floating) 0 else
                             SettingsPreferences.getKeyboardMarginEndDp(service, isLandscape).coerceIn(0, maxMargin),
@@ -338,9 +338,7 @@ internal fun rememberImeKeyboardCallbacks(
                     val metrics = service.resources.displayMetrics
                     (metrics.heightPixels / metrics.density).roundToInt() -
                         tryGetStatusBarHeightDp(service, service.window.window)
-                } else {
-                    config.screenHeightDp
-                }
+                } else config.screenHeightDp
                 // 卡高以实测（onCardPositioned）为唯一真源，首帧实测前走几何兜底
                 val cardHeightDp = if (service.currentFloatingCardHeightDp > 0) {
                     service.currentFloatingCardHeightDp
