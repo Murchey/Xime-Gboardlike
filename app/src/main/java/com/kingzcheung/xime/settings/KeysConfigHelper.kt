@@ -2640,7 +2640,29 @@ object KeysConfigHelper {
                 defaultIndex = original?.defaultIndex,
             )
         }
-        return withLetterVariants(key, isAsciiMode, styled)
+        return withMergedKeySymbol(key, isAsciiMode, withLetterVariants(key, isAsciiMode, styled))
+    }
+
+    /**
+     * 合并键（14/17/18 键的 "qw" 等）长按首项若是组内字母，前置该键的上滑符号：
+     * 角标在中文模式取长按首项，否则合并键角标显示字母、单字母键显示符号，同一键盘上不一致。
+     */
+    private fun withMergedKeySymbol(key: String, isAsciiMode: Boolean, base: LongPressAction?): LongPressAction? {
+        if (key.length != 2 || !key.all { it.isLetter() }) return base
+        val values = base?.values ?: return base
+        val first = values.firstOrNull() ?: return base
+        val firstText = first.label.ifEmpty { first.value }
+        if (first.action != GestureAction.COMMIT || firstText.length != 1 ||
+            !key.contains(firstText, ignoreCase = true)
+        ) return base
+        val symbol = getSwipeUpCommitValue(key, isAsciiMode)?.takeIf { it.isNotBlank() } ?: return base
+        val label = getSwipeUpLabel(key, isAsciiMode)?.takeIf { it.isNotBlank() } ?: symbol
+        if (key.contains(label, ignoreCase = true)) return base
+        return LongPressAction(
+            display = base.display,
+            values = listOf(KeyAction(action = GestureAction.COMMIT, value = symbol, label = label)) + values,
+            defaultIndex = base.defaultIndex,
+        )
     }
 
     private fun withLetterVariants(key: String, isAsciiMode: Boolean, base: LongPressAction?): LongPressAction? {

@@ -587,7 +587,9 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
         val screenW = service.resources.configuration.screenWidthDp
         val screenH = service.resources.configuration.screenHeightDp
         val portraitWidth = minOf(screenW, screenH)
-        val halfMargin = FloatingCardGeometry.halfMarginDp(screenW, portraitWidth)
+        val halfMargin = FloatingCardGeometry.halfMarginDp(
+            screenW, portraitWidth, SettingsPreferences.getFloatingWidthPercent(service),
+        )
         val clampedX = loadedX.coerceIn(-halfMargin, halfMargin)
         service.uiState.value = service.uiState.value.copy(
             isFloatingMode = enabled,
@@ -597,6 +599,7 @@ internal class ImeSchemaController(private val service: XimeInputMethodService) 
             floatingOffsetY = if (enabled) floatingMinY else 0,
         )
         if (enabled) {
+            service.clearGlassBlur()
             service.closeToolPanel()
             // 清掉上一轮的实测矩形：新卡片矩形未建立前，触摸区/钳制走 FloatingCardGeometry 兜底
             service.floatingCardBounds = null

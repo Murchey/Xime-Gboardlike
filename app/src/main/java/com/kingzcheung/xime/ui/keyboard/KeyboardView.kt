@@ -288,8 +288,8 @@ fun KeyboardView(
     val screenW = LocalConfiguration.current.screenWidthDp
     val screenH = LocalConfiguration.current.screenHeightDp
     val portraitScreenWidth = minOf(screenW, screenH)
-    val cardWidthDp = FloatingCardGeometry.cardWidthDp(portraitScreenWidth)
-    val floatScaleFactor = if (state.isFloatingMode) FloatingCardGeometry.widthFraction(portraitScreenWidth, screenW)
+    val cardWidthDp = FloatingCardGeometry.cardWidthDpFor(portraitScreenWidth, state.floatingWidthPercent)
+    val floatScaleFactor = if (state.isFloatingMode) FloatingCardGeometry.widthFraction(portraitScreenWidth, screenW, state.floatingWidthPercent)
         else FloatingCardGeometry.CARD_SCALE
     val floatFontScale = if (state.isFloatingMode) FloatingCardGeometry.CARD_SCALE else 1f
     // 键盘调节支持左右收窄后，实际渲染宽 ≠ 屏宽（屏幕宽度只作首帧兜底）：
@@ -499,7 +499,7 @@ fun KeyboardView(
                                 com.kingzcheung.xime.handwriting.HandwritingEngine.hasModel(toolbarContext)
                             },
                             isDebugLogEnabled = SettingsPreferences.isVerboseLoggingEnabled(toolbarContext),
-                            canResizeKeyboard = !state.isFloatingMode && !state.isHostConstrained,
+                            canResizeKeyboard = !state.isHostConstrained,
                         )
                     ) {
                         return@mapNotNull null
@@ -1552,7 +1552,10 @@ fun KeyboardView(
                                         ToolbarButton.HOME -> callbacks.onToolbarEditingAction?.invoke("home")
                                         ToolbarButton.END -> callbacks.onToolbarEditingAction?.invoke("end")
                                         ToolbarButton.FLOAT -> callbacks.onFloatingModeChange?.invoke(!state.isFloatingMode)
-                                        ToolbarButton.KEYBOARD_RESIZE -> callbacks.onKeyboardResize?.invoke()
+                                        ToolbarButton.KEYBOARD_RESIZE -> {
+                                            callbacks.onKeyboardResize?.invoke()
+                                            viewModel.closeOverlay()
+                                        }
                                         ToolbarButton.ONE_HANDED -> callbacks.onToggleOneHanded?.invoke()
                                         ToolbarButton.PRIVACY -> callbacks.onTogglePrivacyInput?.invoke()
                                         // 手写找字：菜单里直接切到手写面板（此前抛给编辑动作，没有处理器，点了没反应）
@@ -1639,7 +1642,7 @@ fun KeyboardView(
                         pluginButtons = state.toolbarPluginButtons,
                         switchItems = state.schemaSwitches.map { it.asToolbarItem() },
                         isSttEnabled = state.isSttEnabled,
-                        canResizeKeyboard = !state.isFloatingMode && !state.isHostConstrained,
+                        canResizeKeyboard = !state.isHostConstrained,
                         keyTextColor = keyTextColor,
                         backgroundColor = keyboardBgColor,
                         accentColor = accentColor,

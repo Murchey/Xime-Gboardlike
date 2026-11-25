@@ -164,9 +164,19 @@ internal fun rememberImeKeyboardCallbacks(
                     val isLandscape = config.screenWidthDp > config.screenHeightDp
                     // 按当前屏宽收紧已存边距（横竖屏切换后旧值可能超出上限）
                     val maxMargin = KeyboardResizeBounds.maxHorizontalMarginDp(config.screenWidthDp)
+                    val floating = service.uiState.value.isFloatingMode
+                    // 调节层只服务于键盘本体：工具面板/快捷发送表单会占掉卡片外的高度
+                    service.closeToolPanel()
                     service.uiState.value = service.uiState.value.copy(
                         showKeyboardResize = true,
-                        resizePreviewHeightDp = SettingsPreferences.getKeyboardHeightDp(service, isLandscape),
+                        floatingResize = floating,
+                        // 悬浮卡片高度初值：由当前卡片缩放后的高反推回缩放前的值
+                        resizePreviewHeightDp = if (floating) {
+                            (service.uiState.value.keyboardHeightDp / FloatingCardGeometry.CARD_SCALE)
+                                .roundToInt()
+                        } else {
+                            SettingsPreferences.getKeyboardHeightDp(service, isLandscape)
+                        },
                         resizePreviewMarginStartDp =
                             SettingsPreferences.getKeyboardMarginStartDp(service, isLandscape)
                                 .coerceIn(0, maxMargin),
@@ -311,20 +321,12 @@ internal fun rememberImeKeyboardCallbacks(
                 val config = service.resources.configuration
                 val screenW = config.screenWidthDp
                 val portraitWidth = minOf(screenW, config.screenHeightDp)
-                val halfMargin = FloatingCardGeometry.halfMarginDp(screenW, portraitWidth)
+                val halfMargin = FloatingCardGeometry.halfMarginDp(
+                    screenW, portraitWidth, SettingsPreferences.getFloatingWidthPercent(service),
+                )
                 // dx/dy 为原始屏幕位移（+x 右、+y 下）：x 直接累加，y 与 offsetY
                 // 方向相反（offsetY = 卡片离底边的距离，上拖 dy<0 → 卡片上移）
                 val newX = (s.floatingOffsetX + dx).roundToInt().coerceIn(-halfMargin, halfMargin)
-                // 卡高以实测（onCardPositioned）为唯一真源，首帧实测前走几何兜底
-                val cardHeightDp = if (service.currentFloatingCardHeightDp > 0) {
-                    service.currentFloatingCardHeightDp
-                } else {
-                    FloatingCardGeometry.fallbackCardHeightDp(
-                        SettingsPreferences.getKeyboardHeightDp(service, false)
-                            .coerceAtMost((config.screenHeightDp * 8) / 10),
-                        s.keyboardBottomPaddingDp,
-                    )
-                }
                 // 悬浮卡片恒为竖屏形态：有效屏高 = 物理高 - 状态栏（与 setContent 一致）
                 val screenH = if (s.isFloatingMode) {
                     val metrics = service.resources.displayMetrics
@@ -332,6 +334,20 @@ internal fun rememberImeKeyboardCallbacks(
                         tryGetStatusBarHeightDp(service, service.window.window)
                 } else {
                     config.screenHeightDp
+                }
+                // 卡高以实测（onCardPositioned）为唯一真源，首帧实测前走几何兜底
+                val cardHeightDp = if (service.currentFloatingCardHeightDp > 0) {
+                    service.currentFloatingCardHeightDp
+                } else {
+                    FloatingCardGeometry.fallbackCardHeightDp(
+                        FloatingCardGeometry.floatingKeyboardHeightDp(
+                            userHeightDp = SettingsPreferences.getFloatingHeightDp(service),
+                            dockedHeightDp = SettingsPreferences.getKeyboardHeightDp(service, false)
+                                .coerceAtMost((config.screenHeightDp * 8) / 10),
+                            availableHeightDp = screenH,
+                        ),
+                        s.keyboardBottomPaddingDp,
+                    )
                 }
                 val rawY = (s.floatingOffsetY - dy).roundToInt()
                 val newY = FloatingCardGeometry.clampOffsetY(

@@ -1,6 +1,7 @@
 package com.kingzcheung.xime.ui.keyboard
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -60,14 +61,69 @@ class FloatingCardGeometryTest {
     }
 
     @Test
-    fun `clamp offsetY caps card inside screen`() {
-        assertEquals(528, FloatingCardGeometry.clampOffsetY(600, minY = 0, screenHeightDp = 800, cardHeightDp = 272))
+    fun `clamp offsetY caps card inside screen leaving drag bar visible`() {
+        // maxOffsetY = screenH - cardH - topGuard = 800 - 272 - 18 = 510
+        assertEquals(510, FloatingCardGeometry.clampOffsetY(600, minY = 0, screenHeightDp = 800, cardHeightDp = 272))
+    }
+
+    @Test
+    fun `clamp offsetY with explicit topGuard zero matches old behaviour`() {
+        // topGuardDp=0 → 旧行为
+        assertEquals(528, FloatingCardGeometry.clampOffsetY(600, minY = 0, screenHeightDp = 800, cardHeightDp = 272, topGuardDp = 0))
     }
 
     @Test
     fun `clamp keeps minY reachable when card taller than screen`() {
         // 卡高超过屏高时上界塌缩到 minY，钳制区间不反向
         assertEquals(16, FloatingCardGeometry.clampOffsetY(50, minY = 16, screenHeightDp = 100, cardHeightDp = 272))
+    }
+
+    @Test
+    fun `landscape caps keyboard height so card leaves drag room`() {
+        // 横屏可用高 369dp：竖屏键盘 302dp 封顶到 369×0.5/0.85 = 217dp
+        assertEquals(217, FloatingCardGeometry.capKeyboardHeightDp(302, 369))
+        val card = FloatingCardGeometry.fallbackCardHeightDp(217, 14)
+        assertTrue(369 - card >= 150)
+    }
+
+    @Test
+    fun `portrait keyboard height is not capped`() {
+        assertEquals(302, FloatingCardGeometry.capKeyboardHeightDp(302, 849))
+    }
+
+    @Test
+    fun `unknown available height leaves keyboard height unchanged`() {
+        assertEquals(302, FloatingCardGeometry.capKeyboardHeightDp(302, 0))
+    }
+
+    @Test
+    fun `floating height uses user value inside bounds`() {
+        val bounds = FloatingCardGeometry.floatingHeightBoundsDp(369)
+        assertEquals(108, bounds.first)
+        assertEquals(217, bounds.last)
+        // 用户值在区间内原样保留
+        assertEquals(200, FloatingCardGeometry.floatingKeyboardHeightDp(200, 302, 369))
+        // 超出上界夹到上界
+        assertEquals(217, FloatingCardGeometry.floatingKeyboardHeightDp(300, 302, 369))
+    }
+
+    @Test
+    fun `floating height falls back to capped docked height`() {
+        assertEquals(
+            FloatingCardGeometry.capKeyboardHeightDp(302, 369),
+            FloatingCardGeometry.floatingKeyboardHeightDp(0, 302, 369),
+        )
+    }
+
+    @Test
+    fun `floating width percent shrinks card and keeps it centered`() {
+        assertEquals(349, FloatingCardGeometry.cardWidthDpFor(411, 100))
+        assertEquals(175, FloatingCardGeometry.cardWidthDpFor(411, 50))
+        // 下限 50%：再低也按 50 算
+        assertEquals(175, FloatingCardGeometry.cardWidthDpFor(411, 10))
+        assertEquals(349, FloatingCardGeometry.cardWidthDpFor(411, 200))
+        // 收窄后水平行程随之变大：(411 - 175) / 2 = 118
+        assertEquals(118, FloatingCardGeometry.halfMarginDp(411, 411, 50))
     }
 
     @Test

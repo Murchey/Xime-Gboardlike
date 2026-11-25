@@ -126,6 +126,8 @@ data class KeyboardUiState(
      *  退出面板时 fallback 到引擎的面板态，主键盘被误留英文）。 */
     val isInputSessionRestarting: Boolean = false,
     val isFloatingMode: Boolean = false,
+    /** 悬浮卡片宽度百分比（[com.kingzcheung.xime.ui.keyboard.FloatingCardGeometry.MIN_WIDTH_PERCENT]~100） */
+    val floatingWidthPercent: Int = 100,
     /** 单手模式（0 关闭 / 1 左手 / 2 右手）：工具栏面板据此切换「进入/退出」文案。 */
     val oneHandedMode: Int = 0,
     /** 编辑器存在选区：编辑面板在「全选 / 剪切」间切换（仿 fcitx5 updateSelection）。 */

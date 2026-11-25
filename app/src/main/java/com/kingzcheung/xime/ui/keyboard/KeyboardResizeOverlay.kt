@@ -88,6 +88,13 @@ fun KeyboardResizeOverlay(
     /** 是否允许拖左/右边缘调宽：单手模式只调"内侧"那一条，贴边那侧锁死。 */
     allowMarginStartDrag: Boolean = true,
     allowMarginEndDrag: Boolean = true,
+    /** 高度可调区间（dp）；null = 按屏高百分比算（停靠键盘）。悬浮卡片传自己的区间。 */
+    heightBoundsOverride: IntRange? = null,
+    /**
+     * 遮罩实际高度（dp），用于把操作按钮摆在遮罩正中。
+     * 悬浮卡片的 [heightDp] 是缩放前的键盘高，与遮罩实际高度不同，必须分开传。
+     */
+    overlayHeightDp: Int = heightDp,
     modifier: Modifier = Modifier,
 ) {
     val configuration = LocalConfiguration.current
@@ -95,7 +102,7 @@ fun KeyboardResizeOverlay(
     val screenHeightDp = configuration.screenHeightDp
     val isLandscape = screenWidthDp > screenHeightDp
 
-    val heightBounds = remember(screenHeightDp, isLandscape) {
+    val heightBounds = heightBoundsOverride ?: remember(screenHeightDp, isLandscape) {
         KeyboardResizeBounds.heightBoundsDp(screenHeightDp, isLandscape)
     }
     val maxMargin = remember(screenWidthDp) {
@@ -213,7 +220,7 @@ fun KeyboardResizeOverlay(
         Row(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = (heightDp / 2 - ACTION_BLOCK_HALF_HEIGHT).dp)
+                .offset(y = (overlayHeightDp / 2 - ACTION_BLOCK_HALF_HEIGHT).dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.Top,

@@ -210,7 +210,7 @@ fun MenuBar(
             state.isSttEnabled,
             { com.kingzcheung.xime.handwriting.HandwritingEngine.hasModel(context) },
             isDebugLogEnabled = SettingsPreferences.isVerboseLoggingEnabled(context),
-            canResizeKeyboard = state.canResizeKeyboard && !state.isFloatingMode,
+            canResizeKeyboard = state.canResizeKeyboard,
         )
     }.map { b ->
         // 单手模式是"开关"：已开启时同一张卡片显示"退出单手模式"，图标换成四角箭头

@@ -830,7 +830,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val screenW = resources.configuration.screenWidthDp
         val screenH = resources.configuration.screenHeightDp
         val portraitWidth = minOf(screenW, screenH)
-        val halfMargin = FloatingCardGeometry.halfMarginDp(screenW, portraitWidth)
+        val halfMargin = FloatingCardGeometry.halfMarginDp(
+            screenW, portraitWidth, SettingsPreferences.getFloatingWidthPercent(this),
+        )
         val kbH = SettingsPreferences.getKeyboardHeightDp(this, isLandscape)
         val cappedKbH = kbH.coerceAtMost((screenH * 8) / 10)
         val cardH = FloatingCardGeometry.fallbackCardHeightDp(
@@ -840,7 +842,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val navBarDp = tryGetNavBarHeightDp(this, window.window)
         val minY = if (isFloatingMode) navBarDp else 0
         val effectiveH = if (isFloatingMode) screenH - tryGetStatusBarHeightDp(this, window.window) else screenH
-        val maxY = maxOf(minY, effectiveH - cardH - 20)
+        val maxY = maxOf(minY, effectiveH - cardH - FloatingCardGeometry.DRAG_BAR_HEIGHT_DP)
         val clampedX = loadedX.coerceIn(-halfMargin, halfMargin)
         val clampedY = loadedY.coerceIn(minY, maxY)
         if (clampedX != loadedX || clampedY != loadedY) {
@@ -2031,7 +2033,16 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 } else {
                     SettingsPreferences.getKeyboardHeightDp(this@XimeInputMethodService, screenIsLandscape)
                 }
-                val displayHeight = orientationHeight.coerceAtMost((if (state.isFloatingMode) portraitScreenHeightDp else screenHeightDp) * 8 / 10)
+                // 悬浮卡片有自己的尺寸：用户调过就用调过的值，没调过沿用停靠键盘高再按可用高封顶
+                val displayHeight = if (state.isFloatingMode) {
+                    FloatingCardGeometry.floatingKeyboardHeightDp(
+                        userHeightDp = SettingsPreferences.getFloatingHeightDp(this@XimeInputMethodService),
+                        dockedHeightDp = orientationHeight.coerceAtMost(portraitScreenHeightDp * 8 / 10),
+                        availableHeightDp = effectiveScreenH,
+                    )
+                } else {
+                    orientationHeight.coerceAtMost(screenHeightDp * 8 / 10)
+                }
                 val oneHandedActive = !state.isFloatingMode &&
                     state.oneHandedMode != com.kingzcheung.xime.settings.OneHandedMode.OFF
                 // 单手模式有独立的键盘尺寸：未调整过时沿用常规高度，调整过就只认单手值，
@@ -2040,7 +2051,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     .takeIf { it > 0 }
                     ?.coerceIn(screenHeightDp / 4, (screenHeightDp * 3) / 4)
                 val keyboardHeight = if (state.showKeyboardResize) {
-                    if (screenIsLandscape) (screenHeightDp * 7) / 10 else displayHeight.coerceAtLeast(screenHeightDp / 2)
+                    // 悬浮调节：预览值就是卡片键盘高，直接跟手；停靠调节仍按屏高铺底预览
+                    if (state.isFloatingMode) state.resizePreviewHeightDp
+                    else if (screenIsLandscape) (screenHeightDp * 7) / 10
+                    else displayHeight.coerceAtLeast(screenHeightDp / 2)
                 } else if (isHandwritingMode) {
                     screenHeightDp / 2
                 } else if (oneHandedActive) {
@@ -2390,6 +2404,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     inputSessionId = state.inputSessionId,
                                     isInputSessionRestarting = state.isInputSessionRestarting,
                                     isFloatingMode = state.isFloatingMode,
+                                    floatingWidthPercent = SettingsPreferences.getFloatingWidthPercent(this@XimeInputMethodService),
                                     oneHandedMode = state.oneHandedMode,
                                     isHostConstrained = hostConstrained,
                                     isHandwritingMode = isHandwritingMode,
@@ -2463,8 +2478,22 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                               KeyboardResizeOverlay(
                                   heightDp = state.resizePreviewHeightDp,
                                   bottomPaddingDp = state.keyboardBottomPaddingDp,
-                                  marginStartDp = state.resizePreviewMarginStartDp,
+                                  // 悬浮模式下左右手柄表示"卡片相对满卡宽收窄多少"，始终居中
+                                  marginStartDp = if (state.isFloatingMode) {
+                                      val portraitW = minOf(screenWidthDp, screenHeightDp)
+                                      val maxCardW = FloatingCardGeometry.cardWidthDp(portraitW)
+                                      (maxCardW - FloatingCardGeometry.cardWidthDpFor(
+                                      portraitW,
+                                      SettingsPreferences.getFloatingWidthPercent(this@XimeInputMethodService),
+                                  )) / 2
+                                  } else state.resizePreviewMarginStartDp,
                                   marginEndDp = state.resizePreviewMarginEndDp,
+                                  // 悬浮卡片的高度区间按可用高算，不用停靠键盘的屏高百分比
+                                  heightBoundsOverride = if (state.isFloatingMode) {
+                                      FloatingCardGeometry.floatingHeightBoundsDp(effectiveScreenH)
+                                  } else null,
+                                  // 悬浮遮罩实际高 = 缩放后的键盘内容高，与可调高度不是同一个量
+                                  overlayHeightDp = if (state.isFloatingMode) effectiveKeyboardHeight else state.resizePreviewHeightDp,
                                   onHeightChange = { newHeight ->
                                       uiState.value = uiState.value.copy(resizePreviewHeightDp = newHeight)
                                   },
@@ -2479,14 +2508,43 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                   },
                                   onReset = {
                                       uiState.value = uiState.value.copy(
-                                          resizePreviewHeightDp = SettingsPreferences.getDefaultKeyboardHeightDp(this@XimeInputMethodService, isLandscape),
-                                          keyboardBottomPaddingDp = 0,
+                                          resizePreviewHeightDp = if (state.isFloatingMode) {
+                                              // 悬浮「重置」回到跟随停靠键盘高
+                                              SettingsPreferences.getKeyboardHeightDp(this@XimeInputMethodService, false)
+                                          } else SettingsPreferences.getDefaultKeyboardHeightDp(this@XimeInputMethodService, isLandscape),
+                                          keyboardBottomPaddingDp = if (state.isFloatingMode) uiState.value.keyboardBottomPaddingDp else 0,
                                           resizePreviewMarginStartDp = 0,
                                           resizePreviewMarginEndDp = 0,
                                       )
                                   },
                                   onConfirm = {
                                       val snapshot = uiState.value
+                                      if (snapshot.floatingResize) {
+                                          // 悬浮卡片尺寸独立落盘：不动停靠键盘的高度与边距。
+                                          // 左右手柄的收窄量换算成卡宽百分比（卡片始终水平居中）
+                                          val portraitW = minOf(
+                                              resources.configuration.screenWidthDp,
+                                              resources.configuration.screenHeightDp,
+                                          )
+                                          val maxCardW = FloatingCardGeometry.cardWidthDp(portraitW)
+                                          val shrink = snapshot.resizePreviewMarginStartDp +
+                                              snapshot.resizePreviewMarginEndDp
+                                          val percent = if (maxCardW > 0) {
+                                              (100 * (maxCardW - shrink) / maxCardW)
+                                                  .coerceIn(FloatingCardGeometry.MIN_WIDTH_PERCENT, 100)
+                                          } else 100
+                                          SettingsPreferences.setFloatingWidthPercent(
+                                              this@XimeInputMethodService, percent)
+                                          SettingsPreferences.setFloatingHeightDp(
+                                              this@XimeInputMethodService, snapshot.resizePreviewHeightDp)
+                                          uiState.value = snapshot.copy(
+                                              showKeyboardResize = false,
+                                              floatingResize = false,
+                                              keyboardHeightDp = (snapshot.resizePreviewHeightDp *
+                                                  FloatingCardGeometry.CARD_SCALE).roundToInt(),
+                                          )
+                                          return@KeyboardResizeOverlay
+                                      }
                                       if (snapshot.oneHandedResize) {
                                           // 单手尺寸单独落盘：不碰横屏/竖屏的常规高度与宽度边距
                                           val screenW = resources.configuration.screenWidthDp
@@ -2529,6 +2587,14 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                   allowMarginEndDrag = !state.oneHandedResize ||
                                       com.kingzcheung.xime.settings.OneHandedMode.isKeyboardOnLeft(state.oneHandedMode),
                                   onCancel = {
+                                      if (uiState.value.floatingResize) {
+                                          // 悬浮尺寸取消：只清预览态，停靠键盘尺寸本来没被改过
+                                          uiState.value = uiState.value.copy(
+                                              showKeyboardResize = false,
+                                              floatingResize = false,
+                                          )
+                                          return@KeyboardResizeOverlay
+                                      }
                                       if (uiState.value.oneHandedResize) {
                                           uiState.value = uiState.value.copy(
                                               showKeyboardResize = false,
@@ -2556,7 +2622,21 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                           resizePreviewMarginEndDp = restoreEnd,
                                       )
                                   },
-                                  modifier = Modifier.matchParentSize()
+                                  // 悬浮卡片可以拖到任意位置，遮罩必须跟着卡片走（与 FloatingKeyboardContainer 同款几何），
+                                  // 否则调节层停在窗口底部的原停靠位置，与卡片错位
+                                  modifier = if (state.isFloatingMode) {
+                                      Modifier
+                                          .fillMaxWidth(
+                                              FloatingCardGeometry.widthFraction(
+                                                  minOf(screenWidthDp, screenHeightDp),
+                                                  screenWidthDp,
+                                                  SettingsPreferences.getFloatingWidthPercent(this@XimeInputMethodService),
+                                              )
+                                          )
+                                          .height(floatingCardContentHeight.dp)
+                                          .align(androidx.compose.ui.Alignment.BottomCenter)
+                                          .offset(x = state.floatingOffsetX.dp, y = (-state.floatingOffsetY).dp)
+                                  } else Modifier.matchParentSize()
                               )
                           }
                            }
@@ -2664,7 +2744,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             if (state.isFloatingMode && floatingExitHintState.value) {
                                 FloatingExitGlow(
                                     offsetXdp = state.floatingOffsetX,
-                                    cardWidthDp = FloatingCardGeometry.cardWidthDp(minOf(screenWidthDp, screenHeightDp)),
+                                    cardWidthDp = FloatingCardGeometry.cardWidthDpFor(
+                            minOf(screenWidthDp, screenHeightDp),
+                            SettingsPreferences.getFloatingWidthPercent(this@XimeInputMethodService),
+                        ),
                                     bottomGapDp = floatingMinY,
                                     glowColor = accentCol,
                                     modifier = Modifier
@@ -3536,6 +3619,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     /** 键盘主模糊面。底部圆角（导航栏透明）时延伸到屏幕底，覆盖导航条区域。 */
     internal fun updateGlassBlur(rect: android.graphics.Rect) {
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return
+        // 悬浮卡片不走玻璃背板：停靠位置的模糊面若留着，会糊住卡片下方的宿主
+        if (uiState.value.isFloatingMode) {
+            clearGlassBlur()
+            return
+        }
         ensureGlassBlurAvailabilityListener()
         glassBlurRect = android.graphics.Rect(rect)
         val densityPx = resources.displayMetrics.density
@@ -3602,6 +3690,13 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         updateGlassSurface("keyboard", topStrip)
         updateGlassSurface("keyboard-left", androidRect(left))
         updateGlassSurface("keyboard-right", androidRect(right))
+    }
+
+    /** 撤掉全部模糊面并忘记停靠矩形（切到悬浮时调用，之后不会被显隐同步重新点亮）。 */
+    internal fun clearGlassBlur() {
+        glassBlurRect = null
+        glassSurfaceBounds.clear()
+        glassBlurWindows.values.forEach { it.setVisible(false) }
     }
 
     private fun setGlassSurfacesVisible(visible: Boolean) {
@@ -4047,10 +4142,17 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                         windowHeightPx = windowHeightPx,
                         offsetXdp = state.floatingOffsetX,
                         offsetYdp = state.floatingOffsetY,
-                        cardWidthDp = FloatingCardGeometry.cardWidthDp(portraitWidthDp),
+                        cardWidthDp = FloatingCardGeometry.cardWidthDpFor(
+                            portraitWidthDp,
+                            SettingsPreferences.getFloatingWidthPercent(this@XimeInputMethodService),
+                        ),
                         cardHeightDp = FloatingCardGeometry.fallbackCardHeightDp(
-                            SettingsPreferences.getKeyboardHeightDp(this@XimeInputMethodService, false)
-                                .coerceAtMost((config.screenHeightDp * 8) / 10),
+                            FloatingCardGeometry.floatingKeyboardHeightDp(
+                                userHeightDp = SettingsPreferences.getFloatingHeightDp(this@XimeInputMethodService),
+                                dockedHeightDp = SettingsPreferences.getKeyboardHeightDp(this@XimeInputMethodService, false)
+                                    .coerceAtMost((config.screenHeightDp * 8) / 10),
+                                availableHeightDp = (windowHeightPx / density).toInt(),
+                            ),
                             state.keyboardBottomPaddingDp,
                         ),
                         density = density,

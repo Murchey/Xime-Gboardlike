@@ -41,6 +41,8 @@ data class InputUIState(
     /** 键盘右边距（dp）：>0 时键盘右缘内收。 */
     val keyboardMarginEndDp: Int = 0,
     val showKeyboardResize: Boolean = false,
+    /** 本次调节是在编辑「悬浮卡片尺寸」（确认后只写悬浮专用宽高，不动停靠键盘尺寸）。 */
+    val floatingResize: Boolean = false,
     val resizePreviewHeightDp: Int = 0,
     /** 键盘调节进行中的左右边距预览值（确认后写入 keyboardMarginStart/EndDp）。 */
     val resizePreviewMarginStartDp: Int = 0,

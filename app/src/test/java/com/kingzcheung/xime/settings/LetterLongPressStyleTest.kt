@@ -105,10 +105,18 @@ class LetterLongPressStyleTest {
     }
 
     @Test
-    fun `合并键不追加单字母变体`() {
+    fun `合并键长按首项是上滑符号且不追加单字母变体`() {
         useStyle(SettingsPreferences.SYMBOL_HINT_FCITX5)
         val lp = KeysConfigHelper.longPressForStyle("ab")!!
-        assertEquals(listOf("a", "b", "A", "B"), lp.values.map { it.label })
+        // 首项决定中文模式的键面角标：必须与单字母键一样是符号，而不是组内字母
+        assertEquals(listOf("*", "a", "b", "A", "B"), lp.values.map { it.label })
         assertFalse(lp.values.any { it.label == "á" })
+    }
+
+    @Test
+    fun `gboard风格_合并键长按首项是首字母的符号`() {
+        useStyle(SettingsPreferences.SYMBOL_HINT_GBOARD)
+        val lp = KeysConfigHelper.longPressForStyle("ab")!!
+        assertEquals("@", lp.values.first().label)
     }
 }

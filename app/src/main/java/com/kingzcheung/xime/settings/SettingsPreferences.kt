@@ -1532,6 +1532,25 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
         getPrefs(context).edit().putBoolean(key, enabled).apply()
     }
 
+    private const val KEY_FLOATING_HEIGHT_DP = "floating_height_dp"
+    private const val KEY_FLOATING_WIDTH_PERCENT = "floating_width_percent"
+
+    /** 悬浮卡片键盘内容高（dp）；0 = 跟随停靠键盘高度。 */
+    fun getFloatingHeightDp(context: Context): Int =
+        getPrefs(context).getInt(KEY_FLOATING_HEIGHT_DP, 0)
+
+    fun setFloatingHeightDp(context: Context, heightDp: Int) {
+        getPrefs(context).edit().putInt(KEY_FLOATING_HEIGHT_DP, heightDp).apply()
+    }
+
+    /** 悬浮卡片宽度占"卡宽上限"的百分比（50~100）；100 = 现有竖屏卡宽。 */
+    fun getFloatingWidthPercent(context: Context): Int =
+        getPrefs(context).getInt(KEY_FLOATING_WIDTH_PERCENT, 100)
+
+    fun setFloatingWidthPercent(context: Context, percent: Int) {
+        getPrefs(context).edit().putInt(KEY_FLOATING_WIDTH_PERCENT, percent).apply()
+    }
+
     fun getFloatingOffsetX(context: Context, isLandscape: Boolean = false): Int {
         val key = if (isLandscape) KEY_FLOATING_OFFSET_X_LANDSCAPE else KEY_FLOATING_OFFSET_X
         return getPrefs(context).getInt(key, 0)
