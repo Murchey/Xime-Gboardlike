@@ -120,6 +120,7 @@ data class CandidateBarVisuals(
 
 data class CandidateBarCallbacks(
     val onCandidateSelect: (Int) -> Unit,
+    val onClipboardItemSelect: ((ClipboardItem) -> Unit)? = null,
     val onLogoClick: (() -> Unit)? = null,
     /** Gboard 式工具栏编辑入口（铅笔按钮）：打开定制工具栏拖动排布。 */
     val onEditToolbar: (() -> Unit)? = null,
@@ -461,6 +462,11 @@ fun CandidateBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 itemsIndexed(displayCandidates, key = { index, _ -> index }) { index, candidate ->
+                    val clipboardItem = (state as? CandidateBarState.ClipboardDisplay)?.items?.getOrNull(index)
+                    val selectItem = {
+                        if (clipboardItem != null && callbacks.onClipboardItemSelect != null) callbacks.onClipboardItemSelect.invoke(clipboardItem)
+                        else callbacks.onCandidateSelect(index)
+                    }
                     val imageItem = displayImages.getOrNull(index)
                     val hasFollowing = index < displayCandidates.lastIndex ||
                         displayAssociation.isNotEmpty()
@@ -470,7 +476,7 @@ fun CandidateBar(
                             ClipboardImageCandidateItem(
                                 file = clipboardImageFileOf?.invoke(imageItem),
                                 isSelected = index == 0 && visuals.highlightFirstCandidate,
-                                onClick = { callbacks.onCandidateSelect(index) },
+                                onClick = selectItem,
                                 onLongClick = if (callbacks.onCandidateLongPress != null) {
                                     { callbacks.onCandidateLongPress(index) }
                                 } else null,
@@ -488,7 +494,7 @@ fun CandidateBar(
                             CandidateItem(
                                 text = candidate,
                                 index = index,
-                                onClick = { callbacks.onCandidateSelect(index) },
+                                onClick = selectItem,
                                 onLongClick = if (callbacks.onCandidateLongPress != null) {
                                     { callbacks.onCandidateLongPress(index) }
                                 } else null,

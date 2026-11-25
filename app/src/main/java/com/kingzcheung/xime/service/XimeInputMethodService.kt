@@ -3222,10 +3222,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         // 获取最近30秒的剪切板内容
         ensureClipboardManagerInitialized()
         try {
-            recentClipboardItemsState.value = clipboardManager.getRecentItems(30)
+            recentClipboardItemsState.value = com.kingzcheung.xime.clipboard.ClipboardLinkExtractor.candidates(clipboardManager.getRecentItems(30), SettingsPreferences.isClipboardLinkExtractionEnabled(this@XimeInputMethodService))
             // 将最近剪切板内容显示在候选栏
             candidateState.value = candidateState.value.copy(
-                candidates = recentClipboardItemsState.value.map { it.text },
+                candidates = recentClipboardItemsState.value.map { com.kingzcheung.xime.clipboard.ClipboardLinkExtractor.preview(it) },
                 candidateComments = emptyList(),
                 isShowingRecentClipboard = true
             )
@@ -3237,13 +3237,13 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         clipboardCollectorJob?.cancel()
         clipboardCollectorJob = serviceScope.launch {
             clipboardManager.clipboardItems.collect { _ ->
-                val items = clipboardManager.getRecentItems(30)
+                val items = com.kingzcheung.xime.clipboard.ClipboardLinkExtractor.candidates(clipboardManager.getRecentItems(30), SettingsPreferences.isClipboardLinkExtractionEnabled(this@XimeInputMethodService))
                 recentClipboardItemsState.value = items
                 if (items.isNotEmpty()) {
                     // 清空Rime联想词等
                     rimeEngine.clearComposition()
                     candidateState.value = candidateState.value.copy(
-                        candidates = items.map { it.text.take(8) + if (it.text.length > 8) "..." else "" },
+                        candidates = items.map { com.kingzcheung.xime.clipboard.ClipboardLinkExtractor.preview(it) },
                         candidateComments = emptyList(),
                         inputText = "",
                         isComposing = false,

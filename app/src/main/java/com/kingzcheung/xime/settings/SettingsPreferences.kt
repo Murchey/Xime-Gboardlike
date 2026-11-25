@@ -1682,6 +1682,15 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
         getPrefs(context).edit().putString(KEY_DEVICE_LINK_NAME, name).apply()
     }
 
+    private const val KEY_CLIPBOARD_LINK_EXTRACTION = "clipboard_link_extraction"
+
+    fun isClipboardLinkExtractionEnabled(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_CLIPBOARD_LINK_EXTRACTION, true)
+
+    fun setClipboardLinkExtractionEnabled(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_CLIPBOARD_LINK_EXTRACTION, enabled).apply()
+    }
+
     // ── 剪贴板图片（Phase 2：采集开关 + 单张上限可配） ──────────────
 
     /** 是否采集复制到剪贴板的图片（默认开，见 docs/clipboard-image-plan.md 决策 D1）。 */

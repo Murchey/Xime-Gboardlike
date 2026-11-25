@@ -120,7 +120,7 @@ internal class ImeTextCommit(private val service: XimeInputMethodService) {
     }
     
 
-    internal fun selectClipboardItem(text: String) {
+    internal fun selectClipboardItem(text: String, sourceId: Long? = null, extractedLink: Boolean = false) {
         if (service.candidateState.value.isComposing) {
             service.keyRouter.postRimeJob {
                 service.rimeEngine.clearComposition()
@@ -130,10 +130,11 @@ internal class ImeTextCommit(private val service: XimeInputMethodService) {
             }
         }
         // 标记为已消费：候选栏/剪贴板点选上屏后不再重复出现在候选栏
-        service.clipboardManager.markConsumed(text)
+        if (sourceId != null) service.clipboardManager.markConsumedById(sourceId)
+        else service.clipboardManager.markConsumed(text)
         // 粘贴不计打字统计（不投 text_committed），联想照常
         service.commitPastedText(text)
-        service.clipboardManager.copyToSystemClipboard(text)
+        if (!extractedLink) service.clipboardManager.copyToSystemClipboard(text)
     }
 
     /**

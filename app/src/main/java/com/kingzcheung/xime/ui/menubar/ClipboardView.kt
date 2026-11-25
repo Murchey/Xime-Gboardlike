@@ -46,6 +46,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.AssistChip
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.ui.platform.LocalContext
+import com.kingzcheung.xime.clipboard.ClipboardLinkExtractor
+import com.kingzcheung.xime.settings.SettingsPreferences
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -93,6 +99,7 @@ fun ClipboardView(
     keyBgColor: Color,
     viewModel: KeyboardViewModel,
     onSelectItem: (String) -> Unit,
+    onSelectLink: ((ClipboardItem) -> Unit)? = null,
     onSplitWords: (String, Long) -> Unit,
     onBack: (() -> Unit)? = null,
     onClipboardTabChange: ((Int) -> Unit)? = null,
@@ -311,6 +318,7 @@ fun ClipboardView(
                     subTextColor = subTextColor,
                     accentColor = accentColor,
                     onSelect = onSelectItem,
+                    onSelectLink = onSelectLink,
                     onRemove = { id -> viewModel.removeClipboardItem(id) },
                     onAddToQuickSend = { id -> viewModel.addToQuickSend(id) },
                     onSplitWords = onSplitWords,
@@ -616,7 +624,7 @@ data class LongPressMenuEntry(
     val onClick: () -> Unit
 )
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun ClipboardTabContent(
     items: List<ClipboardItem>,
@@ -625,6 +633,7 @@ fun ClipboardTabContent(
     subTextColor: Color,
     accentColor: Color,
     onSelect: (String) -> Unit,
+    onSelectLink: ((ClipboardItem) -> Unit)? = null,
     onRemove: (Long) -> Unit,
     onAddToQuickSend: (Long) -> Unit,
     onSplitWords: (String, Long) -> Unit,
@@ -638,6 +647,7 @@ fun ClipboardTabContent(
     onDragSendStarted: (() -> Unit)? = null,
 ) {
     val view = LocalView.current
+    val extractLinks = SettingsPreferences.isClipboardLinkExtractionEnabled(LocalContext.current)
     if (items.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -705,6 +715,7 @@ fun ClipboardTabContent(
                             onStartDrag = onStartDrag,
                         )
                     } else {
+                        Column {
                         GridItemCard(
                             text = item.text,
                             highlighted = highlighted,
@@ -717,6 +728,18 @@ fun ClipboardTabContent(
                             dragKey = item.id,
                             onStartDrag = onStartDrag,
                         )
+                        val links = remember(item.text, extractLinks) {
+                            if (extractLinks) ClipboardLinkExtractor.extract(item.text).filter { it != item.text.trim() }.take(5) else emptyList()
+                        }
+                        if (!isMultiSelect && onSelectLink != null) FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            links.forEach { link ->
+                                AssistChip(
+                                    onClick = { onSelectLink(item.copy(text = link, isExtractedLink = true)) },
+                                    label = { Text("↗ " + link.substringAfter("://"), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                )
+                            }
+                        }
+                        }
                     }
                     // 置顶角标：小图钉，避免占用卡片内容宽度
                     if (item.isPinned) {

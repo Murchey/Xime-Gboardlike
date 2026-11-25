@@ -451,6 +451,9 @@
     <string name="s_qiehuanbeifenfuwu">切换备份服务</string>
     <string name="s_yipeizhi">已配置</string>
     <string name="s_peizhi">配置</string>
+    <string name="s_jiantiebanzhineng">智能提取</string>
+    <string name="s_tiqulianjie">提取链接</string>
+    <string name="s_tiqulianjie_tishi">从复制的文本中提取链接，用于快速粘贴</string>
     <string name="s_tupianjilu">图片记录</string>
     <string name="s_shoujifuzhidetupian">收集复制的图片</string>
     <string name="s_fuzhitupianshibaocundaojiantie_6d667">复制图片时保存到剪贴板历史，可在候选栏与剪贴板面板中选用</string>

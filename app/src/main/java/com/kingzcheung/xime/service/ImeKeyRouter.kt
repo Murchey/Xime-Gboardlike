@@ -1674,7 +1674,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
             if (item.isImage) {
                 service.textCommit.selectClipboardImage(item)
             } else {
-                service.textCommit.selectClipboardItem(item.text)
+                service.textCommit.selectClipboardItem(item.text, item.id, item.isExtractedLink)
             }
             service.candidateState.value = service.candidateState.value.copy(
                 isShowingRecentClipboard = false,

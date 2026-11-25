@@ -15,6 +15,22 @@ import org.junit.Test
  * 一旦错位就会"点图片上屏了文本"（或反之）。
  */
 class ClipboardBarStateTest {
+    @Test
+    fun `链接候选保留完整文本与来源快照`() {
+        val source = ClipboardItem(id = 42, text = "分享 https://example.com/path?q=1#part")
+        val items = com.kingzcheung.xime.clipboard.ClipboardLinkExtractor.candidates(listOf(source))
+        val display = CandidateBarState.from(
+            candidates = items.map { com.kingzcheung.xime.clipboard.ClipboardLinkExtractor.preview(it) },
+            candidateComments = emptyList(), inputText = "", isComposing = false,
+            associationCandidates = emptyList(), isShowingRecentClipboard = true, hasNextPage = false,
+            clipboardItems = items,
+        ) as CandidateBarState.ClipboardDisplay
+        assertEquals(42L, display.items[1].id)
+        assertEquals("https://example.com/path?q=1#part", display.items[1].text)
+        assertTrue(display.items[1].isExtractedLink)
+        assertEquals(items.size, display.candidates.size)
+    }
+
 
     private fun image(id: Long, timestamp: Long = id) = ClipboardItem(
         id = id,

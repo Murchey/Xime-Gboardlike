@@ -424,6 +424,9 @@
     <string name="s_qiehuanbeifenfuwu">切換備份服務</string>
     <string name="s_yipeizhi">已配置</string>
     <string name="s_peizhi">配置</string>
+    <string name="s_jiantiebanzhineng">智能提取</string>
+    <string name="s_tiqulianjie">提取連結</string>
+    <string name="s_tiqulianjie_tishi">從複製的文字中提取連結，用於快速貼上</string>
     <string name="s_tupianjilu">圖片記錄</string>
     <string name="s_shoujifuzhidetupian">收集複製的圖片</string>
     <string name="s_fuzhitupianshibaocundaojiantie_6d667">複製圖片時儲存到剪貼簿歷史，可在候選欄與剪貼簿面板中選用</string>

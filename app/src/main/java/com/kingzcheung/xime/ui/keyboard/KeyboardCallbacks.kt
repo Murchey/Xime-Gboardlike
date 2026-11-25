@@ -26,6 +26,7 @@ data class KeyboardCallbacks(
     val onToggleDarkMode: (() -> Unit)? = null,
     val onClipboard: (() -> Unit)? = null,
     val onClipboardSelect: ((String) -> Unit)? = null,
+    val onClipboardItemSelect: ((com.kingzcheung.xime.clipboard.ClipboardItem) -> Unit)? = null,
     /**
      * 剪贴板**图片**条目点选：服务层先尝试 `commitContent` 直插宿主，
      * 宿主不支持图片 MIME 时降级为写入系统剪贴板并提示用户长按输入框粘贴。

@@ -125,6 +125,11 @@ internal fun rememberImeKeyboardCallbacks(
             onToggleDarkMode = { service.toggleDarkMode() },
             onClipboard = {},
             onClipboardSelect = { text -> service.textCommit.selectClipboardItem(text) },
+            onClipboardItemSelect = { item ->
+                if (item.isImage) service.textCommit.selectClipboardImage(item)
+                else service.textCommit.selectClipboardItem(item.text, item.id, item.isExtractedLink)
+                service.candidateState.value = CandidateState()
+            },
             onClipboardImageSelect = { item -> service.textCommit.selectClipboardImage(item) },
             onClipboardPullRemote = {
                 // 内置对象存储同步优先；未启用时回落到插件桥

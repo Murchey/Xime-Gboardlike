@@ -64,6 +64,21 @@ class ClipboardManagerTest {
     }
 
     @Test
+    fun capturesMixedTextAndLinkThroughAndroidClipboard() {
+        val androidClipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val text = "分享 https://example.com/path?q=1#part，稍后查看"
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            androidClipboard.setPrimaryClip(android.content.ClipData.newPlainText("link-test", text))
+        }
+        awaitCondition({ clipboardManager.clipboardItems.value.any { it.text == text } })
+        val source = clipboardManager.clipboardItems.value.first { it.text == text }
+        val candidates = ClipboardLinkExtractor.candidates(listOf(source))
+        assertEquals(text, candidates.first().text)
+        assertEquals("https://example.com/path?q=1#part", candidates[1].text)
+        assertEquals(source.id, candidates[1].id)
+    }
+
+    @Test
     fun registersSystemClipboardListenerOnInit() {
         // b592c882 回归：init 漏调用 startListening() 时，复制图片/文本整体不入库
         // （监听器未注册 → readClipboard() 永远不被触发）。

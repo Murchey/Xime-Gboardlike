@@ -54,6 +54,8 @@ data class ClipboardItem(
     val sizeBytes: Long = 0,
     val width: Int = 0,
     val height: Int = 0,
+    /** 仅用于候选展示，不写入历史。 */
+    val isExtractedLink: Boolean = false,
 ) {
     val isImage: Boolean get() = type == ClipboardEntry.TYPE_IMAGE
 }

@@ -39,6 +39,7 @@ sealed interface CandidateBarState {
          * Gboard 风格的"圆角卡片 + 圆形缩略图 + 图片"芯片。
          */
         val images: List<ClipboardItem?> = emptyList(),
+        val items: List<ClipboardItem> = emptyList(),
     ) : CandidateBarState
 
     data class Calculator(
@@ -62,6 +63,7 @@ sealed interface CandidateBarState {
             preeditCaretPos: Int = -1,
             /** 剪贴板展示态下与 [candidates] 等长的图片条目列表（非图片位为 null）。 */
             clipboardImages: List<ClipboardItem?> = emptyList(),
+            clipboardItems: List<ClipboardItem> = emptyList(),
             /** 滑动解码进行中（候选栏底部滚动 loading 条）。 */
             isLoading: Boolean = false,
         ): CandidateBarState {
@@ -72,7 +74,7 @@ sealed interface CandidateBarState {
                 // 解码中不抢候选栏：loading 只作为顶缘细条叠加。
                 // 若在此占位，误触滑动会让工具栏整行消失，用户短时间内点不到按钮。
                 isShowingRecentClipboard && hasCandidates ->
-                    ClipboardDisplay(candidates = candidates, images = clipboardImages)
+                    ClipboardDisplay(candidates = candidates, images = clipboardImages, items = clipboardItems)
                 isCalculatorActive && hasCandidates ->
                     Calculator(candidates = candidates, comments = candidateComments)
                 isComposing && (hasCandidates || hasInput) ->

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.twotone.DataUsage
 import androidx.compose.material.icons.twotone.Image
+import androidx.compose.material.icons.twotone.Link
 import androidx.compose.material.icons.twotone.Lock
 import androidx.compose.material.icons.twotone.Sync
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -89,6 +90,9 @@ fun ClipboardSettingsContent(
 
     var captureEnabled by remember {
         mutableStateOf(SettingsPreferences.isClipboardImageCaptureEnabled(context))
+    }
+    var linkExtractionEnabled by remember {
+        mutableStateOf(SettingsPreferences.isClipboardLinkExtractionEnabled(context))
     }
     var sensitiveCaptureEnabled by remember {
         mutableStateOf(SettingsPreferences.isClipboardSensitiveCaptureEnabled(context))
@@ -196,6 +200,22 @@ fun ClipboardSettingsContent(
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                         )
                     }
+                }
+            )
+
+            SettingsSection(
+                title = tr(R.string.s_jiantiebanzhineng),
+                content = {
+                    SettingsToggleItem(
+                        icon = Icons.TwoTone.Link,
+                        title = tr(R.string.s_tiqulianjie),
+                        subtitle = tr(R.string.s_tiqulianjie_tishi),
+                        checked = linkExtractionEnabled,
+                        onCheckedChange = { checked ->
+                            linkExtractionEnabled = checked
+                            SettingsPreferences.setClipboardLinkExtractionEnabled(context, checked)
+                        }
+                    )
                 }
             )
 

@@ -391,6 +391,7 @@ fun KeyboardView(
                         isCalculatorActive = state.isCalculatorMode,
                         preeditCaretPos = cs.preeditCaretPos,
                         isLoading = cs.isGlideDecoding,
+                        clipboardItems = if (cs.isShowingRecentClipboard && railExpanded.isEmpty()) state.recentClipboardItems else emptyList(),
                         // 剪贴板态：与 cs.candidates 同序同长，非图片位为 null（展开态数据源不同则不带图片）
                         clipboardImages = if (cs.isShowingRecentClipboard && railExpanded.isEmpty()) {
                             state.recentClipboardItems.map { if (it.isImage) it else null }
@@ -580,6 +581,7 @@ fun KeyboardView(
                     ),
                 ),
                 callbacks = CandidateBarCallbacks(
+                    onClipboardItemSelect = callbacks.onClipboardItemSelect,
                     // 常驻语音：点按候选栏频谱区域结束识别。
                     // 复用 onVoiceModeChange(false) 而非 onVoiceStickyToggle——
                     // 前者就是"轻触空格结束"走的同一条路径（含震动反馈）。
@@ -1607,6 +1609,10 @@ fun KeyboardView(
                         keyTextColor = keyTextColor,
                         keyBgColor = keyBgColor,
                         viewModel = viewModel,
+                        onSelectLink = { item ->
+                            callbacks.onClipboardItemSelect?.invoke(item)
+                            viewModel.closeOverlay()
+                        },
                         onSelectItem = { text ->
                             callbacks.onClipboardSelect?.invoke(text)
                             viewModel.closeOverlay()
