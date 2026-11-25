@@ -31,6 +31,12 @@ object FloatingCardGeometry {
     /** 悬浮卡片宽度百分比下限：再窄按键就没法点了 */
     const val MIN_WIDTH_PERCENT = 50
 
+    fun widthPercentForMargins(portraitWidthDp: Int, start: Int, end: Int): Int {
+        val maxWidth = cardWidthDp(portraitWidthDp)
+        return if (maxWidth <= 0) 100 else
+            (100f * (maxWidth - start - end) / maxWidth).roundToInt().coerceIn(MIN_WIDTH_PERCENT, 100)
+    }
+
     /** 按用户调过的宽度百分比取卡宽（[MIN_WIDTH_PERCENT]~100） */
     fun cardWidthDpFor(portraitScreenWidthDp: Int, widthPercent: Int): Int {
         val p = widthPercent.coerceIn(MIN_WIDTH_PERCENT, 100)
@@ -84,9 +90,9 @@ object FloatingCardGeometry {
         capKeyboardHeightDp(dockedHeightDp, availableHeightDp)
     }
 
-    /** 首帧实测前的兜底卡高（dp） */
-    fun fallbackCardHeightDp(keyboardHeightDp: Int, bottomPaddingDp: Int): Int =
-        (keyboardHeightDp * CARD_SCALE).roundToInt() + DRAG_BAR_HEIGHT_DP + bottomPaddingDp
+    /** 首帧实测前的兜底卡高（dp）；悬浮卡片不包含停靠键盘留白 */
+    fun fallbackCardHeightDp(keyboardHeightDp: Int, @Suppress("UNUSED_PARAMETER") bottomPaddingDp: Int): Int =
+        (keyboardHeightDp * CARD_SCALE).roundToInt() + DRAG_BAR_HEIGHT_DP
 
     /**
      * 垂直位置钳制：offsetY 是"卡片底边离窗口底边的距离"，下界 [minY]（导航栏高，

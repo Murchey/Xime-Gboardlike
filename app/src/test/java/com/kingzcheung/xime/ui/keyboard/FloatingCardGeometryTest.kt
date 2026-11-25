@@ -49,9 +49,9 @@ class FloatingCardGeometryTest {
     }
 
     @Test
-    fun `fallback card height is scaled keyboard plus drag bar plus padding`() {
-        // 0.85×280 = 238，+56 控制栏 +16 留白
-        assertEquals(310, FloatingCardGeometry.fallbackCardHeightDp(keyboardHeightDp = 280, bottomPaddingDp = 16))
+    fun `fallback floating card height excludes docked bottom padding`() {
+        // 悬浮键盘不包含停靠键盘底部留白
+        assertEquals(294, FloatingCardGeometry.fallbackCardHeightDp(keyboardHeightDp = 280, bottomPaddingDp = 16))
     }
 
     @Test
@@ -113,6 +113,14 @@ class FloatingCardGeometryTest {
             FloatingCardGeometry.capKeyboardHeightDp(302, 369),
             FloatingCardGeometry.floatingKeyboardHeightDp(0, 302, 369),
         )
+    }
+
+    @Test
+    fun `preview margins determine floating width and respect limits`() {
+        assertEquals(100, FloatingCardGeometry.widthPercentForMargins(411, 0, 0))
+        assertEquals(80, FloatingCardGeometry.widthPercentForMargins(411, 40, 30))
+        assertEquals(50, FloatingCardGeometry.widthPercentForMargins(411, 300, 0))
+        assertEquals(100, FloatingCardGeometry.widthPercentForMargins(0, 0, 0))
     }
 
     @Test

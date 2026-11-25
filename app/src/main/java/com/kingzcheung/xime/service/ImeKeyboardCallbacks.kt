@@ -172,17 +172,23 @@ internal fun rememberImeKeyboardCallbacks(
                         floatingResize = floating,
                         // 悬浮卡片高度初值：由当前卡片缩放后的高反推回缩放前的值
                         resizePreviewHeightDp = if (floating) {
-                            (service.uiState.value.keyboardHeightDp / FloatingCardGeometry.CARD_SCALE)
-                                .roundToInt()
+                            val screenHeight = (service.resources.displayMetrics.heightPixels / service.resources.displayMetrics.density).roundToInt() -
+                                tryGetStatusBarHeightDp(service, service.window.window)
+                            FloatingCardGeometry.floatingKeyboardHeightDp(
+                                SettingsPreferences.getFloatingHeightDp(service),
+                                SettingsPreferences.getKeyboardHeightDp(service, false),
+                                screenHeight,
+                            )
                         } else {
                             SettingsPreferences.getKeyboardHeightDp(service, isLandscape)
                         },
-                        resizePreviewMarginStartDp =
-                            SettingsPreferences.getKeyboardMarginStartDp(service, isLandscape)
-                                .coerceIn(0, maxMargin),
-                        resizePreviewMarginEndDp =
-                            SettingsPreferences.getKeyboardMarginEndDp(service, isLandscape)
-                                .coerceIn(0, maxMargin),
+                        resizePreviewMarginStartDp = if (floating) {
+                            val width = minOf(config.screenWidthDp, config.screenHeightDp)
+                            FloatingCardGeometry.cardWidthDp(width) -
+                                FloatingCardGeometry.cardWidthDpFor(width, SettingsPreferences.getFloatingWidthPercent(service))
+                        } else SettingsPreferences.getKeyboardMarginStartDp(service, isLandscape).coerceIn(0, maxMargin),
+                        resizePreviewMarginEndDp = if (floating) 0 else
+                            SettingsPreferences.getKeyboardMarginEndDp(service, isLandscape).coerceIn(0, maxMargin),
                     )
                 }
             },

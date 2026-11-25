@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -58,7 +60,6 @@ fun FloatingKeyboardContainer(
     fontScaleFactor: Float = scaleFactor,
     offsetX: Int,
     offsetY: Int,
-    backgroundColor: Color = Color.Transparent,
     onDrag: (dx: Float, dy: Float) -> Unit,
     onDragEnd: () -> Unit,
     onRestore: () -> Unit,
@@ -83,8 +84,6 @@ fun FloatingKeyboardContainer(
                 .fillMaxWidth(scaleFactor)
                 .height(cardTotalHeight)
                 .offset(x = offsetX.dp, y = (-offsetY).dp)
-                .shadow(12.dp, RoundedCornerShape(16.dp))
-                .clip(RoundedCornerShape(16.dp))
                 .onGloballyPositioned { coords ->
                     val pos = coords.positionInWindow()
                     val size = coords.size
@@ -97,7 +96,11 @@ fun FloatingKeyboardContainer(
                 }
         ) {
             Column {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                        .shadow(12.dp, RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(16.dp))
+                ) {
                     CompositionLocalProvider(
                         LocalDensity provides Density(density = density.density, fontScale = density.fontScale * fontScaleFactor)
                     ) {
@@ -105,7 +108,6 @@ fun FloatingKeyboardContainer(
                     }
                 }
                 DragBar(
-                    backgroundColor = backgroundColor,
                     onDrag = { change, dragAmount ->
                         change.consume()
                         val dxDp = with(density) { dragAmount.x.toDp().value }
@@ -123,7 +125,6 @@ fun FloatingKeyboardContainer(
 
 @Composable
 private fun DragBar(
-    backgroundColor: Color,
     onDrag: (change: androidx.compose.ui.input.pointer.PointerInputChange, dragAmount: androidx.compose.ui.geometry.Offset) -> Unit,
     onDragEnd: () -> Unit,
     onRestore: () -> Unit,
@@ -132,8 +133,7 @@ private fun DragBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(DRAG_BAR_HEIGHT_DP.dp)
-            .background(backgroundColor),
+            .height(DRAG_BAR_HEIGHT_DP.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -163,7 +163,7 @@ private fun DragBar(
             )
         }
         FloatingControlLabel(
-            label = tr(R.string.s_jianpandiaojie),
+            label = tr(R.string.s_tiaojie),
             onClick = onAdjust,
             modifier = Modifier.weight(1f),
         )
@@ -186,9 +186,7 @@ private fun FloatingControlLabel(
             text = label,
             color = Color.White,
             fontSize = 14.sp,
-            modifier = Modifier
-                .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(24.dp))
-                .padding(horizontal = 12.dp, vertical = 7.dp),
+            style = TextStyle(shadow = Shadow(color = Color.Black, blurRadius = 6f)),
             maxLines = 1,
         )
     }

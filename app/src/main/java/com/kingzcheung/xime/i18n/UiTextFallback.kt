@@ -1,4 +1,4 @@
-﻿package com.kingzcheung.xime.i18n
+package com.kingzcheung.xime.i18n
 
 import com.kingzcheung.xime.R
 
@@ -279,6 +279,7 @@ internal object UiTextFallback {
         R.string.s_shurufangan to "输入方案",
         R.string.s_dingzhigongjulan to "定制工具栏",
         R.string.s_jianpandiaojie to "键盘调节",
+        R.string.s_tiaojie to "调节",
         R.string.s_bushufangan to "部署方案",
         R.string.s_guanbicaidan to "关闭菜单",
         R.string.s_shezhi to "设置",

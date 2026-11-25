@@ -2172,6 +2172,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     )
                 }
                 val floatingCardContentHeight = effectiveKeyboardHeight + floatingDragBarHeight
+                val floatingWidthPercent = if (state.floatingResize && state.showKeyboardResize) {
+                    FloatingCardGeometry.widthPercentForMargins(minOf(screenWidthDp, screenHeightDp), state.resizePreviewMarginStartDp, state.resizePreviewMarginEndDp)
+                } else SettingsPreferences.getFloatingWidthPercent(this@XimeInputMethodService)
                 // 仅夹取生效时打一行，便于无真机的验证（"是否真的被承载区收缩了"）
                 LaunchedEffect(hostAvailableDp, effectiveKeyboardHeight) {
                     if (effectiveKeyboardHeight < requestedKeyboardHeight) {
@@ -2334,7 +2337,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             modifier = Modifier
 
                                 .fillMaxWidth()
-                                .height(if (state.showKeyboardResize && !state.isFloatingMode) (state.resizePreviewHeightDp + state.keyboardBottomPaddingDp).dp else (floatingCardContentHeight + state.keyboardBottomPaddingDp + overlayPanelExtra).dp)
+                                .height(if (state.showKeyboardResize && !state.isFloatingMode) (state.resizePreviewHeightDp + state.keyboardBottomPaddingDp).dp else (floatingCardContentHeight + (if (state.isFloatingMode) 0 else state.keyboardBottomPaddingDp) + overlayPanelExtra).dp)
                                 .align(androidx.compose.ui.Alignment.BottomCenter)
                                 .then(if (state.isFloatingMode) Modifier else Modifier.offset(y = (-activeBottomDp).dp))
                                 .onGloballyPositioned { c ->
@@ -2384,7 +2387,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     darkMode = state.darkMode,
                                     themeId = state.themeId,
                                     keyboardHeightDp = effectiveKeyboardHeight,
-                                    keyboardBottomPaddingDp = state.keyboardBottomPaddingDp,
+                                    keyboardBottomPaddingDp = if (state.isFloatingMode) 0 else state.keyboardBottomPaddingDp,
                                     clipboardItems = clipboardItemsState.value,
                                     quickSendItems = quickSendItemsState.value,
                                     recentClipboardItems = recentClipboardItemsState.value,
@@ -2404,7 +2407,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     inputSessionId = state.inputSessionId,
                                     isInputSessionRestarting = state.isInputSessionRestarting,
                                     isFloatingMode = state.isFloatingMode,
-                                    floatingWidthPercent = SettingsPreferences.getFloatingWidthPercent(this@XimeInputMethodService),
+                                    floatingWidthPercent = floatingWidthPercent,
                                     oneHandedMode = state.oneHandedMode,
                                     isHostConstrained = hostConstrained,
                                     isHandwritingMode = isHandwritingMode,
@@ -2477,28 +2480,21 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                               // KeyboardResizeBounds，覆盖层只上报合法绝对值。
                               KeyboardResizeOverlay(
                                   heightDp = state.resizePreviewHeightDp,
-                                  bottomPaddingDp = state.keyboardBottomPaddingDp,
-                                  // 悬浮模式下左右手柄表示"卡片相对满卡宽收窄多少"，始终居中
-                                  marginStartDp = if (state.isFloatingMode) {
-                                      val portraitW = minOf(screenWidthDp, screenHeightDp)
-                                      val maxCardW = FloatingCardGeometry.cardWidthDp(portraitW)
-                                      (maxCardW - FloatingCardGeometry.cardWidthDpFor(
-                                      portraitW,
-                                      SettingsPreferences.getFloatingWidthPercent(this@XimeInputMethodService),
-                                  )) / 2
-                                  } else state.resizePreviewMarginStartDp,
+                                  bottomPaddingDp = if (state.isFloatingMode) 0 else state.keyboardBottomPaddingDp,
+                                  floatingMode = state.isFloatingMode,
+                                  marginStartDp = state.resizePreviewMarginStartDp,
                                   marginEndDp = state.resizePreviewMarginEndDp,
                                   // 悬浮卡片的高度区间按可用高算，不用停靠键盘的屏高百分比
                                   heightBoundsOverride = if (state.isFloatingMode) {
                                       FloatingCardGeometry.floatingHeightBoundsDp(effectiveScreenH)
                                   } else null,
                                   // 悬浮遮罩实际高 = 缩放后的键盘内容高，与可调高度不是同一个量
-                                  overlayHeightDp = if (state.isFloatingMode) effectiveKeyboardHeight else state.resizePreviewHeightDp,
+                                  overlayHeightDp = if (state.isFloatingMode) (state.resizePreviewHeightDp * FloatingCardGeometry.CARD_SCALE).roundToInt() else state.resizePreviewHeightDp,
                                   onHeightChange = { newHeight ->
                                       uiState.value = uiState.value.copy(resizePreviewHeightDp = newHeight)
                                   },
                                   onBottomPaddingChange = { newPadding ->
-                                      uiState.value = uiState.value.copy(keyboardBottomPaddingDp = newPadding)
+                                      if (!state.isFloatingMode) uiState.value = uiState.value.copy(keyboardBottomPaddingDp = newPadding)
                                   },
                                   onMarginStartChange = { newMargin ->
                                       uiState.value = uiState.value.copy(resizePreviewMarginStartDp = newMargin)
@@ -2526,13 +2522,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                               resources.configuration.screenWidthDp,
                                               resources.configuration.screenHeightDp,
                                           )
-                                          val maxCardW = FloatingCardGeometry.cardWidthDp(portraitW)
-                                          val shrink = snapshot.resizePreviewMarginStartDp +
-                                              snapshot.resizePreviewMarginEndDp
-                                          val percent = if (maxCardW > 0) {
-                                              (100 * (maxCardW - shrink) / maxCardW)
-                                                  .coerceIn(FloatingCardGeometry.MIN_WIDTH_PERCENT, 100)
-                                          } else 100
+                                          val percent = FloatingCardGeometry.widthPercentForMargins(
+                                              portraitW, snapshot.resizePreviewMarginStartDp, snapshot.resizePreviewMarginEndDp,
+                                          )
                                           SettingsPreferences.setFloatingWidthPercent(
                                               this@XimeInputMethodService, percent)
                                           SettingsPreferences.setFloatingHeightDp(
@@ -2630,12 +2622,12 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                               FloatingCardGeometry.widthFraction(
                                                   minOf(screenWidthDp, screenHeightDp),
                                                   screenWidthDp,
-                                                  SettingsPreferences.getFloatingWidthPercent(this@XimeInputMethodService),
+                                                  floatingWidthPercent,
                                               )
                                           )
-                                          .height((floatingCardContentHeight + state.keyboardBottomPaddingDp).dp)
+                                          .height(effectiveKeyboardHeight.dp)
                                           .align(androidx.compose.ui.Alignment.BottomCenter)
-                                          .offset(x = state.floatingOffsetX.dp, y = (-state.floatingOffsetY).dp)
+                                          .offset(x = state.floatingOffsetX.dp, y = (-(state.floatingOffsetY + floatingDragBarHeight)).dp)
                                   } else Modifier.matchParentSize()
                               )
                           }

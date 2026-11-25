@@ -311,7 +311,6 @@ fun KeyboardView(
         fontScaleFactor = floatFontScale,
         offsetX = state.floatingOffsetX,
         offsetY = state.floatingOffsetY,
-        backgroundColor = keyboardBgColor,
         onDrag = { dx, dy -> callbacks.onFloatingKeyboardDrag?.invoke(dx, dy) },
         onDragEnd = { callbacks.onFloatingKeyboardDragEnd?.invoke() },
         onRestore = { callbacks.onFloatingModeChange?.invoke(false) },

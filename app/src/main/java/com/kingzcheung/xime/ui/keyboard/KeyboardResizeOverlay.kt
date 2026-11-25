@@ -76,6 +76,7 @@ import kotlin.math.roundToInt
 fun KeyboardResizeOverlay(
     heightDp: Int,
     bottomPaddingDp: Int,
+    floatingMode: Boolean = false,
     marginStartDp: Int,
     marginEndDp: Int,
     onHeightChange: (Int) -> Unit,
@@ -160,6 +161,9 @@ fun KeyboardResizeOverlay(
                 .offset(y = -bottomPaddingDp.dp)
                 .height(HANDLE_TOUCH_DP)
                 .dragging { _, dy ->
+                    if (floatingMode) {
+                        latestOnHeightChange((latestHeight + dy / FloatingCardGeometry.CARD_SCALE).roundToInt().coerceIn(heightBounds))
+                    } else {
                     val delta = KeyboardResizeBounds.bottomEdgeDragDelta(
                         dyDp = dy,
                         heightDp = latestHeight,
@@ -168,6 +172,7 @@ fun KeyboardResizeOverlay(
                     )
                     latestOnHeightChange((latestHeight + delta).roundToInt())
                     latestOnBottomPaddingChange((latestBottomPadding - delta).roundToInt())
+                    }
                 },
             contentAlignment = Alignment.BottomCenter,
         ) {
@@ -230,11 +235,12 @@ fun KeyboardResizeOverlay(
                 label = tr(R.string.s_zhongzhi),
                 onClick = onReset,
             )
-            // 中央把手只垂直移动键盘（底部留白升降），不做水平位移
-            OverallDragButton { _, dy ->
-                val newPadding = (latestBottomPadding - dy).roundToInt()
-                    .coerceIn(0, KeyboardResizeBounds.MAX_BOTTOM_PADDING_DP)
-                latestOnBottomPaddingChange(newPadding)
+            if (!floatingMode) OverallDragButton { _, dy ->
+                if (!floatingMode) {
+                    val newPadding = (latestBottomPadding - dy).roundToInt()
+                        .coerceIn(0, KeyboardResizeBounds.MAX_BOTTOM_PADDING_DP)
+                    latestOnBottomPaddingChange(newPadding)
+                }
             }
             ResizeActionButton(
                 icon = Icons.Default.Check,
