@@ -57,7 +57,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.kingzcheung.xime.ui.theme.keyboardTopSoftEdge
-import androidx.compose.foundation.border
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -2313,18 +2312,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     )
                                     .keyboardBackground(rootTheme.keyboardBackground, isDark, keyboardBgColor)
                                     .then(Modifier.keyboardTopSoftEdge(keyboardBgColor))
-                                    // 键盘边缘细描边：圆角/直角都好辨认上沿（玻璃下尤其需要）
-                                    .then(
-                                        Modifier.border(
-                                            1.dp,
-                                            if (isDark) androidx.compose.ui.graphics.Color.White.copy(alpha = .14f)
-                                            else androidx.compose.ui.graphics.Color.Black.copy(alpha = .10f),
-                                            com.kingzcheung.xime.ui.theme.keyboardEdgeShape(
-                                                com.kingzcheung.xime.ui.theme.KeyboardTopStyles.current,
-                                                SettingsPreferences.roundedKeyboardBottom(this@XimeInputMethodService),
-                                            ),
-                                        )
-                                    )
+                                    // 不加边缘描边：此前整圈 border 在深色底上显成左右两条白线；
+                                    // 它的上沿本就被上层内容 Box 盖住，实际只有左右两侧露出来，去掉不影响观感。
                             )
                         }
                         Box(
