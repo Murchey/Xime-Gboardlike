@@ -29,8 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -185,8 +184,11 @@ private fun FloatingControlLabel(
         Text(
             text = label,
             color = Color.White,
-            fontSize = 14.sp,
-            style = TextStyle(shadow = Shadow(color = Color.Black, blurRadius = 6f)),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .background(Color(0xFF292B2F), RoundedCornerShape(24.dp))
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             maxLines = 1,
         )
     }
