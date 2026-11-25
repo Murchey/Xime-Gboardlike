@@ -59,7 +59,7 @@ object AppUpdateDownloader {
 
     /**
      * 流式下载 APK 到 cacheDir，实时发射进度。
-     * 下载完成后由调用方触发 [install]，安装后由 [cleanCachedApks] 清理。
+     * 下载完成后由调用方触发 [install]，升级后由 [cleanInstalledCachedApks] 清理。
      */
     fun download(
         context: Context,
@@ -180,11 +180,43 @@ object AppUpdateDownloader {
         }
     }
 
-    /** 清理下载缓存（安装后或取消后调用） */
+    /** 用户取消下载时清理更新目录中的 APK。 */
     fun cleanCachedApks(context: Context) {
         try {
-            val dir = File(context.cacheDir, "updates")
-            dir.listFiles()?.forEach { it.delete() }
+            cleanCachedApksIn(context.cacheDir)
         } catch (_: Exception) {}
+    }
+
+    /** 部分系统限制后台广播时，启动后只清理已安装版本及更旧的本应用 APK。 */
+    fun cleanInstalledCachedApks(context: Context) {
+        try {
+            val pm = context.packageManager
+            val installed = pm.getPackageInfo(context.packageName, 0).longVersionCode
+            cleanInstalledCachedApksIn(context.cacheDir, context.packageName, installed) { file ->
+                pm.getPackageArchiveInfo(file.absolutePath, 0)?.let { it.packageName to it.longVersionCode }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "清理已安装更新缓存失败", e)
+        }
+    }
+
+    internal fun cleanInstalledCachedApksIn(
+        cacheDir: File,
+        packageName: String,
+        installedVersion: Long,
+        readArchive: (File) -> Pair<String, Long>?,
+    ) {
+        File(cacheDir, "updates").listFiles()?.forEach { file ->
+            if (file.isFile && file.extension.equals("apk", ignoreCase = true)) {
+                val archive = runCatching { readArchive(file) }.getOrNull()
+                if (archive != null && archive.first == packageName && archive.second <= installedVersion) file.delete()
+            }
+        }
+    }
+
+    internal fun cleanCachedApksIn(cacheDir: File) {
+        File(cacheDir, "updates").listFiles()?.forEach { file ->
+            if (file.isFile && file.extension.equals("apk", ignoreCase = true)) file.delete()
+        }
     }
 }

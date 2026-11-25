@@ -69,6 +69,9 @@ class XimeApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        if (shouldPreInitializeRime(Application.getProcessName(), packageName)) {
+            applicationScope.launch { com.kingzcheung.xime.settings.AppUpdateDownloader.cleanInstalledCachedApks(this@XimeApplication) }
+        }
         com.kingzcheung.xime.i18n.UiText.init(
             com.kingzcheung.xime.settings.AppLocale.wrap(this)
         )
