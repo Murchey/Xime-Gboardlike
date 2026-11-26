@@ -645,7 +645,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                 }
                 "emoji" -> {
                     withContext(Dispatchers.Main) {
-                        service.commitText("😊")
+                        service.emojiPickerController.open()
                     }
                 }
                 else -> {

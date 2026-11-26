@@ -25,6 +25,7 @@ data class KeyboardCallbacks(
     val onClearAssociation: (() -> Unit)? = null,
     val onToggleDarkMode: (() -> Unit)? = null,
     val onClipboard: (() -> Unit)? = null,
+    val onEmoji: (() -> Unit)? = null,
     val onClipboardSelect: ((String) -> Unit)? = null,
     val onClipboardItemSelect: ((com.kingzcheung.xime.clipboard.ClipboardItem) -> Unit)? = null,
     /**

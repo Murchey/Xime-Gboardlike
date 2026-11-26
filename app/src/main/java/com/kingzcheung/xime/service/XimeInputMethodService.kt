@@ -215,6 +215,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private fun localizedContext(): Context = AppLocale.wrap(localeBaseContext ?: this)
 
     private var lastLocales: android.os.LocaleList = android.os.LocaleList.getDefault()
+    internal val emojiPickerController by lazy { EmojiPickerController(this) }
 
     companion object {
         internal const val TAG = "XimeInputMethodService"
@@ -587,7 +588,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             com.kingzcheung.xime.settings.BottomBarAction.QUICK_PHRASE ->
                 keyboardViewModel.showOverlay(com.kingzcheung.xime.keyboard.OverlayRoute.Clipboard(1))
             com.kingzcheung.xime.settings.BottomBarAction.EMOJI ->
-                keyboardViewModel.showOverlay(com.kingzcheung.xime.keyboard.OverlayRoute.Emoji)
+                emojiPickerController.open()
             com.kingzcheung.xime.settings.BottomBarAction.SETTINGS -> schemaController.openSettings()
             com.kingzcheung.xime.settings.BottomBarAction.HIDE_KEYBOARD -> requestHideSelf(0)
             com.kingzcheung.xime.settings.BottomBarAction.NONE -> Unit
@@ -3066,6 +3067,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         ImeLatencyTrace.onStartInput()
         super.onStartInput(attribute, restarting)
+        emojiPickerController.observeEditor(attribute)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
         loadDarkModePreference()
 
@@ -3263,12 +3265,14 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         }
 
         attribute?.let { updateEnterKeyText(it) }
+        mainHandler.post { emojiPickerController.deliver(currentInputEditorInfo) }
     }
     
     private val highlightIndex = mutableIntStateOf(0)
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        mainHandler.post { emojiPickerController.deliver(currentInputEditorInfo) }
         // 玻璃模糊面随键盘显示；区域用最近一次上报的键盘矩形
         // 先拆掉模糊子窗口再重建：输入法重新显示时让系统重新采样当前页面（避免切页后拍到旧内容）
         runCatching {
@@ -3980,6 +3984,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     override fun onDestroy() {
+        emojiPickerController.dispose()
         super.onDestroy()
         // 模糊子窗口随输入法服务一起销毁
         runCatching { glassBlurWindows.values.forEach { it.dispose() } }

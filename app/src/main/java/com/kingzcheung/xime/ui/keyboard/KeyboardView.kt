@@ -511,7 +511,7 @@ fun KeyboardView(
                     val onClick: () -> Unit = when (item) {
                         is ToolbarButtonItem.Builtin -> when (item.button) {
                             ToolbarButton.SETTINGS -> ({ callbacks.onSettings?.invoke() })
-                            ToolbarButton.EMOJI -> ({ viewModel.showOverlay(OverlayRoute.Emoji) })
+                            ToolbarButton.EMOJI -> ({ callbacks.onEmoji?.invoke() })
                             ToolbarButton.CLIPBOARD -> ({ viewModel.showOverlay(OverlayRoute.Clipboard(0)) })
                             ToolbarButton.SCHEMA -> ({ viewModel.showOverlay(OverlayRoute.SchemaList, listOf(OverlayRoute.Menu)) })
                             ToolbarButton.QUICK_PHRASE -> ({ viewModel.showOverlay(OverlayRoute.Clipboard(1)) })
@@ -1024,7 +1024,7 @@ fun KeyboardView(
                                         KeyboardLayoutAction.SwitchToCommonSymbol, state.isAsciiMode
                                     ))
                                 }
-                                "emoji" -> viewModel.showOverlay(OverlayRoute.Emoji)
+                                "emoji" -> callbacks.onEmoji?.invoke()
                                 // 与 emoji 同档：command: symbol / 自定义键发 "symbol" 时打开符号面板
                                 "symbol" -> viewModel.showOverlay(OverlayRoute.Symbol)
                                 else -> {
@@ -1046,7 +1046,7 @@ fun KeyboardView(
                                     viewModel.showOverlay(OverlayRoute.Symbol)
                                 }
                                 "emoji" -> {
-                                    viewModel.showOverlay(OverlayRoute.Emoji)
+                                    callbacks.onEmoji?.invoke()
                                 }
                                 else -> callbacks.onKeyPress(key, false)
                             }
@@ -1078,7 +1078,7 @@ fun KeyboardView(
                                     viewModel.showOverlay(OverlayRoute.Symbol)
                                 }
                                 "emoji" -> {
-                                    viewModel.showOverlay(OverlayRoute.Emoji)
+                                    callbacks.onEmoji?.invoke()
                                 }
                                 else -> callbacks.onKeyPress(key, false)
                             }
@@ -1092,7 +1092,7 @@ fun KeyboardView(
                                     KeyboardLayoutAction.SwitchToNumber, state.isAsciiMode
                                 ))
                                 "symbol" -> viewModel.showOverlay(OverlayRoute.Symbol)
-                                "emoji" -> viewModel.showOverlay(OverlayRoute.Emoji)
+                                "emoji" -> callbacks.onEmoji?.invoke()
                                 else -> callbacks.onKeyPress(key, false)
                             }
                         }
@@ -1108,7 +1108,7 @@ fun KeyboardView(
                                     ))
                                 }
                                 "symbol" -> viewModel.showOverlay(OverlayRoute.Symbol)
-                                "emoji" -> viewModel.showOverlay(OverlayRoute.Emoji)
+                                "emoji" -> callbacks.onEmoji?.invoke()
                                 "ime_switch" -> {
                                     callbacks.onT9SwitchAway?.invoke()
                                     callbacks.onKeyPress(key, false)
@@ -1308,7 +1308,7 @@ fun KeyboardView(
                                     viewModel.showOverlay(OverlayRoute.Symbol)
                                 }
                                 "emoji" -> {
-                                    viewModel.showOverlay(OverlayRoute.Emoji)
+                                    callbacks.onEmoji?.invoke()
                                 }
                                 else -> callbacks.onKeyPress(key, false)
                             }
@@ -1351,7 +1351,7 @@ fun KeyboardView(
                                     viewModel.showOverlay(OverlayRoute.Symbol)
                                 }
                                 "emoji" -> {
-                                    viewModel.showOverlay(OverlayRoute.Emoji)
+                                    callbacks.onEmoji?.invoke()
                                 }
                                 else -> callbacks.onKeyPress(key, false)
                             }
@@ -1524,7 +1524,7 @@ fun KeyboardView(
                             onQuickSend = { onHapticFeedback?.invoke(); viewModel.showOverlay(OverlayRoute.Clipboard(1)); callbacks.onQuickSend?.invoke() },
                             onKeyboardResize = { onHapticFeedback?.invoke(); callbacks.onKeyboardResize?.invoke(); viewModel.closeOverlay() },
                             onToggleOneHanded = { onHapticFeedback?.invoke(); callbacks.onToggleOneHanded?.invoke(); viewModel.closeOverlay() },
-                            onEmoji = { onHapticFeedback?.invoke(); viewModel.showOverlay(OverlayRoute.Emoji) },
+                            onEmoji = { onHapticFeedback?.invoke(); callbacks.onEmoji?.invoke() },
                             onReloadConfig = { onHapticFeedback?.invoke(); callbacks.onReloadConfig?.invoke(); viewModel.closeOverlay() },
                             onSettings = { onHapticFeedback?.invoke(); callbacks.onSettings?.invoke(); viewModel.closeOverlay() },
                             onSchemaList = { onHapticFeedback?.invoke(); viewModel.pushOverlay(OverlayRoute.SchemaList) },
@@ -1545,7 +1545,7 @@ fun KeyboardView(
                                 when (item) {
                                     is ToolbarButtonItem.Builtin -> when (item.button) {
                                         ToolbarButton.SETTINGS -> callbacks.onSettings?.invoke()
-                                        ToolbarButton.EMOJI -> viewModel.showOverlay(OverlayRoute.Emoji)
+                                        ToolbarButton.EMOJI -> callbacks.onEmoji?.invoke()
                                         ToolbarButton.CLIPBOARD -> viewModel.showOverlay(OverlayRoute.Clipboard(0))
                                         ToolbarButton.SCHEMA -> viewModel.showOverlay(OverlayRoute.SchemaList, listOf(OverlayRoute.Menu))
                                         ToolbarButton.QUICK_PHRASE -> viewModel.showOverlay(OverlayRoute.Clipboard(1))

@@ -124,6 +124,7 @@ internal fun rememberImeKeyboardCallbacks(
             },
             onToggleDarkMode = { service.toggleDarkMode() },
             onClipboard = {},
+            onEmoji = { service.emojiPickerController.open() },
             onClipboardSelect = { text -> service.textCommit.selectClipboardItem(text) },
             onClipboardItemSelect = { item ->
                 if (item.isImage) service.textCommit.selectClipboardImage(item)
