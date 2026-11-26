@@ -4,6 +4,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ClipboardLinkExtractorTest {
+    @Test fun extractsDomainFollowedImmediatelyByChineseText() {
+        assertEquals(listOf("https://www.baidu.com"),
+            ClipboardLinkExtractor.extract("https://www.baidu.com我说的"))
+        assertEquals(listOf("https://example.com/中文?内容=完整#片段"),
+            ClipboardLinkExtractor.extract("https://example.com/中文?内容=完整#片段"))
+    }
+
     @Test fun extractsLinksPreservingQueryAndFragment() {
         assertEquals(listOf("https://example.com/a?x=1&y=2#part", "http://other.org/path"),
             ClipboardLinkExtractor.extract("分享 https://example.com/a?x=1&y=2#part，另一个 http://other.org/path。"))

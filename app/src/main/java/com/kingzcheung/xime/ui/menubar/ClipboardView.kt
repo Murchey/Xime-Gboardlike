@@ -1,6 +1,5 @@
 package com.kingzcheung.xime.ui.menubar
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -135,7 +134,6 @@ fun ClipboardView(
     var selectedIds by remember(selectedTab) { mutableStateOf<Set<Long>>(emptySet()) }
     var showClearConfirm by remember(selectedTab) { mutableStateOf(false) }
     var showRetentionPanel by remember { mutableStateOf(false) }
-    BackHandler(enabled = showRetentionPanel) { showRetentionPanel = false }
 
     fun exitMultiSelect() {
         isMultiSelect = false
@@ -168,7 +166,7 @@ fun ClipboardView(
                     .size(28.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(iconButtonContainer)
-                    .clickable { onBack?.invoke() },
+                    .clickable { if (showRetentionPanel) showRetentionPanel = false else onBack?.invoke() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

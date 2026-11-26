@@ -11,6 +11,12 @@ object ClipboardLinkExtractor {
         while (value.endsWith(')') && value.count { it == ')' } > value.count { it == '(' }) {
             value = value.dropLast(1)
         }
+        // 域名后的中文正文作为分享文本边界，路径和查询中的中文保持原样。
+        val authorityStart = value.indexOf("://") + 3
+        val authorityEnd = value.indexOfAny(charArrayOf('/', '?', '#'), authorityStart)
+            .takeIf { it >= 0 } ?: value.length
+        val textBoundary = (authorityStart until authorityEnd).firstOrNull { value[it].code > 127 }
+        if (textBoundary != null) value = value.substring(0, textBoundary)
         val uri = runCatching { URI(value) }.getOrNull()
         value.takeIf { uri?.host != null && uri.userInfo == null }
     }.distinct().toList()

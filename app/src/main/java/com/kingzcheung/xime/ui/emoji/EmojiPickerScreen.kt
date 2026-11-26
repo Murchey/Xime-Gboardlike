@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items as rowItems
+import androidx.compose.foundation.lazy.itemsIndexed as rowItemsIndexed
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -70,7 +71,6 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kingzcheung.xime.data.EmojiSearch
 import com.kingzcheung.xime.data.EmojiData
-import com.kingzcheung.xime.data.EmojiCategory
 import com.kingzcheung.xime.data.RecentUsageStore
 import com.kingzcheung.xime.plugin.ExtensionManager
 import com.kingzcheung.xime.ui.keyboard.EmojiCategoryTab
@@ -103,30 +103,21 @@ fun EmojiPickerScreen(
         ExtensionManager.getAllInstalledPlugins().associate { it.id to it.name }
     }
     var selectedPlugin by rememberSaveable { mutableStateOf<String?>(null) }
-    var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
     var recent by remember(context) {
         mutableStateOf(RecentUsageStore.get(context, RecentUsageStore.KEY_RECENT_EMOJIS))
     }
     val activePlugin = selectedPlugin?.takeIf { it in pluginGroups }
     val pageCategories = if (activePlugin == null) builtins else pluginGroups[activePlugin].orEmpty()
-    val visibleCategories = pageCategories
-    val bookmarkCategories = if (activePlugin == null) listOf(
-        EmojiCategory(name = "最近使用", icon = "🕘", emojis = emptyList()),
-    ) + pageCategories else pageCategories
     var selectedBookmark by remember(activePlugin, pageCategories) { mutableIntStateOf(0) }
     val categoryStartIndexes = remember(activePlugin, pageCategories, recent) {
-        buildList {
-            var index = 0
-            if (activePlugin == null) {
-                add(index)
-                index += 1 + maxOf(1, recent.size)
-            }
-            pageCategories.forEach { category ->
-                add(index)
-                index += 1 + category.emojis.size
-            }
-        }
+        EmojiPickerIndex.sectionStarts(
+            categoryItemCounts = pageCategories.map { category ->
+                if (activePlugin == null) category.emojis.size else category.emojiItems.orEmpty().size
+            },
+            recentCount = if (activePlugin == null) recent.size else null,
+            emptyCategoryPlaceholder = activePlugin != null,
+        )
     }
     val searching = query.isNotBlank()
     LaunchedEffect(query, builtins, emojiDictionary) {
@@ -139,10 +130,9 @@ fun EmojiPickerScreen(
     val emojiFontSize = 28.sp
     fun selectBookmark(index: Int) {
         query = ""
-        selectedCategory = if (activePlugin == null && index == 0) RECENT_CATEGORY else null
         selectedBookmark = index
         focusManager.clearFocus()
-        scope.launch { gridState.animateScrollToItem(categoryStartIndexes.getOrElse(index) { 0 }) }
+        scope.launch { gridState.scrollToItem(categoryStartIndexes.getOrElse(index) { 0 }) }
     }
     val selectText: (String) -> Unit = { value ->
         recent = RecentUsageStore.record(context, RecentUsageStore.KEY_RECENT_EMOJIS, value)
@@ -162,9 +152,9 @@ fun EmojiPickerScreen(
     BackHandler(onBack = returnFromSearch)
     LaunchedEffect(activePlugin, query) { gridState.scrollToItem(0) }
     LaunchedEffect(gridState, activePlugin, searching, categoryStartIndexes) {
-        if (activePlugin == null && !searching) {
+        if (!searching) {
             snapshotFlow { gridState.firstVisibleItemIndex }.collectLatest { first ->
-                val section = categoryStartIndexes.indexOfLast { it <= first }.coerceAtLeast(0)
+                val section = EmojiPickerIndex.selectedSection(categoryStartIndexes, first)
                 selectedBookmark = section
             }
         }
@@ -210,7 +200,7 @@ fun EmojiPickerScreen(
                         ),
                     )
                 }
-                if (!compact) LazyRow(
+                if (!compact && !searching) LazyRow(
                     modifier = Modifier.fillMaxWidth().widthIn(max = 840.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -219,13 +209,13 @@ fun EmojiPickerScreen(
                     if (activePlugin == null) item {
                         PickerCategory("🕘", "最近使用", selectedBookmark == 0) { selectBookmark(0) }
                     }
-                    rowItems(pageCategories) { category ->
+                    rowItemsIndexed(pageCategories) { categoryIndex, category ->
                         Box(Modifier.semantics { contentDescription = category.name }) {
                             EmojiCategoryTab(
                                 icon = category.icon,
                                 pluginIcon = category.pluginIcon,
-                                isSelected = !searching && selectedBookmark == pageCategories.indexOf(category) + if (activePlugin == null) 1 else 0,
-                                onClick = { selectBookmark(pageCategories.indexOf(category) + if (activePlugin == null) 1 else 0) },
+                                isSelected = !searching && selectedBookmark == categoryIndex + if (activePlugin == null) 1 else 0,
+                                onClick = { selectBookmark(categoryIndex + if (activePlugin == null) 1 else 0) },
                                 backgroundColor = colors.surface,
                                 textColor = colors.onSurface,
                                 selectedBackgroundColor = colors.primaryContainer,
@@ -259,16 +249,14 @@ fun EmojiPickerScreen(
                         items(recent, key = { "recent:" + it }) { emoji ->
                             PickerEmoji(emoji, emojiFontSize) { selectText(emoji) }
                         }
-                        if (selectedCategory != RECENT_CATEGORY) {
-                            visibleCategories.forEachIndexed { index, category ->
-                                item(span = { GridItemSpan(maxLineSpan) }) { PickerHeading(category.name) }
-                                items(category.emojis, key = { "builtin:" + index + ":" + it }) { emoji ->
-                                    PickerEmoji(emoji, emojiFontSize) { selectText(emoji) }
-                                }
+                        pageCategories.forEachIndexed { index, category ->
+                            item(span = { GridItemSpan(maxLineSpan) }) { PickerHeading(category.name) }
+                            items(category.emojis, key = { "builtin:" + index + ":" + it }) { emoji ->
+                                PickerEmoji(emoji, emojiFontSize) { selectText(emoji) }
                             }
                         }
                     } else {
-                        visibleCategories.forEach { category ->
+                        pageCategories.forEach { category ->
                             val matches = category.emojiItems.orEmpty().filter {
                                 !searching || it.text.contains(query.trim(), ignoreCase = true) ||
                                     it.insertText?.contains(query.trim(), ignoreCase = true) == true
@@ -313,14 +301,14 @@ fun EmojiPickerScreen(
                         item {
                             FilterChip(
                                 selected = activePlugin == null,
-                                onClick = { selectedPlugin = null; selectedCategory = null; query = "" },
+                                onClick = { selectedPlugin = null; query = "" },
                                 label = { Text("Emoji") },
                             )
                         }
                         rowItems(pluginGroups.keys.toList()) { id ->
                             FilterChip(
                                 selected = activePlugin == id,
-                                onClick = { selectedPlugin = id; selectedCategory = null; query = "" },
+                                onClick = { selectedPlugin = id; query = "" },
                                 label = {
                                     Text(pluginNames[id] ?: id, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 },
@@ -335,8 +323,6 @@ fun EmojiPickerScreen(
         }
     }
 }
-
-private const val RECENT_CATEGORY = "@recent"
 
 @Composable
 private fun PickerHeading(title: String) {
