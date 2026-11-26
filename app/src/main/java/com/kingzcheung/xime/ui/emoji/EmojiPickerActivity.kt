@@ -16,7 +16,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.kingzcheung.xime.settings.AppLocale
 import com.kingzcheung.xime.ui.theme.XimeTheme
@@ -40,15 +39,15 @@ class EmojiPickerActivity : ComponentActivity() {
         if (receiver == null) { finish(); return }
         setContent {
             XimeTheme(darkTheme = intent.getBooleanExtra("dark", false)) {
-                BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
-                    val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-                    val sheetHeight = if (keyboardVisible) maxHeight else maxHeight * 0.62f
+                BoxWithConstraints(Modifier.fillMaxSize().systemBarsPadding()) {
+                    val sheetHeight = maxHeight * 0.62f
                     Box(Modifier.fillMaxSize().clickable(
                         interactionSource = remember { MutableInteractionSource() }, indication = null,
                         onClick = { finish() },
                     ))
                     Surface(
-                        modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(sheetHeight),
+                        modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                            .height(sheetHeight).imePadding(),
                         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                     ) {
                         EmojiPickerScreen(
