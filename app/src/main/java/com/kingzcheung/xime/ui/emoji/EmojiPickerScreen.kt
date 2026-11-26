@@ -51,6 +51,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
@@ -77,6 +79,8 @@ fun EmojiPickerScreen(
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var searchFocused by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
     val categories by ExtensionManager.emojiCategoriesFlow.collectAsStateWithLifecycle()
     val builtins = remember(categories) { categories.filterNot { it.isPlugin }.ifEmpty { EmojiData.categories } }
@@ -116,7 +120,17 @@ fun EmojiPickerScreen(
         onSelect(value)
     }
 
-    BackHandler(onBack = onBack)
+    val returnFromSearch = {
+        if (searchFocused || query.isNotBlank()) {
+            query = ""
+            focusManager.clearFocus()
+            keyboardController?.hide()
+            Unit
+        } else {
+            onBack()
+        }
+    }
+    BackHandler(onBack = returnFromSearch)
     LaunchedEffect(activePlugin, selectedCategory, query) { gridState.scrollToItem(0) }
 
     Surface(modifier = Modifier.fillMaxSize(), color = colors.surface) {
@@ -127,13 +141,14 @@ fun EmojiPickerScreen(
                     Modifier.fillMaxWidth().widthIn(max = 840.dp).padding(end = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = returnFromSearch) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                     TextField(
                         value = query,
                         onValueChange = { query = it },
-                        modifier = Modifier.weight(1f).padding(vertical = if (compact) 0.dp else 8.dp),
+                        modifier = Modifier.weight(1f).padding(vertical = if (compact) 0.dp else 8.dp)
+                            .onFocusChanged { searchFocused = it.isFocused },
                         placeholder = { Text("搜索表情", maxLines = 1) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         trailingIcon = {
