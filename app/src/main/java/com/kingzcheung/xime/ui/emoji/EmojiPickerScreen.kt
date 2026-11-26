@@ -152,7 +152,7 @@ fun EmojiPickerScreen(
                         ),
                     )
                 }
-                LazyRow(
+                if (!compact) LazyRow(
                     modifier = Modifier.fillMaxWidth().widthIn(max = 840.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
