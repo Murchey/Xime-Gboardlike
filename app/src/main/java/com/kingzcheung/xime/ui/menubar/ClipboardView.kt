@@ -1,5 +1,6 @@
 package com.kingzcheung.xime.ui.menubar
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -46,12 +47,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.AssistChip
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.ui.platform.LocalContext
 import com.kingzcheung.xime.clipboard.ClipboardLinkExtractor
-import com.kingzcheung.xime.settings.SettingsPreferences
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -88,6 +84,11 @@ import com.kingzcheung.xime.ui.rememberClipboardImageRequest
 import com.kingzcheung.xime.viewmodel.KeyboardViewModel
 import kotlinx.coroutines.launch
 import java.io.File
+
+// 保留旧入口的索引语义，顶部显示顺序为剪贴板、链接条目、快捷发送。
+internal const val CLIPBOARD_TAB = 0
+internal const val QUICK_SEND_TAB = 1
+internal const val CLIPBOARD_LINKS_TAB = 2
 
 @Composable
 fun ClipboardView(
@@ -129,10 +130,12 @@ fun ClipboardView(
         MaterialTheme.colorScheme.primary,
         0.35f
     )
-    var menuAnchor by remember { mutableStateOf<MenuAnchor?>(null) }
-    var isMultiSelect by remember { mutableStateOf(false) }
-    var selectedIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
-    var showClearConfirm by remember { mutableStateOf(false) }
+    var menuAnchor by remember(selectedTab) { mutableStateOf<MenuAnchor?>(null) }
+    var isMultiSelect by remember(selectedTab) { mutableStateOf(false) }
+    var selectedIds by remember(selectedTab) { mutableStateOf<Set<Long>>(emptySet()) }
+    var showClearConfirm by remember(selectedTab) { mutableStateOf(false) }
+    var showRetentionPanel by remember { mutableStateOf(false) }
+    BackHandler(enabled = showRetentionPanel) { showRetentionPanel = false }
 
     fun exitMultiSelect() {
         isMultiSelect = false
@@ -190,45 +193,35 @@ fun ClipboardView(
                     modifier = Modifier.fillMaxHeight(),
                     horizontalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(11.dp))
-                            .background(if (selectedTab == 0) accentColor else Color.Transparent)
-                            .clickable { onClipboardTabChange?.invoke(0) }
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = tr(R.string.s_jiantieban),
-                            color = if (selectedTab == 0) Color.White else textColor,
-                            fontSize = 11.sp,
-                            fontWeight = if (selectedTab == 0) FontWeight.Medium else FontWeight.Normal
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(11.dp))
-                            .background(if (selectedTab == 1) accentColor else Color.Transparent)
-                            .clickable { onClipboardTabChange?.invoke(1) }
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = tr(R.string.s_kuaijiefasong),
-                            color = if (selectedTab == 1) Color.White else textColor,
-                            fontSize = 11.sp,
-                            fontWeight = if (selectedTab == 1) FontWeight.Medium else FontWeight.Normal
-                        )
+                    listOf(
+                        CLIPBOARD_TAB to tr(R.string.s_jiantieban),
+                        CLIPBOARD_LINKS_TAB to "链接条目",
+                        QUICK_SEND_TAB to tr(R.string.s_kuaijiefasong),
+                    ).forEach { (tab, label) ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(11.dp))
+                                .background(if (selectedTab == tab) accentColor else Color.Transparent)
+                                .clickable { onClipboardTabChange?.invoke(tab) }
+                                .padding(horizontal = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                color = if (selectedTab == tab) MaterialTheme.colorScheme.onPrimary else textColor,
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                fontWeight = if (selectedTab == tab) FontWeight.Medium else FontWeight.Normal
+                            )
+                        }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            if (selectedTab == 0) {
+            if (selectedTab == CLIPBOARD_TAB) {
                 if (isMultiSelect) {
                     Box(
                         modifier = Modifier
@@ -265,6 +258,12 @@ fun ClipboardView(
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
+                    RetentionQuickPanelButton(
+                        onClick = { showRetentionPanel = true },
+                        modifier = Modifier.size(28.dp),
+                        tint = accentColor,
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
                     if (clipboardItems.isNotEmpty()) {
                         Box(
                             modifier = Modifier
@@ -285,7 +284,7 @@ fun ClipboardView(
                 }
             }
 
-            if (selectedTab == 1 && onQuickSendAddClick != null) {
+            if (selectedTab == QUICK_SEND_TAB && onQuickSendAddClick != null) {
                 Box(
                     modifier = Modifier
                         .size(28.dp)
@@ -310,7 +309,7 @@ fun ClipboardView(
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            if (selectedTab == 0) {
+            if (selectedTab != QUICK_SEND_TAB) {
                 ClipboardTabContent(
                     items = clipboardItems,
                     itemBgColor = itemBgColor,
@@ -319,11 +318,12 @@ fun ClipboardView(
                     accentColor = accentColor,
                     onSelect = onSelectItem,
                     onSelectLink = onSelectLink,
+                    linksOnly = selectedTab == CLIPBOARD_LINKS_TAB,
                     onRemove = { id -> viewModel.removeClipboardItem(id) },
                     onAddToQuickSend = { id -> viewModel.addToQuickSend(id) },
                     onSplitWords = onSplitWords,
                     onLongPressItem = { item, isLeftColumn ->
-                        menuAnchor = MenuAnchor(item, isLeftColumn, tab = 0)
+                        menuAnchor = MenuAnchor(item, isLeftColumn, tab = CLIPBOARD_TAB)
                     },
                     isMultiSelect = isMultiSelect,
                     selectedIds = selectedIds,
@@ -348,8 +348,15 @@ fun ClipboardView(
                     onQuickSendEditItem = onQuickSendEditItem,
                     onDragSendStarted = onDragSendStarted,
                     onLongPressItem = { item, isLeftColumn ->
-                        menuAnchor = MenuAnchor(item, isLeftColumn, tab = 1)
+                        menuAnchor = MenuAnchor(item, isLeftColumn, tab = QUICK_SEND_TAB)
                     }
+                )
+            }
+            if (showRetentionPanel) {
+                RetentionQuickPanel(
+                    onDismiss = { showRetentionPanel = false },
+                    containerColor = backgroundColor,
+                    contentColor = textColor,
                 )
             }
         }
@@ -404,7 +411,7 @@ fun ClipboardView(
         Spacer(modifier = Modifier.height(if (isWide) 15.dp else bottomPaddingDp.dp))
 
         menuAnchor?.let { anchor ->
-            val menuItems = if (anchor.tab == 0) {
+            val menuItems = if (anchor.tab == CLIPBOARD_TAB) {
                 if (anchor.item.isImage) {
                     // 图片条目：拆词/编辑无意义（文本操作），保留置顶 + 多选 + 删除
                     listOf(
@@ -624,7 +631,7 @@ data class LongPressMenuEntry(
     val onClick: () -> Unit
 )
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ClipboardTabContent(
     items: List<ClipboardItem>,
@@ -645,16 +652,25 @@ fun ClipboardTabContent(
     onSelectImage: ((ClipboardItem) -> Unit)? = null,
     imageFileOf: ((ClipboardItem) -> File?)? = null,
     onDragSendStarted: (() -> Unit)? = null,
+    linksOnly: Boolean = false,
 ) {
     val view = LocalView.current
-    val extractLinks = SettingsPreferences.isClipboardLinkExtractionEnabled(LocalContext.current)
-    if (items.isEmpty()) {
+    val displayedItems = remember(items, linksOnly) {
+        if (linksOnly) {
+            items.filterNot { it.isImage }.flatMap { item ->
+                ClipboardLinkExtractor.extract(item.text).map { link ->
+                    item.copy(text = link, isExtractedLink = true)
+                }
+            }
+        } else items
+    }
+    if (displayedItems.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = tr(R.string.s_jiantiebanweikong),
+                text = if (linksOnly) "暂无链接条目" else tr(R.string.s_jiantiebanweikong),
                 color = subTextColor,
                 fontSize = 13.sp
             )
@@ -668,10 +684,12 @@ fun ClipboardTabContent(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            itemsIndexed(items, key = { _, it -> it.id }) { index, item ->
+            itemsIndexed(displayedItems, key = { _, item -> "${item.id}:${if (linksOnly) item.text else ""}" }) { index, item ->
                 val highlighted = isMultiSelect && item.id in selectedIds
                 val onClick: () -> Unit = {
-                    if (isMultiSelect) {
+                    if (linksOnly) {
+                        onSelectLink?.invoke(item) ?: onSelect(item.text)
+                    } else if (isMultiSelect) {
                         onToggleSelect(item.id)
                     } else if (item.isImage) {
                         onSelectImage?.invoke(item)
@@ -680,7 +698,8 @@ fun ClipboardTabContent(
                     }
                 }
                 val onLongClick: () -> Unit = {
-                    if (isMultiSelect) onExitMultiSelect()
+                    if (linksOnly) Unit
+                    else if (isMultiSelect) onExitMultiSelect()
                     else onLongPressItem(item, index % 2 == 0)
                 }
                 // 拖拽发送：长按后拖出 slop 启动；多选态不启用（选择模式冲突）。
@@ -695,7 +714,7 @@ fun ClipboardTabContent(
                 // 左滑删除（与 fcitx5 剪贴板一致：露出红色删除底色，划过阈值即删）；
                 // 多选态下禁用手势，避免与勾选冲突。
                 SwipeToDeleteBox(
-                    enabled = !isMultiSelect,
+                    enabled = !isMultiSelect && !linksOnly,
                     onDelete = { onRemove(item.id) },
                 ) {
                     Box {
@@ -715,7 +734,6 @@ fun ClipboardTabContent(
                             onStartDrag = onStartDrag,
                         )
                     } else {
-                        Column {
                         GridItemCard(
                             text = item.text,
                             highlighted = highlighted,
@@ -728,18 +746,6 @@ fun ClipboardTabContent(
                             dragKey = item.id,
                             onStartDrag = onStartDrag,
                         )
-                        val links = remember(item.text, extractLinks) {
-                            if (extractLinks) ClipboardLinkExtractor.extract(item.text).filter { it != item.text.trim() }.take(5) else emptyList()
-                        }
-                        if (!isMultiSelect && onSelectLink != null) FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            links.forEach { link ->
-                                AssistChip(
-                                    onClick = { onSelectLink(item.copy(text = link, isExtractedLink = true)) },
-                                    label = { Text("↗ " + link.substringAfter("://"), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                )
-                            }
-                        }
-                        }
                     }
                     // 置顶角标：小图钉，避免占用卡片内容宽度
                     if (item.isPinned) {

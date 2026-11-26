@@ -79,6 +79,8 @@ import com.kingzcheung.xime.settings.KeysConfigHelper
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.ui.isTablet
 import com.kingzcheung.xime.ui.menubar.ClipboardView
+import com.kingzcheung.xime.ui.menubar.CLIPBOARD_TAB
+import com.kingzcheung.xime.ui.menubar.QUICK_SEND_TAB
 import com.kingzcheung.xime.ui.menubar.SchemaListView
 import com.kingzcheung.xime.ui.menubar.ToolbarCustomizeView
 import com.kingzcheung.xime.ui.theme.KeyboardThemes
@@ -512,9 +514,9 @@ fun KeyboardView(
                         is ToolbarButtonItem.Builtin -> when (item.button) {
                             ToolbarButton.SETTINGS -> ({ callbacks.onSettings?.invoke() })
                             ToolbarButton.EMOJI -> ({ callbacks.onEmoji?.invoke() })
-                            ToolbarButton.CLIPBOARD -> ({ viewModel.showOverlay(OverlayRoute.Clipboard(0)) })
+                            ToolbarButton.CLIPBOARD -> ({ viewModel.showOverlay(OverlayRoute.Clipboard(CLIPBOARD_TAB)) })
                             ToolbarButton.SCHEMA -> ({ viewModel.showOverlay(OverlayRoute.SchemaList, listOf(OverlayRoute.Menu)) })
-                            ToolbarButton.QUICK_PHRASE -> ({ viewModel.showOverlay(OverlayRoute.Clipboard(1)) })
+                            ToolbarButton.QUICK_PHRASE -> ({ viewModel.showOverlay(OverlayRoute.Clipboard(QUICK_SEND_TAB)) })
                             ToolbarButton.SYMBOL -> ({ viewModel.showOverlay(OverlayRoute.Symbol) })
                             ToolbarButton.SELECT_ALL -> ({ callbacks.onToolbarEditingAction?.invoke("select_all") })
                             ToolbarButton.COPY -> ({ callbacks.onToolbarEditingAction?.invoke("copy") })
@@ -1520,8 +1522,8 @@ fun KeyboardView(
                         ),
                         callbacks = MenuBarCallbacks(
                             onDismiss = { onHapticFeedback?.invoke(); viewModel.closeOverlay() },
-                            onClipboard = { onHapticFeedback?.invoke(); viewModel.showOverlay(OverlayRoute.Clipboard(0)); callbacks.onClipboard?.invoke() },
-                            onQuickSend = { onHapticFeedback?.invoke(); viewModel.showOverlay(OverlayRoute.Clipboard(1)); callbacks.onQuickSend?.invoke() },
+                            onClipboard = { onHapticFeedback?.invoke(); viewModel.showOverlay(OverlayRoute.Clipboard(CLIPBOARD_TAB)); callbacks.onClipboard?.invoke() },
+                            onQuickSend = { onHapticFeedback?.invoke(); viewModel.showOverlay(OverlayRoute.Clipboard(QUICK_SEND_TAB)); callbacks.onQuickSend?.invoke() },
                             onKeyboardResize = { onHapticFeedback?.invoke(); callbacks.onKeyboardResize?.invoke(); viewModel.closeOverlay() },
                             onToggleOneHanded = { onHapticFeedback?.invoke(); callbacks.onToggleOneHanded?.invoke(); viewModel.closeOverlay() },
                             onEmoji = { onHapticFeedback?.invoke(); callbacks.onEmoji?.invoke() },
@@ -1546,9 +1548,9 @@ fun KeyboardView(
                                     is ToolbarButtonItem.Builtin -> when (item.button) {
                                         ToolbarButton.SETTINGS -> callbacks.onSettings?.invoke()
                                         ToolbarButton.EMOJI -> callbacks.onEmoji?.invoke()
-                                        ToolbarButton.CLIPBOARD -> viewModel.showOverlay(OverlayRoute.Clipboard(0))
+                                        ToolbarButton.CLIPBOARD -> viewModel.showOverlay(OverlayRoute.Clipboard(CLIPBOARD_TAB))
                                         ToolbarButton.SCHEMA -> viewModel.showOverlay(OverlayRoute.SchemaList, listOf(OverlayRoute.Menu))
-                                        ToolbarButton.QUICK_PHRASE -> viewModel.showOverlay(OverlayRoute.Clipboard(1))
+                                        ToolbarButton.QUICK_PHRASE -> viewModel.showOverlay(OverlayRoute.Clipboard(QUICK_SEND_TAB))
                                         ToolbarButton.SYMBOL -> viewModel.showOverlay(OverlayRoute.Symbol)
                                         ToolbarButton.SELECT_ALL -> callbacks.onToolbarEditingAction?.invoke("select_all")
                                         ToolbarButton.COPY -> callbacks.onToolbarEditingAction?.invoke("copy")
@@ -1611,6 +1613,7 @@ fun KeyboardView(
                         viewModel = viewModel,
                         onSelectLink = { item ->
                             callbacks.onClipboardItemSelect?.invoke(item)
+                                ?: callbacks.onClipboardSelect?.invoke(item.text)
                             viewModel.closeOverlay()
                         },
                         onSelectItem = { text ->
@@ -1727,7 +1730,7 @@ fun KeyboardView(
                         backgroundColor = keyboardBgColor,
                         viewModel = viewModel,
                         onBack = { viewModel.popOverlay() },
-                        onNavigateToQuickSend = { viewModel.pushOverlay(OverlayRoute.Clipboard(1)) },
+                        onNavigateToQuickSend = { viewModel.pushOverlay(OverlayRoute.Clipboard(QUICK_SEND_TAB)) },
                         onSelectChar = { char -> callbacks.onCommitText?.invoke(char) },
                         onDeleteText = { count -> callbacks.onDeleteText?.invoke(count) },
                         bottomPaddingDp = state.keyboardBottomPaddingDp,
