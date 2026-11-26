@@ -1486,4 +1486,6 @@
 
     <string name="s_weiqidong">未啟動</string>
     <string name="s_weilianjiedaoshebei">未連線到裝置</string>
+    <string name="s_minimal_power_mode">極簡功耗模式</string>
+    <string name="s_minimal_power_mode_summary">適配低階裝置，暫停按鍵聲音與震動，關閉按壓縮放及玻璃模糊；關閉後恢復原設定</string>
 </resources>

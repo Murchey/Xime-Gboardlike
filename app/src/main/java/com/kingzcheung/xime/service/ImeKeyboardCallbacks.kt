@@ -43,6 +43,7 @@ internal fun rememberImeKeyboardCallbacks(
                 service.keyRouter.handleKeyPress(key, isShifted)
             },
             onKeyPressDown = { key ->
+                service.feedbackManager.performKeyPressDownEffect(key, view)
                 // 打字统计：屏幕键盘按下的每个键（含删除）
                 com.kingzcheung.xime.stats.TypingStats.onKeyDown(key)
                 // 删除键按下：开一次删除会话快照（下滑撤回删除用），必须在首次退格
@@ -50,7 +51,6 @@ internal fun rememberImeKeyboardCallbacks(
                 // 会话结算见 XimeInputMethodService.finishDeleteSession：由撤回请求或
                 // 其它按键触发，不在抬手上结算（抬手时退格 job 可能还在队列里没落盘）。
                 if (key == "delete") service.beginDeleteSession()
-                service.feedbackManager.performKeyPressDownEffect(key, view)
             },
             onKeyRelease = { key ->
                 service.feedbackManager.hapticFeedback(view, keyUp = true)

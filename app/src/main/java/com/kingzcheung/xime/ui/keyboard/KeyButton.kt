@@ -218,7 +218,7 @@ internal fun Modifier.keyPressFeedback(
     shape: Shape,
 ): Modifier {
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
+        targetValue = if (isPressed && !com.kingzcheung.xime.ui.theme.MinimalPowerMode.enabled) KEY_PRESS_SCALE else 1f,
         animationSpec = tween(
             durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
             easing = FastOutSlowInEasing,
@@ -510,7 +510,7 @@ fun KeyButton(
 
     // 按下时的键帽缩放：统一常量（Gboard 的按压回弹幅度）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
+        targetValue = if (isPressed && !com.kingzcheung.xime.ui.theme.MinimalPowerMode.enabled) KEY_PRESS_SCALE else 1f,
         animationSpec = tween(
             durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
             easing = FastOutSlowInEasing,
@@ -1553,7 +1553,7 @@ fun IconKeyButton(
     var isPressed by remember { mutableStateOf(false) }
     // 按下时键帽缩放（与字母/功能键共用统一常量）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
+        targetValue = if (isPressed && !com.kingzcheung.xime.ui.theme.MinimalPowerMode.enabled) KEY_PRESS_SCALE else 1f,
         animationSpec = tween(
             durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
             easing = FastOutSlowInEasing,
@@ -1678,7 +1678,7 @@ fun SwipeableIconKeyButton(
     var isPressed by remember { mutableStateOf(false) }
     // 按下时键帽缩放（图标键，与文字键共用统一常量）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
+        targetValue = if (isPressed && !com.kingzcheung.xime.ui.theme.MinimalPowerMode.enabled) KEY_PRESS_SCALE else 1f,
         animationSpec = tween(
             durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
             easing = FastOutSlowInEasing,
@@ -2224,7 +2224,7 @@ fun SwipeableKeyButtonLandscape(
     var isPressed by remember { mutableStateOf(false) }
     // 按下时键帽缩放（横屏紧凑键盘，与竖屏共用统一常量）
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) KEY_PRESS_SCALE else 1f,
+        targetValue = if (isPressed && !com.kingzcheung.xime.ui.theme.MinimalPowerMode.enabled) KEY_PRESS_SCALE else 1f,
         animationSpec = tween(
             durationMillis = if (isPressed) KEY_PRESS_IN_MS else KEY_PRESS_OUT_MS,
             easing = FastOutSlowInEasing,

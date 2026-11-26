@@ -18,6 +18,7 @@ object SettingsPreferences {
     private const val KEY_RIME_ASSETS_VERSION = "rime_assets_version"
     private const val KEY_SETUP_COMPLETED = "setup_completed"
     private const val KEY_DARK_MODE = "dark_mode"
+    const val KEY_MINIMAL_POWER_MODE = "minimal_power_mode"
     private const val KEY_VERBOSE_LOGGING = "verbose_logging"
     private const val KEY_PLUGIN_DEV_MODE = "plugin_dev_mode"
     /** 按键坐标日志开关（相邻键纠错数据采集，默认关闭）。 */
@@ -370,6 +371,14 @@ private const val DEFAULT_PREDICTION_MODEL_ID = "predictive-text-small"
 
     fun setRimeAssetsVersion(context: Context, version: Int) {
         getPrefs(context).edit().putInt(KEY_RIME_ASSETS_VERSION, version).apply()
+    }
+
+    fun isMinimalPowerMode(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_MINIMAL_POWER_MODE, false)
+
+    fun setMinimalPowerMode(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_MINIMAL_POWER_MODE, enabled).apply()
+        com.kingzcheung.xime.ui.theme.MinimalPowerMode.enabled = enabled
     }
 
     /** 调试 verbose 日志总开关（仅 Debug 构建生效，Release 恒关闭）。 */

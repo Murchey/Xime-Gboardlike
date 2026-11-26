@@ -79,8 +79,8 @@ class FeedbackManager(private val context: Context) {
 
     fun initialize() {
         hasAmplitudeControl = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && vibrator.hasAmplitudeControl()
-        initSoundPool()
         loadSettings()
+        updateSoundPool()
         registerPrefsListener()
         context.contentResolver.registerContentObserver(
             Settings.System.getUriFor(Settings.System.HAPTIC_FEEDBACK_ENABLED), false, hapticsObserver,
@@ -97,6 +97,18 @@ class FeedbackManager(private val context: Context) {
         soundPool = null
         feedbackScope.cancel()
     }
+
+    private fun updateSoundPool() {
+        if (minimalPowerMode || !soundEnabled) {
+            soundPool?.release()
+            soundPool = null
+            soundIds.clear()
+        } else if (soundPool == null) {
+            initSoundPool()
+        }
+    }
+
+    private var minimalPowerMode = false
 
     private fun initSoundPool() {
         val attrs = AudioAttributes.Builder()
@@ -122,6 +134,8 @@ class FeedbackManager(private val context: Context) {
     }
 
     private fun loadSettings() {
+        minimalPowerMode = SettingsPreferences.isMinimalPowerMode(context)
+        com.kingzcheung.xime.ui.theme.MinimalPowerMode.enabled = minimalPowerMode
         soundEnabled = SettingsPreferences.isSoundEnabled(context)
         soundVolume = SettingsPreferences.getSoundVolume(context)
         soundStyle = SettingsPreferences.getSoundStyle(context)
@@ -137,7 +151,15 @@ class FeedbackManager(private val context: Context) {
         val prefs = SettingsPreferences.getPrefsPublic(context)
         prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             when (key) {
-                "sound_enabled" -> soundEnabled = SettingsPreferences.isSoundEnabled(context)
+                "sound_enabled" -> {
+                    soundEnabled = SettingsPreferences.isSoundEnabled(context)
+                    updateSoundPool()
+                }
+                SettingsPreferences.KEY_MINIMAL_POWER_MODE -> {
+                    minimalPowerMode = SettingsPreferences.isMinimalPowerMode(context)
+                    com.kingzcheung.xime.ui.theme.MinimalPowerMode.enabled = minimalPowerMode
+                    updateSoundPool()
+                }
                 "sound_volume" -> soundVolume = SettingsPreferences.getSoundVolume(context)
                 "key_sound_style" -> soundStyle = SettingsPreferences.getSoundStyle(context)
                 "haptic_mode" -> hapticMode = HapticMode.fromValue(SettingsPreferences.getHapticMode(context))
@@ -152,7 +174,7 @@ class FeedbackManager(private val context: Context) {
     }
 
     fun playKeySound(keyType: String = "standard") {
-        if (!soundEnabled) return
+        if (minimalPowerMode || !soundEnabled) return
 
         val pool = soundPool ?: return
         val id = if (soundStyle == "mechanical") "mech_$keyType" else keyType
@@ -166,7 +188,7 @@ class FeedbackManager(private val context: Context) {
     }
 
     fun hapticFeedback(view: View, longPress: Boolean = false, keyUp: Boolean = false) {
-        if (keyUp && !hapticOnKeyUp) return
+        if (minimalPowerMode || (keyUp && !hapticOnKeyUp)) return
         when (hapticMode) {
             HapticMode.Enabled -> {}
             HapticMode.Disabled -> return
@@ -234,7 +256,7 @@ class FeedbackManager(private val context: Context) {
     }
 
     fun performVibration() {
-        if (hapticMode == HapticMode.Disabled) return
+        if (minimalPowerMode || hapticMode == HapticMode.Disabled) return
         if (!vibrator.hasVibrator()) return
         val duration = if (pressDuration != 0L) pressDuration else 20L
         val amplitude = if (hasAmplitudeControl && pressAmplitude != 0) pressAmplitude else VibrationEffect.DEFAULT_AMPLITUDE

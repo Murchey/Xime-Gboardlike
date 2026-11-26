@@ -1735,4 +1735,6 @@
 
     <string name="s_weiqidong">未启动</string>
     <string name="s_weilianjiedaoshebei">未连接到设备</string>
+    <string name="s_minimal_power_mode">极简功耗模式</string>
+    <string name="s_minimal_power_mode_summary">适配低端设备，暂停按键声音和震动，关闭按压缩放与玻璃模糊；关闭后恢复原设置</string>
 </resources>

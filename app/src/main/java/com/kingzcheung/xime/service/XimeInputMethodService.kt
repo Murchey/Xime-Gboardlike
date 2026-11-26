@@ -2198,6 +2198,16 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 }
 
                 XimeTheme(darkTheme = isDarkTheme, themeId = state.themeId) {
+                    val minimalPowerMode = com.kingzcheung.xime.ui.theme.MinimalPowerMode.enabled
+                    LaunchedEffect(minimalPowerMode) {
+                        if (minimalPowerMode) {
+                            glassBlurWindows.values.forEach { it.setVisible(false) }
+                        } else {
+                            glassSurfaceBounds.toMap().forEach { (name, bounds) ->
+                                updateGlassSurface(name, bounds)
+                            }
+                        }
+                    }
                     Box(
                         modifier = Modifier
                             .fillMaxSize()

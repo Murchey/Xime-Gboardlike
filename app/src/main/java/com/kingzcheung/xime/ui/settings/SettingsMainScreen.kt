@@ -93,6 +93,9 @@ fun SettingsMainContent(
     onNavigateToBackup: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    var minimalPowerMode by remember(context) {
+        mutableStateOf(SettingsPreferences.isMinimalPowerMode(context))
+    }
 
     LaunchedEffect(Unit) {
         MarketUpdateChecker.maybeRefresh(context)
@@ -141,6 +144,16 @@ fun SettingsMainContent(
                             val imm = context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
                                 as InputMethodManager
                             imm.showInputMethodPicker()
+                        },
+                    )
+                    SettingsSwitchRow(
+                        title = tr(R.string.s_minimal_power_mode),
+                        summary = tr(R.string.s_minimal_power_mode_summary),
+                        icon = Icons.TwoTone.Tune,
+                        checked = minimalPowerMode,
+                        onCheckedChange = { enabled ->
+                            SettingsPreferences.setMinimalPowerMode(context, enabled)
+                            minimalPowerMode = enabled
                         },
                     )
                 }
