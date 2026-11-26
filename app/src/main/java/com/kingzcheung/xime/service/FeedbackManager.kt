@@ -2,6 +2,9 @@ package com.kingzcheung.xime.service
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.SoundPool
@@ -59,15 +62,34 @@ class FeedbackManager(private val context: Context) {
     private var longPressAmplitude = 0
 
     private var prefsListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+    private var systemHapticsEnabled = true
+    private val hapticsObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) {
+            refreshSystemHaptics()
+        }
+    }
+
+    private fun refreshSystemHaptics() {
+        systemHapticsEnabled = try {
+            Settings.System.getInt(context.contentResolver, Settings.System.HAPTIC_FEEDBACK_ENABLED, 1) == 1
+        } catch (_: Exception) {
+            true
+        }
+    }
 
     fun initialize() {
         hasAmplitudeControl = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && vibrator.hasAmplitudeControl()
         initSoundPool()
         loadSettings()
         registerPrefsListener()
+        context.contentResolver.registerContentObserver(
+            Settings.System.getUriFor(Settings.System.HAPTIC_FEEDBACK_ENABLED), false, hapticsObserver,
+        )
+        refreshSystemHaptics()
     }
 
     fun release() {
+        context.contentResolver.unregisterContentObserver(hapticsObserver)
         prefsListener?.let {
             SettingsPreferences.getPrefsPublic(context).unregisterOnSharedPreferenceChangeListener(it)
         }
@@ -144,24 +166,12 @@ class FeedbackManager(private val context: Context) {
     }
 
     fun hapticFeedback(view: View, longPress: Boolean = false, keyUp: Boolean = false) {
+        if (keyUp && !hapticOnKeyUp) return
         when (hapticMode) {
             HapticMode.Enabled -> {}
             HapticMode.Disabled -> return
-            HapticMode.FollowingSystem -> {
-                val systemEnabled = try {
-                    Settings.System.getInt(
-                        context.contentResolver,
-                        Settings.System.HAPTIC_FEEDBACK_ENABLED,
-                        1
-                    ) == 1
-                } catch (_: Exception) {
-                    true
-                }
-                if (!systemEnabled) return
-            }
+            HapticMode.FollowingSystem -> if (!systemHapticsEnabled) return
         }
-        if (keyUp && !hapticOnKeyUp) return
-
         val duration = if (longPress) longPressDuration else pressDuration
         val amplitude = if (longPress) longPressAmplitude else pressAmplitude
         val hfc: Int = if (longPress) {

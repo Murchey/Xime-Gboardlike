@@ -100,10 +100,12 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
     ) {
         val transformed = service.candidateTransform.transformFor(result)
         // 会话日志：记录本键处理后的组合快照（输入串/候选/上屏增量），供离线重建纠错标签
-        KeyTapLogger.recordComposition(
-            result.inputText, result.preeditText, result.committedText, result.isAsciiMode,
-            result.candidates.map { it.text to it.comment }
-        )
+        if (KeyTapLogger.enabled) {
+            KeyTapLogger.recordComposition(
+                result.inputText, result.preeditText, result.committedText, result.isAsciiMode,
+                result.candidates.map { it.text to it.comment }
+            )
+        }
 
         // 邻键误触纠错：把按键几何先验与当前组合编码对齐后送入 librime 插件
         // （候选生成/打分/出词/排序都在插件内完成，用同一份词典与用户词典）。
