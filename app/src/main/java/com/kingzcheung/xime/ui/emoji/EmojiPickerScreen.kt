@@ -43,10 +43,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,9 +66,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.TextUnit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kingzcheung.xime.data.EmojiSearch
 import com.kingzcheung.xime.data.EmojiData
+import com.kingzcheung.xime.data.EmojiCategory
 import com.kingzcheung.xime.data.RecentUsageStore
 import com.kingzcheung.xime.plugin.ExtensionManager
 import com.kingzcheung.xime.ui.keyboard.EmojiCategoryTab
@@ -103,10 +110,23 @@ fun EmojiPickerScreen(
     }
     val activePlugin = selectedPlugin?.takeIf { it in pluginGroups }
     val pageCategories = if (activePlugin == null) builtins else pluginGroups[activePlugin].orEmpty()
-    val visibleCategories = if (selectedCategory == null || selectedCategory == RECENT_CATEGORY) {
-        pageCategories
-    } else {
-        pageCategories.filter { it.name == selectedCategory }.ifEmpty { pageCategories }
+    val visibleCategories = pageCategories
+    val bookmarkCategories = if (activePlugin == null) listOf(
+        EmojiCategory(name = "最近使用", icon = "🕘", emojis = emptyList()),
+    ) + pageCategories else pageCategories
+    var selectedBookmark by remember(activePlugin, pageCategories) { mutableIntStateOf(0) }
+    val categoryStartIndexes = remember(activePlugin, pageCategories, recent) {
+        buildList {
+            var index = 0
+            if (activePlugin == null) {
+                add(index)
+                index += 1 + maxOf(1, recent.size)
+            }
+            pageCategories.forEach { category ->
+                add(index)
+                index += 1 + category.emojis.size
+            }
+        }
     }
     val searching = query.isNotBlank()
     LaunchedEffect(query, builtins, emojiDictionary) {
@@ -115,6 +135,15 @@ fun EmojiPickerScreen(
         }
     }
     val gridState = rememberLazyGridState()
+    val scope = rememberCoroutineScope()
+    val emojiFontSize = 28.sp
+    fun selectBookmark(index: Int) {
+        query = ""
+        selectedCategory = if (activePlugin == null && index == 0) RECENT_CATEGORY else null
+        selectedBookmark = index
+        focusManager.clearFocus()
+        scope.launch { gridState.animateScrollToItem(categoryStartIndexes.getOrElse(index) { 0 }) }
+    }
     val selectText: (String) -> Unit = { value ->
         recent = RecentUsageStore.record(context, RecentUsageStore.KEY_RECENT_EMOJIS, value)
         onSelect(value)
@@ -131,7 +160,15 @@ fun EmojiPickerScreen(
         }
     }
     BackHandler(onBack = returnFromSearch)
-    LaunchedEffect(activePlugin, selectedCategory, query) { gridState.scrollToItem(0) }
+    LaunchedEffect(activePlugin, query) { gridState.scrollToItem(0) }
+    LaunchedEffect(gridState, activePlugin, searching, categoryStartIndexes) {
+        if (activePlugin == null && !searching) {
+            snapshotFlow { gridState.firstVisibleItemIndex }.collectLatest { first ->
+                val section = categoryStartIndexes.indexOfLast { it <= first }.coerceAtLeast(0)
+                selectedBookmark = section
+            }
+        }
+    }
 
     Surface(modifier = Modifier.fillMaxSize(), color = colors.surface) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -180,23 +217,15 @@ fun EmojiPickerScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (activePlugin == null) item {
-                        PickerCategory("🕘", "最近使用", selectedCategory == RECENT_CATEGORY) {
-                            query = ""
-                            selectedCategory = RECENT_CATEGORY
-                            focusManager.clearFocus()
-                        }
+                        PickerCategory("🕘", "最近使用", selectedBookmark == 0) { selectBookmark(0) }
                     }
                     rowItems(pageCategories) { category ->
                         Box(Modifier.semantics { contentDescription = category.name }) {
                             EmojiCategoryTab(
                                 icon = category.icon,
                                 pluginIcon = category.pluginIcon,
-                                isSelected = !searching && selectedCategory == category.name,
-                                onClick = {
-                                    query = ""
-                                    selectedCategory = category.name
-                                    focusManager.clearFocus()
-                                },
+                                isSelected = !searching && selectedBookmark == pageCategories.indexOf(category) + if (activePlugin == null) 1 else 0,
+                                onClick = { selectBookmark(pageCategories.indexOf(category) + if (activePlugin == null) 1 else 0) },
                                 backgroundColor = colors.surface,
                                 textColor = colors.onSurface,
                                 selectedBackgroundColor = colors.primaryContainer,
@@ -220,7 +249,7 @@ fun EmojiPickerScreen(
                             PickerEmpty("没有找到表情，试试「开心」「爱」或 smile")
                         }
                         items(searchResults, key = { "search:" + it }) { emoji ->
-                            PickerEmoji(emoji) { selectText(emoji) }
+                            PickerEmoji(emoji, emojiFontSize) { selectText(emoji) }
                         }
                     } else if (activePlugin == null) {
                         item(span = { GridItemSpan(maxLineSpan) }) { PickerHeading("最近使用") }
@@ -228,13 +257,13 @@ fun EmojiPickerScreen(
                             PickerEmpty("点按表情后会显示在这里")
                         }
                         items(recent, key = { "recent:" + it }) { emoji ->
-                            PickerEmoji(emoji) { selectText(emoji) }
+                            PickerEmoji(emoji, emojiFontSize) { selectText(emoji) }
                         }
                         if (selectedCategory != RECENT_CATEGORY) {
                             visibleCategories.forEachIndexed { index, category ->
                                 item(span = { GridItemSpan(maxLineSpan) }) { PickerHeading(category.name) }
                                 items(category.emojis, key = { "builtin:" + index + ":" + it }) { emoji ->
-                                    PickerEmoji(emoji) { selectText(emoji) }
+                                    PickerEmoji(emoji, emojiFontSize) { selectText(emoji) }
                                 }
                             }
                         }
@@ -330,15 +359,12 @@ private fun PickerEmpty(message: String) {
 }
 
 @Composable
-private fun PickerEmoji(emoji: String, onClick: () -> Unit) {
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val fontSize = (maxWidth.value * 0.58f).coerceIn(18f, 32f).sp
-        Box(
-            Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(onClick = onClick)
-                .semantics { contentDescription = emoji },
-            contentAlignment = Alignment.Center,
-        ) { Text(emoji, fontSize = fontSize, maxLines = 1) }
-    }
+private fun PickerEmoji(emoji: String, fontSize: TextUnit, onClick: () -> Unit) {
+    Box(
+        Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(onClick = onClick)
+            .semantics { contentDescription = emoji },
+        contentAlignment = Alignment.Center,
+    ) { Text(emoji, fontSize = fontSize, maxLines = 1) }
 }
 
 @Composable
