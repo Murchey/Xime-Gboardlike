@@ -51,6 +51,19 @@ class EmojiSearchTest {
         assertEquals(listOf("😀"), EmojiSearch.search("happy", duplicateCategories))
     }
 
+    @Test
+    fun `内置词典按完整表情索引并保留变体`() {
+        val dictionary = EmojiSearch.parseDictionary(sequenceOf(
+            "舞者\t舞者 🧑‍🩰 🕺", "疲惫\t疲惫 😩", "火心\t火心 ❤️‍🔥",
+            "黑猫\t黑猫 🐈‍⬛", "无效行",
+        ))
+        val entries = listOf(category("表情", "🧑‍🩰", "🕺", "😩", "❤️", "❤️‍🔥", "🐈‍⬛️"))
+        assertEquals(listOf("🧑‍🩰", "🕺"), EmojiSearch.search("舞者", entries, dictionary))
+        assertEquals(listOf("😩"), EmojiSearch.search("疲惫", entries, dictionary))
+        assertEquals(listOf("❤️‍🔥"), EmojiSearch.search("火心", entries, dictionary))
+        assertEquals(listOf("🐈‍⬛️"), EmojiSearch.search("黑猫", entries, dictionary))
+    }
+
     private fun category(name: String, vararg emojis: String) = EmojiCategory(
         name = name,
         icon = "",

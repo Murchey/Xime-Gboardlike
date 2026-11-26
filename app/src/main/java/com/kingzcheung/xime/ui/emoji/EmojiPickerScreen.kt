@@ -44,6 +44,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -77,11 +79,11 @@ fun EmojiPickerScreen(
     val focusManager = LocalFocusManager.current
     val colors = MaterialTheme.colorScheme
     val categories by ExtensionManager.emojiCategoriesFlow.collectAsStateWithLifecycle()
-    val builtins = remember(categories) {
-        val paint = android.text.TextPaint().apply { textSize = 32f }
-        categories.filterNot { it.isPlugin }.ifEmpty { EmojiData.categories }.map { category ->
-            category.copy(emojis = category.emojis.filter { androidx.core.graphics.PaintCompat.hasGlyph(paint, it) })
-        }
+    val builtins = remember(categories) { categories.filterNot { it.isPlugin }.ifEmpty { EmojiData.categories } }
+    var emojiDictionary by remember { mutableStateOf<Map<String, Set<String>>>(emptyMap()) }
+    var searchResults by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(builtins) {
+        emojiDictionary = withContext(Dispatchers.IO) { EmojiSearch.loadDictionary(context) }
     }
     val pluginGroups = remember(categories) {
         categories.filter { it.isPlugin }.groupBy { it.pluginId ?: it.name }
@@ -103,7 +105,11 @@ fun EmojiPickerScreen(
         pageCategories.filter { it.name == selectedCategory }.ifEmpty { pageCategories }
     }
     val searching = query.isNotBlank()
-    val searchResults = remember(query, builtins) { EmojiSearch.search(query, builtins) }
+    LaunchedEffect(query, builtins, emojiDictionary) {
+        searchResults = if (query.isBlank()) emptyList() else {
+            withContext(Dispatchers.Default) { EmojiSearch.search(query, builtins, emojiDictionary) }
+        }
+    }
     val gridState = rememberLazyGridState()
     val selectText: (String) -> Unit = { value ->
         recent = RecentUsageStore.record(context, RecentUsageStore.KEY_RECENT_EMOJIS, value)
@@ -192,7 +198,7 @@ fun EmojiPickerScreen(
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = if (compact) 2.dp else 8.dp),
                 ) {
                     if (searching && activePlugin == null) {
-                        item(span = { GridItemSpan(maxLineSpan) }) {
+                        if (!compact) item(span = { GridItemSpan(maxLineSpan) }) {
                             PickerHeading("搜索结果 · " + searchResults.size)
                         }
                         if (searchResults.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
@@ -248,7 +254,7 @@ fun EmojiPickerScreen(
                     }
                 }
                 HorizontalDivider(color = colors.outlineVariant)
-                Row(
+                if (!compact) Row(
                     modifier = Modifier.fillMaxWidth().widthIn(max = 840.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
