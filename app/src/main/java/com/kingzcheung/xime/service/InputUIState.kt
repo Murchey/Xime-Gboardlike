@@ -77,6 +77,11 @@ data class InputUIState(
     val cursorX: Int = 0,
     val cursorY: Int = 0,
     val cursorVisible: Boolean = false,
+    /**
+     * 表情面板展开（与快捷发送表单同构）：面板挂在候选栏上方，键盘仍完整可用。
+     * 面板高度计入键盘容器总高，宿主输入框因此被顶到面板上沿而不是被盖住。
+     */
+    val showEmojiPanel: Boolean = false,
     val showQuickSendForm: Boolean = false,
     val quickSendFormFocused: Boolean = false,
     /** 快捷发送表单内焦点是否在"触发编码"输入框（false=在文本输入框）；决定按键输入路由目标。 */

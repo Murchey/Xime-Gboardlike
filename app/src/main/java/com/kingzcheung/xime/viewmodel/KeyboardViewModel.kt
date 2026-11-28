@@ -141,6 +141,7 @@ data class KeyboardUiState(
     val swipeCancelEpoch: Long = 0L,
     val t9RightCandidateSelectedCount: Long = 0L,
     val t9SelectedCandidatePinyin: String = "",
+    val showEmojiPanel: Boolean = false,
     val showQuickSendForm: Boolean = false,
     val quickSendFormFocused: Boolean = false,
     val quickSendEditingItemId: Long? = null,

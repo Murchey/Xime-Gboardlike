@@ -43,14 +43,6 @@
             android:name="xime.host.compat_version"
             android:value="${ximeHostCompatVersion}" />
 
-        <activity
-            android:name=".ui.emoji.EmojiPickerActivity"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:taskAffinity="${applicationId}.emoji"
-            android:windowSoftInputMode="adjustResize|stateAlwaysHidden"
-            android:theme="@style/Theme.Xime.EmojiPicker" />
-
         <!-- 主Activity -->
         <activity
             android:name=".MainActivity"

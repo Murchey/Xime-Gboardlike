@@ -163,6 +163,14 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         }
         // 只有空格参与“连按两次”窗口；任何其他按键都中断计数。
         if (key != "space") service.lastSpaceCommitAt = 0L
+        // 表情面板打开期间搜索框是唯一按键目标：面板在输入法窗口内，没有可编辑
+        // 输入框（窗口内的 EditText 会抢走输入连接、把宿主输入框挤成不可见），
+        // 按键直接注入 [EmojiSearchInput]，不落到宿主输入框，也不进 Rime 组合。
+        if (service.uiState.value.showEmojiPanel &&
+            com.kingzcheung.xime.ui.emoji.EmojiSearchInput.handleKey(key, isShifted)
+        ) {
+            return
+        }
         if (service.uiState.value.toolPanelInputFocused) {
             val candState = service.candidateState.value
             val hasComposing = candState.isComposing || candState.inputText.isNotEmpty()
@@ -647,7 +655,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                 }
                 "emoji" -> {
                     withContext(Dispatchers.Main) {
-                        service.emojiPickerController.open()
+                        service.openEmojiPanel()
                     }
                 }
                 else -> {

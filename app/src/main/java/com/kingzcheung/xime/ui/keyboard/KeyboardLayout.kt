@@ -1008,7 +1008,13 @@ internal fun buildUiGestureHandler(
 ): (GestureAction, String) -> Unit = { action, value ->
     when (action) {
         // 面板切换映射的唯一实现（三处 UI 手势入口共用，含 clipboard）
-        GestureAction.SWITCH_ROUTE -> switchRouteOverlay(value)?.let { viewModel.showOverlay(it) }
+        // 表情不是全屏覆盖页：面板挂在候选栏上方（键盘仍可用），
+        // 走回调由服务层展开面板并同步容器高度，宿主输入框随之被顶上去。
+        GestureAction.SWITCH_ROUTE -> if (value == "emoji") {
+            callbacks.onEmoji?.invoke()
+        } else {
+            switchRouteOverlay(value)?.let { viewModel.showOverlay(it) }
+        }
         // command 的值统一走按键路由（tap/上滑与手势分发同一条解析；命令名白名单见 dispatchCommandAction）
         GestureAction.COMMAND -> dispatchCommandAction(value, onKeyPress)
         GestureAction.TOGGLE_ASCII -> {

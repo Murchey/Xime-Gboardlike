@@ -124,7 +124,9 @@ internal fun rememberImeKeyboardCallbacks(
             },
             onToggleDarkMode = { service.toggleDarkMode() },
             onClipboard = {},
-            onEmoji = { service.emojiPickerController.open() },
+            // 表情面板渲染在输入法窗口内（不是独立 Activity）：宿主输入框会被正常顶到
+            // 面板上沿，搜索栏也在窗口内，不会另起系统键盘盖住面板。
+            onEmoji = { service.openEmojiPanel() },
             onClipboardSelect = { text -> service.textCommit.selectClipboardItem(text) },
             onClipboardItemSelect = { item ->
                 if (item.isImage) service.textCommit.selectClipboardImage(item)

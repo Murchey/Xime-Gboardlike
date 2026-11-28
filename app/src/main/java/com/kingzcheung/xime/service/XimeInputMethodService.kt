@@ -215,7 +215,6 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private fun localizedContext(): Context = AppLocale.wrap(localeBaseContext ?: this)
 
     private var lastLocales: android.os.LocaleList = android.os.LocaleList.getDefault()
-    internal val emojiPickerController by lazy { EmojiPickerController(this) }
 
     companion object {
         internal const val TAG = "XimeInputMethodService"
@@ -224,6 +223,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         private const val DARK_MODE_SYSTEM = 2
         private const val HARDWARE_CANDIDATE_BAR_HEIGHT = 72
         internal const val SAFE_TEXT_LIMIT = 262144
+        /** 表情面板高度（dp）：与 [com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_HEIGHT_DP] 同源。 */
+        internal const val EMOJI_PANEL_HEIGHT_DP =
+            com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_HEIGHT_DP
 
         /**
          * 撤回快照 / 落点校验读取输入框的窗口（code unit，2026-10-02）。
@@ -561,6 +563,58 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         )
     }
 
+    /**
+     * 打开表情面板（候选栏上方，与快捷发送表单同构）。
+     *
+     * 面板放在输入法窗口内而不是独立 Activity：独立窗口会接管输入连接，系统不再
+     * 给宿主应用做 ADJUST_RESIZE，宿主输入框必被面板盖住。面板计入键盘容器高度后，
+     * 窗口变高 → 系统上报更大的 IME inset → 输入框被顶到面板上沿之上。
+     */
+    internal fun openEmojiPanel() {
+        // 已展开时同一个入口即收起：工具栏/表情键/命令三处共用，重复点按不会卡在展开态
+        if (uiState.value.showEmojiPanel) {
+            closeEmojiPanel()
+            return
+        }
+        if (uiState.value.isFloatingMode) {
+            Toast.makeText(this, tr(R.string.s_gongjumianbanbuzhichizaixuanfu_69e6b), Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (uiState.value.showQuickSendForm) {
+            uiState.value = uiState.value.copy(
+                showQuickSendForm = false,
+                quickSendFormFocused = false,
+                quickSendCodeFocused = false,
+            )
+        }
+        closeToolPanel()
+        // 打开面板前清掉未上屏的拼音/英文，避免旧组合混进宿主输入框
+        val pending = candidateState.value
+        if (pending.isComposing || pending.inputText.isNotEmpty() || pending.pendingEnglishText.isNotEmpty()) {
+            rimeEngine.clearComposition()
+            endComposingInputBox()
+            candidateState.value = candidateState.value.copy(
+                inputText = "",
+                preeditText = "",
+                pendingEnglishText = "",
+                candidates = emptyList(),
+                candidateComments = emptyList(),
+                associationCandidates = emptyList(),
+                isComposing = false,
+                candidateActions = emptyList(),
+            )
+        }
+        com.kingzcheung.xime.ui.emoji.EmojiSearchInput.open()
+        uiState.value = uiState.value.copy(showEmojiPanel = true)
+    }
+
+    /** 关闭表情面板；容器高度随之还原，IME inset 回到键盘高度。 */
+    internal fun closeEmojiPanel() {
+        if (!uiState.value.showEmojiPanel) return
+        uiState.value = uiState.value.copy(showEmojiPanel = false)
+        com.kingzcheung.xime.ui.emoji.EmojiSearchInput.reset()
+    }
+
     /** 切换单手模式（[com.kingzcheung.xime.settings.OneHandedMode]：0 关闭 / 1 左手 / 2 右手）。 */
     internal fun setOneHandedMode(mode: Int) {
         SettingsPreferences.setOneHandedMode(this, mode)
@@ -587,8 +641,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 keyboardViewModel.showOverlay(com.kingzcheung.xime.keyboard.OverlayRoute.Clipboard(0))
             com.kingzcheung.xime.settings.BottomBarAction.QUICK_PHRASE ->
                 keyboardViewModel.showOverlay(com.kingzcheung.xime.keyboard.OverlayRoute.Clipboard(1))
-            com.kingzcheung.xime.settings.BottomBarAction.EMOJI ->
-                emojiPickerController.open()
+            com.kingzcheung.xime.settings.BottomBarAction.EMOJI -> openEmojiPanel()
             com.kingzcheung.xime.settings.BottomBarAction.SETTINGS -> schemaController.openSettings()
             com.kingzcheung.xime.settings.BottomBarAction.HIDE_KEYBOARD -> requestHideSelf(0)
             com.kingzcheung.xime.settings.BottomBarAction.NONE -> Unit
@@ -2144,6 +2197,12 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 // Overlay 页面（menubar/剪贴板/emoji 等）全屏覆盖键盘内容区：激活期间撑高面板
                 // 不参与计算，否则 Overlay 页面会带上表单/工具面板的额外高度（容器整体被撑高）。
                 val isOverlayPage = page is com.kingzcheung.xime.keyboard.KeyboardPage.Overlay
+                // 表情面板与快捷发送同构：挂在候选栏上方，面板高度计入键盘总高。
+                // 窗口因此变高 → 系统上报更大的 IME inset → 宿主输入框被顶到面板上沿，
+                // 而不是被面板盖住。独立 Activity 做不到：它夺走输入连接后，系统不再
+                // 给宿主做 ADJUST_RESIZE，输入框必然被压住。
+                val emojiPanelExtra =
+                    if (state.showEmojiPanel && !state.isFloatingMode) EMOJI_PANEL_HEIGHT_DP else 0
                 val quickSendFormExtra = if (state.showQuickSendForm && !isOverlayPage) 200 else 0
                 // 需与 ToolPanel 渲染高度一致（toolPanelHeightDp：内容自适应 + 上限），
                 // 否则容器比面板多/少一截，键盘被拉高。
@@ -2156,7 +2215,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                         hasControls = !state.toolPanelUiNodes.isNullOrEmpty(),
                     )
                 } else 0
-                val overlayPanelExtra = quickSendFormExtra + toolPanelExtra
+                val overlayPanelExtra = quickSendFormExtra + toolPanelExtra + emojiPanelExtra
 
                 // 键盘内容高度 = 期望值 ∩ 宿主承载区预算。
                 // 独立 IME 面板（如 Horizon OS 悬浮面板）只给键盘一段区域，而 configuration
@@ -2433,6 +2492,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     swipeCancelEpoch = state.swipeCancelEpoch,
                                     t9RightCandidateSelectedCount = state.t9RightCandidateSelectedCount,
                                     t9SelectedCandidatePinyin = state.t9SelectedCandidatePinyin,
+                                    showEmojiPanel = state.showEmojiPanel,
                                     showQuickSendForm = state.showQuickSendForm,
                                     quickSendFormFocused = state.quickSendFormFocused,
                                     quickSendEditingItemId = state.quickSendEditingItemId,
@@ -3077,7 +3137,6 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         ImeLatencyTrace.onStartInput()
         super.onStartInput(attribute, restarting)
-        emojiPickerController.observeEditor(attribute)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
         loadDarkModePreference()
 
@@ -3275,14 +3334,12 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         }
 
         attribute?.let { updateEnterKeyText(it) }
-        mainHandler.post { emojiPickerController.deliver(currentInputEditorInfo) }
     }
     
     private val highlightIndex = mutableIntStateOf(0)
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        mainHandler.post { emojiPickerController.deliver(currentInputEditorInfo) }
         // 玻璃模糊面随键盘显示；区域用最近一次上报的键盘矩形
         // 先拆掉模糊子窗口再重建：输入法重新显示时让系统重新采样当前页面（避免切页后拍到旧内容）
         runCatching {
@@ -3867,6 +3924,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             QuickSendFormEditTextHolder.editText = null
             QuickSendFormCodeEditTextHolder.editText = null
         }
+        // 表情面板同理：键盘隐藏后残留展开态会让下次弹出直接少一截键盘
+        if (uiState.value.showEmojiPanel) closeEmojiPanel()
     }
 
     override fun onWindowShown() {
@@ -3994,7 +4053,6 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     override fun onDestroy() {
-        emojiPickerController.dispose()
         super.onDestroy()
         // 模糊子窗口随输入法服务一起销毁
         runCatching { glassBlurWindows.values.forEach { it.dispose() } }

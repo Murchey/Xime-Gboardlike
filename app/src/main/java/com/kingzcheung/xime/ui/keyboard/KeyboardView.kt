@@ -404,6 +404,28 @@ fun KeyboardView(
                 }
             }
 
+            // 表情面板挂在候选栏上方（与快捷发送同构）：键盘保持可见可点，
+            // 面板高度已计入容器高度，系统上报的 IME inset 随之变大，
+            // 宿主输入框被顶到面板上沿而不是被盖住。
+            if (state.showEmojiPanel) {
+                com.kingzcheung.xime.ui.emoji.EmojiPanelArea(
+                    backgroundColor = Color.Transparent,
+                    textColor = keyTextColor,
+                    accentColor = accentColor,
+                    cardColor = keyboardBgColor,
+                    onSelect = { emoji ->
+                        onHapticFeedback?.invoke()
+                        callbacks.onCommitText?.invoke(emoji)
+                    },
+                    onImageSelect = { url ->
+                        onHapticFeedback?.invoke()
+                        callbacks.onCommitImage?.invoke(url)
+                    },
+                    onDelete = { callbacks.onKeyPress("delete", false) },
+                    onClose = { viewModel.closeOverlay() },
+                )
+            }
+
             if (state.showQuickSendForm) {
                 QuickSendFormArea(
                     backgroundColor = Color.Transparent,
