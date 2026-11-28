@@ -223,9 +223,6 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         private const val DARK_MODE_SYSTEM = 2
         private const val HARDWARE_CANDIDATE_BAR_HEIGHT = 72
         internal const val SAFE_TEXT_LIMIT = 262144
-        /** 表情面板高度（dp）：与 [com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_HEIGHT_DP] 同源。 */
-        internal const val EMOJI_PANEL_HEIGHT_DP =
-            com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_HEIGHT_DP
 
         /**
          * 撤回快照 / 落点校验读取输入框的窗口（code unit，2026-10-02）。
@@ -2201,8 +2198,20 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 // 窗口因此变高 → 系统上报更大的 IME inset → 宿主输入框被顶到面板上沿，
                 // 而不是被面板盖住。独立 Activity 做不到：它夺走输入连接后，系统不再
                 // 给宿主做 ADJUST_RESIZE，输入框必然被压住。
-                val emojiPanelExtra =
-                    if (state.showEmojiPanel && !state.isFloatingMode) EMOJI_PANEL_HEIGHT_DP else 0
+                // 表情面板两种高度：浏览态半屏、搜索态收成一条。
+                // 浏览态取屏高比例，但必须给键盘和宿主输入框留出位置，否则输入框又被挤没。
+                // 两个高度都要与 EmojiPanelArea 的渲染高度同源，否则容器和面板差一截。
+                val emojiBrowseHeightDp = com.kingzcheung.xime.ui.emoji.emojiPanelBrowseHeightDp(
+                    desiredDp = (screenHeightDp * com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_BROWSE_HEIGHT_RATIO).toInt(),
+                    screenHeightDp = screenHeightDp,
+                    keyboardHeightDp = keyboardHeight,
+                    minHeightDp = com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_MIN_HEIGHT_DP,
+                )
+                val emojiPanelExtra = if (state.showEmojiPanel && !state.isFloatingMode) {
+                    if (com.kingzcheung.xime.ui.emoji.EmojiSearchInput.searchMode)
+                        com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_SEARCH_HEIGHT_DP
+                    else emojiBrowseHeightDp
+                } else 0
                 val quickSendFormExtra = if (state.showQuickSendForm && !isOverlayPage) 200 else 0
                 // 需与 ToolPanel 渲染高度一致（toolPanelHeightDp：内容自适应 + 上限），
                 // 否则容器比面板多/少一截，键盘被拉高。

@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">XimeGboard</string>
     <string name="s_meiyou_sousuo_jieguo">无结果</string>
+    <string name="s_shuruguanjiancisousuo">输入关键词搜索表情</string>
     <string name="subtype_label_wubi">XimeGboard 输入法</string>
     <string name="subtype_label_pinyin">拼音</string>
     <string name="keyboard_name">XimeGboard 输入法</string>

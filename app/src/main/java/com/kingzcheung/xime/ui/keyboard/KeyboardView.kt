@@ -413,6 +413,18 @@ fun KeyboardView(
                     textColor = keyTextColor,
                     accentColor = accentColor,
                     cardColor = keyboardBgColor,
+                    // 浏览态半屏、搜索态一条；两种都按固定高度渲染，
+                    // 键盘键位在下方保持可见可点，键位区不被面板顶掉。
+                    browseHeightDp = if (com.kingzcheung.xime.ui.emoji.EmojiSearchInput.searchMode) {
+                        com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_SEARCH_HEIGHT_DP
+                    } else {
+                        com.kingzcheung.xime.ui.emoji.emojiPanelBrowseHeightDp(
+                            desiredDp = (screenH * com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_BROWSE_HEIGHT_RATIO).toInt(),
+                            screenHeightDp = screenH,
+                            keyboardHeightDp = state.keyboardHeightDp,
+                            minHeightDp = com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_MIN_HEIGHT_DP,
+                        )
+                    },
                     onSelect = { emoji ->
                         onHapticFeedback?.invoke()
                         callbacks.onCommitText?.invoke(emoji)
@@ -490,6 +502,7 @@ fun KeyboardView(
                 )
             }
 
+            val emojiSearchMode = com.kingzcheung.xime.ui.emoji.EmojiSearchInput.searchMode
             val toolbarContext = LocalContext.current
             CandidateBar(
                 state = candidateBarState,

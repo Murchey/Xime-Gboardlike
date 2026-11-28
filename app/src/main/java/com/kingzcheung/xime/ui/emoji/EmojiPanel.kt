@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -65,8 +66,34 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** 表情面板高度（dp）：挂在键盘上方，面板高度计入键盘总高，键盘仍可见可用。 */
-internal const val EMOJI_PANEL_HEIGHT_DP = 240
+/** 搜索态面板高度（dp）：收成键盘上方一条，留搜索栏 + 两行结果。 */
+internal const val EMOJI_PANEL_SEARCH_HEIGHT_DP = 180
+
+/** 浏览态面板占屏高的比例：首次打开半屏展开，键盘仍在下方可用。 */
+internal const val EMOJI_PANEL_BROWSE_HEIGHT_RATIO = 0.38f
+
+/** 浏览态面板高度下限（dp），小屏横屏时别压没。 */
+internal const val EMOJI_PANEL_MIN_HEIGHT_DP = 200
+
+/** 宿主输入框至少要留在屏幕上的高度（dp），面板不得把它挤到屏幕外。 */
+internal const val EMOJI_HOST_INPUT_RESERVE_DP = 120
+
+/**
+ * 计算浏览态面板高度。
+ *
+ * 屏高扣掉键盘、再扣掉留给宿主输入框的一条，剩下的才是面板能占的空间；
+ * 期望值超过这个预算就按预算走，避免"面板半屏很好看但输入框被顶出屏幕"。
+ * 预算低于 [minHeightDp] 时仍取 minHeightDp——面板太矮没法用，宁可让输入框贴边。
+ */
+internal fun emojiPanelBrowseHeightDp(
+    desiredDp: Int,
+    screenHeightDp: Int,
+    keyboardHeightDp: Int,
+    minHeightDp: Int,
+): Int {
+    val budget = screenHeightDp - keyboardHeightDp - EMOJI_HOST_INPUT_RESERVE_DP
+    return desiredDp.coerceAtMost(budget.coerceAtLeast(minHeightDp))
+}
 
 /**
  * 键盘上方的表情面板（与快捷发送表单同构，不是独立窗口）。
@@ -84,6 +111,8 @@ fun EmojiPanelArea(
     textColor: Color,
     accentColor: Color,
     cardColor: Color,
+    /** 面板高度（dp）：与容器撑高同源，浏览态整块、搜索态一条。 */
+    browseHeightDp: Int,
     onSelect: (String) -> Unit,
     onImageSelect: (String) -> Unit,
     onDelete: () -> Unit,
@@ -112,7 +141,7 @@ fun EmojiPanelArea(
     val activePlugin = selectedPlugin?.takeIf { it in pluginGroups }
     val pageCategories = if (activePlugin == null) builtins else pluginGroups[activePlugin].orEmpty()
     val query = EmojiSearchInput.query
-    val searching = query.isNotBlank()
+    val searching = EmojiSearchInput.searchMode
     var results by remember { mutableStateOf<List<String>>(emptyList()) }
     LaunchedEffect(query, builtins, dictionary) {
         results = if (query.isBlank()) emptyList()
@@ -143,10 +172,12 @@ fun EmojiPanelArea(
         onSelect(emoji)
     }
 
+    val searchMode = EmojiSearchInput.searchMode
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(EMOJI_PANEL_HEIGHT_DP.dp)
+            .height(browseHeightDp.dp)
             .background(cardColor),
     ) {
         Row(
@@ -154,8 +185,8 @@ fun EmojiPanelArea(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(
-                // 返回先清搜索词，词为空才关面板——与独立窗口版的返回语义一致
-                onClick = { if (searching) EmojiSearchInput.query = "" else onClose() },
+                // 返回先退出搜索态回到半屏浏览，已在浏览态才关面板
+                onClick = { if (searching) EmojiSearchInput.exitSearch() else onClose() },
                 modifier = Modifier.size(36.dp),
             ) {
                 Icon(
@@ -170,15 +201,15 @@ fun EmojiPanelArea(
                     .weight(1f)
                     .height(32.dp)
                     .background(textColor.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
-                    .clickable { EmojiSearchInput.panelOpen = true }
+                    .clickable { EmojiSearchInput.enterSearch() }
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
                     Icons.Default.Search,
                     contentDescription = null,
-                    // 面板打开期间搜索框恒为按键目标，图标保持高对比提示"可直接打字"
-                    tint = textColor.copy(alpha = 0.9f),
+                    // 搜索态图标高对比，提示当前按键进的是搜索框
+                    tint = textColor.copy(alpha = if (searching) 0.9f else 0.45f),
                     modifier = Modifier.size(15.dp),
                 )
                 Text(
@@ -257,8 +288,15 @@ fun EmojiPanelArea(
             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
         ) {
             if (searching) {
-                if (results.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-                    PickerEmpty(tr(R.string.s_meiyou_sousuo_jieguo))
+                // 刚进搜索态还没输入时提示可打字，不要显示成"无结果"
+                if (query.isBlank()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        PickerEmpty(tr(R.string.s_shuruguanjiancisousuo))
+                    }
+                } else if (results.isEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        PickerEmpty(tr(R.string.s_meiyou_sousuo_jieguo))
+                    }
                 }
                 items(results, key = { "s:" + it }) { emoji ->
                     PickerEmoji(emoji, textColor) { selectEmoji(emoji) }
@@ -310,6 +348,8 @@ fun EmojiPanelArea(
                 }
             }
         }
+        // 搜索态收成一条：分类栏与底部操作栏都不显示，高度只够搜索栏
+        if (!searching) {
         HorizontalDivider(color = textColor.copy(alpha = 0.12f))
         Row(
             modifier = Modifier.fillMaxWidth().height(38.dp).padding(horizontal = 8.dp),
@@ -334,6 +374,7 @@ fun EmojiPanelArea(
             IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
                 Text("⌫", color = textColor, fontSize = 18.sp)
             }
+        }
         }
     }
 }

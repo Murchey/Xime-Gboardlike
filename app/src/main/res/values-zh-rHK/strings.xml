@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">XimeGboard</string>
+    <string name="s_shuruguanjiancisousuo">輸入關鍵詞搜尋表情</string>
     <string name="subtype_label_wubi">XimeGboard 輸入法</string>
     <string name="subtype_label_pinyin">拼音</string>
     <string name="keyboard_name">XimeGboard 輸入法</string>
