@@ -66,11 +66,11 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** 搜索态面板高度（dp）：收成键盘上方一条，留搜索栏 + 两行结果。 */
+/** 搜索态面板高度（dp）：键盘上方一个只显示搜索结果的小面板。 */
 internal const val EMOJI_PANEL_SEARCH_HEIGHT_DP = 180
 
-/** 浏览态面板占屏高的比例：首次打开半屏展开，键盘仍在下方可用。 */
-internal const val EMOJI_PANEL_BROWSE_HEIGHT_RATIO = 0.38f
+/** 浏览态面板占屏高的比例：首次打开即收起键盘，面板占大半屏。 */
+internal const val EMOJI_PANEL_BROWSE_HEIGHT_RATIO = 0.55f
 
 /** 浏览态面板高度下限（dp），小屏横屏时别压没。 */
 internal const val EMOJI_PANEL_MIN_HEIGHT_DP = 200
@@ -81,17 +81,16 @@ internal const val EMOJI_HOST_INPUT_RESERVE_DP = 120
 /**
  * 计算浏览态面板高度。
  *
- * 屏高扣掉键盘、再扣掉留给宿主输入框的一条，剩下的才是面板能占的空间；
- * 期望值超过这个预算就按预算走，避免"面板半屏很好看但输入框被顶出屏幕"。
- * 预算低于 [minHeightDp] 时仍取 minHeightDp——面板太矮没法用，宁可让输入框贴边。
+ * 浏览态会收起键盘，所以预算只扣宿主输入框那一条——键盘不占位。
+ * 期望值超过预算就按预算走，避免"面板好看但输入框被顶出屏幕"；
+ * 预算低于 [minHeightDp] 时仍取 minHeightDp，宁可输入框贴边也不能把面板压没。
  */
 internal fun emojiPanelBrowseHeightDp(
     desiredDp: Int,
     screenHeightDp: Int,
-    keyboardHeightDp: Int,
     minHeightDp: Int,
 ): Int {
-    val budget = screenHeightDp - keyboardHeightDp - EMOJI_HOST_INPUT_RESERVE_DP
+    val budget = screenHeightDp - EMOJI_HOST_INPUT_RESERVE_DP
     return desiredDp.coerceAtMost(budget.coerceAtLeast(minHeightDp))
 }
 
@@ -113,6 +112,8 @@ fun EmojiPanelArea(
     cardColor: Color,
     /** 面板高度（dp）：与容器撑高同源，浏览态整块、搜索态一条。 */
     browseHeightDp: Int,
+    /** 浏览态占满整块内容区（键盘已收起），搜索态只占固定一条。 */
+    fillContent: Boolean = false,
     onSelect: (String) -> Unit,
     onImageSelect: (String) -> Unit,
     onDelete: () -> Unit,
@@ -177,7 +178,7 @@ fun EmojiPanelArea(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(browseHeightDp.dp)
+            .then(if (fillContent) Modifier.fillMaxHeight() else Modifier.height(browseHeightDp.dp))
             .background(cardColor),
     ) {
         Row(

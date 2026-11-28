@@ -331,6 +331,10 @@ fun KeyboardView(
         // 窗口——焦点型弹窗会抢焦点导致 IME 被系统收起）
         // 长按删除待确认项：词文本 + 确认后执行（候选栏/展开页共用同一确认覆盖层）
         var deletePending by remember { mutableStateOf<DeletePendingWord?>(null) }
+        // 表情面板两种形态：浏览态键盘收起、面板独占内容区；搜索态面板只占键盘上方一条。
+        // 声明提前到 Column 之前：候选栏、键位区、面板三处都要读。
+        val emojiSearchMode = com.kingzcheung.xime.ui.emoji.EmojiSearchInput.searchMode
+        val emojiBrowseMode = state.showEmojiPanel && !emojiSearchMode
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -413,18 +417,17 @@ fun KeyboardView(
                     textColor = keyTextColor,
                     accentColor = accentColor,
                     cardColor = keyboardBgColor,
-                    // 浏览态半屏、搜索态一条；两种都按固定高度渲染，
-                    // 键盘键位在下方保持可见可点，键位区不被面板顶掉。
-                    browseHeightDp = if (com.kingzcheung.xime.ui.emoji.EmojiSearchInput.searchMode) {
+                    // 浏览态键盘收起，面板占满内容区；搜索态只占键盘上方一小条。
+                    browseHeightDp = if (emojiSearchMode) {
                         com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_SEARCH_HEIGHT_DP
                     } else {
                         com.kingzcheung.xime.ui.emoji.emojiPanelBrowseHeightDp(
                             desiredDp = (screenH * com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_BROWSE_HEIGHT_RATIO).toInt(),
                             screenHeightDp = screenH,
-                            keyboardHeightDp = state.keyboardHeightDp,
                             minHeightDp = com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_MIN_HEIGHT_DP,
                         )
                     },
+                    fillContent = emojiBrowseMode,
                     onSelect = { emoji ->
                         onHapticFeedback?.invoke()
                         callbacks.onCommitText?.invoke(emoji)
@@ -502,8 +505,8 @@ fun KeyboardView(
                 )
             }
 
-            val emojiSearchMode = com.kingzcheung.xime.ui.emoji.EmojiSearchInput.searchMode
             val toolbarContext = LocalContext.current
+            if (!emojiBrowseMode) {
             CandidateBar(
                 state = candidateBarState,
                 page = page,
@@ -763,8 +766,9 @@ fun KeyboardView(
                 ),
                 inlineSuggestions = inlineSuggestions,
             )
+            }
 
-            if (candidatePageExpanded) {
+            if (!emojiBrowseMode && candidatePageExpanded) {
                 // 候选展开页：候选栏的在位展开态（顶部即真实候选栏，实时跟随编码/删除变化）。
                 // 数据源为服务层的跨页全量候选（expandedCandidates），行分组惰性渲染
                 // （LazyColumn 只画可见行），可上下滑动 + 翻页键滚动一屏，不驱动 rime 翻页。
@@ -994,7 +998,7 @@ fun KeyboardView(
                     onHapticFeedback = onHapticFeedback,
                     modifier = Modifier.weight(1f).fillMaxWidth()
                 )
-            } else {
+            } else if (!emojiBrowseMode) {
             val isMainKeyboard = page is KeyboardPage.Main
             if (isMainKeyboard) {
                 val mainType = (page as KeyboardPage.Main).type

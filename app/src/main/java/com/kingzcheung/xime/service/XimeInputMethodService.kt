@@ -2198,17 +2198,19 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 // 窗口因此变高 → 系统上报更大的 IME inset → 宿主输入框被顶到面板上沿，
                 // 而不是被面板盖住。独立 Activity 做不到：它夺走输入连接后，系统不再
                 // 给宿主做 ADJUST_RESIZE，输入框必然被压住。
-                // 表情面板两种高度：浏览态半屏、搜索态收成一条。
-                // 浏览态取屏高比例，但必须给键盘和宿主输入框留出位置，否则输入框又被挤没。
-                // 两个高度都要与 EmojiPanelArea 的渲染高度同源，否则容器和面板差一截。
+                // 表情面板两种形态：
+                // 浏览态收起键盘，面板自己就是整块内容区；
+                // 搜索态键盘照常显示，面板只占键盘上方一小条放搜索结果。
+                // 两种高度都要与 EmojiPanelArea 的渲染高度同源，否则容器和面板差一截。
                 val emojiBrowseHeightDp = com.kingzcheung.xime.ui.emoji.emojiPanelBrowseHeightDp(
                     desiredDp = (screenHeightDp * com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_BROWSE_HEIGHT_RATIO).toInt(),
                     screenHeightDp = screenHeightDp,
-                    keyboardHeightDp = keyboardHeight,
                     minHeightDp = com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_MIN_HEIGHT_DP,
                 )
+                val emojiSearchMode = com.kingzcheung.xime.ui.emoji.EmojiSearchInput.searchMode
+                val emojiBrowseActive = state.showEmojiPanel && !state.isFloatingMode && !emojiSearchMode
                 val emojiPanelExtra = if (state.showEmojiPanel && !state.isFloatingMode) {
-                    if (com.kingzcheung.xime.ui.emoji.EmojiSearchInput.searchMode)
+                    if (emojiSearchMode)
                         com.kingzcheung.xime.ui.emoji.EMOJI_PANEL_SEARCH_HEIGHT_DP
                     else emojiBrowseHeightDp
                 } else 0
@@ -2286,7 +2288,12 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             },
                     ) {
                         // Sync FrameLayout height with Compose content height
-                        val contentHeight = if (state.showKeyboardResize) state.resizePreviewHeightDp else floatingCardContentHeight + overlayPanelExtra
+                        // 浏览态键盘已收起：窗口高度就是面板高度，不再叠加键盘高度。
+                        val contentHeight = when {
+                            state.showKeyboardResize -> state.resizePreviewHeightDp
+                            emojiBrowseActive -> emojiPanelExtra
+                            else -> floatingCardContentHeight + overlayPanelExtra
+                        }
                         val totalDp = if (state.isCompact || state.isFloatingMode) effectiveScreenH
                             else contentHeight + state.keyboardBottomPaddingDp + activeBottomDp
                         SideEffect {
@@ -2377,7 +2384,16 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(if (state.showKeyboardResize) (state.resizePreviewHeightDp + state.keyboardBottomPaddingDp + activeBottomDp).dp else (floatingCardContentHeight + state.keyboardBottomPaddingDp + overlayPanelExtra + activeBottomDp).dp)
+                                    .height(
+                                        (
+                                            when {
+                                                state.showKeyboardResize -> state.resizePreviewHeightDp
+                                                // 浏览态键盘收起，背景只托住面板
+                                                emojiBrowseActive -> emojiPanelExtra
+                                                else -> floatingCardContentHeight + overlayPanelExtra
+                                            } + state.keyboardBottomPaddingDp + activeBottomDp
+                                        ).dp
+                                    )
                                     .padding(start = effectiveMarginStartDp.dp, end = effectiveMarginEndDp.dp)
                                     .align(androidx.compose.ui.Alignment.BottomCenter)
                                     .onGloballyPositioned { c ->
@@ -2421,7 +2437,17 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             modifier = Modifier
 
                                 .fillMaxWidth()
-                                .height(if (state.isFloatingMode) effectiveScreenH.dp else if (state.showKeyboardResize) (state.resizePreviewHeightDp + state.keyboardBottomPaddingDp).dp else (floatingCardContentHeight + state.keyboardBottomPaddingDp + overlayPanelExtra).dp)
+                                .height(
+                                    if (state.isFloatingMode) effectiveScreenH.dp
+                                    else (
+                                        when {
+                                            state.showKeyboardResize -> state.resizePreviewHeightDp
+                                            // 浏览态键盘收起，内容区只有面板
+                                            emojiBrowseActive -> emojiPanelExtra
+                                            else -> floatingCardContentHeight + overlayPanelExtra
+                                        } + state.keyboardBottomPaddingDp
+                                    ).dp
+                                )
                                 .align(androidx.compose.ui.Alignment.BottomCenter)
                                 .then(if (state.isFloatingMode) Modifier else Modifier.offset(y = (-activeBottomDp).dp))
                                 .onGloballyPositioned { c ->

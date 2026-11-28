@@ -8,11 +8,11 @@ class EmojiPanelHeightTest {
 
     @Test
     fun `期望高度放得下时取期望值`() {
-        // 屏 800dp - 键盘 300dp - 输入框预留 120dp = 380dp 预算
+        // 屏 800dp - 输入框预留 120dp = 680dp 预算
         assertEquals(
-            300,
+            440,
             emojiPanelBrowseHeightDp(
-                desiredDp = 300, screenHeightDp = 800, keyboardHeightDp = 300,
+                desiredDp = 440, screenHeightDp = 800,
                 minHeightDp = EMOJI_PANEL_MIN_HEIGHT_DP,
             ),
         )
@@ -20,25 +20,24 @@ class EmojiPanelHeightTest {
 
     @Test
     fun `期望高度超预算时压到预算`() {
-        // 屏 800 - 键盘 400 - 预留 120 = 280 预算，期望 360 应被压到 280
+        // 屏 240 - 预留 120 = 120 预算，下限 200 生效 → 200
         assertEquals(
-            280,
+            200,
             emojiPanelBrowseHeightDp(
-                desiredDp = 360, screenHeightDp = 800, keyboardHeightDp = 400,
+                desiredDp = 240, screenHeightDp = 240,
                 minHeightDp = EMOJI_PANEL_MIN_HEIGHT_DP,
             ),
         )
     }
 
     @Test
-    fun `预算不足时保住最小高度`() {
-        // 屏 800 - 键盘 700 - 预留 120 为负，仍要保住最小高度
+    fun `小屏仍保住最小高度并给输入框留位置`() {
         val height = emojiPanelBrowseHeightDp(
-            desiredDp = 360, screenHeightDp = 800, keyboardHeightDp = 700,
+            desiredDp = 500, screenHeightDp = 600,
             minHeightDp = EMOJI_PANEL_MIN_HEIGHT_DP,
         )
-        assertEquals(EMOJI_PANEL_MIN_HEIGHT_DP, height)
-        assertTrue(height > 0)
+        assertEquals(480, height)
+        assertTrue("必须给宿主输入框留下空间", 600 - height >= EMOJI_HOST_INPUT_RESERVE_DP)
     }
 
     @Test
